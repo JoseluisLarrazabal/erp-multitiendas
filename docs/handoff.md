@@ -58,10 +58,26 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   Impuestos Nacionales. Descartado. El comprobante es una nota de venta propia (impresa o PDF). Si en el form de Lider
   marcan "factura electrónica" como interés, eso no cambia el alcance.
 
-- **Solo con conexión (CTO, 2026-10-26):** no hay modo sin internet ni reconciliación. Sin conexión, la app avisa
-  con un banner, bloquea las ventas y no pierde el carrito. Al cliente se le recomienda un respaldo de internet 4G
-  (router o punto de acceso). Se mantiene en el diseño porque sirve igual contra el doble clic y los reintentos:
-  la venta lleva un ID generado en el cliente y la llamada que la registra no duplica si se repite.
+- **Venta sin conexión (CTO, 2026-10-26; reemplaza la decisión "solo con conexión" del PR #6).** Requisito del
+  cliente: la venta no se bloquea si se corta internet. No esperan cortes frecuentes, pero no quieren sorpresas.
+  Opción elegida: "venta offline append-only".
+  - **Sin conexión se permite:** registrar ventas en el POS y, en la lavandería, recibir órdenes nuevas.
+  - **Sin conexión no se permite** (requiere internet): productos, precios, ajustes de inventario, cierre de caja,
+    usuarios y cambios de estado de órdenes.
+  - **Cómo funciona:** el catálogo y los precios se guardan en el equipo, solo para leer. Cada venta se guarda en una
+    cola local (IndexedDB) con un UUID del cliente. Al volver la conexión se envía con una llamada que no duplica
+    aunque se repita. El servidor es la fuente de verdad; no hay sincronización en dos direcciones ni resolución de
+    conflictos.
+  - **Reconciliación:** un reporte de las ventas hechas sin conexión y de los productos con stock negativo, para que
+    los revise el encargado. La numeración de notas lleva un prefijo por equipo (`C1-000123`).
+  - **Riesgo:** si se borra el navegador, se pierden las ventas sin enviar. Se mitiga con un aviso visible de
+    "N ventas sin enviar".
+  - **Límites que hay que comunicar al cliente:** sin conexión, el QR o la transferencia no se pueden verificar
+    (quedan "pendientes de verificar"); el stock puede quedar negativo; cada equipo solo ve sus propias ventas
+    pendientes.
+  - **Recomendación al cliente:** un respaldo de internet 4G.
+  - **Alcance contractual:** no verificado si el contrato lo cubre.
+  - **Descartados:** talonario en papel, servidor local, sincronización completa (PowerSync o similar).
 
 ## Pendientes / a decidir en la planificación
 
