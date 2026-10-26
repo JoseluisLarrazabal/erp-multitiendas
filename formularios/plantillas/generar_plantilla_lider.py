@@ -1,4 +1,4 @@
-"""Genera Multitienda-Lider-Datos-iniciales.xlsx (espejo de crearPlanillaLider en apps-script/formulario-lider.gs). Uso: python3 generar_plantilla_lider.py [salida.xlsx]  (requiere openpyxl)."""
+"""Genera Multitienda-Lider-Datos-iniciales.xlsx (copia sincronizada a mano de la planilla de Lider en apps-script/relevamiento.gs; las instrucciones finales difieren a propósito porque el xlsx se manda por WhatsApp). Uso: python3 generar_plantilla_lider.py [salida.xlsx]  (requiere openpyxl)."""
 import sys
 from pathlib import Path
 from openpyxl import Workbook
