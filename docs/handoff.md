@@ -8,7 +8,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Contrato redactado**, pendiente de firma: `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
   (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
-- **Desarrollo:** sin empezar. Próximo paso: planificación (plan en `docs/plan-*.md`).
+- **Desarrollo:** sin empezar. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+- **En curso (2026-10-26):** formulario de relevamiento para Multitienda Lider (Google Form + planilla vía
+  Apps Script). Plan: `docs/plan-formulario-lider.md`. El plazo de 30 días arranca cuando el cliente lo devuelve completo.
 
 ## Partes
 
