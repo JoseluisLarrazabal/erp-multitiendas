@@ -79,6 +79,17 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Alcance contractual:** no verificado si el contrato lo cubre.
   - **Descartados:** talonario en papel, servidor local, sincronización completa (PowerSync o similar).
 
+- **Estructura de la app (CTO, 2026-10-26):** una sola app Next.js, con un despliegue y un login. El acceso a cada
+  parte depende del rol, y la grilla de permisos sale del formulario (sección 3).
+  - **Panel (`/panel`, el ERP):** productos y precios, inventario y kardex, ajustes, compras y proveedores, clientes,
+    caja (vista y administración), reportes, consolidado de los 3 negocios, usuarios y configuración.
+    - Responsive: el dueño lo usa desde el celular y el encargado desde la PC.
+    - Instalable (manifest). Sin service worker: sin conexión muestra "sin conexión", nunca datos viejos.
+  - **POS (`/pos`, empleados):** venta, apertura y cierre de caja propia, y consulta rápida de stock y precio.
+    - En la lavandería también recepción y entrega de órdenes.
+    - Tiene service worker para abrir sin internet y la venta sin conexión, según lo decidido arriba.
+  - **Descartados:** dos apps separadas y una app de escritorio (Electron/Tauri) para el POS.
+
 ## Pendientes / a decidir en la planificación
 
 - **Stack:** la base (Next.js, Supabase, PWA) se puede definir ahora. Queda abierta hasta tener las respuestas de
