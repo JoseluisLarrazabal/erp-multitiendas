@@ -58,12 +58,15 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   Impuestos Nacionales. Descartado. El comprobante es una nota de venta propia (impresa o PDF). Si en el form de Lider
   marcan "factura electrónica" como interés, eso no cambia el alcance.
 
+- **Solo con conexión (CTO, 2026-10-26):** no hay modo sin internet ni reconciliación. Sin conexión, la app avisa
+  con un banner, bloquea las ventas y no pierde el carrito. Al cliente se le recomienda un respaldo de internet 4G
+  (router o punto de acceso). Se mantiene en el diseño porque sirve igual contra el doble clic y los reintentos:
+  la venta lleva un ID generado en el cliente y la llamada que la registra no duplica si se repite.
+
 ## Pendientes / a decidir en la planificación
 
-- **Stack:** la base (Next.js, Supabase, PWA) se puede definir ahora. Quedan abiertos hasta tener las respuestas de
-  los formularios:
-  - el modo sin conexión, según cómo sea el internet en el local (sección 3);
-  - la impresión directa ESC/POS y el cajón de dinero, según el hardware (sección 3).
+- **Stack:** la base (Next.js, Supabase, PWA) se puede definir ahora. Queda abierta hasta tener las respuestas de
+  los formularios: la impresión directa ESC/POS y el cajón de dinero, según el hardware (sección 3).
 - **Supabase Free:** según lo que sabemos, no tiene backups automáticos y se pausa tras 7 días sin actividad. Hay que
   elegir entre Pro y un `pg_dump` programado. Revisar los términos actuales.
 
