@@ -48,7 +48,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Pendiente CTO (ambos):** compartir cada planilla de carga con el correo del cliente (Editor), mandar los links
     por WhatsApp y registrar aquí la fecha de envío.
   - Plan: `docs/plan-formularios-lavanderia-frial.md`.
-- **Próximo:** pulir el prototipo `sistema-de-gestion-multinacional/`, el modelo de datos y el hosting.
+- **Formularios ENVIADOS al cliente: 2026-10-26** (los 3 links por WhatsApp). Esperando respuestas; el plazo de
+  30 días corre desde que los devuelva completos. No verificado: si las 3 planillas de carga ya se compartieron como
+  Editor.
+- **Próximo:** (1) cerrar el stack (hosting, plan de Supabase, Serwist + Next 16) en `docs/stack.md`; (2) núcleo
+  del modelo de datos en `docs/plan-modelo-datos.md`; (3) scaffold de la app real. El prototipo
+  `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
+  referencia visual.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Propuesta a confirmar en el diseño del modelo: tabla `negocios` + columna `negocio_id` en las tablas operativas
   (productos, ventas, kardex, órdenes, caja), con RLS según los negocios asignados a cada usuario. `usuarios` es
@@ -76,7 +82,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     (quedan "pendientes de verificar"); el stock puede quedar negativo; cada equipo solo ve sus propias ventas
     pendientes.
   - **Recomendación al cliente:** un respaldo de internet 4G.
-  - **Alcance contractual:** no verificado si el contrato lo cubre.
+  - **Alcance contractual:** el contrato NO lo cubre. El CTO lo absorbe sin costo (2026-10-26). Conviene que el
+    acta de entrega lo mencione como un extra.
   - **Descartados:** talonario en papel, servidor local, sincronización completa (PowerSync o similar).
 
 - **Estructura de la app (CTO, 2026-10-26):** una sola app Next.js, con un despliegue y un login. El acceso a cada
