@@ -148,7 +148,6 @@ assert.ok(!carga.hojas.some((h) => /^(Sheet|Hoja) ?1$/.test(h.nombre)), 'quedó 
 for (const h of carga.hojas.slice(1)) assert.equal(h.congelada, 1, `fila 1 sin congelar en ${h.nombre}`);
 const prod = carga.hojas.find((h) => h.nombre === 'Productos');
 assert.ok(prod.validaciones >= 10, `validaciones en Productos: ${prod.validaciones}`);
-assert.equal(prod.notas, 2);
 assert.ok(planillas.some((p) => p.nombre.includes('Respuestas formulario')), 'falta la planilla de respuestas');
 
 // Logger: 4 URLs

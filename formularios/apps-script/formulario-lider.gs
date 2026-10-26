@@ -360,14 +360,14 @@ const HOJAS_CARGA = [
     nombre: 'Productos',
     columnas: COLUMNAS_PRODUCTOS,
     ejemplos: [
-      ['REF-001', '7790000000011', 'Refrigerador no frost 300 L', 'Marca Ejemplo', 'RF-300', 'Refrigeradores', 'Línea blanca', 2800, 3500, 3900, 3300, 4, 1, 'Sí', 12, ''],
-      ['TV-002', '7790000000028', 'Televisor LED 43 pulgadas', 'Marca Ejemplo', 'TV-43', 'Televisores', 'Línea negra', 1500, 1900, 2100, 1800, 6, 2, 'Sí', 12, ''],
+      ['REF-001', '7790000000011', 'Refrigerador no frost 300 L', 'Marca Ejemplo', 'RF-300', 'Refrigeradores', 'Línea blanca', 2800, 3500, 3900, 3300, 4, 1, 'Sí', 12, 'EJEMPLO — borrar'],
+      ['TV-002', '7790000000028', 'Televisor LED 43 pulgadas', 'Marca Ejemplo', 'TV-43', 'Televisores', 'Línea negra', 1500, 1900, 2100, 1800, 6, 2, 'Sí', 12, 'EJEMPLO — borrar'],
     ],
   },
   {
     nombre: 'Números de serie',
     columnas: ['Código interno', 'Número de serie', 'Ubicación'],
-    ejemplos: [['REF-001', 'SN-0001', 'Tienda'], ['REF-001', 'SN-0002', 'Depósito']],
+    ejemplos: [['REF-001', 'SN-0001', 'Tienda (EJEMPLO — borrar)'], ['REF-001', 'SN-0002', 'Depósito (EJEMPLO — borrar)']],
   },
   {
     nombre: 'Clientes',
@@ -429,10 +429,11 @@ function crearPlanillaLider() {
     hoja.getRange(1, 1, 1, h.columnas.length).setValues([h.columnas]).setFontWeight('bold');
     hoja.setFrozenRows(1);
     hoja.setColumnWidths(1, h.columnas.length, 150);
+    // Códigos como texto, antes de escribir ejemplos, para no perder ceros ni pasar a notación científica.
+    if (h.nombre === 'Productos') hoja.getRange(2, 1, FILAS_VALIDADAS, 2).setNumberFormat('@');
     if (h.ejemplos) {
       const filas = hoja.getRange(2, 1, h.ejemplos.length, h.columnas.length);
       filas.setValues(h.ejemplos).setFontColor('#999999');
-      h.ejemplos.forEach(function (_, i) { hoja.getRange(2 + i, 1).setNote('EJEMPLO — borrar'); });
     }
   });
 
@@ -447,8 +448,6 @@ function crearPlanillaLider() {
     reglaLista(['Línea blanca', 'Línea negra', 'Pequeños electrodomésticos', 'Otros']));
   validarColumna(productos, cols, '¿Controla nro. de serie?', reglaLista(['Sí', 'No']));
   COLUMNAS_NUMERICAS_PRODUCTOS.forEach(function (n) { validarColumna(productos, cols, n, reglaNumero()); });
-  // Códigos como texto para no perder ceros a la izquierda ni pasar a notación científica.
-  productos.getRange(2, 1, FILAS_VALIDADAS, 2).setNumberFormat('@');
 
   const clientes = HOJAS_CARGA[2];
   validarColumna(ss.getSheetByName('Clientes'), clientes.columnas, 'Saldo de crédito pendiente (Bs)', reglaNumero());
