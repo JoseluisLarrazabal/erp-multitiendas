@@ -54,7 +54,18 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   (productos, ventas, kardex, órdenes, caja), con RLS según los negocios asignados a cada usuario. `usuarios` es
   compartida; `clientes` compartida o por negocio según lo que conteste en la sección 4 del form de Lider.
 
+- **Sin integración con el SIN (CTO, 2026-10-26):** no habrá facturación electrónica ni ninguna integración con
+  Impuestos Nacionales. Descartado. El comprobante es una nota de venta propia (impresa o PDF). Si en el form de Lider
+  marcan "factura electrónica" como interés, eso no cambia el alcance.
+
 ## Pendientes / a decidir en la planificación
+
+- **Stack:** la base (Next.js, Supabase, PWA) se puede definir ahora. Quedan abiertos hasta tener las respuestas de
+  los formularios:
+  - el modo sin conexión, según cómo sea el internet en el local (sección 3);
+  - la impresión directa ESC/POS y el cajón de dinero, según el hardware (sección 3).
+- **Supabase Free:** según lo que sabemos, no tiene backups automáticos y se pausa tras 7 días sin actividad. Hay que
+  elegir entre Pro y un `pg_dump` programado. Revisar los términos actuales.
 
 - **Hosting de la app:** Vercel Hobby es solo para uso no comercial; si lo detectan pueden suspender la cuenta
   (y caerían todos los proyectos de esa cuenta, incluido Elegance). Alternativa gratis con uso comercial:
