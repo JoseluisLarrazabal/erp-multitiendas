@@ -9,8 +9,22 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
 - **Desarrollo:** sin empezar. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
-- **En curso (2026-10-26):** formulario de relevamiento para Multitienda Lider (Google Form + planilla vía
-  Apps Script). Plan: `docs/plan-formulario-lider.md`. El plazo de 30 días arranca cuando el cliente lo devuelve completo.
+- **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/formulario-lider.gs`
+  creó (cuenta Google del CTO):
+  - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform
+  - Editar form: https://docs.google.com/forms/d/1qrG1GulgtutvGeBt0dgFDI02BC5TsGryR6PyevU1L9U/edit
+  - Planilla de carga: https://docs.google.com/spreadsheets/d/1YE1VWxSqo6-ZZlrT5Vn7-FgNjoCRcWf6cijJ2prCxQE/edit
+  - Planilla de respuestas: https://docs.google.com/spreadsheets/d/1fgxt7zJ-Ly3w3am6LyrxBPPFrURKElRqSB_S3_BI9gU/edit
+  - Alternativa offline: `formularios/plantillas/Multitienda-Lider-Datos-iniciales.xlsx` (mismas columnas; regenerar con
+    `generar_plantilla_lider.py` si cambian las del `.gs`).
+  - Verificado con Playwright: 13 páginas (intro + 12 secciones), 104 preguntas, link a la planilla en la intro, correo
+    requerido, confirmación final obligatoria. **No verificado:** planilla de carga en vivo (privada; revisar a mano) ni
+    respuesta de prueba punta a punta. Codex: no verificado.
+  - **Pendiente CTO:** compartir planilla de carga con el correo del cliente (Editor) y mandar link del form por WhatsApp.
+    Registrar aquí la fecha de envío. El plazo de 30 días corre desde que el cliente lo devuelve completo.
+  - Plan: `docs/plan-formulario-lider.md`.
+- **Próximo:** formularios de lavandería y frial (nuevo array de secciones en el mismo script, reusan `SECCIONES_COMUNES`
+  — ojo: si el dueño ya respondió las comunes en Lider, no repetirlas). Después: pulir prototipo `sistema-de-gestion-multinacional/`.
 
 ## Partes
 
