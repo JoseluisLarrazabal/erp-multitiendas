@@ -14,4 +14,5 @@ Notas:
 - Ejecute `crearTodoLider` una sola vez: cada ejecución crea archivos nuevos.
 - El logo no se puede pedir en el formulario (Google no lo permite por script): pídaselo al cliente por WhatsApp.
 - Autochequeo local del script: `node formularios/apps-script/test-mock.mjs`.
+- Versión Excel offline de la planilla de carga (para mandar por WhatsApp): `formularios/plantillas/Multitienda-Lider-Datos-iniciales.xlsx`. Si cambian columnas en el `.gs`, regenerarla con `generar_plantilla_lider.py` (requiere openpyxl).
 - Para lavandería o frial: copie `SECCIONES_LIDER` como base, cambie las preguntas y llame a `crearFormulario(...)` con `SECCIONES_COMUNES` más su propio arreglo.
