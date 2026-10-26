@@ -52,7 +52,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   30 días corre desde que los devuelva completos. No verificado: si las 3 planillas de carga ya se compartieron como
   Editor.
 - **Próximo:** (1) cerrar el stack (hosting, plan de Supabase, Serwist + Next 16) en `docs/stack.md`; (2) núcleo
-  del modelo de datos en `docs/plan-modelo-datos.md`; (3) scaffold de la app real. El prototipo
+  del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
   referencia visual.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
