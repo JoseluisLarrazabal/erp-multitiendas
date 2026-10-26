@@ -6,7 +6,41 @@
  * Cada pregunta: { tipo, titulo, ayuda?, opciones?, otro?, obligatoria?, filas?, columnas? }
  * tipos: texto | parrafo | opcion | casillas | lista | grillaCasillas | fecha
  * FormApp no puede crear subida de archivos: el logo se pide por WhatsApp.
+ * Debe ser la primera función del archivo: el editor la deja seleccionada en Ejecutar.
  */
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+function crearTodoLider() {
+  const planilla = crearPlanillaLider();
+
+  const intro =
+    'Este formulario nos ayuda a armar el sistema de gestión de su tienda Multitienda Lider.\n\n' +
+    'Tarda unos 30 a 40 minutos. Si no sabe una respuesta, déjela en blanco o escriba "no sé": la vemos juntos en la reunión. ' +
+    'Si necesita más tiempo, avísenos por WhatsApp. Después de enviarlo puede corregir sus respuestas con el enlace "Editar tu respuesta" que aparece al final.\n\n' +
+    'Además de este formulario, puede llenar la planilla de carga con su lista de productos, clientes y personas:\n' +
+    planilla.getUrl() + '\n\n' +
+    'El logo de su negocio mándelo por WhatsApp.';
+
+  const form = crearFormulario(
+    'Multitienda Lider — Relevamiento para su sistema de gestión',
+    intro,
+    SECCIONES_COMUNES.concat(SECCIONES_LIDER)
+  );
+  form.setConfirmationMessage(
+    'Gracias, recibimos su información. Si necesita corregir algo, use el enlace "Editar tu respuesta" de esta página o avísenos por WhatsApp.'
+  );
+
+  const respuestas = SpreadsheetApp.create('Multitienda Lider — Respuestas formulario');
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, respuestas.getId());
+
+  Logger.log('Editar el formulario: ' + form.getEditUrl());
+  Logger.log('Link para el cliente: ' + form.getPublishedUrl());
+  Logger.log('Planilla de carga: ' + planilla.getUrl());
+  Logger.log('Planilla de respuestas: ' + respuestas.getUrl());
+}
+
 
 const SI_NO = ['Sí', 'No'];
 const SI_NO_NS = ['Sí', 'No', 'No sé'];
@@ -453,36 +487,4 @@ function crearPlanillaLider() {
   validarColumna(ss.getSheetByName('Clientes'), clientes.columnas, 'Saldo de crédito pendiente (Bs)', reglaNumero());
 
   return ss;
-}
-
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
-function crearTodoLider() {
-  const planilla = crearPlanillaLider();
-
-  const intro =
-    'Este formulario nos ayuda a armar el sistema de gestión de su tienda Multitienda Lider.\n\n' +
-    'Tarda unos 30 a 40 minutos. Si no sabe una respuesta, déjela en blanco o escriba "no sé": la vemos juntos en la reunión. ' +
-    'Si necesita más tiempo, avísenos por WhatsApp. Después de enviarlo puede corregir sus respuestas con el enlace "Editar tu respuesta" que aparece al final.\n\n' +
-    'Además de este formulario, puede llenar la planilla de carga con su lista de productos, clientes y personas:\n' +
-    planilla.getUrl() + '\n\n' +
-    'El logo de su negocio mándelo por WhatsApp.';
-
-  const form = crearFormulario(
-    'Multitienda Lider — Relevamiento para su sistema de gestión',
-    intro,
-    SECCIONES_COMUNES.concat(SECCIONES_LIDER)
-  );
-  form.setConfirmationMessage(
-    'Gracias, recibimos su información. Si necesita corregir algo, use el enlace "Editar tu respuesta" de esta página o avísenos por WhatsApp.'
-  );
-
-  const respuestas = SpreadsheetApp.create('Multitienda Lider — Respuestas formulario');
-  form.setDestination(FormApp.DestinationType.SPREADSHEET, respuestas.getId());
-
-  Logger.log('Editar el formulario: ' + form.getEditUrl());
-  Logger.log('Link para el cliente: ' + form.getPublishedUrl());
-  Logger.log('Planilla de carga: ' + planilla.getUrl());
-  Logger.log('Planilla de respuestas: ' + respuestas.getUrl());
 }
