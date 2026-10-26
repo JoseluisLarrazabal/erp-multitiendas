@@ -1,21 +1,34 @@
 # Stack — ERP Multitiendas
 
-Estado: **propuesta del chairman, pendiente de confirmación del CTO** (2026-10-26). Los términos se revisaron el
+Estado: **decidido por el CTO** (2026-10-26). Los términos se revisaron el
 2026-10-26 con las fuentes oficiales citadas abajo.
 
-## Decisión propuesta
+## Decisión
 
 | Pieza | Elección | Costo |
 |---|---|---|
 | Framework | Next.js 16 (App Router), una sola app con `/panel` y `/pos` | — |
-| Base y auth | Supabase **Pro** | ~$25/mes |
-| Hosting | Vercel **Pro**, 1 seat Developer | ~$20/mes (incluye $20 de uso) |
+| Base y auth | Supabase **Free** + backups propios (ver abajo) | $0 |
+| Hosting | Vercel **Hobby** + dominio propio | $0 + dominio |
 | Service worker (POS) | spike con `@serwist/turbopack`; si falla, SW manual (`src/sw.ts` + esbuild) | — |
 | Cola local (POS) | Dexie 4 + outbox propia con UUID como idempotency key | — |
 | Reintento | evento `online` + temporizador (Background Sync no existe en Safari) | — |
 
-Costo base estimado: **~$45/mes**. Quién lo paga (el cliente o el CTO) no está definido en lo que conozco del
-contrato. **Pendiente.**
+Costo base: **$0/mes** más el dominio.
+
+### Condiciones de la decisión
+
+- **Backups, obligatorios antes de producción:**
+  - GitHub Actions con cron diario y `supabase db dump`, que incluya `auth.users` (verificarlo).
+  - Dump cifrado (`age`/`gpg`) y guardado fuera de Supabase.
+  - **Prueba de restauración** en un proyecto aparte: login OK y stock = `sum(kardex)`.
+- **Pasar a Supabase Pro** si el proyecto se pausa alguna vez, si se acerca a 500 MB o si el negocio lo justifica.
+- **Vercel Hobby:**
+  - El CTO acepta el riesgo de los términos (prohíben uso comercial; tener dominio propio no cambia eso).
+  - Mitigación recomendada: una cuenta Vercel separada para este cliente, para que una suspensión no arrastre a
+    Elegance ni a otros proyectos.
+  - Mitigación recomendada: un despliegue reproducible, que se pueda mover a Vercel Pro o a Cloudflare en horas.
+- Cupo del Free: máximo 2 proyectos activos por organización. Revisar si ya está ocupado.
 
 ## Motivos
 
