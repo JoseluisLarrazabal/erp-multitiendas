@@ -31,8 +31,15 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     publicado sigue coincidiendo con el código.
   - **No verificado:** la ejecución real en Google de lavandería y frial (solo probado con stubs), y la configuración
     regional de la cuenta (separador decimal en la planilla del frial). Codex: no verificado.
-  - **Pendiente CTO:** pegar el `.gs` nuevo en el proyecto de Apps Script, ejecutar `crearTodoLavanderia` y
-    `crearTodoFrial` una vez cada uno y pasar las 8 URLs para verificarlas con Playwright y anotarlas aquí.
+  - **Lavandería: creado (2026-10-26).** Verificado con Playwright: 10 páginas (intro + 9 secciones), 82 preguntas,
+    link a la planilla de carga en la intro, correo requerido, confirmación final obligatoria.
+    - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLSfv9ohkgFW4KonwPzS5JPr7X8D9wMUU2_sf4Mn6_YiUGAKFYA/viewform
+    - Editar form: https://docs.google.com/forms/d/1Pm86SGnQyvBAV-6emgasz3z6Ul1XSCiYLAekKkgSHKE/edit
+    - Planilla de carga: https://docs.google.com/spreadsheets/d/178C1hezWtEZhyBNTpj_p0EtjRg63Ju437oamvydBoh0/edit
+    - Planilla de respuestas: https://docs.google.com/spreadsheets/d/1jXJv1asWqeTRg0gpfyrBFsge186K0DkmR8CtefYr5EM/edit
+  - **Frial: falta.** Pendiente CTO: ejecutar `crearTodoFrial` una vez y pasar las 4 URLs.
+  - **Pendiente CTO (ambos):** compartir cada planilla de carga con el correo del cliente (Editor), mandar los links
+    por WhatsApp y registrar aquí la fecha de envío.
   - Plan: `docs/plan-formularios-lavanderia-frial.md`.
 - **Próximo:** pulir el prototipo `sistema-de-gestion-multinacional/`, el modelo de datos y el hosting.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
