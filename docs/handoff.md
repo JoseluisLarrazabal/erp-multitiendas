@@ -50,10 +50,10 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Plan: `docs/plan-formularios-lavanderia-frial.md`.
 - **Formularios ENVIADOS al cliente: 2026-10-26** (los 3 links por WhatsApp). Esperando respuestas; el plazo de
   30 días corre desde que los devuelva completos.
-  - **Planilla Lider:** no estaba compartida. El cliente pidió acceso y el CTO lo aprobó (reportado 2026-10-27).
-    Falta confirmar que el permiso sea **Editor**; con Lector o Comentarista no puede cargar datos.
-  - **Planillas lavandería y frial:** probablemente tampoco están compartidas. Compartirlas de antemano con el mismo
-    correo de Google que usó el cliente para pedir el acceso. No verificado.
+  - **Planillas de carga: acceso "Cualquier persona con el enlace"** (decisión del CTO, 2026-10-27). El link solo se
+    mandó al cliente. El CTO acepta el riesgo: el link también está en la intro del form, que se puede reenviar, y la
+    planilla va a tener costos y datos personales. Recomendado pasarla a **Restringido** apenas termine la carga.
+    Permiso del enlace (Lector o Editor) y cuáles planillas: no verificado.
 - **Próximo:** (1) stack DECIDIDO en `docs/stack.md` (Vercel Hobby + dominio, Supabase Free + backups propios cifrados con prueba de restauración); (2) núcleo
   del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
