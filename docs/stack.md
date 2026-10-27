@@ -30,14 +30,17 @@ Costo base: **$0/mes** más el dominio.
   - Mitigación recomendada: un despliegue reproducible, que se pueda mover a Vercel Pro o a Cloudflare en horas.
 - Cupo del Free: máximo 2 proyectos activos por organización. Revisar si ya está ocupado.
 
-## Motivos
+## Análisis previo (antes de la decisión del CTO)
 
-- **Supabase Free descartado:** no tiene backups automáticos y se pausa tras ~7 días de baja actividad. Para un
-  sistema con dinero y stock, inaceptable.
+La propuesta inicial era Supabase Pro + Vercel Pro (~$45/mes). El CTO eligió Free/Hobby aceptando los riesgos de
+abajo.
+
+- **Riesgo de Supabase Free:** no tiene backups automáticos y se pausa tras ~7 días de baja actividad. Para un
+  sistema con dinero y stock, inaceptable sin backups propios.
   - Pro incluye backups diarios con 7 días de retención y no se pausa.
   - PITR ($100/mes) no hace falta de entrada.
   - Fuentes: https://supabase.com/pricing, https://supabase.com/docs/guides/platform/free-project-pausing
-- **Vercel Hobby descartado:** su definición de uso comercial incluye a un consultor que cobra por el código.
+- **Riesgo de Vercel Hobby:** su definición de uso comercial incluye a un consultor que cobra por el código.
   Fuente: https://vercel.com/docs/limits/fair-use-guidelines.
 - **Vercel Pro antes que Cloudflare:**
   - `@opennextjs/cloudflare` (1.20.13) soporta Next `>=16.4.1`, pero **no soporta Node Middleware**. En Next 16,
