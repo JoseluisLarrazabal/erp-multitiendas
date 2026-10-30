@@ -53,7 +53,16 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Planillas de carga: acceso "Cualquier persona con el enlace"** (decisión del CTO, 2026-10-27). El link solo se
     mandó al cliente. El CTO acepta el riesgo: el link también está en la intro del form, que se puede reenviar, y la
     planilla va a tener costos y datos personales. Recomendado pasarla a **Restringido** apenas termine la carga.
-    Permiso del enlace (Lector o Editor) y cuáles planillas: no verificado.
+    Revisado 2026-10-30: las 3 se pueden leer y descargar sin login. En Lider, sin login se ve "Solo ver"; en lavandería
+    y frial no se comprobó el permiso del enlace.
+  - **Planilla Lider, revisión 2026-10-30 (solo lectura, sin cambios):** 597 productos reales en `Productos`.
+    - El cliente agregó las columnas `imagenes` (B) y `Ubicacion` (R). Hay 292 fotos en las filas 5 a 296; las 17
+      revisadas al azar coinciden con su producto.
+    - Columnas ocultas: H a L y N a Q. No tienen datos reales: **ningún producto tiene precio** ni código interno.
+    - Filas 569 a 594 (26): pegadas sin formato ni validaciones, y sin `Ubicacion`.
+    - Para limpiar antes de importar: 4 filas con "aro 20/29" en código de barras, 17 códigos repetidos, 13 productos
+      repetidos, 1 código en notación científica, categoría "Hornos" duplicada.
+    - El síntoma que reportó el cliente sigue sin confirmar. Lavandería y frial solo tienen las filas de ejemplo.
 - **Próximo:** (1) stack DECIDIDO en `docs/stack.md` (Vercel Hobby + dominio, Supabase Free + backups propios cifrados con prueba de restauración); (2) núcleo
   del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
