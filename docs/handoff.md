@@ -55,11 +55,14 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     planilla va a tener costos y datos personales. Recomendado pasarla a **Restringido** apenas termine la carga.
     Revisado 2026-10-30: las 3 se pueden leer y descargar sin login. En Lider, sin login se ve "Solo ver"; en lavandería
     y frial no se comprobó el permiso del enlace.
-  - **Planilla Lider, revisión 2026-10-30 (solo lectura, sin cambios):** 597 productos reales en `Productos`.
+  - **Planilla Lider, revisión 2026-10-30:** 597 productos reales en `Productos`.
     - El cliente agregó las columnas `imagenes` (B) y `Ubicacion` (R). Hay 292 fotos en las filas 5 a 296; las 17
       revisadas al azar coinciden con su producto.
-    - Columnas ocultas: H a L y N a Q. No tienen datos reales: **ningún producto tiene precio** ni código interno.
-    - Filas 569 a 594 (26): pegadas sin formato ni validaciones, y sin `Ubicacion`.
+    - Columnas H a L y N a Q: estaban ocultas, ya visibles. No tienen datos reales: **ningún producto tiene precio** ni
+      código interno.
+    - Filas 569 a 594 (26): estaban pegadas sin formato ni validaciones. Reparadas el 2026-10-30, a pedido del CTO, con
+      la cuenta `jencarlosmoral2`. Valores sin cambios (verificado por exportación). Siguen sin `Ubicacion`.
+    - Respaldo previo: https://docs.google.com/spreadsheets/d/1tLSkAeGuOCQG0e41VDcPedof-iEpLrmOrRv1guLOGag/edit
     - Para limpiar antes de importar: 4 filas con "aro 20/29" en código de barras, 17 códigos repetidos, 13 productos
       repetidos, 1 código en notación científica, categoría "Hornos" duplicada.
     - El síntoma que reportó el cliente sigue sin confirmar. Lavandería y frial solo tienen las filas de ejemplo.
