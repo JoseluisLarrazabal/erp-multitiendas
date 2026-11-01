@@ -47,11 +47,15 @@ Consecuencias:
 - **Promedio dentro del `on conflict do update`** del trigger, para leer la fila vigente con ventas concurrentes. Stock
   previo negativo cuenta como 0; costo previo desconocido toma el costo nuevo.
 - **`ajuste_costo`:** tipo nuevo de movimiento, `cantidad = 0`, fija `costo_promedio`. Es el único tipo con cantidad 0.
-  `fijar_costos` exige `ajustar_inventario` y `ver_costos`.
+  `fijar_costos` exige `ajustar_inventario` y `ver_costos`, y recorre las ubicaciones del negocio (no las filas de
+  `stock`): un `ajuste_costo` por ubicación donde el costo cambie, así un producto importado sin stock conserva su costo.
 - **Operaciones de inventario idempotentes.** `registrar_entrada`, `ajustar_inventario`, `trasladar_stock` y
-  `registrar_conteo` reciben `p_operacion_id` generado al abrir el formulario. Índice único parcial sobre
-  `(ref_id, producto_id, ubicacion_id, tipo)`. Reintentar no duplica stock.
-- **Traslado** lleva el costo promedio del origen, así el valor total no cambia. Con stock insuficiente se permite (RN-04):
+  `registrar_conteo` reciben `p_operacion_id` generado al abrir el formulario. La tabla `operaciones_inventario`
+  (append-only, sin acceso del cliente) guarda el id con una huella md5 de los parámetros: repetir la misma operación
+  devuelve el resultado original sin duplicar stock; el mismo id con otros datos o de otro negocio da
+  `ERP_OPERACION_REPETIDA`. El índice único parcial sobre `(ref_id, producto_id, ubicacion_id, tipo)` queda como red de seguridad.
+- **Traslado** lleva el costo promedio del origen: el valor total se conserva solo si el origen tiene costo conocido; sin
+  costo no hay valor que conservar y el destino mantiene su promedio. Con stock insuficiente se permite (RN-04):
   la pantalla avisa.
 - **Producto en `unidad`:** `cantidad` entera, la RPC rechaza decimales. Un `servicio` no genera movimientos.
 - **Series:** `registrar_series` carga números para unidades ya existentes, separado de la entrada, porque los productos
@@ -115,6 +119,7 @@ Sin bake-off: `impeccable`, tokens existentes y `lucide-react`. Gate `web-design
 - CRUD de ubicaciones: se crean por script y seed. Son 2 en Lider y 1 en los demás.
 - Unir duplicados, marcas y categorías parecidas: esperan al cliente; el reporte los lista.
 - Venta con serie (DB-15): fase 2.
+- DB-12 se completa en la fase 3, con el reporte de reconciliación de RF-VEN-13.
 
 ## Verificación
 

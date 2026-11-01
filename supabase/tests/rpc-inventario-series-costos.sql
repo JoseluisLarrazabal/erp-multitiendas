@@ -1,6 +1,6 @@
 -- RPC registrar_series y fijar_costos.
 begin;
-select plan(36);
+select plan(41);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -69,7 +69,15 @@ select is(public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1
 select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array['A4'])$$, 'P0001', 'ERP_SERIES_EXCEDEN_STOCK', 'series: ya completas');
 select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U2'), array['C1'])$$, 'P0001', 'ERP_SERIES_EXCEDEN_STOCK', 'series: ubicación sin stock');
 select public.ajustar_inventario(pg_temp.i('O2'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), 'danado', -1, 'x', array[(select id from public.series where serie = 'A1')]);
-select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array['A1'])$$, 'P0001', 'ERP_SERIE_DUPLICADA', 'series: duplicada con una existente, aunque esté en baja');
+-- Revertir una baja: baja por ajuste, ajuste positivo, volver a registrar
+select public.ajustar_inventario(pg_temp.i('O3'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), 'ajuste', 1, 'sobrante', null);
+select is(public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array['A1']), 1, 'series: una serie en baja se reactiva');
+select is((select estado from public.series where serie = 'A1'), 'disponible', 'series: la reactivada queda disponible');
+select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array['A1'])$$, 'P0001', 'ERP_SERIE_DUPLICADA', 'series: duplicada si no está en baja');
+select public.ajustar_inventario(pg_temp.i('O4'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), 'danado', -1, 'x', array[(select id from public.series where serie = 'A3')]);
+select public.registrar_entrada(pg_temp.i('O5'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U2'), 1, null, null);
+select is(public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U2'), array['A3']), 1, 'series: reactivar en otra ubicación cuenta contra su stock');
+select is((select ubicacion_id from public.series where serie = 'A3'), pg_temp.i('U2'), 'series: la reactivada toma la ubicación');
 select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array['Z1', 'Z1'])$$, 'P0001', 'ERP_SERIE_DUPLICADA', 'series: duplicada dentro del lote');
 select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), array['Q1'])$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'series: el producto debe controlar serie');
 select throws_ok($$select public.registrar_series(pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), array[]::text[])$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'series: lote vacío');
@@ -95,8 +103,10 @@ select results_eq($$select tipo, cantidad, ref_id, motivo from public.movimiento
   $$values ('ajuste_costo', 0.000::numeric, null::uuid, 'carga de costos'), ('ajuste_costo', 0.000::numeric, null::uuid, 'carga de costos')$$, 'costos: movimientos con cantidad 0 y sin ref_id');
 select pg_temp.como(pg_temp.i('d'));
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 7.5)), null), 0, 'costos: el mismo costo no genera movimientos');
-select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'costo', 3)), null), 0, 'costos: sin filas de stock no hace nada');
-select is((select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('PK')), 0::bigint, 'costos: sin stock no deja movimientos');
+select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'costo', 3)), null), 2, 'costos: sin stock fija el costo en cada ubicación del negocio');
+select is((select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('PK') and tipo = 'ajuste_costo'), 2::bigint, 'costos: un ajuste_costo por ubicación, sin cantidad');
+select results_eq($$select ubicacion_id, s.cantidad, c.costo_promedio from public.costos_stock(pg_temp.i('T')) c join public.stock s using (producto_id, ubicacion_id) where producto_id = pg_temp.i('PK') order by ubicacion_id$$,
+  $$values (pg_temp.i('U1'), 0.000::numeric, 3.0000::numeric), (pg_temp.i('U2'), 0.000::numeric, 3.0000::numeric)$$, 'costos: el producto sin stock conserva su costo');
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 0)), null), 2, 'costos: costo 0 es válido');
 select throws_ok($$select public.fijar_costos(pg_temp.i('T'), '[]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'costos: lote vacío');
 select throws_ok($$select public.fijar_costos(pg_temp.i('T'), (select jsonb_agg(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 1)) from generate_series(1, 201)), null)$$, 'P0001', 'ERP_LOTE_GRANDE', 'costos: más de 200');

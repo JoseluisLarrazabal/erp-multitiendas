@@ -19,7 +19,8 @@ end;
 $$;
 
 -- Más reciente primero. Paginación por (created_at, id): p_desde_id es el id del último movimiento de la página
--- anterior. costo_unitario es null sin ver_costos. Producto inexistente y de otro negocio dan el mismo error.
+-- anterior. Exige ajustar_inventario o ver_reportes. costo_unitario es null sin ver_costos. Producto inexistente y de
+-- otro negocio dan el mismo error.
 create function public.kardex_producto(
   p_producto_id uuid, p_ubicacion_id uuid default null, p_limite integer default 100, p_desde_id uuid default null
 )
@@ -39,6 +40,9 @@ declare
 begin
   select p.negocio_id into v_negocio_id from public.productos p where p.id = p_producto_id;
   if v_negocio_id is null or v_negocio_id not in (select public.mis_negocios()) then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if not (public.tiene_permiso(v_negocio_id, 'ajustar_inventario') or public.tiene_permiso(v_negocio_id, 'ver_reportes')) then
     raise exception 'ERP_SIN_PERMISO';
   end if;
   if p_limite is null or p_limite < 1 or p_limite > 500 then

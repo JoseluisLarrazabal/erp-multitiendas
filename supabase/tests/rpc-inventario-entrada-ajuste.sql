@@ -1,6 +1,6 @@
 -- RPC registrar_entrada y ajustar_inventario.
 begin;
-select plan(55);
+select plan(65);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -138,6 +138,21 @@ select lives_ok($$select public.ajustar_inventario(pg_temp.i('O22'), pg_temp.i('
 select is((select count(*) from public.series where estado = 'baja' and id in (pg_temp.i('S1'), pg_temp.i('S2'))), 2::bigint, 'serie: pasan a baja');
 select lives_ok($$select public.ajustar_inventario(pg_temp.i('O22'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), 'danado', -2, 'x', array[pg_temp.i('S1'), pg_temp.i('S2')])$$, 'serie: repetir la operación no falla');
 select throws_ok($$select public.ajustar_inventario(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('PS'), pg_temp.i('U1'), 'danado', -1, 'x', array[pg_temp.i('S1')])$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'serie: una en baja ya no está disponible');
+
+-- Idempotencia por operación: el mismo id con otros datos, otra ubicación, otro producto u otro negocio no pasa.
+select pg_temp.como(pg_temp.i('d'));
+select set_config('t.antes', (select sum(cantidad)::text from public.stock), true);
+select set_config('t.antes_n', (select count(*)::text from public.movimientos_inventario), true);
+select throws_ok($$select public.registrar_entrada(pg_temp.i('O1'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U2'), 10, 5, 'compra')$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: entrada con otra ubicación');
+select throws_ok($$select public.registrar_entrada(pg_temp.i('O1'), pg_temp.i('T'), pg_temp.i('PK'), pg_temp.i('U1'), 10, 5, 'compra')$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: entrada con otro producto');
+select throws_ok($$select public.registrar_entrada(pg_temp.i('O1'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), 11, 5, 'compra')$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: entrada con otra cantidad');
+select throws_ok($$select public.registrar_entrada(pg_temp.i('O1'), pg_temp.i('L'), pg_temp.i('PI'), pg_temp.i('UL'), 10, 5, 'compra')$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: entrada en otro negocio');
+select throws_ok($$select public.ajustar_inventario(pg_temp.i('O1'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), 'ajuste', 10, 'compra', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: el id de una entrada no sirve para un ajuste');
+select throws_ok($$select public.ajustar_inventario(pg_temp.i('O11'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U2'), 'ajuste', -2, 'faltante', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: ajuste con otra ubicación');
+select throws_ok($$select public.ajustar_inventario(pg_temp.i('O11'), pg_temp.i('T'), pg_temp.i('PK'), pg_temp.i('U1'), 'ajuste', -2, 'faltante', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: ajuste con otro producto');
+select throws_ok($$select public.ajustar_inventario(pg_temp.i('O11'), pg_temp.i('L'), pg_temp.i('PI'), pg_temp.i('UL'), 'ajuste', -2, 'faltante', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: ajuste en otro negocio');
+select is((select sum(cantidad)::text from public.stock), current_setting('t.antes'), 'idempotencia: el stock no cambia');
+select is((select count(*)::text from public.movimientos_inventario), current_setting('t.antes_n'), 'idempotencia: no hay movimientos nuevos');
 
 select * from finish();
 rollback;

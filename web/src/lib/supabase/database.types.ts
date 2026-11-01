@@ -163,6 +163,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"operaciones_inventario": {
+                  Row: {
+                    "created_at": string,"huella": string,"id": string,"negocio_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"huella": string,"id": string,"negocio_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"huella"?: string,"id"?: string,"negocio_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "operaciones_inventario_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"perfiles": {
                   Row: {
                     "activo": boolean,"created_at": string,"id": string,"nombre": string
@@ -437,6 +457,9 @@ isOneToOne: false
                            },
 "quitar_usuario":
 { Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: undefined
+                           },
+"reclamar_operacion":
+{ Args: { "p_huella": string,"p_id": string,"p_negocio_id": string }; Returns: boolean
                            },
 "registrar_conteo":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number

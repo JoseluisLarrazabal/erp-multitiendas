@@ -1,6 +1,6 @@
 -- Kardex: DB-02, DB-10, DB-12, costo promedio (trigger), permisos por columna.
 begin;
-select plan(31);
+select plan(36);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -45,6 +45,10 @@ select throws_ok($$update public.movimientos_inventario set motivo = 'x'$$, 'P00
 select throws_ok($$delete from public.movimientos_inventario$$, 'P0001', 'ERP_SOLO_AGREGAR', 'DB-02: DELETE rechazado');
 select throws_ok($$truncate public.movimientos_inventario$$, 'P0001', 'ERP_SOLO_AGREGAR', 'DB-02: TRUNCATE rechazado');
 select throws_ok($$truncate public.conteo_items$$, 'P0001', 'ERP_SOLO_AGREGAR', 'conteo_items: TRUNCATE rechazado');
+insert into public.operaciones_inventario (id, negocio_id, huella) values ('cccccccc-3000-0000-0000-0000000000f1', 'aaaaaaaa-3000-0000-0000-000000000001', 'h');
+select throws_ok($$update public.operaciones_inventario set huella = 'x'$$, 'P0001', 'ERP_SOLO_AGREGAR', 'operaciones_inventario: UPDATE rechazado');
+select throws_ok($$delete from public.operaciones_inventario$$, 'P0001', 'ERP_SOLO_AGREGAR', 'operaciones_inventario: DELETE rechazado');
+select throws_ok($$truncate public.operaciones_inventario$$, 'P0001', 'ERP_SOLO_AGREGAR', 'operaciones_inventario: TRUNCATE rechazado');
 
 -- Checks de la tabla
 select throws_ok($$insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad) values ('aaaaaaaa-3000-0000-0000-000000000001', 'bbbbbbbb-3000-0000-0000-000000000001', 'eeeeeeee-3000-0000-0000-000000000001', 'entrada', 0)$$, '23514', null, 'cantidad 0 solo para ajuste_costo');
@@ -110,6 +114,8 @@ select throws_ok($$select costo_promedio from public.stock$$, '42501', null, 've
 select throws_ok($$select * from public.stock$$, '42501', null, 'select * de stock falla para authenticated');
 select throws_ok($$select costo_unitario from public.movimientos_inventario$$, '42501', null, 'vendedor no lee movimientos.costo_unitario');
 select throws_ok($$insert into public.stock (negocio_id, producto_id, ubicacion_id, cantidad) values ('aaaaaaaa-3000-0000-0000-000000000001', 'eeeeeeee-3000-0000-0000-000000000001', 'bbbbbbbb-3000-0000-0000-000000000001', 1)$$, '42501', null, 'sin escritura directa en stock');
+select isnt((select provolatile from pg_proc where proname = 'validar_inventario' and pronamespace = 'public'::regnamespace), 's', 'validar_inventario toma for share: no es stable');
+select throws_ok($$select * from public.operaciones_inventario$$, '42501', null, 'authenticated no lee operaciones_inventario');
 select pg_temp.como('99999999-3000-0000-0000-000000000004');
 select is((select count(*) from public.stock), 0::bigint, 'usuario de otro negocio no ve stock ajeno');
 

@@ -29,7 +29,7 @@ create table public.movimientos_inventario (
   constraint movimientos_cantidad_cero_ck check ((cantidad = 0) = (tipo = 'ajuste_costo')),
   constraint movimientos_ajuste_costo_ck check (tipo <> 'ajuste_costo' or costo_unitario is not null)
 );
--- Idempotencia: repetir una operación no duplica el movimiento.
+-- Red de seguridad de la idempotencia (la principal es operaciones_inventario): ni una RPC con error duplica el movimiento.
 create unique index movimientos_operacion_uq on public.movimientos_inventario (ref_id, producto_id, ubicacion_id, tipo)
   where ref_id is not null;
 -- Un solo stock inicial por producto y ubicación (la importación es repetible).
@@ -37,6 +37,15 @@ create unique index movimientos_inicial_uq on public.movimientos_inventario (pro
   where tipo = 'inicial';
 create index movimientos_negocio_fecha_idx on public.movimientos_inventario (negocio_id, created_at);
 create index movimientos_producto_fecha_idx on public.movimientos_inventario (producto_id, created_at desc);
+
+-- Una fila por operación de inventario (id = p_operacion_id). La huella (md5 de los parámetros) distingue un reintento
+-- legítimo de reusar el id con otros datos. Sin policies ni grants: solo la toca reclamar_operacion.
+create table public.operaciones_inventario (
+  id uuid primary key,
+  negocio_id uuid not null references public.negocios (id),
+  huella text not null,
+  created_at timestamptz not null default now()
+);
 
 create table public.stock (
   negocio_id uuid not null,
@@ -99,6 +108,13 @@ create trigger movimientos_sin_truncate
   before truncate on public.movimientos_inventario
   for each statement execute function public.rechazar_modificacion();
 
+create trigger operaciones_solo_agregar
+  before update or delete on public.operaciones_inventario
+  for each row execute function public.rechazar_modificacion();
+create trigger operaciones_sin_truncate
+  before truncate on public.operaciones_inventario
+  for each statement execute function public.rechazar_modificacion();
+
 create trigger conteos_solo_agregar
   before update or delete on public.conteos
   for each row execute function public.rechazar_modificacion();
@@ -155,6 +171,7 @@ create trigger movimientos_aplicar_a_stock
 alter table public.movimientos_inventario enable row level security;
 alter table public.stock enable row level security;
 alter table public.series enable row level security;
+alter table public.operaciones_inventario enable row level security;
 alter table public.conteos enable row level security;
 alter table public.conteo_items enable row level security;
 
@@ -177,6 +194,7 @@ create policy conteo_items_select on public.conteo_items
 revoke all on public.movimientos_inventario from anon, authenticated, public;
 revoke all on public.stock from anon, authenticated, public;
 revoke all on public.series from anon, authenticated, public;
+revoke all on public.operaciones_inventario from anon, authenticated, public;
 revoke all on public.conteos from anon, authenticated, public;
 revoke all on public.conteo_items from anon, authenticated, public;
 

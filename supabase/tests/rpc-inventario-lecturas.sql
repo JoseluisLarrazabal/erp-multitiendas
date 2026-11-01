@@ -1,6 +1,6 @@
 -- DB-04, DB-12 en reconciliación; costos_stock, kardex_producto, stock_inconsistente, productos_stock_bajo.
 begin;
-select plan(28);
+select plan(31);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -135,9 +135,17 @@ select is((select count(distinct id) from (
   (select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('P1')), 'kardex: la paginación cubre todo sin repetir');
 select throws_ok($$select * from public.kardex_producto(pg_temp.i('P1'), null, 0)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'kardex: límite inválido');
 select throws_ok($$select * from public.kardex_producto(pg_temp.i('P1'), null, 10, gen_random_uuid())$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'kardex: cursor inexistente');
+select pg_temp.como(pg_temp.i('c'));
+select cmp_ok((select count(*) from public.kardex_producto(pg_temp.i('P1'))), '>', 0::bigint, 'kardex: el contador (ver_reportes) lo lee');
+select is((select count(*) from public.kardex_producto(pg_temp.i('P1')) where costo_unitario is not null), current_setting('t.ncosto')::bigint, 'kardex: el contador con ver_costos recibe costos');
+-- Ningún rol de la matriz lee el kardex sin ver_costos: se quita el permiso al contador solo dentro de esta transacción.
+reset role;
+delete from public.rol_permisos where tipo_negocio = 'tienda' and rol = 'contador' and permiso = 'ver_costos';
+select pg_temp.como(pg_temp.i('c'));
+select cmp_ok((select count(*) from public.kardex_producto(pg_temp.i('P1'))), '>', 0::bigint, 'kardex: acceso por ver_reportes sin ver_costos');
+select is((select count(*) from public.kardex_producto(pg_temp.i('P1')) where costo_unitario is not null), 0::bigint, 'kardex: sin ver_costos el costo sale null');
 select pg_temp.como(pg_temp.i('v'));
-select cmp_ok((select count(*) from public.kardex_producto(pg_temp.i('P1'))), '>', 0::bigint, 'kardex: el vendedor lo lee');
-select is((select count(*) from public.kardex_producto(pg_temp.i('P1')) where costo_unitario is not null), 0::bigint, 'kardex: el vendedor no recibe costos');
+select throws_ok($$select * from public.kardex_producto(pg_temp.i('P1'))$$, 'P0001', 'ERP_SIN_PERMISO', 'kardex: el vendedor no lo lee');
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select * from public.kardex_producto(pg_temp.i('P1'))$$, 'P0001', 'ERP_SIN_PERMISO', 'kardex: usuario de otro negocio');
 select throws_ok($$select * from public.kardex_producto(gen_random_uuid())$$, 'P0001', 'ERP_SIN_PERMISO', 'kardex: producto inexistente da el mismo error');

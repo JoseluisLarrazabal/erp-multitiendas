@@ -1,6 +1,6 @@
 -- RPC trasladar_stock (DB-16) y registrar_conteo (DB-17).
 begin;
-select plan(50);
+select plan(66);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -35,6 +35,9 @@ insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad, cont
   ('eeeeeeee-3000-0000-0000-000000000003', 'aaaaaaaa-3000-0000-0000-000000000001', 'PS', 'PS', 'producto', 'unidad', true, null),
   ('eeeeeeee-3000-0000-0000-000000000004', 'aaaaaaaa-3000-0000-0000-000000000002', 'PL', 'PL', 'servicio', 'unidad', false, null),
   ('eeeeeeee-3000-0000-0000-000000000005', 'aaaaaaaa-3000-0000-0000-000000000002', 'PI', 'PI', 'insumo', 'unidad', false, null);
+-- PX: sin ninguna fila de stock, para probar que traslado y conteo la crean
+insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad) values
+  ('eeeeeeee-3000-0000-0000-0000000000b1', 'aaaaaaaa-3000-0000-0000-000000000001', 'PX', 'PX', 'producto', 'unidad');
 -- Atajo de ids: T, L (negocios) · U1, U2, UL (ubicaciones) · P1, PK, PS, PL, PI (productos) · d, v, c, x (usuarios) · O<n> operaciones · S<n> series
 create function pg_temp.i(n text) returns uuid language sql as $$
   select (case
@@ -48,6 +51,7 @@ create function pg_temp.i(n text) returns uuid language sql as $$
     when n = 'PS' then 'eeeeeeee-3000-0000-0000-000000000003'
     when n = 'PL' then 'eeeeeeee-3000-0000-0000-000000000004'
     when n = 'PI' then 'eeeeeeee-3000-0000-0000-000000000005'
+    when n = 'PX' then 'eeeeeeee-3000-0000-0000-0000000000b1'
     when n = 'd' then '99999999-3000-0000-0000-000000000001'
     when n = 'v' then '99999999-3000-0000-0000-000000000002'
     when n = 'c' then '99999999-3000-0000-0000-000000000003'
@@ -76,6 +80,9 @@ select pg_temp.como(pg_temp.i('d'));
 select is(public.trasladar_stock(pg_temp.i('O3'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('U2'), 5, 'reposición', null)::text, current_setting('t.m'), 'traslado: repetir devuelve el mismo resultado');
 select is((select count(*) from public.movimientos_inventario where ref_id = pg_temp.i('O3')), 2::bigint, 'traslado: repetir no duplica movimientos');
 select is((select sum(cantidad) from public.stock where producto_id = pg_temp.i('P1')), 20.000::numeric, 'traslado: repetir no cambia el stock');
+select throws_ok($$select public.trasladar_stock(pg_temp.i('O3'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U2'), pg_temp.i('U1'), 5, 'reposición', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'traslado: la misma operación con origen y destino invertidos');
+select throws_ok($$select public.trasladar_stock(pg_temp.i('O3'), pg_temp.i('T'), pg_temp.i('PK'), pg_temp.i('U1'), pg_temp.i('U2'), 5, 'reposición', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'traslado: la misma operación con otro producto');
+select is((select count(*) from public.movimientos_inventario where ref_id = pg_temp.i('O3')), 2::bigint, 'traslado: ambas patas siguen en su sitio tras los reintentos distintos');
 select lives_ok($$select public.trasladar_stock(pg_temp.i('O4'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('U2'), 100, null, null)$$, 'RN-04: traslado con stock insuficiente se permite');
 select is((select sum(cantidad) from public.stock where producto_id = pg_temp.i('P1')), 20.000::numeric, 'DB-16: el total sigue igual con origen negativo');
 select throws_ok($$select public.trasladar_stock(pg_temp.i('O5'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('U1'), 1, null, null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'traslado: origen igual a destino');
@@ -91,6 +98,13 @@ select pg_temp.como(pg_temp.i('v'));
 select throws_ok($$select public.trasladar_stock(pg_temp.i('O6'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('U2'), 1, null, null)$$, 'P0001', 'ERP_SIN_PERMISO', 'traslado: el vendedor no puede');
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select public.trasladar_stock(pg_temp.i('O6'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('U2'), 1, null, null)$$, 'P0001', 'ERP_SIN_PERMISO', 'traslado: usuario de otro negocio');
+
+-- Sin filas de stock previas, el traslado crea origen y destino
+select pg_temp.como(pg_temp.i('d'));
+select public.trasladar_stock(pg_temp.i('O8'), pg_temp.i('T'), pg_temp.i('PX'), pg_temp.i('U1'), pg_temp.i('U2'), 1, null, null);
+select results_eq($$select ubicacion_id, cantidad from public.stock where producto_id = pg_temp.i('PX') order by ubicacion_id$$,
+  $$values (pg_temp.i('U1'), -1.000::numeric), (pg_temp.i('U2'), 1.000::numeric)$$, 'traslado: crea las filas de origen y destino');
+select is((select count(*) from public.movimientos_inventario where ref_id = pg_temp.i('O8')), 2::bigint, 'traslado: dos movimientos');
 
 -- Traslado con series
 select pg_temp.como(pg_temp.i('d'));
@@ -119,13 +133,16 @@ select results_eq($$select producto_id, cantidad_sistema, cantidad_contada from 
 select results_eq($$select producto_id, tipo, cantidad, ref_tipo, ref_id, motivo from public.movimientos_inventario where ref_id = pg_temp.i('O20')$$,
   format($$values (%L::uuid, 'ajuste', 4.500::numeric, 'conteo', %L::uuid, 'conteo mensual')$$, pg_temp.i('PK'), pg_temp.i('O20')), 'conteo: un ajuste por la diferencia');
 select is((select cantidad from public.stock where producto_id = pg_temp.i('PK') and ubicacion_id = pg_temp.i('U2')), 4.500::numeric, 'conteo: el stock queda en lo contado');
-select is(public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('T'), pg_temp.i('U2'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'cantidad_contada', 99)), null), 1, 'conteo: repetir devuelve el resultado original');
+select is(public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('T'), pg_temp.i('U2'), jsonb_build_array(
+    jsonb_build_object('producto_id', pg_temp.i('P1'), 'cantidad_contada', :sistema),
+    jsonb_build_object('producto_id', pg_temp.i('PK'), 'cantidad_contada', 4.5)), 'conteo mensual'), 1, 'conteo: repetir devuelve el resultado original');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000002","cantidad_contada":99}]', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'conteo: la misma operación con otros items');
 select is((select count(*) from public.movimientos_inventario where ref_id = pg_temp.i('O20')), 1::bigint, 'conteo: repetir no genera ajustes');
 select is((select count(*) from public.conteo_items where conteo_id = pg_temp.i('O20')), 2::bigint, 'conteo: repetir no cambia los items');
 select is(public.registrar_conteo(pg_temp.i('O21'), pg_temp.i('T'), pg_temp.i('U2'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'cantidad_contada', 1)), null), 1, 'conteo: diferencia negativa');
 select is((select cantidad from public.stock where producto_id = pg_temp.i('PK') and ubicacion_id = pg_temp.i('U2')), 1.000::numeric, 'conteo: baja el stock a lo contado');
 select is(public.registrar_conteo(pg_temp.i('O22'), pg_temp.i('T'), pg_temp.i('U2'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'cantidad_contada', 1)), null), 0, 'conteo: sin diferencias no genera ajustes');
-select throws_ok($$select public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('T'), pg_temp.i('U1'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: la misma operación en otra ubicación');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('T'), pg_temp.i('U1'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'conteo: la misma operación en otra ubicación');
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('U2'), '[]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: sin items');
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('U2'), (select jsonb_agg(jsonb_build_object('producto_id', pg_temp.i('P1'), 'cantidad_contada', 1)) from generate_series(1, 501)), null)$$, 'P0001', 'ERP_LOTE_GRANDE', 'conteo: más de 500 items');
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":-1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: contada negativa');
@@ -135,11 +152,25 @@ select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000005","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: producto de otro negocio');
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('UL'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: ubicación de otro negocio');
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O23'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"not-a-uuid","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: producto_id mal formado');
+-- Conteo sin fila de stock previa: se crea antes del bloqueo
+select is(public.registrar_conteo(pg_temp.i('O25'), pg_temp.i('T'), pg_temp.i('U1'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000002","cantidad_contada":0}]', null), 0, 'conteo: sin diferencia sobre un producto sin stock');
+select is((select cantidad from public.stock where producto_id = pg_temp.i('PK') and ubicacion_id = pg_temp.i('U1')), 0.000::numeric, 'conteo: crea la fila de stock que faltaba');
+
+-- Conteo con series: tras el traslado S2 sigue en U1 (stock 1) y S1 está en U2
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0)), null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo serie: la diferencia negativa exige serie_ids');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0, 'serie_ids', jsonb_build_array(pg_temp.i('S2'), pg_temp.i('S1')))), null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo serie: cantidad distinta de serie_ids');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0, 'serie_ids', jsonb_build_array(pg_temp.i('S1')))), null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo serie: la serie está en otra ubicación');
+select is(public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0, 'serie_ids', jsonb_build_array(pg_temp.i('S2')))), null), 1, 'conteo serie: la baja con su serie');
+select is((select estado from public.series where id = pg_temp.i('S2')), 'baja', 'conteo serie: pasa a baja');
+select is(public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0, 'serie_ids', jsonb_build_array(pg_temp.i('S2')))), null), 1, 'conteo serie: repetir devuelve el resultado original');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O26'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 0, 'serie_ids', jsonb_build_array(pg_temp.i('S1')))), null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'conteo serie: la huella incluye las series');
+select is(public.registrar_conteo(pg_temp.i('O27'), pg_temp.i('T'), pg_temp.i('U1'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PS'), 'cantidad_contada', 2)), null), 1, 'conteo serie: la diferencia positiva no exige series');
+
 select pg_temp.como(pg_temp.i('v'));
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O24'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_SIN_PERMISO', 'conteo: el vendedor no puede');
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select public.registrar_conteo(pg_temp.i('O24'), pg_temp.i('T'), pg_temp.i('U2'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000001","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_SIN_PERMISO', 'conteo: usuario de otro negocio');
-select throws_ok($$select public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('L'), pg_temp.i('UL'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000005","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'conteo: una operación de otro negocio no se reutiliza');
+select throws_ok($$select public.registrar_conteo(pg_temp.i('O20'), pg_temp.i('L'), pg_temp.i('UL'), '[{"producto_id":"eeeeeeee-3000-0000-0000-000000000005","cantidad_contada":1}]', null)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'conteo: una operación de otro negocio no se reutiliza');
 
 select * from finish();
 rollback;
