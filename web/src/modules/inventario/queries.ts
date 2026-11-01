@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { sanearBusqueda } from "@/modules/catalogo";
-import type { Resultado } from "@/modules/usuarios/panel";
+import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
   valorDeStock,
   type FilaStock,
@@ -13,8 +13,6 @@ import {
 type Cliente = SupabaseClient<Database>;
 // `pagina` es la efectiva: la pedida acotada a [1, páginas].
 export type Pagina<T> = { filas: T[]; total: number; pagina: number };
-
-const falla = (texto: string): Resultado<never> => ({ ok: false, error: texto });
 
 // Siempre columnas explícitas: authenticated no tiene select sobre stock.costo_promedio ni
 // movimientos_inventario.costo_unitario, y un `select *` da 42501.

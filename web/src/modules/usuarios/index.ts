@@ -3,6 +3,7 @@ export {
   etiquetaRol,
   tieneAccesoPanel,
   type NegocioUsuario,
+  falla,
   type Resultado,
 } from "./domain";
 export { LoginForm } from "./components/login-form";

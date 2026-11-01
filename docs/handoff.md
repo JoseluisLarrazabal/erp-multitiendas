@@ -152,10 +152,14 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   Project"), enlazado con `supabase link`. Migraciones aplicadas con `db push`, sin seed. Auth igual a local con
   `config push` (registro cerrado, comprobado); `site_url` sigue en localhost hasta que ande Vercel. Función
   `admin-usuarios` desplegada. Sin usuarios todavía: los crea el CTO desde el panel de Supabase.
-  - Vercel `erp_multitiendas` (team de jencarlosmoral2), producción `https://erpmultitiendas.vercel.app`: responde 500 en
-    todas las rutas porque faltan `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. El MCP de Vercel solo ve
-    el proyecto `kuska`: falta que el CTO le dé acceso a `erp_multitiendas` o cargue las variables. Las previews están
-    detrás de la protección de Vercel.
+  - Vercel `erp_multitiendas` (team de jencarlosmoral2), producción `https://erpmultitiendas.vercel.app`, apunta a staging:
+    `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` cargadas por MCP en Production y Preview. Verificado con
+    Playwright a 1280 y 390 px: sin sesión todas las rutas llevan a `/login`, sin errores de consola, CSP con el origen de
+    staging. **No verificado:** flujo con usuario (staging no tiene usuarios). Las funciones corren en `iad1` y la base
+    en `sa-east-1`: propuesto fijar `gru1` con `vercel.json`. Las previews están detrás de la protección de Vercel.
+  - `resumen_caja` (PR 4) también aplicada en staging.
+- **Ponytail-review faltó en los PR 3 y 4** (regla 2). Corrido después del merge: sin bugs de dinero; 7 hallazgos de
+  limpieza y tests aplicados en `fix/ponytail-pos`, revisados otra vez con `/code-review` y ponytail.
   - Regla nueva: tras cada merge, verificar producción con Playwright; el check verde de Vercel solo dice que el build
     terminó.
 - **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la

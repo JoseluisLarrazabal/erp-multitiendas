@@ -4,12 +4,10 @@ import { Printer, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { bs } from "../domain";
+import { bs, ETIQUETA_MEDIO } from "../domain";
 import type { NotaVenta } from "../venta";
 
 type Papel = "80" | "a4";
-
-const ETIQUETA_MEDIO = { efectivo: "Efectivo", qr: "QR" } as const;
 
 // Nota de venta (RF-VEN-05). Imprime con window.print(); el papel (80 mm o A4) lo fija la clase de página de
 // globals.css. Fuera de .nota-venta todo lleva print:hidden: sale sin cromo de la app.

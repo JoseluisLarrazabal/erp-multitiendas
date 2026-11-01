@@ -16,11 +16,11 @@ export function useCatalogo(negocioId: string, ubicacionId: string) {
   const [estado, setEstado] = useState<EstadoCatalogo>({ t: "cargando" });
   const [marcas, setMarcas] = useState<ReadonlyMap<string, string>>(new Map());
   const ultimaCarga = useRef(0);
-  // Las marcas son opcionales: si su carga falló (mapa vacío), la siguiente recarga del catálogo las pide otra vez.
+  // Las marcas son opcionales: si su carga quedó incompleta, la siguiente recarga del catálogo las pide otra vez.
   const marcasCargadas = useRef(false);
-  const guardarMarcas = useCallback((m: Map<string, string>) => {
-    marcasCargadas.current = m.size > 0;
-    setMarcas(m);
+  const guardarMarcas = useCallback((r: Awaited<ReturnType<typeof cargarMarcas>>) => {
+    marcasCargadas.current = r.completas;
+    setMarcas(r.marcas);
   }, []);
 
   const recargar = useCallback(async (): Promise<Map<string, ProductoPos> | null> => {

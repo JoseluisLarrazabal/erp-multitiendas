@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { limitesDelDia } from "@/lib/format/fecha";
 import type { Database } from "@/lib/supabase/database.types";
-import type { Resultado } from "@/modules/usuarios";
+import { falla, type Resultado } from "@/modules/usuarios";
 import type { Unidad } from "./domain";
 import { fueraDePlazo } from "./domain-panel";
 import type { FiltrosVentas } from "./schemas-panel";
@@ -9,7 +9,6 @@ import type { FiltrosVentas } from "./schemas-panel";
 // Lecturas de /panel/ventas. Todo select lista columnas: venta_items sin costo_unitario y ventas sin huella (grant por
 // columnas; un select * falla).
 type Cliente = SupabaseClient<Database>;
-const falla = (error: string): { ok: false; error: string } => ({ ok: false, error });
 
 export type EquipoPanel = { id: string; nombre: string; prefijo: string };
 
@@ -136,7 +135,7 @@ export type DetalleVenta = {
   vendedor: string | null;
   cliente: string | null;
   items: ItemVenta[];
-  pagos: { id: string; medio: string; monto: number; verificacion: string }[];
+  pagos: { id: string; medio: "efectivo" | "qr"; monto: number; verificacion: string }[];
   devoluciones: {
     id: string;
     creadaEn: string;
@@ -252,7 +251,7 @@ export async function detalleVenta(
       }),
       pagos: pagos.data.map((p) => ({
         id: p.id,
-        medio: p.medio,
+        medio: p.medio as "efectivo" | "qr", // check de la tabla pagos
         monto: Number(p.monto),
         verificacion: p.verificacion,
       })),

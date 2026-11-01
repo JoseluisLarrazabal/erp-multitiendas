@@ -79,12 +79,9 @@ export function calcularTotales(
   };
 }
 
-// "12", "12,5", "12.50" -> centavos. null si no es un monto válido (más de 2 decimales, vacío, negativo).
-export function parsearMonto(texto: string): number | null {
-  const m = /^(\d{1,9})(?:[.,](\d{1,2}))?$/.exec(texto.trim());
-  if (!m) return null;
-  return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
-}
+export { parsearMonto } from "@/lib/format/moneda";
+
+export const ETIQUETA_MEDIO: Record<"efectivo" | "qr", string> = { efectivo: "Efectivo", qr: "QR" };
 
 // Entera en `unidad`, hasta 3 decimales en `kg`. Devuelve milésimas, o null si es inválida o cero.
 export function parsearCantidad(texto: string, unidad: Unidad): number | null {
@@ -130,8 +127,6 @@ export function calcularCobro(
 // Numeración: `prefijo-000123`. El contador guarda el último número usado.
 export const formatearNumero = (prefijo: string, secuencia: number) =>
   `${prefijo}-${String(secuencia).padStart(6, "0")}`;
-
-export const contadorInicial = (local: number, servidor: number) => Math.max(local, servidor);
 
 // El número de nota admite 6 dígitos (000001-999999). Pasado ese tope el equipo no puede numerar más notas.
 export const MAX_SECUENCIA = 999_999;

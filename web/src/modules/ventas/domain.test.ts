@@ -4,7 +4,6 @@ import {
   buscar,
   calcularCobro,
   calcularTotales,
-  contadorInicial,
   crearIndice,
   descontarStock,
   formatearCantidad,
@@ -132,10 +131,8 @@ describe("calcularCobro", () => {
 });
 
 describe("numeración", () => {
-  it("formatea prefijo-000123 y toma el mayor entre local y servidor", () => {
+  it("formatea prefijo-000123", () => {
     expect(formatearNumero("C1", 123)).toBe("C1-000123");
-    expect(contadorInicial(5, 9)).toBe(9);
-    expect(contadorInicial(12, 9)).toBe(12);
   });
 });
 
