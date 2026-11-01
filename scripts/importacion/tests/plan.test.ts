@@ -139,6 +139,12 @@ describe("construirPlan", () => {
     expect(plan.stock).toMatchObject({ ilegible: 1, fuente: 5.5, aceptado: 4, rechazado: 1.5 });
   });
 
+  it("stock con separador de miles ambiguo: se rechaza y no suma a la fuente", () => {
+    const plan = construirPlan([base(4, { stock: "1.000" }), base(5, { stock: 3 })]);
+    expect(plan.rechazadas).toEqual([{ fila: 4, regla: "stock_ambiguo" }]);
+    expect(plan.stock).toMatchObject({ ilegible: 1, fuente: 3, aceptado: 3, rechazado: 0 });
+  });
+
   it("rechaza sin nombre o sin código", () => {
     const plan = construirPlan([base(4, { nombre: "" }), base(5, { codigo: "" })]);
     expect(plan.rechazadas).toEqual([

@@ -21,26 +21,26 @@ const negocioId = randomUUID();
 const negocioSinDeposito = randomUUID();
 let archivo = "";
 
+async function crearNegocio(id: string, nombres: string[]) {
+  const n = await cliente
+    .from("negocios")
+    .insert({ id, nombre: `Prueba ${id.slice(0, 8)}`, tipo: "tienda" });
+  expect(n.error).toBeNull();
+  const u = await cliente
+    .from("ubicaciones")
+    .insert(
+      nombres.map((nombre) => ({
+        negocio_id: id,
+        nombre,
+        tipo: nombre === "Tienda" ? "local" : "deposito",
+      })),
+    );
+  expect(u.error).toBeNull();
+}
+
 beforeAll(async () => {
-  for (const [id, nombres] of [
-    [negocioId, ["Tienda", "Depósito"]],
-    [negocioSinDeposito, ["Tienda"]],
-  ] as const) {
-    const n = await cliente
-      .from("negocios")
-      .insert({ id, nombre: `Prueba ${id.slice(0, 8)}`, tipo: "tienda" });
-    expect(n.error).toBeNull();
-    const u = await cliente
-      .from("ubicaciones")
-      .insert(
-        nombres.map((nombre) => ({
-          negocio_id: id,
-          nombre,
-          tipo: nombre === "Tienda" ? "local" : "deposito",
-        })),
-      );
-    expect(u.error).toBeNull();
-  }
+  await crearNegocio(negocioId, ["Tienda", "Depósito"]);
+  await crearNegocio(negocioSinDeposito, ["Tienda"]);
   archivo = join(dir, "sintetico.xlsx");
   await crearXlsx(archivo, [
     filaProducto({ codigo: "ej-1", nombre: "Ejemplo uno", stock: 99 }),
@@ -167,5 +167,67 @@ describe("importación contra Supabase local", () => {
     expect(segunda.conciliacion.filter((c) => !c.ok)).toEqual([]);
     expect(await contar("productos", { negocio_id: negocioId })).toBe(4);
     expect(await contar("movimientos_inventario", { negocio_id: negocioId })).toBe(3);
+  });
+
+  it("concilia solo lo de esta corrida: un producto previo del negocio no da DIF", async () => {
+    const id = randomUUID();
+    await crearNegocio(id, ["Tienda", "Depósito"]);
+    const previo = await cliente
+      .from("productos")
+      .insert({ negocio_id: id, codigo: "PRE", nombre: "Previo", tipo: "producto", unidad: "unidad" })
+      .select("id")
+      .single();
+    expect(previo.error).toBeNull();
+    const ubic = await cliente.from("ubicaciones").select("id").eq("negocio_id", id).eq("nombre", "Tienda").single();
+    const rpc = await cliente.rpc("registrar_stock_inicial", {
+      p_negocio_id: id,
+      p_items: [{ producto_id: previo.data?.id, ubicacion_id: ubic.data?.id, cantidad: 100 }],
+    });
+    expect(rpc.error).toBeNull();
+
+    const reporte = await importar({
+      archivo,
+      negocioId: id,
+      cliente,
+      rutaReporte: join(dir, "previo.json"),
+      esperadas: 6,
+    });
+    expect(reporte.conciliacion.filter((c) => !c.ok)).toEqual([]);
+    expect(reporte.conciliacion.some((c) => c.control.startsWith("Aceptadas + rechazadas"))).toBe(
+      true,
+    );
+  });
+
+  it("reimportar con otra ubicación no duplica el stock inicial del producto", async () => {
+    const id = randomUUID();
+    await crearNegocio(id, ["Tienda", "Depósito"]);
+    const f1 = join(dir, "u1.xlsx");
+    const f2 = join(dir, "u2.xlsx");
+    await crearXlsx(f1, [
+      ["x"],
+      ["x"],
+      filaProducto({ codigo: "U1", nombre: "Uno", stock: 5, ubicacion: "tienda" }),
+    ]);
+    await crearXlsx(f2, [
+      ["x"],
+      ["x"],
+      filaProducto({ codigo: "U1", nombre: "Uno", stock: 5, ubicacion: "deposito" }),
+    ]);
+    const a = await importar({ archivo: f1, negocioId: id, cliente, rutaReporte: join(dir, "a.json") });
+    expect(a.escritura).toMatchObject({ stockInicialCreado: 1 });
+    const b = await importar({ archivo: f2, negocioId: id, cliente, rutaReporte: join(dir, "b.json") });
+    expect(b.escritura).toMatchObject({ stockInicialCreado: 0, stockInicialYaExistia: 1 });
+    expect(await contar("movimientos_inventario", { negocio_id: id })).toBe(1);
+  });
+
+  it("service_role no inserta en el kardex directamente", async () => {
+    const r = await cliente.from("movimientos_inventario").insert({
+      negocio_id: negocioId,
+      ubicacion_id: randomUUID(),
+      producto_id: randomUUID(),
+      tipo: "inicial",
+      cantidad: 1,
+    });
+    expect(r.error?.code).toBe("42501");
   });
 });

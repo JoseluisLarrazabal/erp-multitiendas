@@ -102,7 +102,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   verde. Hecha en una sesión; la estimación era 3 días. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
   referencia visual.
-  - **Próximo:** fase 1, plan en `docs/plan-fase-1.md`.
+  - Fase 1 siguió en la misma sesión; ver abajo.
   - **No verificado:** Safari, Firefox, Vercel, equipos del cliente, JWT asimétrico en `getClaims`, reintento de
     `error.tsx`, y vacío de dispositivos. Foco del menú móvil con reintento por frames, sin causa raíz.
   - **Riesgo:** dos dueños que se desactivan a la vez pueden dejar el negocio sin dueño; se recupera con `service_role`.
@@ -117,7 +117,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
     cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
   - Codex: no verificado en esta fase.
-- **Fase 1 en curso (2026-11-01):** plan en `docs/plan-fase-1.md`. **El cliente carga sus precios en el panel** (CTO,
+- **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la
+  estimación era 6 días. **Próximo:** fase 2 de `docs/roadmap.md`, POS y caja. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
   - PR 1 hecho: tablas de catálogo y auditoría, vista `producto_precios_bs`, RPC de escritura. `auditar_cuenta` solo con
     `service_role`. Sin probar: ruta `ERP_AUDITORIA` de `admin-usuarios`. Codex: no verificado.
@@ -131,6 +132,12 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - PR 4 hecho: stock por ubicación, kardex, entrada, salida, traslado, conteo y series, con selector de producto para
     lector USB. E2E-03 completo con la cuenta contador. El test de baneo usa su propia cuenta (`baneable@erp.test`).
     Sin probar: series de punta a punta en navegador y conteo de más de 500 ítems.
+  - PR 5 hecho: `scripts/importacion/`, reglas puras con prueba, reporte fuera del repo, kardex por la RPC
+    `registrar_stock_inicial` (solo `service_role`, idempotente por producto). Corrida local con la planilla real: 597
+    productos, 0 rechazados, 2.633 unidades (Tienda 1.020, Depósito 1.613), conciliación OK, segunda corrida sin
+    duplicar. Fotos de la planilla pendientes. Cambiar stock de un producto ya importado es un ajuste, no reimportar.
+  - **Para la fase 5:** al exportar a Excel, neutralizar textos que empiezan con `=`, `+`, `-` o `@`: vienen de la
+    planilla del cliente sin filtrar.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.

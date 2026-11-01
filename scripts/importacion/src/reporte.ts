@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs";
+import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import type { EstadoBase, ResultadoEscritura } from "./escribir.ts";
 import type { Evento, Plan } from "./plan.ts";
 
@@ -25,7 +26,11 @@ const control = (nombre: string, esperado: number, real: number, nota?: string):
 });
 
 /** Conciliación (docs/migracion-datos.md). Sin `estado` (corrida seca) solo valen los controles sobre el plan. */
-export function conciliar(plan: Plan, estado: EstadoBase | null): Control[] {
+export function conciliar(
+  plan: Plan,
+  estado: EstadoBase | null,
+  esperadas?: number,
+): Control[] {
   const { stock } = plan;
   const controles = [
     control(
@@ -34,11 +39,20 @@ export function conciliar(plan: Plan, estado: EstadoBase | null): Control[] {
       plan.aceptadas.length + plan.rechazadas.length + plan.excluidas.length,
     ),
   ];
+  if (esperadas !== undefined) {
+    controles.push(
+      control(
+        "Aceptadas + rechazadas = filas esperadas (--esperadas)",
+        esperadas,
+        plan.aceptadas.length + plan.rechazadas.length,
+      ),
+    );
+  }
   if (!estado) return controles;
   controles.push(
     control(
-      "Stock inicial en la base = fuente menos rechazado",
-      stock.fuente - stock.rechazado,
+      "Stock inicial de este archivo en la base = stock aceptado",
+      stock.aceptado,
       estado.importadoTotal,
       `rechazado ${stock.rechazado} unidades; ${stock.ilegible} filas con stock ilegible no suman a la fuente`,
     ),
@@ -78,6 +92,7 @@ export function armarReporte(
   modo: Reporte["modo"],
   escritura: ResultadoEscritura | null,
   estado: EstadoBase | null,
+  esperadas?: number,
 ): Reporte {
   return {
     generado: new Date().toISOString(),
@@ -97,14 +112,26 @@ export function armarReporte(
     categoriasParecidas: plan.categoriasParecidas,
     posiblesDuplicados: plan.posiblesDuplicados,
     escritura,
-    conciliacion: conciliar(plan, estado),
+    conciliacion: conciliar(plan, estado, esperadas),
     detalle: { excluidas: plan.excluidas, rechazadas: plan.rechazadas, avisos: plan.avisos },
   };
 }
 
-// Mode 0600: el reporte lista filas del cliente. Va fuera del repo (o en un nombre que .gitignore excluye).
-export const escribirReporte = (ruta: string, reporte: Reporte): void =>
+/** ¿La ruta queda dentro de algún repo git? Sube desde su carpeta (o la más cercana que exista) buscando `.git`. */
+export function rutaDentroDeRepo(ruta: string): boolean {
+  let dir = dirname(resolve(ruta));
+  while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir);
+  for (dir = realpathSync(dir); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, ".git"))) return true;
+    if (dirname(dir) === dir) return false;
+  }
+}
+
+// Modo 0600: el reporte lista filas del cliente. Va fuera del repo (cli lo exige); el chmod cubre un archivo previo.
+export function escribirReporte(ruta: string, reporte: Reporte): void {
   writeFileSync(ruta, JSON.stringify(reporte, null, 2), { mode: 0o600 });
+  chmodSync(ruta, 0o600);
+}
 
 /** Solo conteos: nada de nombres, códigos ni marcas. */
 export function resumenConsola(r: Reporte): string[] {

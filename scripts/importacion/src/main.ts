@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -10,7 +12,13 @@ import {
 } from "./escribir.ts";
 import { leerProductos } from "./leer.ts";
 import { construirPlan } from "./plan.ts";
-import { armarReporte, escribirReporte, resumenConsola, type Reporte } from "./reporte.ts";
+import {
+  armarReporte,
+  escribirReporte,
+  resumenConsola,
+  rutaDentroDeRepo,
+  type Reporte,
+} from "./reporte.ts";
 
 export type Opciones = {
   archivo: string;
@@ -18,6 +26,8 @@ export type Opciones = {
   /** Sin cliente (corrida seca) no se toca la base. */
   cliente: Cliente | null;
   rutaReporte: string;
+  /** Filas que debería dar la planilla (aceptadas + rechazadas): si no cuadra, la conciliación da DIF. */
+  esperadas?: number;
 };
 
 export async function importar({
@@ -25,15 +35,20 @@ export async function importar({
   negocioId,
   cliente,
   rutaReporte,
+  esperadas,
 }: Opciones): Promise<Reporte> {
   const plan = construirPlan(await leerProductos(archivo));
   let escritura: ResultadoEscritura | null = null;
   let estado: EstadoBase | null = null;
   if (cliente) {
     escritura = await escribir(cliente, negocioId, plan);
-    estado = await leerEstado(cliente, negocioId);
+    estado = await leerEstado(
+      cliente,
+      negocioId,
+      plan.aceptadas.map((p) => p.codigo),
+    );
   }
-  const reporte = armarReporte(plan, cliente ? "real" : "seco", escritura, estado);
+  const reporte = armarReporte(plan, cliente ? "real" : "seco", escritura, estado, esperadas);
   escribirReporte(rutaReporte, reporte);
   return reporte;
 }
@@ -53,19 +68,25 @@ async function cli(): Promise<number> {
       negocio: { type: "string" },
       seco: { type: "boolean", default: false },
       reporte: { type: "string" },
+      esperadas: { type: "string" },
       produccion: { type: "boolean", default: false },
     },
     strict: true,
   });
   const negocio = z.guid().safeParse(values.negocio);
-  if (!values.archivo || !negocio.success) {
+  const esperadas =
+    values.esperadas === undefined ? undefined : /^\d+$/.test(values.esperadas) ? Number(values.esperadas) : NaN;
+  if (!values.archivo || !negocio.success || !values.reporte || Number.isNaN(esperadas)) {
     console.error(
-      "Uso: node src/main.ts --archivo <xlsx> --negocio <uuid> [--seco] [--reporte <ruta>] [--produccion]",
+      "Uso: node src/main.ts --archivo <xlsx> --negocio <uuid> --reporte <ruta.json> [--esperadas <n>] [--seco] [--produccion]",
     );
     return 1;
   }
-  const rutaReporte =
-    values.reporte ?? `reporte-importacion-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  // Antes de tocar la base: el reporte lista filas del cliente y no puede acabar en un repo.
+  if (rutaDentroDeRepo(values.reporte)) {
+    console.error("--reporte queda dentro de un repo git. Indica una ruta fuera del repo");
+    return 1;
+  }
 
   let cliente: Cliente | null = null;
   if (!values.seco) {
@@ -92,14 +113,16 @@ async function cli(): Promise<number> {
     archivo: values.archivo,
     negocioId: negocio.data,
     cliente,
-    rutaReporte,
+    rutaReporte: values.reporte,
+    esperadas,
   });
   for (const linea of resumenConsola(reporte)) console.log(linea);
   console.log("Reporte escrito en el archivo indicado");
   return reporte.conciliacion.every((c) => c.ok) ? 0 : 2;
 }
 
-if (import.meta.main) {
+// Ejecución directa (`node src/main.ts`), no al importarlo desde las pruebas.
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   cli().then(
     (codigo) => process.exit(codigo),
     (error: unknown) => {

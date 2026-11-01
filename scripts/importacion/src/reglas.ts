@@ -31,7 +31,7 @@ export type AvisoBarras =
   | "barras_alfanumerico"
   | "barras_no_numerico_descartado"
   | "ean13_digito_invalido";
-export type CorreccionBarras = "barras_a_modelo";
+export type CorreccionBarras = "barras_a_modelo" | "barras_espacios";
 
 export type ResultadoBarras = {
   barras: string | null;
@@ -59,11 +59,12 @@ export function digitoEan13Valido(codigo: string): boolean {
  * - Alfanumérico de una sola palabra, con al menos un dígito ("ab12cd"): puede ser un código 128 o una serie mal puesta.
  *   Se conserva como código, con aviso: descartarlo perdería el dato, y conservarlo no cuesta nada.
  * - Texto con espacios o símbolos ("aro 20/29"): va a `modelo` si está vacío; si no, se descarta con aviso.
+ * - Dígitos separados por espacios ("750 123 456"): se quitan los espacios y se trata como numérico.
  * - Solo dígitos: se conserva tal cual (ceros incluidos). EAN-13 con dígito verificador inválido: aviso y se conserva,
  *   porque el texto viene exacto. Código corto (25, 35): se conserva, no es EAN.
  */
 export function normalizarBarras(celda: Celda, modelo: string): ResultadoBarras {
-  const texto = celda.texto.trim();
+  let texto = celda.texto.trim();
   const resultado: ResultadoBarras = { barras: null, modelo, correcciones: [], avisos: [] };
   if (texto === "") return resultado;
 
@@ -71,6 +72,11 @@ export function normalizarBarras(celda: Celda, modelo: string): ResultadoBarras 
     if (/^\d{1,11}$/.test(texto))
       return { ...resultado, barras: texto, avisos: ["barras_numerico"] };
     return { ...resultado, avisos: ["barras_notacion_cientifica"] };
+  }
+  const sinEspacios = texto.replace(/\s+/g, "");
+  if (sinEspacios !== texto && /^\d+$/.test(sinEspacios)) {
+    texto = sinEspacios;
+    resultado.correcciones.push("barras_espacios");
   }
   if (NOTACION_CIENTIFICA.test(texto))
     return { ...resultado, avisos: ["barras_notacion_cientifica"] };
@@ -105,16 +111,19 @@ export function normalizarUbicacion(texto: string): {
 // Stock -------------------------------------------------------------------------------------------------------------
 
 export type ResultadoStock =
-  { ok: true; valor: number } | { ok: false; motivo: "stock_invalido" | "stock_decimal" };
+  | { ok: true; valor: number }
+  // El decimal se lee (suma a la fuente) pero no vale: todo producto importado se cuenta por unidad.
+  | { ok: false; motivo: "stock_decimal"; valor: number }
+  | { ok: false; motivo: "stock_invalido" | "stock_ambiguo" };
 
-/** Número >= 0; vacío es 0; un decimal solo vale en un producto que no se cuenta por unidad. */
-export function parsearStock(texto: string, unidad: "unidad" | "kg" = "unidad"): ResultadoStock {
+/** Número >= 0 sin decimales; vacío es 0. "1.000" o "2,000" es ambiguo (¿mil o uno?): se rechaza, que lo corrija el cliente. */
+export function parsearStock(texto: string): ResultadoStock {
   const limpio = texto.trim();
   if (limpio === "") return { ok: true, valor: 0 };
+  if (/^\d{1,3}([.,]\d{3})+$/.test(limpio)) return { ok: false, motivo: "stock_ambiguo" };
   if (!/^\d+([.,]\d+)?$/.test(limpio)) return { ok: false, motivo: "stock_invalido" };
   const valor = Number(limpio.replace(",", "."));
-  if (unidad === "unidad" && !Number.isInteger(valor))
-    return { ok: false, motivo: "stock_decimal" };
+  if (!Number.isInteger(valor)) return { ok: false, motivo: "stock_decimal", valor };
   return { ok: true, valor };
 }
 

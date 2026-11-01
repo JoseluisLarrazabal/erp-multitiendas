@@ -4,15 +4,15 @@ select plan(4);
 
 select ok(
   has_table_privilege('service_role', 'public.productos', 'INSERT')
-    and has_table_privilege('service_role', 'public.movimientos_inventario', 'INSERT')
     and has_table_privilege('service_role', 'public.categorias', 'INSERT'),
-  'service_role inserta productos, categorías y movimientos'
+  'service_role inserta productos y categorías (catálogo)'
 );
 select ok(
   not has_table_privilege('service_role', 'public.stock', 'INSERT')
     and not has_table_privilege('service_role', 'public.stock', 'UPDATE')
-    and not has_table_privilege('service_role', 'public.auditoria', 'INSERT'),
-  'service_role no escribe stock ni auditoria: lo hacen los triggers'
+    and not has_table_privilege('service_role', 'public.auditoria', 'INSERT')
+    and not has_table_privilege('service_role', 'public.movimientos_inventario', 'INSERT'),
+  'service_role no escribe stock, auditoria ni kardex directo: triggers y RPC'
 );
 select ok(
   not has_table_privilege('service_role', 'public.productos', 'UPDATE')

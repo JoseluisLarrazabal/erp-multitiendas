@@ -17,3 +17,4 @@ web/AGENTS.md
 
 # Reportes de la importación (listan filas del cliente): también van fuera del repo.
 scripts/importacion/reporte-*.json
+reporte-importacion-*.json

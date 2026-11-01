@@ -19,7 +19,7 @@ env:
 
 jobs:
   # scripts/importacion/ es un paquete aparte (usa service_role, no entra en web/). Aquí solo tipos y pruebas unitarias:
-  # la importación real no corre en CI.
+  # la integración (importación contra Supabase local) corre en el paso 9 del job `ci`.
   importacion:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

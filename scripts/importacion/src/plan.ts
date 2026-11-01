@@ -99,9 +99,7 @@ export function construirPlan(filas: FilaCruda[]): Plan {
 
     const stock = parsearStock(celdas.stock.texto);
     // Un decimal rechazado igual suma a la fuente: el número se lee, solo no vale para una unidad.
-    if (stock.ok) stockLegible.set(fila, stock.valor);
-    else if (stock.motivo === "stock_decimal")
-      stockLegible.set(fila, Number(celdas.stock.texto.trim().replace(",", ".")));
+    if (stock.ok || stock.motivo === "stock_decimal") stockLegible.set(fila, stock.valor);
     else plan.stock.ilegible++;
 
     const correcciones: string[] = [];
@@ -129,10 +127,10 @@ export function construirPlan(filas: FilaCruda[]): Plan {
 
     const marca = limpiarMarcaModelo(celdas.marca.texto);
     const modeloLimpio = limpiarMarcaModelo(celdas.modelo.texto);
-    texto(celdas.marca.texto);
-    texto(celdas.modelo.texto);
     for (const crudo of [celdas.marca.texto, celdas.modelo.texto]) {
-      if (limpiarTexto(crudo) === "--") correcciones.push("marca_modelo_vacio");
+      const limpio = limpiarTexto(crudo);
+      if (limpio !== crudo) correcciones.push("espacios");
+      if (limpio === "--") correcciones.push("marca_modelo_vacio");
     }
     const barras = normalizarBarras(celdas.barras, modeloLimpio);
     correcciones.push(...barras.correcciones);

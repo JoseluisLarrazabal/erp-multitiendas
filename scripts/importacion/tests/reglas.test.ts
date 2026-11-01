@@ -45,6 +45,11 @@ describe("código de barras", () => {
   it("vacío queda sin código", () => {
     expect(normalizarBarras(texto(" "), "").barras).toBeNull();
   });
+  it("dígitos con espacios se tratan como numérico", () => {
+    const r = normalizarBarras(texto("750 123 0456"), "");
+    expect(r).toMatchObject({ barras: "7501230456", modelo: "", correcciones: ["barras_espacios"] });
+    expect(normalizarBarras(texto("aro 20"), "").barras).toBeNull();
+  });
   it("conserva los ceros iniciales", () => {
     expect(normalizarBarras(texto("0012345"), "").barras).toBe("0012345");
   });
@@ -124,12 +129,18 @@ describe("stock", () => {
   it("vacío es 0", () => {
     expect(parsearStock("  ")).toEqual({ ok: true, valor: 0 });
   });
-  it("decimal en producto unidad se rechaza", () => {
-    expect(parsearStock("1,5")).toEqual({ ok: false, motivo: "stock_decimal" });
-    expect(parsearStock("2.5")).toEqual({ ok: false, motivo: "stock_decimal" });
+  it("decimal se rechaza y devuelve su valor", () => {
+    expect(parsearStock("1,5")).toEqual({ ok: false, motivo: "stock_decimal", valor: 1.5 });
+    expect(parsearStock("2.5")).toEqual({ ok: false, motivo: "stock_decimal", valor: 2.5 });
   });
-  it("decimal en kg se acepta", () => {
-    expect(parsearStock("1,5", "kg")).toEqual({ ok: true, valor: 1.5 });
+  it("separador de miles ambiguo se rechaza", () => {
+    for (const t of ["1.000", "2,000", "12.345", "1.234.567", "0.500"])
+      expect(parsearStock(t)).toEqual({ ok: false, motivo: "stock_ambiguo" });
+  });
+  it("lo que no calza con miles sigue su camino", () => {
+    expect(parsearStock("1000")).toEqual({ ok: true, valor: 1000 });
+    expect(parsearStock("1.50")).toMatchObject({ motivo: "stock_decimal" });
+    expect(parsearStock("1.0000")).toMatchObject({ ok: true, valor: 1 });
   });
   it("negativo o no numérico se rechaza", () => {
     expect(parsearStock("-3")).toEqual({ ok: false, motivo: "stock_invalido" });

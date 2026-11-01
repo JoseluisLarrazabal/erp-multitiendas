@@ -28,7 +28,7 @@ Las cifras son de la corrida local del 2026-11-01 sobre la planilla real.
 | Posibles duplicados | 13 grupos | No se unen. Solo se listan en el reporte, con sus filas |
 | Categorías | 53 en uso | Solo las usadas, con `trim`, unidas por nombre sin distinguir mayúsculas. Sin mapa de parecidas: el reporte avisa los pares (2) |
 | Sin ubicación | 26 filas, 86 unidades | "Tienda", con aviso `sin_ubicacion`. Una ubicación que no es tienda ni depósito también va a "Tienda", con aviso `ubicacion_desconocida` |
-| Stock | | Número >= 0 sin decimales (todo producto importado es `unidad`). Vacío es 0. Decimal o texto: se rechaza la fila (`stock_decimal`, `stock_invalido`) |
+| Stock | | Número >= 0 sin decimales (todo producto importado es `unidad`). Vacío es 0. Decimal o texto: se rechaza la fila (`stock_decimal`, `stock_invalido`). Con separador de miles (`1.000`, `2,000`: ¿mil o uno?) también se rechaza, con `stock_ambiguo`: el cliente lo corrige en la planilla |
 | Fotos | 292 en filas 5 a 296 | **Pendiente**: fuera de la importación. El xlsx las trae embebidas; hay que extraerlas y subirlas a Storage en otro PR |
 
 ### Código de barras
@@ -41,6 +41,7 @@ Las cifras son de la corrida local del 2026-11-01 sobre la planilla real.
 | Notación científica ("7.75E+12") o número de celda de 12 o más dígitos | Se rechaza **el código**, no el producto (`barras_notacion_cientifica`, 1 fila). Un código dañado es peor que ninguno; se reescanea |
 | Número de celda corto | Se conserva como texto, con aviso `barras_numerico`: pudo perder ceros iniciales antes de llegar |
 | Una palabra alfanumérica con al menos un dígito (`ab12cd`) | **Decisión del script**: se conserva como código, con aviso `barras_alfanumerico` (50 filas). Puede ser un Code 128 o una serie mal puesta; descartarlo perdería el dato y conservarlo no estorba |
+| Dígitos con espacios ("750 123 456") | Se quitan los espacios y se trata como numérico (corrección `barras_espacios`) |
 | Texto con espacios o símbolos ("aro 20/29") | Si `modelo` está vacío, pasa a `modelo` (corrección `barras_a_modelo`). Si no, se descarta el código y queda vacío con aviso `barras_no_numerico_descartado` (7 filas) |
 
 `Código de barras` se lee como texto en toda la importación. Nunca como número: una celda numérica se detecta y se trata
@@ -67,28 +68,36 @@ cd scripts/importacion
 # Seco: no toca la base ni necesita variables de entorno. Solo reporte.
 node src/main.ts --archivo <carga-lider.xlsx> --negocio <uuid> --seco --reporte <ruta.json>
 # Real: URL y clave solo por entorno, nunca por argumento.
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node src/main.ts --archivo <xlsx> --negocio <uuid> --reporte <ruta.json>
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node src/main.ts --archivo <xlsx> --negocio <uuid> --reporte <ruta.json> --esperadas 597
 ```
 
 - `--negocio` es el id del negocio. Las ubicaciones se buscan por nombre dentro de él ("Tienda", "Depósito"); si falta una
   que el plan usa, el script falla antes de escribir.
 - Una URL que no sea local (`localhost`, `127.0.0.1`, `::1`) exige `--produccion`.
-- Sin `--reporte`, escribe `reporte-importacion-<fecha>.json` en el directorio actual; `.gitignore` lo excluye. Mejor
-  indicar una ruta fuera del repo. El reporte lleva filas y motivos, sin valores; la consola, solo conteos.
+- `--reporte` es obligatorio y debe quedar **fuera de cualquier repo git** (el script sube buscando `.git` y se niega,
+  antes de tocar la base). Se escribe con modo 0600, también si ya existía. `.gitignore` excluye `reporte-importacion-*.json`
+  solo como red. El reporte lista, por número de fila y motivo, las excluidas, las rechazadas y los avisos, sin valores;
+  la consola muestra solo conteos (por motivo).
+- `--esperadas <n>` (opcional): las filas que debe dar la planilla. Si aceptadas + rechazadas no es n, la conciliación da DIF.
 - Código de salida: 0 todo cuadra, 1 error de uso o de ejecución, 2 la conciliación tiene diferencias.
 - Lotes de 200, sin transacción única: si se corta, se vuelve a correr.
-- Escribe con `service_role` directo en `categorias`, `productos` y `movimientos_inventario`, porque las RPC exigen
-  `auth.uid()`. La migración `20261101170000_importacion_service_role` le da solo esos privilegios. El trigger crea
-  `stock` y `auditoria`; los productos importados quedan auditados con `usuario_id` null.
+- `categorias` y `productos` se insertan directo con `service_role`: son catálogo, no contabilidad. La migración
+  `20261101170000_importacion_service_role` le da solo esos `insert`. El stock inicial entra por la RPC
+  `registrar_stock_inicial(negocio, items)` (solo `service_role`, hasta 500 items por llamada; el script manda 200): el
+  kardex no se escribe directo. El trigger crea `stock` y `auditoria`; los productos importados quedan auditados con
+  `usuario_id` null.
 - Sin precios ni costos (los carga el cliente en el panel). El stock entra como movimiento `inicial` con
-  `ref_tipo = 'importacion'` y sin costo.
+  `ref_tipo = 'importacion'` y sin costo. Cantidad 0 no genera movimiento.
 
 Idempotencia: el producto se identifica por `(negocio_id, codigo)`; si existe, no se toca y se cuenta como "ya existía".
-El `inicial` se inserta solo si no existe para ese producto y ubicación. Una segunda corrida no cambia nada. Un código de
-barras que ya tenga otro producto del negocio deja el producto nuevo sin código (`barrasEnConflicto`).
+El stock inicial es idempotente **por producto**: si el producto ya tiene un movimiento `inicial` en cualquier ubicación,
+la RPC lo omite completo (cuenta como "ya existía"). Así reimportar tras corregir una ubicación no duplica stock; para
+cambiar el stock de un producto ya importado se usa un ajuste, no la importación. Una segunda corrida no cambia nada. Un
+código de barras que ya tenga otro producto del negocio deja el producto nuevo sin código (`barrasEnConflicto`).
 
-Pruebas: `pnpm test` (reglas, plan y lectura, con fixtures sintéticos) y `pnpm test:integracion` (Supabase local, xlsx
-generado en la prueba, dos corridas). CI corre ambas.
+Pruebas: `pnpm test` (reglas, plan, lectura y reporte, con fixtures sintéticos) y `pnpm test:integracion` (Supabase local, xlsx
+generado en la prueba, corridas repetidas, conciliación en un negocio con productos previos). pgTAP cubre la RPC
+(`supabase/tests/rpc-registrar-stock-inicial.sql`). CI corre las tres.
 
 ## Proceso
 
@@ -100,12 +109,14 @@ generado en la prueba, dos corridas). CI corre ambas.
 
 ## Conciliación
 
-El script la calcula al final de cada corrida real, en el reporte y en consola.
+El script la calcula al final de cada corrida real, en el reporte y en consola. Los controles de stock importado y de
+auditoría se limitan a los productos de este archivo (por `codigo` dentro del negocio): productos previos del negocio no
+mueven el resultado. El control `stock` = kardex sí es del negocio entero. Con `--esperadas 597` se suma el control de filas.
 
 | Control | Esperado | Corrida local 2026-11-01 |
 |---|---|---|
 | Filas de datos = aceptadas + rechazadas + excluidas | 600 = 597 + 0 + 3 | Cuadra |
-| Stock en la base = fuente menos rechazado | 2.633 menos lo rechazado, con diferencia explicada | 2.633 (rechazado 0) |
+| Stock inicial de este archivo en la base = stock aceptado | Entero exacto; rechazado y fuente quedan en el reporte | 2.633 = 2.633 (rechazado 0) |
 | Stock tienda y depósito | 934 y 1.613, más las 86 unidades sin ubicación | Tienda 1.020 (934 + 86 por defecto), Depósito 1.613 |
 | `stock` = suma de movimientos | Sin diferencias | 0 diferencias |
 | Productos auditados con usuario | 0 (no hay sesión) | 0 |

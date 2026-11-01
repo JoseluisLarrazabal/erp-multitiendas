@@ -38,7 +38,6 @@ async function insertarEnLotes<T extends object, R>(
   return devueltas;
 }
 
-const Id = z.object({ id: z.guid() });
 const Ubic = z.object({ id: z.guid(), nombre: z.string() });
 const Categoria = z.object({ id: z.guid(), nombre: z.string() });
 const ProductoDb = z.object({
@@ -46,7 +45,7 @@ const ProductoDb = z.object({
   codigo: z.string(),
   codigo_barras: z.string().nullable(),
 });
-const Inicial = z.object({ producto_id: z.guid(), ubicacion_id: z.guid() });
+const ResultadoInicial = z.object({ creados: z.number().int(), ya_existian: z.number().int() });
 
 export type ResultadoEscritura = {
   categoriasCreadas: number;
@@ -59,7 +58,7 @@ export type ResultadoEscritura = {
   stockInicialYaExistia: number;
 };
 
-/** Aplica el plan. Idempotente: producto por (negocio_id, codigo), `inicial` por producto y ubicación. */
+/** Aplica el plan. Idempotente: producto por (negocio_id, codigo), `inicial` por producto (lo decide la RPC). */
 export async function escribir(
   cliente: Cliente,
   negocioId: string,
@@ -74,7 +73,12 @@ export async function escribir(
     (
       await leerTodo(
         (d, h) =>
-          cliente.from("ubicaciones").select("id, nombre").eq("negocio_id", negocioId).range(d, h),
+          cliente
+            .from("ubicaciones")
+            .select("id, nombre")
+            .eq("negocio_id", negocioId)
+            .order("id")
+            .range(d, h),
         Ubic,
       )
     ).map((u) => [u.nombre, u.id]),
@@ -97,7 +101,12 @@ export async function escribir(
     (
       await leerTodo(
         (d, h) =>
-          cliente.from("categorias").select("id, nombre").eq("negocio_id", negocioId).range(d, h),
+          cliente
+            .from("categorias")
+            .select("id, nombre")
+            .eq("negocio_id", negocioId)
+            .order("id")
+            .range(d, h),
         Categoria,
       )
     ).map((c) => [claveCategoria(c.nombre), c.id]),
@@ -147,6 +156,7 @@ export async function escribir(
       unidad: "unidad",
     };
   });
+  // Catálogo, no contabilidad: insert directo (el kardex, abajo, solo por RPC).
   const insertados = await insertarEnLotes(
     filasProducto,
     (lote) => cliente.from("productos").insert(lote).select("id, codigo"),
@@ -155,48 +165,25 @@ export async function escribir(
   for (const p of insertados) idPorCodigo.set(p.codigo, p.id);
   resultado.productosCreados = insertados.length;
 
-  // Stock inicial por movimiento: el trigger crea y suma `stock`. usuario_id queda null (no hay sesión).
-  const iniciales = new Set(
-    (
-      await leerTodo(
-        (d, h) =>
-          cliente
-            .from("movimientos_inventario")
-            .select("producto_id, ubicacion_id")
-            .eq("negocio_id", negocioId)
-            .eq("tipo", "inicial")
-            .order("id")
-            .range(d, h),
-        Inicial,
-      )
-    ).map((m) => `${m.producto_id}:${m.ubicacion_id}`),
-  );
-  const movimientos = [];
+  // Stock inicial por RPC (kardex): el trigger crea y suma `stock`. usuario_id queda null (no hay sesión).
+  const items = [];
   for (const p of plan.aceptadas) {
     if (p.stock === 0) continue;
     const productoId = idPorCodigo.get(p.codigo);
     const ubicacionId = ubicaciones.get(p.ubicacion);
     if (!productoId || !ubicacionId) throw new Error("Producto o ubicación sin resolver");
-    if (iniciales.has(`${productoId}:${ubicacionId}`)) {
-      resultado.stockInicialYaExistia++;
-      continue;
-    }
-    movimientos.push({
-      negocio_id: negocioId,
-      ubicacion_id: ubicacionId,
-      producto_id: productoId,
-      tipo: "inicial",
-      cantidad: p.stock,
-      ref_tipo: "importacion",
-    });
+    items.push({ producto_id: productoId, ubicacion_id: ubicacionId, cantidad: p.stock });
   }
-  resultado.stockInicialCreado = (
-    await insertarEnLotes(
-      movimientos,
-      (lote) => cliente.from("movimientos_inventario").insert(lote).select("id"),
-      Id,
-    )
-  ).length;
+  for (let i = 0; i < items.length; i += LOTE) {
+    const { data, error } = await cliente.rpc("registrar_stock_inicial", {
+      p_negocio_id: negocioId,
+      p_items: items.slice(i, i + LOTE),
+    });
+    if (error) throw new Error(error.message);
+    const r = ResultadoInicial.parse(data);
+    resultado.stockInicialCreado += r.creados;
+    resultado.stockInicialYaExistia += r.ya_existian;
+  }
   return resultado;
 }
 
@@ -207,24 +194,55 @@ const Cantidad = z.object({
 });
 
 export type EstadoBase = {
+  /** Del archivo de esta corrida: stock `inicial`/`importacion` de sus productos (por `codigo`), en el negocio. */
   importadoPorUbicacion: Record<string, number>;
   importadoTotal: number;
-  /** Pares (producto, ubicación) donde `stock` no es la suma del kardex. */
+  /** Del negocio entero: pares (producto, ubicación) donde `stock` no es la suma del kardex. */
   diferenciasKardex: number;
+  /** De los productos de esta corrida. */
   productosAuditados: number;
   auditadosConUsuario: number;
 };
 
-/** Lee lo que quedó en la base para conciliar. */
-export async function leerEstado(cliente: Cliente, negocioId: string): Promise<EstadoBase> {
+// Milésimas enteras: la suma no arrastra error de coma flotante (numeric(12,3) en la base).
+const mil = (n: number): number => Math.round(n * 1000);
+
+/** Lee lo que quedó en la base para conciliar. `codigos`: los productos aceptados de este archivo. */
+export async function leerEstado(
+  cliente: Cliente,
+  negocioId: string,
+  codigos: string[],
+): Promise<EstadoBase> {
   const nombres = new Map(
     (
       await leerTodo(
         (d, h) =>
-          cliente.from("ubicaciones").select("id, nombre").eq("negocio_id", negocioId).range(d, h),
+          cliente
+            .from("ubicaciones")
+            .select("id, nombre")
+            .eq("negocio_id", negocioId)
+            .order("id")
+            .range(d, h),
         Ubic,
       )
     ).map((u) => [u.id, u.nombre]),
+  );
+  const delArchivo = new Set(codigos);
+  const idsArchivo = new Set(
+    (
+      await leerTodo(
+        (d, h) =>
+          cliente
+            .from("productos")
+            .select("id, codigo, codigo_barras")
+            .eq("negocio_id", negocioId)
+            .order("id")
+            .range(d, h),
+        ProductoDb,
+      )
+    )
+      .filter((p) => delArchivo.has(p.codigo))
+      .map((p) => p.id),
   );
   const movimientos = await leerTodo(
     (d, h) =>
@@ -236,16 +254,16 @@ export async function leerEstado(cliente: Cliente, negocioId: string): Promise<E
         .range(d, h),
     Cantidad.extend({ ref_tipo: z.string().nullable(), tipo: z.string() }),
   );
-  const importadoPorUbicacion: Record<string, number> = {};
-  let importadoTotal = 0;
+  const importadoMil: Record<string, number> = {};
+  let totalMil = 0;
   const kardex = new Map<string, number>();
   for (const m of movimientos) {
     const clave = `${m.producto_id}:${m.ubicacion_id}`;
-    kardex.set(clave, (kardex.get(clave) ?? 0) + m.cantidad);
-    if (m.tipo === "inicial" && m.ref_tipo === "importacion") {
+    kardex.set(clave, (kardex.get(clave) ?? 0) + mil(m.cantidad));
+    if (m.tipo === "inicial" && m.ref_tipo === "importacion" && idsArchivo.has(m.producto_id)) {
       const nombre = nombres.get(m.ubicacion_id) ?? "?";
-      importadoPorUbicacion[nombre] = (importadoPorUbicacion[nombre] ?? 0) + m.cantidad;
-      importadoTotal += m.cantidad;
+      importadoMil[nombre] = (importadoMil[nombre] ?? 0) + mil(m.cantidad);
+      totalMil += mil(m.cantidad);
     }
   }
   const filasStock = await leerTodo(
@@ -255,35 +273,39 @@ export async function leerEstado(cliente: Cliente, negocioId: string): Promise<E
         .select("producto_id, ubicacion_id, cantidad")
         .eq("negocio_id", negocioId)
         .order("producto_id")
+        .order("ubicacion_id")
         .range(d, h),
     Cantidad,
   );
   const enStock = new Map(
-    filasStock.map((s) => [`${s.producto_id}:${s.ubicacion_id}`, s.cantidad]),
+    filasStock.map((s) => [`${s.producto_id}:${s.ubicacion_id}`, mil(s.cantidad)]),
   );
   let diferenciasKardex = 0;
   for (const clave of new Set([...kardex.keys(), ...enStock.keys()])) {
     if ((kardex.get(clave) ?? 0) !== (enStock.get(clave) ?? 0)) diferenciasKardex++;
   }
 
-  const auditoria = (soloConUsuario: boolean) => {
-    let q = cliente
-      .from("auditoria")
-      .select("id", { count: "exact", head: true })
-      .eq("negocio_id", negocioId)
-      .eq("tabla", "productos")
-      .eq("accion", "insert");
-    if (soloConUsuario) q = q.not("usuario_id", "is", null);
-    return q;
-  };
-  const [total, conUsuario] = await Promise.all([auditoria(false), auditoria(true)]);
-  if (total.error) throw new Error(total.error.message);
-  if (conUsuario.error) throw new Error(conUsuario.error.message);
+  // registro_id es el id del producto (texto). Se filtra aquí: una lista de ids en la URL no cabe.
+  const auditoria = await leerTodo(
+    (d, h) =>
+      cliente
+        .from("auditoria")
+        .select("registro_id, usuario_id")
+        .eq("negocio_id", negocioId)
+        .eq("tabla", "productos")
+        .eq("accion", "insert")
+        .order("id")
+        .range(d, h),
+    z.object({ registro_id: z.string(), usuario_id: z.string().nullable() }),
+  );
+  const propias = auditoria.filter((a) => idsArchivo.has(a.registro_id));
   return {
-    importadoPorUbicacion,
-    importadoTotal,
+    importadoPorUbicacion: Object.fromEntries(
+      Object.entries(importadoMil).map(([k, v]) => [k, v / 1000]),
+    ),
+    importadoTotal: totalMil / 1000,
     diferenciasKardex,
-    productosAuditados: total.count ?? 0,
-    auditadosConUsuario: conUsuario.count ?? 0,
+    productosAuditados: propias.length,
+    auditadosConUsuario: propias.filter((a) => a.usuario_id !== null).length,
   };
 }
