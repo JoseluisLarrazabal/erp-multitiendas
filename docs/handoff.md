@@ -155,8 +155,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Vercel `erp_multitiendas` (team de jencarlosmoral2), producción `https://erpmultitiendas.vercel.app`, apunta a staging:
     `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` cargadas por MCP en Production y Preview. Verificado con
     Playwright a 1280 y 390 px: sin sesión todas las rutas llevan a `/login`, sin errores de consola, CSP con el origen de
-    staging. **No verificado:** flujo con usuario (staging no tiene usuarios). Las funciones corren en `iad1` y la base
-    en `sa-east-1`: propuesto fijar `gru1` con `vercel.json`. Las previews están detrás de la protección de Vercel.
+    staging. **No verificado:** flujo con usuario (staging no tiene usuarios). Funciones en `gru1` con `web/vercel.json`
+    (PR #41, confirmado en el deploy), junto a la base en `sa-east-1`. Las previews están detrás de la protección de
+    Vercel.
   - `resumen_caja` (PR 4) también aplicada en staging.
 - **Ponytail-review faltó en los PR 3 y 4** (regla 2). Corrido después del merge: sin bugs de dinero; 7 hallazgos de
   limpieza y tests aplicados en `fix/ponytail-pos`, revisados otra vez con `/code-review` y ponytail.
