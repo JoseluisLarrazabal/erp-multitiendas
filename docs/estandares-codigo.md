@@ -35,7 +35,7 @@ Reglas verificables para `web/`, `supabase/` y `scripts/`. Lo que una herramient
 - El POS es la excepción: es cliente y usa la cola de `lib/offline`.
 - Componentes de más de 200 líneas se dividen.
 - `useEffect` no se usa para derivar estado ni para traer datos.
-- UI con shadcn y tokens de Tailwind. Iconos desde `iconify`; no SVG inventados.
+- UI con shadcn y tokens de Tailwind. Iconos de `lucide-react`, el set de shadcn; no SVG inventados.
 - Trabajo visual con los skills `impeccable` o `design-taste-frontend`, y auditoría con `web-design-guidelines`.
 - Estados de carga, vacío y error explícitos en cada pantalla.
 

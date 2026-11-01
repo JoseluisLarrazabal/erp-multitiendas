@@ -98,7 +98,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
   - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
   - **Pendiente cliente:** precios, y preguntas P-01 a P-17 del SRS.
-- **Próximo:** fase 0 de `docs/roadmap.md` (scaffold en `web/`, CI, migraciones base, auth, RLS). El prototipo
+- **Fase 0 en curso (desde 2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. PR 1 (scaffold de `web/`, Supabase local
+  en puertos 54420-54429 y CI) es el primero. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
   referencia visual.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).

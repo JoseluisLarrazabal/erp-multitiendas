@@ -4,3 +4,11 @@ node_modules/
 !.env.example
 .DS_Store
 .playwright-mcp/
+*.tsbuildinfo
+next-env.d.ts
+web/test-results/
+web/playwright-report/
+web/blob-report/
+supabase/.temp/
+supabase/.branches/
+supabase/.env

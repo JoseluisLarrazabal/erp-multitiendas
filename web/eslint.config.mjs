@@ -1,0 +1,56 @@
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+// Límites de módulos (docs/estandares-codigo.md). `no-restricted-imports` no conoce el archivo
+// que importa, así que la regla de lib/ va en su propio bloque `files`.
+// shortcut: cubre imports con alias, con `modules/` y relativos a un módulo hermano solo en los
+// niveles src/modules/*/*.ts y src/modules/*/components/**; no cubre subcarpetas más profundas
+// (p. ej. components/a/b/ con ../../../otro) ni ciclos entre módulos. Si aparecen, agregar
+// dependency-cruiser.
+const soloIndex = {
+  group: ["@/modules/*/*", "**/modules/*/*"],
+  message: "Un módulo solo se importa por su index.ts (@/modules/<nombre>).",
+};
+const libNoImportaModulos = {
+  group: ["@/modules", "@/modules/**", "**/modules", "**/modules/**"],
+  message: "lib/ no importa modules/.",
+};
+
+const noSalirDelModulo = (patron) => ({
+  group: [patron],
+  message: "Un módulo no importa relativo fuera de su carpeta; usar @/modules/<nombre>.",
+});
+
+export default defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "playwright-report/**",
+    "test-results/**",
+  ]),
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: { "no-restricted-imports": ["error", { patterns: [soloIndex] }] },
+  },
+  {
+    files: ["src/lib/**/*.{ts,tsx}"],
+    rules: { "no-restricted-imports": ["error", { patterns: [soloIndex, libNoImportaModulos] }] },
+  },
+  {
+    files: ["src/modules/*/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [soloIndex, noSalirDelModulo("../*")] }],
+    },
+  },
+  {
+    files: ["src/modules/*/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [soloIndex, noSalirDelModulo("../../*")] }],
+    },
+  },
+]);
