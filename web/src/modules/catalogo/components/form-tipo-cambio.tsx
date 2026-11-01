@@ -11,9 +11,10 @@ import {
   type Campos,
   type Errores,
 } from "@/components/panel/campo";
+import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { useAccion } from "@/components/panel/use-accion";
 import { registrarTipoCambio } from "../actions";
-import { MENSAJE_DATOS } from "../domain";
+import { cambioBruscoDeTipoCambio, formatearTipoCambio, MENSAJE_DATOS } from "../domain";
 import { tipoCambioSchema } from "../schemas";
 
 const CAMPOS: Campos = {
@@ -23,12 +24,26 @@ const CAMPOS: Campos = {
   },
 };
 
-export function FormTipoCambio({ negocioId }: { negocioId: string }) {
+export function FormTipoCambio({
+  negocioId,
+  vigente,
+}: {
+  negocioId: string;
+  vigente: number | null;
+}) {
   const formulario = useRef<HTMLFormElement>(null);
   const { pendiente, error, ejecutar } = useAccion();
   const [errores, setErrores] = useState<Errores>({});
   const [general, setGeneral] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
+  // Valor (texto crudo y número) que se aleja mucho del vigente y espera confirmación.
+  const [porConfirmar, setPorConfirmar] = useState<{ texto: string; valor: number } | null>(null);
+
+  const registrar = (texto: string) => registrarTipoCambio({ negocioId, valor: texto });
+  const alRegistrado = () => {
+    formulario.current?.reset();
+    setHecho(true);
+  };
 
   function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,13 +56,11 @@ export function FormTipoCambio({ negocioId }: { negocioId: string }) {
     }
     setErrores({});
     setGeneral(null);
-    ejecutar(
-      () => registrarTipoCambio(entrada),
-      () => {
-        formulario.current?.reset();
-        setHecho(true);
-      },
-    );
+    // Un dedazo (69,6 en vez de 6,96) cambia todos los Bs: se confirma antes de registrar.
+    if (cambioBruscoDeTipoCambio(vigente, v.datos.valor)) {
+      return setPorConfirmar({ texto: String(entrada.valor), valor: v.datos.valor });
+    }
+    ejecutar(() => registrar(String(entrada.valor)), alRegistrado);
   }
 
   const mensaje = general ?? error;
@@ -83,6 +96,16 @@ export function FormTipoCambio({ negocioId }: { negocioId: string }) {
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Registrar tipo de cambio
         </Button>
+        <p className="text-muted-foreground self-start text-sm sm:mt-[1.375rem] sm:leading-10">
+          {vigente === null ? (
+            "Aún no hay tipo de cambio vigente."
+          ) : (
+            <>
+              Vigente:{" "}
+              <strong className="text-foreground">Bs {formatearTipoCambio(vigente)}</strong>
+            </>
+          )}
+        </p>
       </div>
       <p role="alert" className="text-destructive text-sm empty:hidden">
         {mensaje}
@@ -90,6 +113,19 @@ export function FormTipoCambio({ negocioId }: { negocioId: string }) {
       <p role="status" className="text-sm font-medium">
         {hecho && !mensaje ? "Tipo de cambio registrado." : ""}
       </p>
+      <ConfirmarAccion
+        abierto={porConfirmar !== null}
+        alCambiarAbierto={(abierto) => !abierto && setPorConfirmar(null)}
+        titulo={`¿Registrar Bs ${porConfirmar ? formatearTipoCambio(porConfirmar.valor) : ""} por 1 USD?`}
+        descripcion={`El tipo de cambio vigente es Bs ${vigente === null ? "" : formatearTipoCambio(vigente)}. El nuevo valor cambia el equivalente en Bs de todos los precios en USD.`}
+        confirmar="Registrar"
+        destructiva={false}
+        accion={async () => {
+          const r = await registrar(porConfirmar?.texto ?? "");
+          if (r.ok) alRegistrado();
+          return r;
+        }}
+      />
     </form>
   );
 }

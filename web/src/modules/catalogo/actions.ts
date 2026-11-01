@@ -2,14 +2,15 @@
 
 // Solo para el panel (se importa por panel.ts). No importar desde /pos: ver usuarios/actions.ts.
 import { revalidatePath } from "next/cache";
-import type { ZodType } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import {
   codigoDeMensaje,
   mensajeDeError as mensajeBase,
+  validar,
   type Resultado,
 } from "@/modules/usuarios/panel";
 import { MOTIVO_COSTOS, mensajeDeCatalogo } from "./domain";
+import type { FilaFallida } from "./grilla";
 import {
   categoriaSchema,
   estadoProductoSchema,
@@ -21,11 +22,6 @@ import {
 
 const mensaje = (codigo?: string) => mensajeDeCatalogo(codigo) ?? mensajeBase(codigo);
 const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensaje(codigo) });
-
-function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {
-  const r = schema.safeParse(entrada);
-  return r.success ? r.data : null;
-}
 
 type Datos = ReturnType<typeof datosDeProducto>;
 const datosDeProducto = (d: {
@@ -72,35 +68,16 @@ export async function guardarProducto(entrada: unknown): Promise<Resultado<{ id:
   return { ok: true, data: { id: data } };
 }
 
-// La foto se sube desde el navegador a Storage; aquí solo se guarda la ruta. guardar_producto exige todos los
-// campos, así que se relee el producto (con la RLS de quien llama) y se reenvía con foto_path.
+// La foto se sube desde el navegador a Storage; aquí solo se guarda la ruta, sin tocar los demás campos del
+// producto (una edición concurrente no se pisa). Una ruta null quita la foto.
 export async function asignarFoto(entrada: unknown): Promise<Resultado<null>> {
   const d = validar(fotoSchema, entrada);
   if (!d) return fallo("ERP_DATOS_INVALIDOS");
   const supabase = await createClient();
-  const { data: p } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("id", d.productoId)
-    .maybeSingle();
-  if (!p) return fallo("ERP_DATOS_INVALIDOS");
-  const { error } = await supabase.rpc("guardar_producto", {
-    p_negocio_id: p.negocio_id,
-    p_datos: {
-      id: p.id,
-      codigo: p.codigo,
-      codigo_barras: p.codigo_barras,
-      nombre: p.nombre,
-      marca: p.marca,
-      modelo: p.modelo,
-      categoria_id: p.categoria_id,
-      tipo: p.tipo,
-      unidad: p.unidad,
-      controla_serie: p.controla_serie,
-      garantia_meses: p.garantia_meses,
-      stock_minimo: p.stock_minimo,
-      foto_path: d.fotoPath,
-    },
+  const { error } = await supabase.rpc("asignar_foto_producto", {
+    p_producto_id: d.productoId,
+    // El generador de tipos marca p_foto_path como no nulo, pero la RPC acepta null (quitar).
+    p_foto_path: d.fotoPath as string,
   });
   if (error) return fallo(codigoDeMensaje(error.message));
   revalidatePath("/panel/productos");
@@ -151,24 +128,29 @@ export async function registrarTipoCambio(entrada: unknown): Promise<Resultado<n
 }
 
 export type ResultadoGrilla = {
-  guardados: number;
-  fallidas: { productoId: string; error: string }[];
+  // Filas con todo lo que se mandó ya guardado.
+  guardadas: number;
+  // Filas donde algo no se guardó. Lo que no figura en `campos` sí se guardó.
+  fallidas: FilaFallida[];
 };
 
 // Un solo lote de precios y otro de costos. Si el lote entero falla por datos de una fila (el RPC es todo o
-// nada y no dice cuál), se reintenta fila por fila para señalar solo las malas y guardar las demás.
+// nada y no dice cuál), se reintenta fila por fila para señalar solo las malas y guardar las demás. Un lote que
+// falla no impide el otro, y se revalida siempre que algo se haya guardado.
 export async function guardarGrilla(entrada: unknown): Promise<Resultado<ResultadoGrilla>> {
   const d = validar(guardarGrillaSchema, entrada);
   if (!d) return fallo("ERP_DATOS_INVALIDOS");
   const supabase = await createClient();
 
-  const itemPrecios = (f: (typeof d.filas)[number]) => ({
-    producto_id: f.productoId,
-    moneda: f.precios!.moneda,
-    precios: Object.fromEntries(Object.entries(f.precios!.precios)),
-  });
   const guardarPrecios = (filas: typeof d.filas) =>
-    supabase.rpc("guardar_precios", { p_negocio_id: d.negocioId, p_items: filas.map(itemPrecios) });
+    supabase.rpc("guardar_precios", {
+      p_negocio_id: d.negocioId,
+      p_items: filas.map((f) => ({
+        producto_id: f.productoId,
+        moneda: f.precios!.moneda,
+        precios: f.precios!.precios,
+      })),
+    });
   const guardarCostos = (filas: typeof d.filas) =>
     supabase.rpc("fijar_costos", {
       p_negocio_id: d.negocioId,
@@ -177,32 +159,46 @@ export async function guardarGrilla(entrada: unknown): Promise<Resultado<Resulta
     });
   const RECUPERABLES = ["ERP_DATOS_INVALIDOS", "ERP_MONEDA_MIXTA"];
 
-  const conPrecios = d.filas.filter((f) => f.precios);
-  const conCostos = d.filas.filter((f) => f.costo !== null);
-  const fallidas = new Map<string, string>();
+  const fallas = new Map<string, FilaFallida>();
+  const marcar = (productoId: string, campo: FilaFallida["campos"][number], error: string) => {
+    const f = fallas.get(productoId) ?? { productoId, error, campos: [] };
+    f.campos.push(campo);
+    fallas.set(productoId, f);
+  };
+  let guardoAlgo = false;
+  let fatal: { codigo?: string } | null = null;
 
-  for (const [lote, llamar] of [
-    [conPrecios, guardarPrecios],
-    [conCostos, guardarCostos],
+  for (const [campo, lote, llamar] of [
+    ["precios", d.filas.filter((f) => f.precios), guardarPrecios],
+    ["costo", d.filas.filter((f) => f.costo !== null), guardarCostos],
   ] as const) {
     if (lote.length === 0) continue;
     const { error } = await llamar(lote);
-    if (!error) continue;
+    if (!error) {
+      guardoAlgo = true;
+      continue;
+    }
     const codigo = codigoDeMensaje(error.message);
-    if (!codigo || !RECUPERABLES.includes(codigo)) return fallo(codigo);
+    if (!codigo || !RECUPERABLES.includes(codigo)) {
+      fatal ??= { codigo };
+      for (const fila of lote) marcar(fila.productoId, campo, mensaje(codigo));
+      continue;
+    }
     for (const fila of lote) {
       const { error: e } = await llamar([fila]);
-      if (e) fallidas.set(fila.productoId, mensaje(codigoDeMensaje(e.message)));
+      if (e) marcar(fila.productoId, campo, mensaje(codigoDeMensaje(e.message)));
+      else guardoAlgo = true;
     }
   }
 
-  revalidatePath("/panel/precios");
-  revalidatePath("/panel/productos");
+  // Nada se guardó y la causa es de todo el lote (permiso, sesión, conexión): un solo aviso, no fila por fila.
+  if (!guardoAlgo && fatal && fallas.size === d.filas.length) return fallo(fatal.codigo);
+  if (guardoAlgo) {
+    revalidatePath("/panel/precios");
+    revalidatePath("/panel/productos");
+  }
   return {
     ok: true,
-    data: {
-      guardados: d.filas.length - fallidas.size,
-      fallidas: [...fallidas].map(([productoId, error]) => ({ productoId, error })),
-    },
+    data: { guardadas: d.filas.length - fallas.size, fallidas: [...fallas.values()] },
   };
 }

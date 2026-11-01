@@ -3,7 +3,13 @@ import Link from "next/link";
 import { Plus, Tags } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { filtrosSchema, hrefConFiltros, PAGINA_PRODUCTOS, type Filtros } from "@/modules/catalogo";
+import {
+  filtrosSchema,
+  hrefConFiltros,
+  listaPrincipal,
+  PAGINA_PRODUCTOS,
+  type Filtros,
+} from "@/modules/catalogo";
 import {
   EncabezadoPagina,
   FiltrosBusqueda,
@@ -68,51 +74,55 @@ export default async function PaginaProductos({
           )
         }
       />
-      {error || !lista.ok || !categorias.ok || !marcas.ok ? (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      ) : (
-        <div className="flex flex-col gap-5">
-          <FiltrosBusqueda
-            ruta="/panel/productos"
-            filtros={filtros}
-            categorias={categorias.data}
-            marcas={marcas.data}
-            conInactivos
+      <div className="flex flex-col gap-5">
+        <FiltrosBusqueda
+          ruta="/panel/productos"
+          filtros={filtros}
+          categorias={categorias.ok ? categorias.data : undefined}
+          marcas={marcas.ok ? marcas.data : undefined}
+          conInactivos
+          enfocarBusqueda
+        />
+        {error && (
+          <p role="alert" className="text-destructive text-sm">
+            {error}
+          </p>
+        )}
+        {lista.ok && lista.data.filas.length === 0 && (
+          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+            {hayFiltros
+              ? "Ningún producto coincide con la búsqueda o los filtros."
+              : "Aún no hay productos en este negocio."}
+            {!hayFiltros && puedeEditar && (
+              <>
+                {" "}
+                <Link
+                  href="/panel/productos/nuevo"
+                  className="text-primary underline underline-offset-4"
+                >
+                  Crea el primero.
+                </Link>
+              </>
+            )}
+          </p>
+        )}
+        {lista.ok && lista.data.filas.length > 0 && (
+          <ListaProductos
+            productos={lista.data.filas}
+            fotos={Object.fromEntries(fotos)}
+            puedeEditar={puedeEditar}
+            listaPrincipal={listaPrincipal(activo.tipo)}
           />
-          {lista.data.filas.length === 0 ? (
-            <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-              {hayFiltros
-                ? "Ningún producto coincide con la búsqueda o los filtros."
-                : "Aún no hay productos en este negocio."}
-              {!hayFiltros && puedeEditar && (
-                <>
-                  {" "}
-                  <Link
-                    href="/panel/productos/nuevo"
-                    className="text-primary underline underline-offset-4"
-                  >
-                    Crea el primero.
-                  </Link>
-                </>
-              )}
-            </p>
-          ) : (
-            <ListaProductos
-              productos={lista.data.filas}
-              fotos={Object.fromEntries(fotos)}
-              puedeEditar={puedeEditar}
-            />
-          )}
+        )}
+        {lista.ok && (
           <Paginador
-            pagina={filtros.pagina}
+            pagina={lista.data.pagina}
             porPagina={PAGINA_PRODUCTOS}
             total={lista.data.total}
             hrefDe={(pagina) => hrefConFiltros("/panel/productos", filtros, { pagina })}
           />
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }

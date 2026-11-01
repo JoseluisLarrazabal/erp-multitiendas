@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { guardarGrilla } from "../actions";
-import { ETIQUETA_LISTA, type FilaPrecios, type Lista } from "../domain";
-import { borradorBase, cambiosDeFila, celdasInvalidas, type Borrador } from "../grilla";
+import { ID_PAGINA_SIGUIENTE, type FilaPrecios, type Lista } from "../domain";
+import {
+  borradorBase,
+  cambiosDeFila,
+  celdasInvalidas,
+  mensajeDeGuardado,
+  type Borrador,
+} from "../grilla";
 import { ERROR_CONEXION } from "@/lib/supabase/errores";
+import { CabeceraGrilla } from "./cabecera-grilla";
 import { FilaGrilla } from "./fila-grilla";
+import { useAvisoSalir } from "./use-aviso-salir";
+import { useTecladoGrilla } from "./use-teclado-grilla";
 
 type Props = {
   negocioId: string;
@@ -16,18 +25,27 @@ type Props = {
   listas: readonly Lista[];
   tipoCambio: number | null;
   verCostos: boolean;
+  // Hay una búsqueda con resultados: el foco arranca en la primera celda.
+  enfocarPrimera: boolean;
 };
 
-const AVISO_SALIR = "Tienes cambios sin guardar. Si sales, se pierden.";
+const AVISO_FIN = "Fin de la página: guarda para pasar a la siguiente";
 
-export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos }: Props) {
+export function GrillaPrecios({
+  negocioId,
+  filas,
+  listas,
+  tipoCambio,
+  verCostos,
+  enfocarPrimera,
+}: Props) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   // Solo las filas tocadas. Una fila cuyo borrador ya coincide con lo guardado no cuenta como cambiada.
   const [borradores, setBorradores] = useState<Record<string, Borrador>>({});
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [aviso, setAviso] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
-  const tabla = useRef<HTMLTableElement>(null);
+  const botonGuardar = useRef<HTMLButtonElement>(null);
 
   const borradorDe = (f: FilaPrecios) => borradores[f.id] ?? borradorBase(f, listas);
   const cambiosDe = (f: FilaPrecios) => cambiosDeFila(f, borradorDe(f), listas);
@@ -36,26 +54,17 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
     return c.precios || c.costo;
   });
   const sucio = modificadas.length > 0;
+  const enlaceSiguiente = () => document.getElementById(ID_PAGINA_SIGUIENTE);
 
-  // Salir con cambios sin guardar: recarga o cierre (beforeunload) y enlaces internos (paginación, menú).
-  useEffect(() => {
-    if (!sucio) return;
-    const alSalir = (e: BeforeUnloadEvent) => e.preventDefault();
-    const alEnlace = (e: MouseEvent) => {
-      const a = (e.target as Element | null)?.closest?.("a[href]");
-      if (!a || a.getAttribute("target") === "_blank") return;
-      if (!window.confirm(AVISO_SALIR)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener("beforeunload", alSalir);
-    document.addEventListener("click", alEnlace, true);
-    return () => {
-      window.removeEventListener("beforeunload", alSalir);
-      document.removeEventListener("click", alEnlace, true);
-    };
-  }, [sucio]);
+  const { tabla, alTeclear, enfocarCelda } = useTecladoGrilla(() => {
+    // Con cambios, guardar es lo siguiente; sin ellos el botón está deshabilitado y el foco pasa a "Siguiente".
+    if (sucio) {
+      botonGuardar.current?.focus();
+      setAviso({ tipo: "ok", texto: AVISO_FIN });
+    } else enlaceSiguiente()?.focus();
+  }, enfocarPrimera);
+
+  useAvisoSalir(sucio);
 
   function cambiar(f: FilaPrecios, cambio: Partial<Borrador> & { lista?: string; texto?: string }) {
     const actual = borradorDe(f);
@@ -75,27 +84,16 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
     setAviso(null);
   }
 
-  // Enter baja a la fila siguiente en la misma columna (como una hoja de cálculo).
-  function alTeclear(e: KeyboardEvent<HTMLTableElement>) {
-    const el = e.target as HTMLElement;
-    if (e.key !== "Enter" || el.tagName !== "INPUT" || !el.dataset.celda) return;
-    e.preventDefault();
-    const siguiente = tabla.current?.querySelector<HTMLInputElement>(
-      `[data-fila="${Number(el.dataset.fila) + 1}"][data-celda="${el.dataset.celda}"]:not(:disabled)`,
-    );
-    siguiente?.focus();
-    siguiente?.select();
-  }
-
   function guardar() {
-    const malas = Object.fromEntries(
-      modificadas
-        .filter((f) => celdasInvalidas(borradorDe(f), listas).length > 0)
-        .map((f) => [f.id, "Revisa los montos marcados."]),
-    );
-    if (Object.keys(malas).length) {
-      setErrores(malas);
-      return setAviso({ tipo: "error", texto: "Hay montos inválidos. No se guardó nada." });
+    const malas = modificadas.filter((f) => celdasInvalidas(f, borradorDe(f), listas).length > 0);
+    if (malas.length) {
+      setErrores(Object.fromEntries(malas.map((f) => [f.id, "Revisa los montos marcados."])));
+      setAviso({ tipo: "error", texto: "Hay montos inválidos. No se guardó nada." });
+      const primera = malas[0]!;
+      return enfocarCelda(
+        filas.indexOf(primera),
+        celdasInvalidas(primera, borradorDe(primera), listas)[0],
+      );
     }
     const carga = modificadas.map((f) => {
       const b = borradorDe(f);
@@ -117,21 +115,23 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
       try {
         const r = await guardarGrilla({ negocioId, filas: carga });
         if (!r.ok) return setAviso({ tipo: "error", texto: r.error });
-        const fallidas = Object.fromEntries(r.data.fallidas.map((x) => [x.productoId, x.error]));
-        setErrores(fallidas);
-        // Las guardadas se quedan en borradores: coinciden con lo nuevo y dejan de contar como cambiadas al refrescar.
-        setAviso(
-          r.data.fallidas.length
-            ? {
-                tipo: "error",
-                texto: `Se guardaron ${r.data.guardados} filas. ${r.data.fallidas.length} no se guardaron: están señaladas, con lo que escribiste.`,
-              }
-            : {
-                tipo: "ok",
-                texto: `Se guardaron ${r.data.guardados} ${r.data.guardados === 1 ? "fila" : "filas"}.`,
-              },
-        );
+        const { guardadas, fallidas } = r.data;
+        setErrores(Object.fromEntries(fallidas.map((x) => [x.productoId, x.error])));
+        // Lo guardado se queda en borradores: coincide con lo nuevo y deja de contar como cambiado al refrescar.
+        setAviso({
+          tipo: fallidas.length ? "error" : "ok",
+          texto: mensajeDeGuardado(
+            guardadas,
+            fallidas,
+            carga.some((c) => c.precios),
+          ),
+        });
         router.refresh();
+        const primera = filas.findIndex((f) => fallidas.some((x) => x.productoId === f.id));
+        const campos = fallidas.find((x) => x.productoId === filas[primera]?.id)?.campos;
+        if (primera >= 0) enfocarCelda(primera, campos?.includes("precios") ? listas[0] : "costo");
+        // El botón queda deshabilitado: el foco pasa a "Siguiente" para seguir con la página que sigue.
+        else (enlaceSiguiente() ?? tabla.current?.parentElement)?.focus();
       } catch {
         setAviso({ tipo: "error", texto: ERROR_CONEXION });
       }
@@ -141,7 +141,12 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="bg-background/95 sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b py-2 backdrop-blur">
-        <Button onClick={guardar} disabled={!sucio || pendiente} className="h-10">
+        <Button
+          ref={botonGuardar}
+          onClick={guardar}
+          disabled={!sucio || pendiente}
+          className="h-10"
+        >
           {pendiente ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
           Guardar cambios
         </Button>
@@ -150,16 +155,22 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
             ? `${modificadas.length} ${modificadas.length === 1 ? "fila modificada" : "filas modificadas"}`
             : "Sin cambios"}
         </p>
-        <p
-          role={aviso?.tipo === "error" ? "alert" : "status"}
-          className={aviso?.tipo === "error" ? "text-destructive text-sm" : "text-sm font-medium"}
-        >
-          {aviso?.texto}
+        <p role="status" className="text-sm font-medium empty:hidden">
+          {aviso?.tipo === "ok" ? aviso.texto : ""}
+        </p>
+        <p role="alert" className="text-destructive text-sm empty:hidden">
+          {aviso?.tipo === "error" ? aviso.texto : ""}
         </p>
       </div>
+      <p className="text-muted-foreground text-xs md:hidden">
+        Desliza hacia la derecha para ver todas las listas
+      </p>
       <div
-        className="bg-card overflow-x-auto rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-        tabIndex={-1}
+        role="region"
+        aria-label="Tabla de precios, desplazable"
+        tabIndex={0}
+        // scroll-pl = ancho de la columna fija: el foco que llega por scroll no queda tapado por ella.
+        className="bg-card focus-visible:ring-ring/50 scroll-pl-36 overflow-x-auto rounded-xl border shadow-[0_2px_5px_#34345a0d] outline-none focus-visible:ring-3 md:scroll-pl-48"
       >
         <table
           ref={tabla}
@@ -167,26 +178,7 @@ export function GrillaPrecios({ negocioId, filas, listas, tipoCambio, verCostos 
           className="w-max min-w-full border-collapse text-sm"
         >
           <caption className="sr-only">Precios por lista. Enter pasa a la fila siguiente.</caption>
-          <thead>
-            <tr className="text-muted-foreground border-b text-left text-xs font-semibold">
-              <th scope="col" className="bg-card sticky left-0 z-10 px-2 py-2.5">
-                Producto
-              </th>
-              <th scope="col" className="px-2 py-2.5">
-                Moneda
-              </th>
-              {listas.map((l) => (
-                <th key={l} scope="col" className="px-2 py-2.5 text-right">
-                  {ETIQUETA_LISTA[l]}
-                </th>
-              ))}
-              {verCostos && (
-                <th scope="col" className="px-2 py-2.5 text-right">
-                  Costo (Bs)
-                </th>
-              )}
-            </tr>
-          </thead>
+          <CabeceraGrilla listas={listas} verCostos={verCostos} />
           <tbody>
             {filas.map((f, i) => (
               <FilaGrilla

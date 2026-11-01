@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { formatearFecha } from "@/modules/catalogo";
+import { formatearFecha, formatearTipoCambio } from "@/modules/catalogo";
 import {
   EncabezadoPagina,
   FormTipoCambio,
@@ -10,11 +10,6 @@ import {
 import { exigirPermiso } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Tipo de cambio · ERP Multitiendas" };
-
-const formatoTc = new Intl.NumberFormat("es-BO", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 4,
-});
 
 export default async function PaginaTipoCambio() {
   const { activo } = await exigirPermiso("editar_productos");
@@ -40,7 +35,7 @@ export default async function PaginaTipoCambio() {
                   className="text-3xl font-bold tracking-tight tabular-nums"
                   data-testid="tc-vigente"
                 >
-                  Bs {formatoTc.format(vigente.valor)}
+                  Bs {formatearTipoCambio(vigente.valor)}
                 </span>
                 <span className="text-muted-foreground ml-3 text-sm">
                   por 1 USD, desde el {formatearFecha(vigente.vigenteDesde)}
@@ -53,7 +48,7 @@ export default async function PaginaTipoCambio() {
             )}
           </Seccion>
           <Seccion titulo="Registrar nuevo">
-            <FormTipoCambio negocioId={activo.negocioId} />
+            <FormTipoCambio negocioId={activo.negocioId} vigente={vigente?.valor ?? null} />
           </Seccion>
           <Seccion titulo="Historial">
             {historial.data.length === 0 ? (
@@ -80,7 +75,7 @@ export default async function PaginaTipoCambio() {
                       <tr key={t.id} className="border-b last:border-0">
                         <td className="py-2 pr-4 tabular-nums">{formatearFecha(t.vigenteDesde)}</td>
                         <td className="py-2 pr-4 text-right tabular-nums">
-                          {formatoTc.format(t.valor)}
+                          {formatearTipoCambio(t.valor)}
                         </td>
                         <td className="py-2">{t.usuario}</td>
                       </tr>

@@ -454,6 +454,9 @@ isOneToOne: false
             "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
+"asignar_foto_producto":
+{ Args: { "p_foto_path": string,"p_producto_id": string }; Returns: undefined
+                           },
 "asignar_usuario":
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
                            },
@@ -467,7 +470,7 @@ isOneToOne: false
 { Args: { "p_usuario_id": string }; Returns: boolean
                            },
 "costos_stock":
-{ Args: { "p_negocio_id": string }; Returns: {
+{ Args: { "p_negocio_id": string,"p_producto_ids": (string)[] }; Returns: {
               "costo_promedio": number,"producto_id": string,"ubicacion_id": string
             }[]
                            },

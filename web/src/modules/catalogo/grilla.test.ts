@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { FilaPrecios, Lista } from "./domain";
-import { borradorBase, bsDeUsd, cambiosDeFila, celdasInvalidas } from "./grilla";
+import {
+  borradorBase,
+  bsDeUsd,
+  cambiosDeFila,
+  celdasInvalidas,
+  mensajeDeGuardado,
+  mensajeDeMontoInvalido,
+} from "./grilla";
 
 const LISTAS: Lista[] = ["contado", "credito", "mayorista", "minimo"];
 const fila: FilaPrecios = {
@@ -11,6 +18,7 @@ const fila: FilaPrecios = {
   moneda: "USD",
   precios: { contado: 200, credito: 12.5 },
   costo: 150,
+  costoVaria: false,
 };
 
 describe("cambiosDeFila", () => {
@@ -56,8 +64,8 @@ describe("celdasInvalidas", () => {
     b.precios.contado = "abc";
     b.precios.minimo = "1,234";
     b.precios.mayorista = "";
-    b.costo = "0";
-    expect(celdasInvalidas(b, LISTAS)).toEqual(["contado", "minimo", "costo"]);
+    b.costo = "0,5x";
+    expect(celdasInvalidas(fila, b, LISTAS)).toEqual(["contado", "minimo", "costo"]);
   });
 });
 
@@ -70,5 +78,65 @@ describe("bsDeUsd", () => {
   it("sin tipo de cambio o monto inválido, null", () => {
     expect(bsDeUsd("200", null)).toBeNull();
     expect(bsDeUsd("x", 6.96)).toBeNull();
+  });
+});
+
+describe("celdasInvalidas: solo las celdas cambiadas", () => {
+  it("el costo 0 es válido; el precio 0 no", () => {
+    const b = borradorBase(fila, LISTAS);
+    b.costo = "0";
+    b.precios.mayorista = "0";
+    expect(celdasInvalidas(fila, b, LISTAS)).toEqual(["mayorista"]);
+  });
+  it("0 en una celda vacía cuenta como cambio y se valida", () => {
+    const sin: FilaPrecios = { ...fila, moneda: null, precios: {}, costo: null };
+    const b = borradorBase(sin, LISTAS);
+    b.precios.contado = "0";
+    b.precios.credito = "abc";
+    b.costo = "abc";
+    expect(cambiosDeFila(sin, b, LISTAS)).toEqual({ precios: true, costo: true });
+    expect(celdasInvalidas(sin, b, LISTAS)).toEqual(["contado", "credito", "costo"]);
+  });
+  it("lo que no se tocó no se valida", () => {
+    const raro: FilaPrecios = { ...fila, precios: { contado: 12.345 } };
+    expect(celdasInvalidas(raro, borradorBase(raro, LISTAS), LISTAS)).toEqual([]);
+  });
+  it("costo 1.500 se rechaza por el punto de miles", () => {
+    const b = borradorBase(fila, LISTAS);
+    b.costo = "1.500";
+    expect(celdasInvalidas(fila, b, LISTAS)).toEqual(["costo"]);
+    expect(mensajeDeMontoInvalido("1.500")).toMatch(/sin puntos de miles/);
+    expect(mensajeDeMontoInvalido("abc")).toBe("Monto inválido");
+  });
+});
+
+describe("costo que varía por ubicación", () => {
+  const varia: FilaPrecios = { ...fila, costo: null, costoVaria: true };
+  it("la celda arranca vacía y sin cambio; escribir un costo es un cambio", () => {
+    const b = borradorBase(varia, LISTAS);
+    expect(b.costo).toBe("");
+    expect(cambiosDeFila(varia, b, LISTAS).costo).toBe(false);
+    b.costo = "8";
+    expect(cambiosDeFila(varia, b, LISTAS).costo).toBe(true);
+  });
+});
+
+describe("mensajeDeGuardado", () => {
+  const costo = { productoId: "1", error: "x", campos: ["costo" as const] };
+  it("sin fallas", () => {
+    expect(mensajeDeGuardado(1, [], true)).toBe("Se guardaron 1 fila.");
+    expect(mensajeDeGuardado(3, [], true)).toBe("Se guardaron 3 filas.");
+  });
+  it("precios guardados y costos fallidos se distinguen", () => {
+    expect(mensajeDeGuardado(0, [costo, { ...costo, productoId: "2" }], true)).toMatch(
+      /^Precios guardados\. 2 costos no se guardaron/,
+    );
+  });
+  it("sin precios enviados o con precios fallidos, mensaje general", () => {
+    expect(mensajeDeGuardado(0, [costo], false)).toMatch(/No se guardaron 1 costo:/);
+    const precios = { productoId: "3", error: "x", campos: ["precios" as const] };
+    expect(mensajeDeGuardado(2, [precios, costo], true)).toMatch(
+      /Se guardaron 2 filas\. No se guardaron 1 precio y 1 costo/,
+    );
   });
 });

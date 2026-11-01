@@ -1,7 +1,9 @@
 import {
+  costoATexto,
+  MENSAJE_MILES,
   mismoMonto,
-  montoATexto,
   parsearMonto,
+  precioATexto,
   type FilaPrecios,
   type Lista,
   type Moneda,
@@ -12,8 +14,9 @@ export type Borrador = { moneda: Moneda; precios: Record<string, string>; costo:
 
 export const borradorBase = (fila: FilaPrecios, listas: readonly Lista[]): Borrador => ({
   moneda: fila.moneda ?? "BOB",
-  precios: Object.fromEntries(listas.map((l) => [l, montoATexto(fila.precios[l])])),
-  costo: montoATexto(fila.costo),
+  precios: Object.fromEntries(listas.map((l) => [l, precioATexto(fila.precios[l])])),
+  // Con costos distintos por ubicación la celda queda vacía: no hay un valor que mostrar ni que "no cambiar".
+  costo: costoATexto(fila.costo),
 });
 
 export type Cambios = { precios: boolean; costo: boolean };
@@ -34,11 +37,49 @@ export function cambiosDeFila(fila: FilaPrecios, b: Borrador, listas: readonly L
   return { precios, costo };
 }
 
-// Celdas que no son un monto válido (texto escrito que no parsea).
-export const celdasInvalidas = (b: Borrador, listas: readonly Lista[]): string[] => [
-  ...listas.filter((l) => !vacio(b.precios[l] ?? "") && parsearMonto(b.precios[l]!) === null),
-  ...(!vacio(b.costo) && parsearMonto(b.costo, 4) === null ? ["costo"] : []),
-];
+// Celdas cambiadas cuyo texto no es un monto válido: precios > 0, costo >= 0. Las que no se tocaron no se validan.
+export function celdasInvalidas(
+  fila: FilaPrecios,
+  b: Borrador,
+  listas: readonly Lista[],
+): string[] {
+  const base = borradorBase(fila, listas);
+  const cambiada = (nuevo: string, antes: string) => !vacio(nuevo) && !igual(nuevo, antes);
+  return [
+    ...listas.filter((l) => {
+      const t = b.precios[l] ?? "";
+      return cambiada(t, base.precios[l] ?? "") && parsearMonto(t) === null;
+    }),
+    ...(cambiada(b.costo, base.costo) && parsearMonto(b.costo, 4, true) === null ? ["costo"] : []),
+  ];
+}
+
+// "1.500" se explica aparte: la causa no es el monto sino el punto de miles.
+export const mensajeDeMontoInvalido = (texto: string) =>
+  /^\d+\.\d{3}$/.test(texto.trim()) ? MENSAJE_MILES : "Monto inválido";
+
+// Resultado por fila de guardarGrilla: qué partes (precios, costo) no se guardaron y por qué.
+export type FilaFallida = { productoId: string; error: string; campos: ("precios" | "costo")[] };
+
+// Texto del aviso tras guardar. `conPrecios`: se mandó algún precio (si ninguno falló, quedaron guardados).
+export function mensajeDeGuardado(
+  guardadas: number,
+  fallidas: readonly FilaFallida[],
+  conPrecios: boolean,
+): string {
+  const sinPrecios = fallidas.filter((f) => f.campos.includes("precios")).length;
+  const sinCostos = fallidas.filter((f) => f.campos.includes("costo")).length;
+  const costos = (n: number) => `${n} ${n === 1 ? "costo no se guardó" : "costos no se guardaron"}`;
+  if (fallidas.length === 0)
+    return `Se guardaron ${guardadas} ${guardadas === 1 ? "fila" : "filas"}.`;
+  if (sinPrecios === 0 && conPrecios)
+    return `Precios guardados. ${costos(sinCostos)}: ${sinCostos === 1 ? "está señalada" : "están señaladas"}, con lo que escribiste.`;
+  const faltan = [
+    sinPrecios > 0 && `${sinPrecios} ${sinPrecios === 1 ? "precio" : "precios"}`,
+    sinCostos > 0 && `${sinCostos} ${sinCostos === 1 ? "costo" : "costos"}`,
+  ].filter(Boolean);
+  return `Se guardaron ${guardadas} ${guardadas === 1 ? "fila" : "filas"}. No se guardaron ${faltan.join(" y ")}: están señaladas, con lo que escribiste.`;
+}
 
 // Bs de un precio en USD, para mostrar junto al monto. Aritmética en centavos enteros y tipo de cambio en
 // diezmilésimas, como round(monto * tc, 2) de Postgres. El valor definitivo lo calcula la vista producto_precios_bs.

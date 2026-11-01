@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  cambioBruscoDeTipoCambio,
+  costoATexto,
+  costoUnico,
   errorDeFoto,
   formatearFecha,
   hrefConFiltros,
   FILTROS_VACIOS,
   listasDelNegocio,
   mensajeDeCatalogo,
-  montoATexto,
+  mismoMonto,
   parsearMonto,
+  precioATexto,
   rutaDeFoto,
   sanearBusqueda,
   tiposDeProducto,
@@ -30,22 +34,94 @@ describe("parsearMonto", () => {
   });
 });
 
-describe("montoATexto", () => {
-  it("usa coma y no deja ceros de sobra", () => {
-    expect(montoATexto(12.5)).toBe("12,5");
-    expect(montoATexto(40)).toBe("40");
-    expect(montoATexto(null)).toBe("");
+describe("parsearMonto: miles y cero", () => {
+  it("no adivina miles: 1.500 se rechaza, con coma o con más decimales sí", () => {
+    expect(parsearMonto("1.500", 4)).toBeNull();
+    expect(parsearMonto("1.500")).toBeNull();
+    expect(parsearMonto("1,500", 4)).toBe(1.5);
+    expect(parsearMonto("1.5000", 4)).toBe(1.5);
+  });
+  it("el cero solo vale si se admite (costos)", () => {
+    expect(parsearMonto("0", 4)).toBeNull();
+    expect(parsearMonto("0", 4, true)).toBe(0);
+    expect(parsearMonto("0,00", 4, true)).toBe(0);
+    expect(parsearMonto("-1", 4, true)).toBeNull();
+  });
+});
+
+describe("precioATexto y costoATexto", () => {
+  it("el precio lleva siempre 2 decimales y coma", () => {
+    expect(precioATexto(12.5)).toBe("12,50");
+    expect(precioATexto(40)).toBe("40,00");
+    expect(precioATexto(null)).toBe("");
+  });
+  it("el costo lleva hasta 4 decimales, sin ceros de más", () => {
+    expect(costoATexto(12.5)).toBe("12,5");
+    expect(costoATexto(40)).toBe("40");
+    expect(costoATexto(6.9612)).toBe("6,9612");
+    expect(costoATexto(0)).toBe("0");
+    expect(costoATexto(null)).toBe("");
   });
   it("ida y vuelta", () => {
-    expect(parsearMonto(montoATexto(1234.56))).toBe(1234.56);
+    expect(parsearMonto(precioATexto(1234.56))).toBe(1234.56);
+  });
+});
+
+describe("mismoMonto", () => {
+  it("compara por número cuando ambos parsean", () => {
+    expect(mismoMonto("12,50", "12,5")).toBe(true);
+    expect(mismoMonto("12,5", "13")).toBe(false);
+    expect(mismoMonto("0,00", "0")).toBe(true);
+  });
+  it("si alguno no parsea compara el texto: abc o 0 frente a vacío son cambio", () => {
+    expect(mismoMonto("abc", "")).toBe(false);
+    expect(mismoMonto("0", "")).toBe(false);
+    expect(mismoMonto("abc", "abc")).toBe(true);
+    expect(mismoMonto("abc", "abd")).toBe(false);
+  });
+});
+
+describe("costoUnico", () => {
+  it("un costo igual en todas las ubicaciones se muestra; distintos, varía", () => {
+    expect(costoUnico([7.5, 7.5])).toEqual({ costo: 7.5, varia: false });
+    expect(costoUnico([7.5, 9])).toEqual({ costo: null, varia: true });
+    expect(costoUnico([9, 7.5])).toEqual({ costo: null, varia: true });
+    expect(costoUnico([])).toEqual({ costo: null, varia: false });
+  });
+});
+
+describe("cambioBruscoDeTipoCambio", () => {
+  it("pide confirmar si el valor se aleja más de 20 % del vigente", () => {
+    expect(cambioBruscoDeTipoCambio(6.96, 69.6)).toBe(true);
+    expect(cambioBruscoDeTipoCambio(6.96, 0.696)).toBe(true);
+    expect(cambioBruscoDeTipoCambio(10, 12.1)).toBe(true);
+    expect(cambioBruscoDeTipoCambio(10, 12)).toBe(false);
+    expect(cambioBruscoDeTipoCambio(10, 8)).toBe(false);
+    expect(cambioBruscoDeTipoCambio(6.96, 6.97)).toBe(false);
+  });
+  it("sin tipo de cambio vigente no hay con qué comparar", () => {
+    expect(cambioBruscoDeTipoCambio(null, 500)).toBe(false);
   });
 });
 
 describe("sanearBusqueda", () => {
-  it("quita lo que rompe o altera un filtro .or() de PostgREST", () => {
-    expect(sanearBusqueda("a,b(c)")).toBe("a b c");
-    expect(sanearBusqueda("x.eq.1,nombre.ilike.*")).toBe("x.eq.1 nombre.ilike.");
-    expect(sanearBusqueda('50%_"\\*')).toBe("50");
+  it("cada carácter que rompe un filtro .or() de PostgREST se vuelve el comodín *", () => {
+    expect(sanearBusqueda("a,b(c)")).toBe("a*b*c");
+    expect(sanearBusqueda("x.eq.1,nombre.ilike.*")).toBe("x.eq.1*nombre.ilike.");
+    expect(sanearBusqueda('50%_"\\*mm')).toBe("50*mm");
+  });
+  it("encuentra Cable 2,5mm y AB_12", () => {
+    expect(sanearBusqueda("Cable 2,5mm")).toBe("Cable 2*5mm");
+    expect(sanearBusqueda("AB_12")).toBe("AB*12");
+  });
+  it("colapsa comodines repetidos y no deja uno en los bordes", () => {
+    expect(sanearBusqueda("a,,%_b")).toBe("a*b");
+    expect(sanearBusqueda("a , b")).toBe("a*b");
+    expect(sanearBusqueda(",a,")).toBe("a");
+  });
+  it("un valor solo de caracteres peligrosos queda vacío, no se vuelve 'todo'", () => {
+    for (const t of ["*", "%%%", ",", "()", '_"\\', " , * ", ":"])
+      expect(sanearBusqueda(t), t).toBe("");
   });
   it("recorta y limita el largo", () => {
     expect(sanearBusqueda("   hola   mundo  ")).toBe("hola mundo");

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ID_PAGINA_SIGUIENTE } from "../domain";
 
 type Props = {
   pagina: number;
@@ -19,7 +20,7 @@ export function Paginador({ pagina, porPagina, total, hrefDe, unidad = "producto
   const boton = cn(buttonVariants({ variant: "outline" }), "h-10");
   return (
     <nav aria-label="Paginación" className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-muted-foreground text-sm" role="status">
+      <p className="text-muted-foreground text-sm">
         {desde}–{hasta} de {total} {unidad}
       </p>
       <div className="flex items-center gap-2">
@@ -36,7 +37,7 @@ export function Paginador({ pagina, porPagina, total, hrefDe, unidad = "producto
           Página {pagina} de {paginas}
         </span>
         {pagina < paginas ? (
-          <Link href={hrefDe(pagina + 1)} className={boton}>
+          <Link id={ID_PAGINA_SIGUIENTE} href={hrefDe(pagina + 1)} className={boton}>
             Siguiente <ChevronRight aria-hidden />
           </Link>
         ) : (

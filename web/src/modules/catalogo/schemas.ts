@@ -10,11 +10,11 @@ const textoOpcional = (max: number) =>
     .max(max)
     .transform((t) => (t === "" ? null : t));
 
-const montoTexto = (decimales = 2) =>
+const montoTexto = (decimales = 2, admiteCero = false) =>
   z
     .string()
-    .refine((t) => parsearMonto(t, decimales) !== null)
-    .transform((t) => parsearMonto(t, decimales)!);
+    .refine((t) => parsearMonto(t, decimales, admiteCero) !== null)
+    .transform((t) => parsearMonto(t, decimales, admiteCero)!);
 
 const enteroOpcional = z
   .string()
@@ -84,7 +84,7 @@ export const guardarGrillaSchema = z.object({
         productoId: id,
         // null = solo cambió el costo; no se tocan los precios.
         precios: filaPreciosSchema.omit({ productoId: true }).nullable(),
-        costo: montoTexto(4).nullable(),
+        costo: montoTexto(4, true).nullable(),
       }),
     )
     .min(1)

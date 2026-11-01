@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Resultado } from "@/modules/usuarios/panel";
 import {
+  costoUnico,
   sanearBusqueda,
   type Categoria,
   type Filtros,
@@ -14,7 +15,8 @@ import {
 } from "./domain";
 
 type Cliente = SupabaseClient<Database>;
-type Pagina<T> = { filas: T[]; total: number };
+// `pagina` es la efectiva: la pedida acotada a [1, páginas].
+type Pagina<T> = { filas: T[]; total: number; pagina: number };
 
 const falla = (texto: string): Resultado<never> => ({ ok: false, error: texto });
 
@@ -24,25 +26,35 @@ export async function listarProductos(
   f: Filtros,
   porPagina: number,
 ): Promise<Resultado<Pagina<ProductoLista>>> {
-  let consulta = supabase
-    .from("productos_lista")
-    .select("*", { count: "exact" })
-    .eq("negocio_id", negocioId);
-  if (!f.inactivos) consulta = consulta.eq("activo", true);
-  if (f.categoria) consulta = consulta.eq("categoria_id", f.categoria);
-  if (f.marca) consulta = consulta.eq("marca", f.marca);
-  if (f.sinPrecio) consulta = consulta.eq("con_precio", false);
-  const q = sanearBusqueda(f.q);
-  if (q) {
-    // Ya sin comas, paréntesis ni comodines (sanearBusqueda): el texto no puede alterar el filtro.
-    consulta = consulta.or(
-      ["codigo", "codigo_barras", "nombre", "marca", "modelo"]
-        .map((c) => `${c}.ilike.*${q}*`)
-        .join(","),
-    );
-  }
-  const desde = (f.pagina - 1) * porPagina;
-  const { data, error, count } = await consulta
+  const filtrada = (soloConteo: boolean) => {
+    let consulta = supabase
+      .from("productos_lista")
+      .select("*", soloConteo ? { count: "exact", head: true } : undefined)
+      .eq("negocio_id", negocioId);
+    if (!f.inactivos) consulta = consulta.eq("activo", true);
+    if (f.categoria) consulta = consulta.eq("categoria_id", f.categoria);
+    if (f.marca) consulta = consulta.eq("marca", f.marca);
+    if (f.sinPrecio) consulta = consulta.eq("con_precio", false);
+    const q = sanearBusqueda(f.q);
+    if (q) {
+      // Ya sin comas ni paréntesis (sanearBusqueda): el texto no puede alterar el filtro.
+      consulta = consulta.or(
+        ["codigo", "codigo_barras", "nombre", "marca", "modelo"]
+          .map((c) => `${c}.ilike.*${q}*`)
+          .join(","),
+      );
+    }
+    return consulta;
+  };
+  // Se cuenta primero: pedir un rango fuera de lo que hay da 416 en PostgREST (p. ej. tras guardar precios en la
+  // última página de "sin precio", que queda vacía).
+  const { count, error: errorConteo } = await filtrada(true);
+  if (errorConteo) return falla("No se pudieron leer los productos.");
+  const total = count ?? 0;
+  const pagina = Math.min(Math.max(1, f.pagina), Math.max(1, Math.ceil(total / porPagina)));
+  if (total === 0) return { ok: true, data: { filas: [], total, pagina } };
+  const desde = (pagina - 1) * porPagina;
+  const { data, error } = await filtrada(false)
     .order("codigo")
     .order("id")
     .range(desde, desde + porPagina - 1);
@@ -50,7 +62,8 @@ export async function listarProductos(
   return {
     ok: true,
     data: {
-      total: count ?? 0,
+      total,
+      pagina,
       filas: data.map((p) => ({
         id: p.id!,
         codigo: p.codigo!,
@@ -63,6 +76,7 @@ export async function listarProductos(
         fotoPath: p.foto_path,
         conPrecio: p.con_precio === true,
         monedaPrincipal: p.moneda_principal as Moneda | null,
+        montoPrincipal: p.monto_principal,
         principalBs: p.principal_bs,
       })),
     },
@@ -204,8 +218,8 @@ export async function filasDePrecios(
           .select("producto_id, lista, monto, moneda")
           .in("producto_id", ids)
       : Promise.resolve({ data: [], error: null }),
-    verCostos
-      ? supabase.rpc("costos_stock", { p_negocio_id: negocioId })
+    verCostos && ids.length
+      ? supabase.rpc("costos_stock", { p_negocio_id: negocioId, p_producto_ids: ids })
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (precios.error) return falla("No se pudieron leer los precios.");
@@ -220,11 +234,11 @@ export async function filasDePrecios(
     fila.precios[f.lista as Lista] = f.monto;
     porProducto.set(f.producto_id, fila);
   }
-  // Un mismo costo por ubicación en la práctica (fijar_costos las iguala); se toma el primero conocido.
-  const costoDe = new Map<string, number>();
+  // El costo promedio es por ubicación: si difieren, la celda no tiene un valor único (costoUnico).
+  const costosDe = new Map<string, number[]>();
   for (const c of costos.data ?? []) {
-    if (c.costo_promedio != null && !costoDe.has(c.producto_id))
-      costoDe.set(c.producto_id, c.costo_promedio);
+    if (c.costo_promedio != null)
+      costosDe.set(c.producto_id, [...(costosDe.get(c.producto_id) ?? []), c.costo_promedio]);
   }
   return {
     ok: true,
@@ -235,7 +249,10 @@ export async function filasDePrecios(
       tipo: p.tipo,
       moneda: porProducto.get(p.id)?.moneda ?? null,
       precios: porProducto.get(p.id)?.precios ?? {},
-      costo: costoDe.get(p.id) ?? null,
+      ...(() => {
+        const { costo, varia } = costoUnico(costosDe.get(p.id) ?? []);
+        return { costo, costoVaria: varia };
+      })(),
     })),
   };
 }

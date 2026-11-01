@@ -32,6 +32,8 @@ export const ETIQUETA_UNIDAD: Record<string, string> = { unidad: "Unidad", kg: "
 
 export const PAGINA_PRODUCTOS = 25;
 export const PAGINA_PRECIOS = 50;
+// El enlace "Siguiente" del paginador: la grilla le pasa el foco tras guardar.
+export const ID_PAGINA_SIGUIENTE = "pagina-siguiente";
 
 export const MOTIVO_COSTOS = "Carga de costos";
 export const FOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -69,34 +71,66 @@ export const mensajeDeCatalogo = (codigo: string | undefined) =>
 
 export const MENSAJE_DATOS = "Revisa los datos: hay algo incompleto o inválido.";
 
-// Texto de un monto -> número. Acepta coma o punto como decimal, sin separador de miles ("1.234,50" es
-// ambiguo y se rechaza). Mayor a 0 y con a lo más `decimales`. null si no vale.
-export function parsearMonto(texto: string, decimales = 2): number | null {
+export const MENSAJE_MILES = "Escribe el monto con coma, sin puntos de miles. Ej.: 1500,50";
+
+// Texto de un monto -> número. Acepta coma o punto como decimal, con a lo más `decimales`. Mayor a 0, o desde 0 si
+// `admiteCero` (costos). No adivina miles: "1.500" es ambiguo (¿1,5 o 1500?) y se rechaza. null si no vale.
+export function parsearMonto(texto: string, decimales = 2, admiteCero = false): number | null {
   const t = texto.trim();
-  if (!new RegExp(`^\\d+([.,]\\d{1,${decimales}})?$`).test(t)) return null;
+  if (!new RegExp(`^\\d+([.,]\\d{1,${decimales}})?$`).test(t) || /^\d+\.\d{3}$/.test(t))
+    return null;
   const n = Number(t.replace(",", "."));
-  return n > 0 ? n : null;
+  return n > 0 || (admiteCero && n === 0) ? n : null;
 }
 
-// Número -> texto para editar: coma decimal, sin miles ni ceros de sobra (12.5 -> "12,5").
-export const montoATexto = (n: number | null | undefined): string =>
-  n == null ? "" : String(n).replace(".", ",");
+// Precio -> texto para editar: coma decimal y siempre 2 decimales ("12,50").
+export const precioATexto = (n: number | null | undefined): string =>
+  n == null ? "" : n.toFixed(2).replace(".", ",");
 
-// Cualquier fila de la grilla compara por número, no por texto: "12,50" y "12,5" son lo mismo.
+// Costo -> texto para editar: coma decimal, hasta 4 decimales y sin ceros de más (12.5 -> "12,5").
+export const costoATexto = (n: number | null | undefined): string =>
+  n == null ? "" : String(Number(n.toFixed(4))).replace(".", ",");
+
+// Cualquier fila de la grilla compara por número, no por texto: "12,50" y "12,5" son lo mismo. Si alguno no
+// parsea ("abc", o "0" frente a una celda vacía) se compara el texto, para que no se pierda como "sin cambio".
 export const mismoMonto = (a: string, b: string): boolean => {
-  const x = parsearMonto(a, 4);
-  const y = parsearMonto(b, 4);
-  return x === y;
+  const x = parsearMonto(a, 4, true);
+  const y = parsearMonto(b, 4, true);
+  return x === null || y === null ? a.trim() === b.trim() : x === y;
 };
 
+// Costo de un producto a partir del costo promedio de cada ubicación con costo. Distintos = varía: la grilla
+// deja la celda vacía y escribir un costo los reemplaza a todos.
+export function costoUnico(costos: readonly number[]): { costo: number | null; varia: boolean } {
+  const primero = costos[0];
+  if (primero === undefined) return { costo: null, varia: false };
+  return costos.every((c) => c === primero)
+    ? { costo: primero, varia: false }
+    : { costo: null, varia: true };
+}
+
+// Un tipo de cambio que se aleja más de este margen del vigente pide confirmación: un dedazo cambia todos los Bs.
+export const MARGEN_TIPO_CAMBIO = 0.2;
+export const cambioBruscoDeTipoCambio = (vigente: number | null, nuevo: number): boolean =>
+  vigente !== null && vigente > 0 && Math.abs(nuevo - vigente) / vigente > MARGEN_TIPO_CAMBIO;
+
+const FORMATO_TIPO_CAMBIO = new Intl.NumberFormat("es-BO", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
+export const formatearTipoCambio = (n: number) => FORMATO_TIPO_CAMBIO.format(n);
+
 // El valor va dentro de un filtro .or() de PostgREST: la coma separa condiciones y los paréntesis agrupan; las
-// comillas y la barra rompen el valor; `*` y `%` son comodines; `_` es comodín de LIKE. Se quitan todos.
+// comillas y la barra rompen el valor; `*` y `%` son comodines; `_` es comodín de LIKE. Cada uno se vuelve el
+// comodín `*` (así "Cable 2,5mm" y "AB_12" aparecen), se colapsan repetidos y se quitan los de los bordes: la
+// consulta ya envuelve el valor en `*…*`, y un valor solo de comodines queda vacío en vez de coincidir con todo.
 export function sanearBusqueda(texto: string): string {
   return texto
-    .replace(/[,()"\\*%_:]/g, " ")
+    .replace(/[,()"\\*%_:]/g, "*")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80);
+    .replace(/ ?\*[ *]*/g, "*")
+    .slice(0, 80)
+    .replace(/^[\s*]+|[\s*]+$/g, "");
 }
 
 export type ProductoLista = {
@@ -110,7 +144,9 @@ export type ProductoLista = {
   activo: boolean;
   fotoPath: string | null;
   conPrecio: boolean;
+  // Lista principal (contado o normal): null si el producto no tiene precio en ella.
   monedaPrincipal: Moneda | null;
+  montoPrincipal: number | null;
   principalBs: number | null;
 };
 
@@ -143,6 +179,8 @@ export type FilaPrecios = {
   moneda: Moneda | null;
   precios: Partial<Record<Lista, number>>;
   costo: number | null;
+  // Las ubicaciones tienen costos promedio distintos: no hay un costo único que mostrar.
+  costoVaria: boolean;
 };
 
 export type Filtros = {
