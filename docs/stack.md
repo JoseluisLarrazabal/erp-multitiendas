@@ -16,6 +16,23 @@ Estado: **decidido por el CTO** (2026-10-26). Los términos se revisaron el
 
 Costo base: **$0/mes** más el dominio.
 
+### Librerías y herramientas (2026-11-01)
+
+| Uso | Elección |
+|---|---|
+| Lenguaje | TypeScript `strict` |
+| Paquetes | pnpm |
+| UI | Tailwind 4 y shadcn, como el prototipo |
+| Validación | Zod |
+| Sesión Supabase | `@supabase/ssr` con `proxy.ts` |
+| Migraciones y tipos | Supabase CLI, `supabase gen types` |
+| Excel | `xlsx` no se agrega sin revisar licencia y alternativas al implementar RF-REP-04 |
+| Pruebas | Vitest, pgTAP (`supabase test db`), Playwright |
+| Calidad | ESLint de Next, Prettier, gitleaks |
+| CI | GitHub Actions |
+
+Versiones exactas se fijan en el scaffold. Reglas de uso en `docs/estandares-codigo.md` y `docs/plan-pruebas.md`.
+
 ### Condiciones de la decisión
 
 - **Backups, obligatorios antes de producción:**
