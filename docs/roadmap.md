@@ -14,7 +14,7 @@ arranca con la firma y la recepción de precios e inventario; ver D-03 y D-04 en
 | Fase | Entrega | Contenido | Requisitos | Estimación | Depende de |
 |---|---|---|---|---|---|
 | 0 Cimientos | A | Scaffold, CI, migraciones base, auth, RLS, usuarios, spike de service worker | RF-TR-01 a RF-TR-05, RF-TR-08 | 3 | Stack |
-| 1 Catálogo e inventario | A | Productos, precios, tipo de cambio, kardex, ubicaciones, auditoría, importación | RF-CAT-*, RF-INV-*, RF-MIG-*, RF-TR-09 | 6 | Fase 0; datos del cliente para la importación |
+| 1 Catálogo e inventario | A | Productos, precios, tipo de cambio, kardex, ubicaciones, auditoría, importación | RF-CAT-*, RF-INV-*, RF-MIG-*, RF-TR-09 | 6 | Fase 0 |
 | 2 POS y caja | A | Venta, pagos, descuentos, nota, anulación, devolución, caja, clientes | RF-VEN-01 a RF-VEN-08, RF-CAJ-*, RF-CLI-* | 5 | Fase 1 |
 | 3 Sin conexión | A | Cola, snapshot, service worker, reconciliación | RF-VEN-09 a RF-VEN-14 | 4 | Fase 2 |
 | 4 Lavandería | A | Servicios, órdenes, estados, cobro, entrega | RF-LAV-* | 4 | Fases 2 y 3 |
@@ -55,12 +55,13 @@ esbuild, según `docs/stack.md`. Resultado escrito en ese mismo archivo.
 
 ## Bloqueos del cliente
 
-Se piden en un solo mensaje antes de la fase 1. Detalle en `docs/migracion-datos.md` y en la sección 7 del SRS.
+Detalle en `docs/migracion-datos.md` y en la sección 7 del SRS. El cliente carga sus precios en el sistema (CTO, 2026-11-01):
+la importación no los espera.
 
 | Bloqueo | Frena |
 |---|---|
-| Precios y costos de Lider | Importación y arranque |
-| Respuestas P-01 a P-05 | Importación |
+| Precios y costos de Lider, cargados por el cliente en el panel | Arranque |
+| Respuestas P-01 a P-05 | Corrida final de la importación; corre antes con supuestos |
 | Servicios y precios de lavandería | Arranque de lavandería |
 | P-07 interés de crédito | Fase 7 |
 | P-12 anticipo de reservas | Fase 7 |
