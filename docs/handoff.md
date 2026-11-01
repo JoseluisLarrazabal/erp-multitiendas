@@ -117,6 +117,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
     cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
   - Codex: no verificado en esta fase.
+- **Fase 2 en curso (2026-11-01):** plan en `docs/plan-fase-2.md`. Simplificación registrada: RF-VEN-03 sin
+  autorización de un encargado en el mismo equipo; un vendedor sin `descontar` no aplica descuentos y el encargado vende
+  desde su sesión. Autorizar con credenciales ajenas exige un PIN que el SRS no define.
 - **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la
   estimación era 6 días. **Próximo:** fase 2 de `docs/roadmap.md`, POS y caja. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
