@@ -181,6 +181,19 @@ numeración por equipo y snapshot del catálogo. La cola en IndexedDB no entra a
 - La nota de 80 mm imprime en papel de 80 × 297 mm: CSS no admite alto automático en `@page`.
 - `usuarios/servidor.ts` aloja lo de servidor que usan páginas fuera del panel; `/pos` no lo puede importar (ESLint).
 
+### Hecho en el PR 4, tras revisión
+
+- `/pos` no muestra el efectivo esperado mientras la caja está abierta: el arqueo es ciego. El cajero ve esperado,
+  diferencia y QR recién al cerrar, en la respuesta de `cerrar_caja`.
+- `resumen_caja(sesion)`: RPC de solo lectura para el panel, exige `caja` o `ver_reportes`. Devuelve el desglose del
+  arqueo, `esperado` (de `efectivo_esperado`) y `qr_neto` (de `total_qr_sesion`) en un solo snapshot; pgTAP prueba que el
+  desglose suma exacto al esperado. El panel no recalcula dinero en TypeScript.
+- Listas largas: el detalle de caja muestra las 200 ventas y los 200 movimientos más recientes con "Mostrando N de M";
+  los totales nunca se suman sobre una lista truncada.
+- Un cierre confirmado deja la caja cerrada sin volver a consultar; `ERP_CAJA_CERRADA` al cerrar lleva a la apertura.
+- Tras una devolución total, el reparto en efectivo y QR queda a la vista.
+- Un filtro inválido en la URL toma su valor por defecto y muestra un aviso, sin ocultar "Quitar filtros".
+
 ### Panel
 
 | Ruta | Permiso |

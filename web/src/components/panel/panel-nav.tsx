@@ -6,9 +6,13 @@ import {
   Banknote,
   Boxes,
   CircleDollarSign,
+  Contact,
+  Landmark,
   LayoutDashboard,
   MonitorSmartphone,
   Package,
+  Percent,
+  Receipt,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -51,6 +55,20 @@ export const ITEMS: Item[] = [
     icono: Banknote,
     permisos: ["editar_productos"],
   },
+  {
+    href: "/panel/ventas",
+    etiqueta: "Ventas",
+    icono: Receipt,
+    permisos: ["ver_reportes", "anular"],
+  },
+  { href: "/panel/cajas", etiqueta: "Cajas", icono: Landmark, permisos: ["caja", "ver_reportes"] },
+  {
+    href: "/panel/clientes",
+    etiqueta: "Clientes",
+    icono: Contact,
+    permisos: ["vender", "editar_productos"],
+  },
+  { href: "/panel/descuento", etiqueta: "Descuento", icono: Percent, permisos: ["usuarios"] },
 ];
 
 // Ruta de un ítem o de una pantalla suya (/panel/productos/nuevo cuenta como Productos). Inicio solo es exacto.

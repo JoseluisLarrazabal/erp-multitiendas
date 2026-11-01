@@ -13,6 +13,7 @@ import {
   sesionAbierta,
   stockEn,
   tienda,
+  venderApi,
   ventasDeLaCaja,
 } from "./pos-helpers";
 
@@ -590,4 +591,324 @@ test("E2E-08: lector por teclado y búsqueda bajo 200 ms con 2.000 productos", a
         ),
       );
   }
+});
+
+// PR 4 de la fase 2: caja en /pos y ventas, devoluciones, cajas y clientes en /panel. Comparten el equipo C1 y su caja
+// con todo lo de arriba, por eso viven en este archivo (en serie).
+test("caja en /pos: movimientos, error por falta de efectivo y cierre con la diferencia correcta en base", async ({
+  page,
+}) => {
+  await abrirCajaPorUI(page, "100");
+  const sesionId = (await sesionAbierta(equipoId))!;
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+
+  const registrar = async (tipo: string, monto: string, motivo: string) => {
+    await page.getByLabel("Tipo", { exact: true }).selectOption(tipo);
+    await page.getByLabel("Monto (Bs)").fill(monto);
+    await page.getByLabel("Motivo", { exact: true }).fill(motivo);
+    await page.getByRole("button", { name: "Registrar movimiento" }).click();
+  };
+  await registrar("ingreso", "20", "Cambio del banco");
+  await expect(page.getByRole("status").filter({ hasText: "Ingreso registrado." })).toBeVisible();
+  await registrar("gasto", "5,50", "Limpieza");
+  await expect(
+    page.getByRole("list", { name: "Movimientos registrados" }).getByRole("listitem"),
+  ).toHaveCount(2);
+
+  // Sin motivo o con monto 0 no se envía; un retiro mayor al efectivo lo rechaza el servidor.
+  await registrar("retiro", "0", "x");
+  await expect(page.getByRole("alert").filter({ hasText: "monto mayor a 0" })).toBeVisible();
+  await registrar("retiro", "500", "Retiro excesivo");
+  await expect(page.getByRole("alert").filter({ hasText: "efectivo suficiente" })).toBeVisible();
+
+  // Esperado: 100 + 20 - 5,50 = 114,50. Contado 120 -> sobrante de 5,50.
+  await page.getByLabel("Efectivo contado (Bs)").fill("120");
+  await page.getByRole("button", { name: "Cerrar caja" }).first().click();
+  const dialogo = page.getByRole("alertdialog");
+  await expect(dialogo).toContainText("Bs 120,00");
+  await dialogo.getByRole("button", { name: "Cerrar caja" }).click();
+
+  await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 114,50");
+  await expect(page.getByTestId("cierre-diferencia")).toHaveText("Bs 5,50");
+  await expect(page.getByTestId("cierre-qr")).toHaveText("Bs 0,00");
+  const fila = await apiComo(
+    "vendedor",
+    `caja_sesiones?select=monto_esperado,monto_contado,diferencia,cerrada_en&id=eq.${sesionId}`,
+  );
+  const s = (
+    fila.json as {
+      monto_esperado: number;
+      monto_contado: number;
+      diferencia: number;
+      cerrada_en: string | null;
+    }[]
+  )[0]!;
+  expect([Number(s.monto_esperado), Number(s.monto_contado), Number(s.diferencia)]).toEqual([
+    114.5, 120, 5.5,
+  ]);
+  expect(s.cerrada_en).not.toBeNull();
+
+  // Queda en apertura.
+  await expect(page.getByLabel("Efectivo inicial (Bs)")).toBeVisible();
+  expect(await sesionAbierta(equipoId)).toBeNull();
+});
+
+test.describe("panel: ventas, cajas, clientes y descuento", () => {
+  test.use({ storageState: rutaAuth("dueno") });
+
+  test("anular una venta desde el panel devuelve el stock", async ({ page }) => {
+    const p = await crearProductoConPrecio({ contado: 40, stock: 10 });
+    await abrirCajaApi(equipoId);
+    const cajaId = (await sesionAbierta(equipoId))!;
+    const venta = await venderApi({
+      equipoId,
+      cajaId,
+      items: [{ producto: p, cantidad: 2, precio: 40 }],
+      efectivo: 80,
+    });
+    expect(await stockEn(p.id)).toBe(8);
+
+    await page.goto(`/panel/ventas?q=${venta.numero}`);
+    await page.getByRole("link", { name: new RegExp(venta.numero) }).click();
+    await expect(page.getByRole("heading", { name: `Venta ${venta.numero}` })).toBeVisible();
+    // El motivo es obligatorio.
+    await page.getByRole("button", { name: "Anular venta" }).click();
+    await expect(page.getByText("Escribe el motivo de la anulación.")).toBeVisible();
+    await page.getByLabel("Motivo de la anulación").fill("Error de cobro");
+    await page.getByRole("button", { name: "Anular venta" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Anular venta" }).click();
+
+    await expect(page.getByText(/Anulada .*Motivo: Error de cobro/)).toBeVisible();
+    await expect(page.getByRole("form", { name: "Anular venta" })).toHaveCount(0);
+    expect(await stockEn(p.id)).toBe(10);
+    const r = await apiComo("dueno", `ventas?select=estado&id=eq.${venta.id}`);
+    expect((r.json as { estado: string }[])[0]?.estado).toBe("anulada");
+  });
+
+  test("devolución parcial con reparto mixto: monto, efectivo y QR, y el stock vuelve", async ({
+    page,
+  }) => {
+    const p = await crearProductoConPrecio({ contado: 50, stock: 10 });
+    await abrirCajaApi(equipoId);
+    const cajaId = (await sesionAbierta(equipoId))!;
+    const venta = await venderApi({
+      equipoId,
+      cajaId,
+      items: [{ producto: p, cantidad: 3, precio: 50 }],
+      efectivo: 60,
+      qr: 90,
+    });
+
+    await page.goto(`/panel/ventas/${venta.id}`);
+    const form = page.getByRole("form", { name: "Devolver venta" });
+    // Más de lo vendido no pasa.
+    await form.getByLabel(`Cantidad a devolver de ${p.nombre}`).fill("4");
+    await form.getByLabel("Motivo de la devolución").fill("Defecto de fábrica");
+    await form.getByRole("button", { name: "Devolver" }).click();
+    await expect(form.getByText(/entero de 1 a 3/)).toBeVisible();
+
+    await form.getByLabel(`Cantidad a devolver de ${p.nombre}`).fill("2");
+    await form.getByRole("button", { name: "Devolver" }).click();
+    // 2 de 3 = Bs 100; el efectivo cobrado era 60, el resto sale por QR.
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Bs 100,00 en total, Bs 60,00 en efectivo y Bs 40,00 por QR" }),
+    ).toBeVisible();
+    await expect(page.getByRole("list", { name: "Devoluciones" })).toContainText(
+      "Defecto de fábrica",
+    );
+    await expect(page.getByText("queda 1")).toBeVisible();
+    expect(await stockEn(p.id)).toBe(9);
+    const r = await apiComo(
+      "dueno",
+      `devoluciones?select=monto,monto_efectivo&venta_id=eq.${venta.id}`,
+    );
+    const d = r.json as { monto: number; monto_efectivo: number }[];
+    expect(d).toHaveLength(1);
+    expect([Number(d[0]!.monto), Number(d[0]!.monto_efectivo)]).toEqual([100, 60]);
+    // Con devoluciones ya no se anula.
+    await expect(page.getByText(/ya tiene devoluciones/)).toBeVisible();
+  });
+
+  test("devolución total: el reparto queda a la vista aunque la venta ya no tenga nada por devolver", async ({
+    page,
+  }) => {
+    const p = await crearProductoConPrecio({ contado: 30, stock: 10 });
+    await abrirCajaApi(equipoId);
+    const cajaId = (await sesionAbierta(equipoId))!;
+    const venta = await venderApi({
+      equipoId,
+      cajaId,
+      items: [{ producto: p, cantidad: 2, precio: 30 }],
+      efectivo: 60,
+    });
+
+    await page.goto(`/panel/ventas/${venta.id}`);
+    const form = page.getByRole("form", { name: "Devolver venta" });
+    await form.getByLabel(`Cantidad a devolver de ${p.nombre}`).fill("2");
+    await form.getByLabel("Motivo de la devolución").fill("Cliente se arrepintió");
+    await form.getByRole("button", { name: "Devolver" }).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Bs 60,00 en total, Bs 60,00 en efectivo y Bs 0,00 por QR" }),
+    ).toBeVisible();
+    await expect(form.getByText("No queda nada por devolver")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Devoluciones" })).toContainText(
+      "Cliente se arrepintió",
+    );
+    expect(await stockEn(p.id)).toBe(10);
+  });
+
+  test("detalle de una caja cerrada: esperado, contado, diferencia y QR", async ({ page }) => {
+    const p = await crearProductoConPrecio({ contado: 25, stock: 10 });
+    await abrirCajaApi(equipoId);
+    const cajaId = (await sesionAbierta(equipoId))!;
+    await venderApi({
+      equipoId,
+      cajaId,
+      items: [{ producto: p, cantidad: 2, precio: 25 }],
+      efectivo: 30,
+      qr: 20,
+    });
+    const mov = await apiComo("vendedor", "rpc/registrar_movimiento_caja", {
+      metodo: "POST",
+      cuerpo: {
+        p_id: crypto.randomUUID(),
+        p_sesion_id: cajaId,
+        p_tipo: "ingreso",
+        p_monto: 10,
+        p_motivo: "Prueba panel",
+      },
+    });
+    expect(mov.status).toBeLessThan(300);
+    // Esperado: 100 + 30 + 10 = 140. Contado 150 -> diferencia 10; QR 20.
+    const cierre = await apiComo("vendedor", "rpc/cerrar_caja", {
+      metodo: "POST",
+      cuerpo: { p_sesion_id: cajaId, p_monto_contado: 150 },
+    });
+    expect(cierre.status).toBeLessThan(300);
+
+    await page.goto(`/panel/cajas/${cajaId}`);
+    await expect(page.getByTestId("sesion-esperado")).toHaveText("Bs 140,00");
+    await expect(page.getByTestId("sesion-diferencia")).toHaveText("Bs 10,00");
+    await expect(page.getByTestId("sesion-qr")).toHaveText("Bs 20,00");
+    await expect(page.getByRole("list", { name: "Movimientos" })).toContainText("Prueba panel");
+    await expect(
+      page.getByRole("list", { name: "Ventas de la sesión" }).getByRole("listitem"),
+    ).toHaveCount(1);
+
+    await page.goto("/panel/cajas");
+    await expect(page.getByRole("link", { name: /Caja 1/ }).first()).toBeVisible();
+  });
+
+  test("tope de descuento: se fija, se valida y queda en base", async ({ page }) => {
+    const leer = async () => {
+      const r = await apiComo("dueno", `negocios?select=tope_descuento&id=eq.${tienda}`);
+      return Number((r.json as { tope_descuento: number }[])[0]!.tope_descuento);
+    };
+    const original = await leer();
+    try {
+      await page.goto("/panel/descuento");
+      await page.getByLabel("Tope (%)").fill("101");
+      await page.getByRole("button", { name: "Guardar tope" }).click();
+      await expect(page.getByText(/de 0 a 100/)).toBeVisible();
+      await page.getByLabel("Tope (%)").fill("12,5");
+      await page.getByRole("button", { name: "Guardar tope" }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Tope guardado." })).toBeVisible();
+      await expect(page.getByTestId("tope-vigente")).toHaveText("12,5 %");
+      expect(await leer()).toBe(12.5);
+    } finally {
+      await apiComo("dueno", "rpc/fijar_tope_descuento", {
+        metodo: "POST",
+        cuerpo: { p_negocio_id: tienda, p_tope: original },
+      });
+    }
+    expect(await leer()).toBe(original);
+  });
+
+  test("clientes: alta, búsqueda, edición y documento duplicado", async ({ page }) => {
+    const doc = `PNL${corrida}`;
+    const nombre = `Cliente Panel ${corrida}`;
+    await page.goto("/panel/clientes");
+    const nuevo = page.getByRole("form", { name: "Cliente nuevo" });
+    await nuevo.getByLabel("Nombre").fill(nombre);
+    await nuevo.getByLabel("CI o NIT").fill(doc.toLowerCase());
+    await nuevo.getByRole("button", { name: "Guardar cliente" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Cliente guardado." })).toBeVisible();
+
+    await nuevo.getByLabel("Nombre").fill("Otro cliente");
+    await nuevo.getByLabel("CI o NIT").fill(doc);
+    await nuevo.getByRole("button", { name: "Guardar cliente" }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Ya existe un cliente con ese documento" }),
+    ).toBeVisible();
+
+    try {
+      await page.goto(`/panel/clientes?q=${doc}`);
+      const lista = page.getByRole("list", { name: "Clientes" });
+      await expect(lista.getByRole("listitem")).toHaveCount(1);
+      await expect(lista).toContainText(nombre);
+      await page.getByRole("button", { name: `Editar a ${nombre}` }).click();
+      const edicion = page.getByRole("form", { name: "Editar cliente" });
+      await edicion.getByLabel("Nombre").fill(`${nombre} editado`);
+      await edicion.getByLabel("Teléfono").fill("70000000");
+      await edicion.getByRole("button", { name: "Guardar cambios" }).click();
+      await expect(lista).toContainText(`${nombre} editado`);
+    } finally {
+      const r = await apiComo(
+        "dueno",
+        `clientes?select=id&negocio_id=eq.${tienda}&ci_nit=eq.${doc}`,
+      );
+      for (const c of r.json as { id: string }[]) await liberarCliente(c.id);
+    }
+  });
+});
+
+test.describe("panel: permisos", () => {
+  test.use({ storageState: rutaAuth("contador") });
+
+  test("el contador ve la venta pero no anula ni devuelve, y no tiene caja en /pos", async ({
+    page,
+  }) => {
+    const p = await crearProductoConPrecio({ contado: 10, stock: 5 });
+    await abrirCajaApi(equipoId);
+    const cajaId = (await sesionAbierta(equipoId))!;
+    const venta = await venderApi({
+      equipoId,
+      cajaId,
+      items: [{ producto: p, cantidad: 1, precio: 10 }],
+      efectivo: 10,
+    });
+
+    await page.goto(`/panel/ventas/${venta.id}`);
+    await expect(page.getByRole("heading", { name: `Venta ${venta.numero}` })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Anular venta" })).toHaveCount(0);
+    await expect(page.getByRole("form", { name: "Devolver venta" })).toHaveCount(0);
+    await expect(
+      page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Ventas" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Descuento" })).toHaveCount(0);
+
+    // El servidor lo rechaza aunque se intente por API.
+    const anular = await apiComo("contador", "rpc/anular_venta", {
+      metodo: "POST",
+      cuerpo: { p_venta_id: venta.id, p_motivo: "intento" },
+    });
+    expect(anular.status).toBeGreaterThanOrEqual(400);
+    const caja = await apiComo("contador", "rpc/caja_sesion_abierta", {
+      metodo: "POST",
+      cuerpo: { p_dispositivo_id: equipoId },
+    });
+    expect(caja.status).toBeGreaterThanOrEqual(400);
+
+    await fijarEquipo(page, equipoId);
+    await page.goto("/pos");
+    await expect(page.getByRole("alert").filter({ hasText: "no puede vender" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Caja", exact: true })).toHaveCount(0);
+
+    await page.goto("/panel/descuento");
+    await expect(page).toHaveURL(/\/panel$/);
+  });
 });

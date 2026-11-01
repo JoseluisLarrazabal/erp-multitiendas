@@ -36,6 +36,7 @@ export function PosVenta({
     cambiarEquipo,
     alAbrirCaja,
     verificarCaja,
+    cajaCerrada,
     recargarNegocio,
   } = usePosCaja(negocioId, permisos);
 
@@ -107,6 +108,7 @@ export function PosVenta({
             recargarNegocio={recargarNegocio}
             recargarPermisos={recargarPermisos}
             verificarCaja={verificarCaja}
+            cajaCerrada={cajaCerrada}
             registrarGuarda={registrarGuarda}
             atajosBloqueados={atajosBloqueados}
             sesionCaducada={sesionCaducada}

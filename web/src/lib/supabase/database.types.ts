@@ -945,6 +945,9 @@ isOneToOne: false
 "resolver_venta_existente":
 { Args: { "p_huella": string,"p_negocio_id": string,"p_venta": Omit<Database["public"]['Tables']["ventas"]['Row'], Database["public"]['Tables']["ventas"]['ComputedFields']> }; Returns: Json
                            },
+"resumen_caja":
+{ Args: { "p_sesion_id": string }; Returns: Json
+                           },
 "stock_inconsistente":
 { Args: { "p_negocio_id": string }; Returns: {
               "cantidad_kardex": number,"cantidad_stock": number,"producto_id": string,"ubicacion_id": string

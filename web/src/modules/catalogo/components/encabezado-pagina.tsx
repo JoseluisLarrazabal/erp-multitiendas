@@ -28,3 +28,12 @@ export function Seccion({ titulo, children }: { titulo: string; children: React.
     </section>
   );
 }
+
+export function Dato({ t, d }: { t: string; d: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-muted-foreground text-xs font-semibold">{t}</dt>
+      <dd>{d}</dd>
+    </div>
+  );
+}
