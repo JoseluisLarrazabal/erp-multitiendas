@@ -37,6 +37,76 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"caja_movimientos": {
+                  Row: {
+                    "created_at": string,"id": string,"monto": number,"motivo": string,"negocio_id": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id": string,"monto": number,"motivo": string,"negocio_id": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"monto"?: number,"motivo"?: string,"negocio_id"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "caja_movimientos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "caja_movimientos_negocio_id_sesion_id_fkey"
+      columns: ["negocio_id","sesion_id"]
+isOneToOne: false
+      referencedRelation: "caja_sesiones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "caja_movimientos_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"caja_sesiones": {
+                  Row: {
+                    "abierta_en": string,"cerrada_en": string | null,"diferencia": number | null,"dispositivo_id": string,"id": string,"monto_contado": number | null,"monto_esperado": number | null,"monto_inicial": number,"negocio_id": string,"usuario_apertura": string,"usuario_cierre": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id": string,"id": string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial": number,"negocio_id": string,"usuario_apertura": string,"usuario_cierre"?: string | null
+                  }
+                  Update: {
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id"?: string,"id"?: string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial"?: number,"negocio_id"?: string,"usuario_apertura"?: string,"usuario_cierre"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "caja_sesiones_negocio_id_dispositivo_id_fkey"
+      columns: ["negocio_id","dispositivo_id"]
+isOneToOne: false
+      referencedRelation: "dispositivos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "caja_sesiones_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "caja_sesiones_usuario_apertura_fkey"
+      columns: ["usuario_apertura"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "caja_sesiones_usuario_cierre_fkey"
+      columns: ["usuario_cierre"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"categorias": {
                   Row: {
                     "created_at": string,"id": string,"negocio_id": string,"nombre": string
@@ -51,6 +121,26 @@ export type Database = {
                   Relationships: [
                     {
       foreignKeyName: "categorias_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"clientes": {
+                  Row: {
+                    "ci_nit": string | null,"created_at": string,"direccion": string | null,"id": string,"negocio_id": string,"nombre": string,"telefono": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ci_nit"?: string | null,"created_at"?: string,"direccion"?: string | null,"id"?: string,"negocio_id": string,"nombre": string,"telefono"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "ci_nit"?: string | null,"created_at"?: string,"direccion"?: string | null,"id"?: string,"negocio_id"?: string,"nombre"?: string,"telefono"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clientes_negocio_id_fkey"
       columns: ["negocio_id"]
 isOneToOne: false
       referencedRelation: "negocios"
@@ -501,7 +591,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "ajustar_inventario":
+            "abrir_caja":
+{ Args: { "p_dispositivo_id": string,"p_id": string,"p_monto_inicial": number,"p_negocio_id": string }; Returns: string
+                           },
+"ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
 "asignar_foto_producto":
@@ -516,6 +609,29 @@ isOneToOne: false
 "bloquear_series":
 { Args: { "p_cantidad": number,"p_ids": (string)[],"p_negocio_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: undefined
                            },
+"caja_sesion_abierta":
+{ Args: { "p_dispositivo_id": string }; Returns: {
+              "abierta_en": string,
+"cerrada_en": string | null,
+"diferencia": number | null,
+"dispositivo_id": string,
+"id": string,
+"monto_contado": number | null,
+"monto_esperado": number | null,
+"monto_inicial": number,
+"negocio_id": string,
+"usuario_apertura": string,
+"usuario_cierre": string | null
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "caja_sesiones"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"cerrar_caja":
+{ Args: { "p_monto_contado": number,"p_sesion_id": string }; Returns: Json
+                           },
 "comparte_negocio":
 { Args: { "p_usuario_id": string }; Returns: boolean
                            },
@@ -527,6 +643,9 @@ isOneToOne: false
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
                            },
+"efectivo_esperado":
+{ Args: { "p_sesion_id": string }; Returns: number
+                           },
 "es_dueno":
 { Args: { "p_negocio_id": string }; Returns: boolean
                            },
@@ -535,6 +654,9 @@ isOneToOne: false
                            },
 "guardar_categoria":
 { Args: { "p_id": string,"p_negocio_id": string,"p_nombre": string }; Returns: string
+                           },
+"guardar_cliente":
+{ Args: { "p_datos": Json,"p_negocio_id": string }; Returns: string
                            },
 "guardar_precios":
 { Args: { "p_items": Json,"p_negocio_id": string }; Returns: number
@@ -581,6 +703,9 @@ isOneToOne: false
                            },
 "registrar_entrada":
 { Args: { "p_cantidad": number,"p_costo_unitario": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"registrar_movimiento_caja":
+{ Args: { "p_id": string,"p_monto": number,"p_motivo": string,"p_sesion_id": string,"p_tipo": string }; Returns: string
                            },
 "registrar_series":
 { Args: { "p_negocio_id": string,"p_producto_id": string,"p_series": (string)[],"p_ubicacion_id": string }; Returns: number

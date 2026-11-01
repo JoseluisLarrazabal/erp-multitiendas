@@ -97,6 +97,16 @@ numeración por equipo y snapshot del catálogo. La cola en IndexedDB no entra a
   ingresos - gastos - retiros - devoluciones en efectivo` y la diferencia (DB-06). QR no entra al efectivo; se muestra
   aparte. Cerrar exige `caja`. RN-07 (cola vacía) se impone en el POS en la fase 3.
 - Sesiones por negocio, sin efecto cruzado (DB-20).
+- Hecho en el PR 1, tras revisión:
+  - `cerrar_caja` repetido con el mismo contado devuelve el resultado guardado; con otro, `ERP_CAJA_CERRADA`.
+    `cerrada_en = clock_timestamp()`, para que ningún movimiento contado quede con hora posterior al cierre.
+  - Gasto o retiro mayor al efectivo esperado: `ERP_EFECTIVO_INSUFICIENTE`. Movimientos y cierre toman la sesión
+    `for update`. Probado a mano con 20 retiros concurrentes: pasan los que caben.
+  - `caja_sesion_abierta` exige `caja`. Un id de sesión o movimiento de otro negocio da `ERP_SIN_PERMISO`.
+  - El replay de `abrir_caja` con el id de una sesión cerrada devuelve ese id: el POS confirma con `caja_sesion_abierta`.
+- **PR 2:** `efectivo_esperado` suma ventas en efectivo y resta devoluciones en efectivo. `devolver_venta` y `anular_venta`
+  con pago en efectivo aplican el mismo chequeo (`ERP_EFECTIVO_INSUFICIENTE`) y toman la sesión `for update`, si no el
+  esperado puede quedar negativo.
 
 ### Clientes
 
@@ -136,6 +146,9 @@ Anular y devolver también desde `/panel/ventas/[id]`, con la sesión de caja ab
 ## Fuera de esta fase
 
 - Cola offline, envío con backoff, aviso de pendientes, bloqueo de cierre con cola: fase 3.
+- Caja sin conexión: hoy `abierta_en`, `created_at` y el usuario salen del servidor al sincronizar. La fase 3 agrega hora
+  y usuario del equipo (como `creada_en_cliente` en ventas) a apertura, movimientos y cierre.
+- Búsqueda de clientes sin índice: `pg_trgm` si un negocio pasa de unos 10.000.
 - Lavandería y venta por peso en frial: fases 4 y 5. La venta ya acepta `kg`.
 - Crédito y reservas: Entrega B.
 - Reporte de ventas y ganancia: fase 5.
