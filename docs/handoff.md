@@ -142,6 +142,22 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     impresora térmica real, lavandería en E2E (solo Vitest), cambio de cuenta en el mismo navegador (solo revisión).
     Tras cada build hay que borrar el service worker del navegador para ver `/pos` nuevo (`skipWaiting` apagado a
     propósito). Codex: no verificado (sin cuota).
+  - PR 4 `feat/caja-ventas-panel`: movimientos y cierre de caja en `/pos` (arqueo ciego); en `/panel`: clientes, ventas
+    con anulación y devolución parcial, cajas con detalle, y tope de descuento. RPC nueva `resumen_caja`. pgTAP 1057,
+    Vitest 188, E2E 98 en verde. Revisión de seguridad sin hallazgos. No verificado: cerrar caja con venta en duda y
+    filtro inválido solo en Vitest, sin E2E. Codex: no verificado (sin cuota).
+- **Fase 2 cerrada (2026-11-01):** 4 PRs, plan en `docs/plan-fase-2.md`. **Próximo:** fase 3, venta y órdenes sin
+  conexión (`docs/roadmap.md`).
+- **Staging (2026-11-01):** Supabase `yfdhiuaeinfkvcegeqfy` (São Paulo, plan Free, nombre por defecto "JoseluisLarrazabal's
+  Project"), enlazado con `supabase link`. Migraciones aplicadas con `db push`, sin seed. Auth igual a local con
+  `config push` (registro cerrado, comprobado); `site_url` sigue en localhost hasta que ande Vercel. Función
+  `admin-usuarios` desplegada. Sin usuarios todavía: los crea el CTO desde el panel de Supabase.
+  - Vercel `erp_multitiendas` (team de jencarlosmoral2), producción `https://erpmultitiendas.vercel.app`: responde 500 en
+    todas las rutas porque faltan `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. El MCP de Vercel solo ve
+    el proyecto `kuska`: falta que el CTO le dé acceso a `erp_multitiendas` o cargue las variables. Las previews están
+    detrás de la protección de Vercel.
+  - Regla nueva: tras cada merge, verificar producción con Playwright; el check verde de Vercel solo dice que el build
+    terminó.
 - **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la
   estimación era 6 días. **Próximo:** fase 2 de `docs/roadmap.md`, POS y caja. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
