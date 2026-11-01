@@ -98,10 +98,16 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
   - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
   - **Pendiente cliente:** precios, y preguntas P-01 a P-17 del SRS.
-- **Fase 0 en curso (desde 2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. PR 1 (scaffold de `web/`, Supabase local
-  en puertos 54420-54429 y CI) es el primero. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
-  `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
-  referencia visual.
+- **Fase 0 en curso (desde 2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Todo local, sin proyectos en Supabase
+  ni Vercel. El prototipo `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como
+  mapa de módulos y referencia visual.
+  - PR #24 hecho: `web/`, Supabase local en puertos 54420-54429 y CI de 8 pasos.
+  - Base de tenencia: 6 tablas, matriz de permisos, RLS de solo lectura y RPC de usuarios y dispositivos. Usuarios de
+    prueba en `supabase/seed.sql`.
+  - Spike de service worker: `@serwist/turbopack` sirve, resultado en `docs/stack.md`.
+  - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
+    cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
+  - Codex: no verificado en esta fase.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.

@@ -23,13 +23,144 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            [_ in never]: never
+            "dispositivos": {
+                  Row: {
+                    "created_at": string,"id": string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"negocio_id"?: string,"nombre"?: string,"prefijo"?: string,"ubicacion_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "dispositivos_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"negocios": {
+                  Row: {
+                    "created_at": string,"datos_nota": string | null,"id": string,"nit": string | null,"nombre": string,"tipo": string,"tope_descuento": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"datos_nota"?: string | null,"id"?: string,"nit"?: string | null,"nombre": string,"tipo": string,"tope_descuento"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"datos_nota"?: string | null,"id"?: string,"nit"?: string | null,"nombre"?: string,"tipo"?: string,"tope_descuento"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"perfiles": {
+                  Row: {
+                    "activo": boolean,"created_at": string,"id": string,"nombre": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activo"?: boolean,"created_at"?: string,"id": string,"nombre": string
+                  }
+                  Update: {
+                    "activo"?: boolean,"created_at"?: string,"id"?: string,"nombre"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"rol_permisos": {
+                  Row: {
+                    "permiso": string,"rol": string,"tipo_negocio": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "permiso": string,"rol": string,"tipo_negocio": string
+                  }
+                  Update: {
+                    "permiso"?: string,"rol"?: string,"tipo_negocio"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"ubicaciones": {
+                  Row: {
+                    "created_at": string,"id": string,"negocio_id": string,"nombre": string,"tipo": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"negocio_id": string,"nombre": string,"tipo": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"negocio_id"?: string,"nombre"?: string,"tipo"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ubicaciones_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"usuario_negocio": {
+                  Row: {
+                    "created_at": string,"negocio_id": string,"rol": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"negocio_id": string,"rol": string,"usuario_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"negocio_id"?: string,"rol"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "usuario_negocio_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "usuario_negocio_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "asignar_usuario":
+{ Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
+                           },
+"comparte_negocio":
+{ Args: { "p_usuario_id": string }; Returns: boolean
+                           },
+"es_dueno":
+{ Args: { "p_negocio_id": string }; Returns: boolean
+                           },
+"mis_negocios":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"puede_administrar_cuenta":
+{ Args: { "p_usuario_id": string }; Returns: boolean
+                           },
+"quitar_usuario":
+{ Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: undefined
+                           },
+"registrar_dispositivo":
+{ Args: { "p_negocio_id": string,"p_nombre": string,"p_prefijo": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"tiene_permiso":
+{ Args: { "p_negocio_id": string,"p_permiso": string }; Returns: boolean
+                           }
           }
           Enums: {
             [_ in never]: never

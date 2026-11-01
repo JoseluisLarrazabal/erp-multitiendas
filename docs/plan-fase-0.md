@@ -40,10 +40,11 @@ global a la cuenta.
 1. Solo un `dueno` del negocio asigna el rol `dueno` o modifica a un `dueno`.
 2. Nadie cambia su propio rol ni se quita a sí mismo.
 3. Desactivar o reactivar una cuenta exige `usuarios` en **todos** los negocios de esa cuenta. Quien no los tiene usa
-   `quitar_usuario`, que solo afecta a su negocio.
-4. Una cuenta desactivada queda baneada en Auth y además `mis_negocios()` y `tiene_permiso()` la ignoran, porque su JWT
-   sigue vivo hasta 1 hora.
-5. `admin-usuarios` llama `asignar_usuario` con el JWT del llamador. Si falla, borra la cuenta recién creada.
+   `quitar_usuario`, que solo afecta a su negocio. El último negocio de una cuenta no se quita: la cuenta se desactiva.
+4. Desactivar es banear en Auth. Un trigger sobre `auth.users.banned_until` mantiene `perfiles.activo`, así flag y ban no
+   se separan. `mis_negocios()` y `tiene_permiso()` ignoran esa cuenta, porque su JWT sigue vivo hasta 1 hora.
+5. `admin-usuarios` consulta `puede_administrar_cuenta` y llama `asignar_usuario` con el JWT del llamador. Si falla,
+   borra la cuenta recién creada.
 
 `quitar_usuario` se suma al catálogo de RPC.
 
