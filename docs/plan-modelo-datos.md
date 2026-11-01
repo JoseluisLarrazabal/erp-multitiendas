@@ -191,7 +191,7 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 
 - `auditoria` (tabla, registro_id, accion, antes, despues, usuario_id, created_at).
 - Se llena con trigger sobre `productos`, `producto_precios`, `tipos_cambio`, `usuario_negocio` y `rol_permisos`. Desactivar
-  una cuenta lo registra `auditar_cuenta`, que llama `admin-usuarios`.
+  una cuenta lo registra `auditar_cuenta` (solo `service_role`), que llama `admin-usuarios` con el id verificado del llamador.
 
 ## Catálogo de RPC
 

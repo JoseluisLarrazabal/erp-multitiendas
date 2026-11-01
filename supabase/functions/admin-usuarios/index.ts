@@ -1,5 +1,5 @@
 // Crear y desactivar cuentas exige la API admin de Auth. La llaman solo server actions del panel: sin CORS.
-// Dos clientes: el del llamador (JWT) decide permisos por RPC; service_role solo toca auth.admin.
+// Dos clientes: el del llamador (JWT) decide permisos por RPC; service_role toca auth.admin y auditar_cuenta.
 // Versiones iguales a web/package.json.
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { z } from "npm:zod@4.6.7";
@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
     return falla(flojo ? "ERP_CLAVE_DEBIL" : "ERP_DATOS_INVALIDOS");
   }
   const datos = parsed.data;
-  const admin = createClient(url, servicio, sinSesion).auth.admin;
+  const clienteServicio = createClient(url, servicio, sinSesion);
+  const admin = clienteServicio.auth.admin;
 
   try {
     if (datos.accion === "crear") {
@@ -140,6 +141,13 @@ Deno.serve(async (req) => {
       ban_duration: datos.accion === "desactivar" ? "876000h" : "none",
     });
     if (errorBan) return falla("ERP_INTERNO");
+    // El baneo ya rige: si la auditoría falla se avisa, no se oculta ni se deshace.
+    const { error: errorAuditoria } = await clienteServicio.rpc("auditar_cuenta", {
+      p_actor_id: sesion.user.id,
+      p_usuario_id: datos.usuario_id,
+      p_activo: datos.accion === "reactivar",
+    });
+    if (errorAuditoria) return falla("ERP_AUDITORIA");
     return responder({ ok: true, data: { usuario_id: datos.usuario_id } });
   } catch {
     return falla("ERP_INTERNO");
