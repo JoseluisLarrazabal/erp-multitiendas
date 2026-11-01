@@ -135,6 +135,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     - Anular pasadas 24 h exige `devolver_fuera_plazo`. QR en línea exige `verificado: true`. Lavandería exige cliente.
     - Pendiente para la fase 3: la venta offline debe marcarse para revisión en vez de rechazarse por piso o tope.
     - Codex: no verificado (sin cuota).
+  - PR 3 `feat/pos-venta`: `/pos` vende con conexión. Equipo en `localStorage`, apertura de caja, catálogo en memoria
+    (búsqueda medida bajo 45 ms con 2.000 productos), carrito, cobro efectivo/QR/mixto, cliente, nota imprimible 80 mm y
+    A4, consulta rápida (RF-VEN-01 a 05, RF-VEN-08, RF-CAJ-01, RF-CLI-01/02, RF-CAT-07, E2E-04, E2E-08). Vitest 167,
+    E2E 90 en verde. Decisiones en `docs/plan-fase-2.md`, sección "Hecho en el PR 3". No verificado: táctil real,
+    impresora térmica real, lavandería en E2E (solo Vitest), cambio de cuenta en el mismo navegador (solo revisión).
+    Tras cada build hay que borrar el service worker del navegador para ver `/pos` nuevo (`skipWaiting` apagado a
+    propósito). Codex: no verificado (sin cuota).
 - **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la
   estimación era 6 días. **Próximo:** fase 2 de `docs/roadmap.md`, POS y caja. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.

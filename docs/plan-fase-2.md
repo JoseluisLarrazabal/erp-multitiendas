@@ -164,6 +164,23 @@ numeración por equipo y snapshot del catálogo. La cola en IndexedDB no entra a
 - Contenido: negocio, NIT, `datos_nota` (dirección y teléfono), número, fecha, vendedor, cliente, líneas, garantía por
   producto, descuentos, total, pagos.
 
+### Hecho en el PR 3, tras revisión
+
+- Una venta enviada sin respuesta queda "en duda": no se borra hasta un resultado cierto. Antes de descartarla o de
+  aceptar un rechazo, el POS consulta si el UUID ya existe. Con la sesión caducada o con otra cuenta en el navegador
+  no envía, ni comprueba, ni descarta: la RLS ocultaría una venta ya guardada.
+- Un re-chequeo de sesión en segundo plano no cambia de negocio ni desmonta la venta; solo el usuario cambia de
+  negocio, con confirmación si hay carrito y nunca con venta pendiente.
+- Numeración: el siguiente número es el mayor entre el contador en memoria y el de `localStorage`, para que otra pestaña
+  del mismo equipo no lo atasque. Pasado `999999` el equipo avisa que agotó la numeración.
+- Ante `ERP_SIN_PERMISO`, `ERP_DESCUENTO_TOPE` o `ERP_PRODUCTO_SIN_PRECIO` el POS recarga catálogo, negocio y permisos.
+  Una línea sin precio vuelve a `contado`; un producto que salió del catálogo se quita con aviso.
+- `ERP_CAJA_CERRADA` muestra la apertura sobre la venta, sin perder el carrito.
+- Un servicio fuera de lavandería se ve en la consulta pero no se vende.
+- Tras vender, el stock local se descuenta; el catálogo completo se recarga solo si pasaron más de 5 minutos.
+- La nota de 80 mm imprime en papel de 80 × 297 mm: CSS no admite alto automático en `@page`.
+- `usuarios/servidor.ts` aloja lo de servidor que usan páginas fuera del panel; `/pos` no lo puede importar (ESLint).
+
 ### Panel
 
 | Ruta | Permiso |
