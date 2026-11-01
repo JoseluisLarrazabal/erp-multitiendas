@@ -183,12 +183,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "negocios"
       referencedColumns: ["id"]
-    },{
-      foreignKeyName: "tipos_cambio_usuario_id_fkey"
-      columns: ["usuario_id"]
-isOneToOne: false
-      referencedRelation: "perfiles"
-      referencedColumns: ["id"]
     }
                   ]
                 },"ubicaciones": {
@@ -261,7 +255,7 @@ isOneToOne: false
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
                            },
 "auditar_cuenta":
-{ Args: { "p_activo": boolean,"p_usuario_id": string }; Returns: undefined
+{ Args: { "p_activo": boolean,"p_actor_id": string,"p_usuario_id": string }; Returns: undefined
                            },
 "comparte_negocio":
 { Args: { "p_usuario_id": string }; Returns: boolean

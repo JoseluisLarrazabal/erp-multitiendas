@@ -70,8 +70,8 @@ begin
   if v_codigo is null or v_codigo = '' or v_nombre is null or v_nombre = ''
      or v_tipo is null
      or not (v_tipo = any (case v_tipo_negocio when 'lavanderia' then array['servicio', 'insumo'] else array['producto'] end))
-     -- La foto vive bajo la carpeta del negocio.
-     or (v_foto is not null and v_foto not like p_negocio_id::text || '/%') then
+     -- La foto es <negocio_id>/<uuid>.(jpg|png|webp): sin subcarpetas ni '..'.
+     or (v_foto is not null and v_foto !~ ('^' || p_negocio_id::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$')) then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
 
@@ -151,6 +151,7 @@ declare
   v_item jsonb;
   v_producto_id uuid;
   v_moneda text;
+  v_monto numeric;
   v_precio record;
 begin
   if not public.tiene_permiso(p_negocio_id, 'editar_productos') then
@@ -169,14 +170,20 @@ begin
     else array['contado', 'credito', 'mayorista', 'minimo']
   end;
 
-  for v_item in select * from jsonb_array_elements(p_items) loop
+  -- Orden fijo por producto: dos lotes concurrentes no se bloquean en cruz.
+  for v_item in select e from jsonb_array_elements(p_items) e order by e ->> 'producto_id' loop
     if jsonb_typeof(v_item) <> 'object' or jsonb_typeof(v_item -> 'precios') is distinct from 'object' then
       raise exception 'ERP_DATOS_INVALIDOS';
     end if;
     v_producto_id := (v_item ->> 'producto_id')::uuid;
     v_moneda := v_item ->> 'moneda';
     if v_moneda is null or v_moneda not in ('BOB', 'USD')
-       or not exists (select 1 from public.productos where id = v_producto_id and negocio_id = p_negocio_id) then
+       or v_producto_id is null then
+      raise exception 'ERP_DATOS_INVALIDOS';
+    end if;
+    -- Bloquea el producto: no se desactiva ni cambia de moneda a medio lote.
+    perform 1 from public.productos where id = v_producto_id and negocio_id = p_negocio_id for update;
+    if not found then
       raise exception 'ERP_DATOS_INVALIDOS';
     end if;
 
@@ -186,7 +193,7 @@ begin
       end if;
       if jsonb_typeof(v_precio.value) = 'null' then
         delete from public.producto_precios where producto_id = v_producto_id and lista = v_precio.lista;
-      elsif jsonb_typeof(v_precio.value) = 'number' and (v_precio.value #>> '{}')::numeric >= 0 then
+      elsif jsonb_typeof(v_precio.value) = 'number' and (v_precio.value #>> '{}')::numeric > 0 then
         insert into public.producto_precios (negocio_id, producto_id, lista, monto, moneda)
         values (p_negocio_id, v_producto_id, v_precio.lista, (v_precio.value #>> '{}')::numeric, v_moneda)
         on conflict (producto_id, lista) do update
@@ -224,7 +231,7 @@ begin
   if not public.tiene_permiso(p_negocio_id, 'editar_productos') then
     raise exception 'ERP_SIN_PERMISO';
   end if;
-  if p_valor is null or p_valor <= 0 then
+  if p_valor is null or p_valor <= 0 or p_valor = 'NaN' then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
 
@@ -233,7 +240,7 @@ begin
   returning id into v_id;
   return v_id;
 exception
-  when numeric_value_out_of_range then
+  when numeric_value_out_of_range or check_violation then
     raise exception 'ERP_DATOS_INVALIDOS';
 end;
 $$;

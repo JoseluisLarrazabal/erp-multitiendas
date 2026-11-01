@@ -64,8 +64,8 @@ Consecuencias:
 - `auditoria` es append-only, con `negocio_id` nullable (`rol_permisos` no tiene negocio).
 - Trigger genérico sobre `productos`, `producto_precios`, `tipos_cambio`, `usuario_negocio` y `rol_permisos`.
 - Se lee con `ver_reportes`. Sin pantalla en esta fase; los reportes llegan en la fase 5.
-- Desactivar una cuenta pasa por la API admin, donde `auth.uid()` es null. `admin-usuarios` llama `auditar_cuenta` con el JWT
-  del llamador y deja una fila por negocio de esa cuenta.
+- Desactivar una cuenta pasa por la API admin, donde `auth.uid()` es null. `admin-usuarios` llama `auditar_cuenta` con `service_role`
+  (solo ese rol la ejecuta), pasando el id verificado del llamador, tras el baneo, y deja una fila por negocio de esa cuenta.
 
 ### Fotos
 

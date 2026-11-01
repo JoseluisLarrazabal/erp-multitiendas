@@ -27,9 +27,13 @@ create trigger auditoria_sin_truncate
 alter table public.auditoria enable row level security;
 
 -- Filas sin negocio (rol_permisos) no las lee nadie por la API: tiene_permiso(null, ...) es falso.
+-- Quién tiene qué rol es del permiso 'usuarios'; el resto de la historia, de 'ver_reportes'.
 create policy auditoria_select on public.auditoria
   for select to authenticated
-  using (public.tiene_permiso(negocio_id, 'ver_reportes'));
+  using (public.tiene_permiso(
+    negocio_id,
+    case when tabla in ('usuario_negocio', 'perfiles') then 'usuarios' else 'ver_reportes' end
+  ));
 
 revoke all on public.auditoria from anon, authenticated, public;
 grant select on public.auditoria to authenticated;
@@ -56,7 +60,7 @@ begin
   values (
     tg_table_name,
     (select string_agg(v_fila ->> c, ':' order by o)
-       from unnest(case when tg_nargs = 0 then array['id'] else tg_argv end) with ordinality as a (c, o)),
+       from unnest(tg_argv) with ordinality as a (c, o)),
     (v_fila ->> 'negocio_id')::uuid,
     lower(tg_op),
     v_antes,
@@ -85,30 +89,29 @@ create trigger rol_permisos_auditar
   after insert or update or delete on public.rol_permisos
   for each row execute function public.auditar_cambio('tipo_negocio', 'rol', 'permiso');
 
--- Desactivar o reactivar una cuenta es baneo en Auth (auth.uid() es null ahí): admin-usuarios lo registra
--- con el JWT del llamador, una fila por negocio de la cuenta. Mismo permiso que la acción misma.
-create function public.auditar_cuenta(p_usuario_id uuid, p_activo boolean)
+-- Desactivar o reactivar una cuenta es baneo en Auth (auth.uid() es null ahí). Solo service_role: admin-usuarios
+-- ya comprobó el permiso del llamador y le pasa su id verificado; un cliente no puede forjar filas de auditoría.
+-- Exige que el baneo ya rija (perfiles.activo = p_activo). Una fila por negocio de la cuenta.
+create function public.auditar_cuenta(p_actor_id uuid, p_usuario_id uuid, p_activo boolean)
 returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  if not public.puede_administrar_cuenta(p_usuario_id) then
-    raise exception 'ERP_SIN_PERMISO';
-  end if;
-  if p_activo is null then
+  if p_actor_id is null or p_usuario_id is null or p_activo is null
+     or not exists (select 1 from public.perfiles where id = p_usuario_id and activo = p_activo) then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
 
   insert into public.auditoria (tabla, registro_id, negocio_id, accion, antes, despues, usuario_id)
   select 'perfiles', p_usuario_id::text, un.negocio_id,
     case when p_activo then 'reactivar' else 'desactivar' end,
-    jsonb_build_object('activo', not p_activo), jsonb_build_object('activo', p_activo), (select auth.uid())
+    jsonb_build_object('activo', not p_activo), jsonb_build_object('activo', p_activo), p_actor_id
   from public.usuario_negocio un
   where un.usuario_id = p_usuario_id;
 end;
 $$;
 
-revoke all on function public.auditar_cuenta(uuid, boolean) from public, anon, authenticated;
-grant execute on function public.auditar_cuenta(uuid, boolean) to authenticated;
+revoke all on function public.auditar_cuenta(uuid, uuid, boolean) from public, anon, authenticated;
+grant execute on function public.auditar_cuenta(uuid, uuid, boolean) to service_role;

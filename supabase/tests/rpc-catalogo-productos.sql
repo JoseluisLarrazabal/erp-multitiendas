@@ -1,6 +1,6 @@
 -- RPC guardar_categoria, guardar_producto, desactivar_producto.
 begin;
-select plan(52);
+select plan(56);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -55,14 +55,14 @@ select results_eq(
   format($$values ('P-1', '7770001', %L, 'unidad', true, 12, 2.500::numeric, true)$$, current_setting('t.cat')),
   'producto: campos guardados con sus valores por defecto'
 );
-select lives_ok(format($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', jsonb_build_object('id', %L::text, 'codigo', 'P-1', 'nombre', 'Celular B', 'tipo', 'producto', 'foto_path', 'aaaaaaaa-2000-0000-0000-000000000001/x.jpg'))$$, current_setting('t.prod')), 'producto: editar');
+select lives_ok(format($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', jsonb_build_object('id', %L::text, 'codigo', 'P-1', 'nombre', 'Celular B', 'tipo', 'producto', 'foto_path', 'aaaaaaaa-2000-0000-0000-000000000001/11111111-2222-3333-4444-555555555555.jpg'))$$, current_setting('t.prod')), 'producto: editar');
 select results_eq(
   format($$select nombre, codigo_barras, categoria_id::text, foto_path from public.productos where id = %L$$, current_setting('t.prod')),
-  $$values ('Celular B', null, null, 'aaaaaaaa-2000-0000-0000-000000000001/x.jpg')$$,
+  $$values ('Celular B', null, null, 'aaaaaaaa-2000-0000-0000-000000000001/11111111-2222-3333-4444-555555555555.jpg')$$,
   'producto: editar reemplaza los campos ausentes'
 );
 select lives_ok(format($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', jsonb_build_object('id', %L::text, 'codigo', 'P-1', 'nombre', 'Celular C', 'tipo', 'producto'))$$, current_setting('t.prod')), 'producto: editar sin foto_path');
-select is((select foto_path from public.productos where id = current_setting('t.prod')::uuid), 'aaaaaaaa-2000-0000-0000-000000000001/x.jpg', 'producto: sin la clave foto_path se conserva la foto');
+select is((select foto_path from public.productos where id = current_setting('t.prod')::uuid), 'aaaaaaaa-2000-0000-0000-000000000001/11111111-2222-3333-4444-555555555555.jpg', 'producto: sin la clave foto_path se conserva la foto');
 select is((select count(*) from public.productos where negocio_id = 'aaaaaaaa-2000-0000-0000-000000000001'), 1::bigint, 'producto: editar no crea otra fila');
 select lives_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"P-2","codigo_barras":"7770002","nombre":"Con barras","tipo":"producto"}')$$, 'producto: crear con otro código de barras');
 select lives_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"P-3","nombre":"Sin barras 1","tipo":"producto"}')$$, 'producto: sin código de barras');
@@ -83,6 +83,10 @@ select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-00000
 select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","garantia_meses":"doce"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: garantía no numérica');
 select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","stock_minimo":-1}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: stock mínimo negativo');
 select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","foto_path":"otro/x.jpg"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: foto fuera de la carpeta del negocio');
+select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","foto_path":"aaaaaaaa-2000-0000-0000-000000000001/../aaaaaaaa-2000-0000-0000-000000000002/11111111-2222-3333-4444-555555555555.jpg"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: foto con .. hacia otro negocio');
+select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","foto_path":"aaaaaaaa-2000-0000-0000-000000000001/11111111-2222-3333-4444-555555555555.gif"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: foto con extensión no permitida');
+select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"codigo":"S-1","nombre":"X","tipo":"producto","foto_path":"aaaaaaaa-2000-0000-0000-000000000001/a/11111111-2222-3333-4444-555555555555.jpg"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: foto en subcarpeta');
+select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', jsonb_build_object('codigo', 'S-1', 'nombre', 'X', 'tipo', 'producto', 'stock_minimo', 'NaN'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: stock mínimo NaN');
 select throws_ok(format($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', jsonb_build_object('codigo', 'S-1', 'nombre', 'X', 'tipo', 'producto', 'categoria_id', %L::text))$$, current_setting('t.cat_l')), 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: categoría de otro negocio');
 select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '[]')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: datos que no son un objeto');
 select throws_ok($$select public.guardar_producto('aaaaaaaa-2000-0000-0000-000000000001', '{"id":"no-uuid","codigo":"S-1","nombre":"X","tipo":"producto"}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'producto: id mal formado');

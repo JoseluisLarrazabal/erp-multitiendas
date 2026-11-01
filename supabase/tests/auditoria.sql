@@ -1,6 +1,6 @@
 -- Auditoría (RF-TR-09): DB-27, triggers genéricos, append-only, lectura con ver_reportes y auditar_cuenta.
 begin;
-select plan(31);
+select plan(37);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -51,6 +51,21 @@ select results_eq(
 select is((select count(*) from public.auditoria where tabla = 'producto_precios' and accion = 'update'), 1::bigint, 'trigger: un update sin cambios no deja fila');
 select is((select count(*) from public.auditoria where tabla = 'productos' and registro_id = current_setting('t.prod') and accion = 'insert' and despues ->> 'codigo' = 'P1'), 1::bigint, 'trigger: productos audita el alta');
 select is((select count(*) from public.auditoria where tabla = 'tipos_cambio' and accion = 'insert' and (despues ->> 'valor')::numeric = 6.96 and usuario_id = '99999999-6000-0000-0000-000000000002'), 1::bigint, 'trigger: tipos_cambio audita el registro');
+-- Guardar sin cambios: ni updated_at ni auditoría se mueven. now() es constante dentro de la transacción, así que se
+-- fija a mano un updated_at viejo (con el trigger apagado) para que la prueba pueda fallar.
+alter table public.productos disable trigger productos_updated_at;
+update public.productos set updated_at = '2020-01-01' where id = current_setting('t.prod')::uuid;
+alter table public.productos enable trigger productos_updated_at;
+select set_config('t.filas', (select count(*) from public.auditoria where tabla = 'productos' and registro_id = current_setting('t.prod'))::text, true);
+select pg_temp.como('99999999-6000-0000-0000-000000000002');
+select public.guardar_producto('aaaaaaaa-6000-0000-0000-000000000001', jsonb_build_object('id', current_setting('t.prod'), 'codigo', 'P1', 'nombre', 'Uno', 'tipo', 'producto'));
+reset role;
+select is((select updated_at from public.productos where id = current_setting('t.prod')::uuid), '2020-01-01'::timestamptz, 'updated_at: guardar sin cambios lo conserva');
+select is((select count(*) from public.auditoria where tabla = 'productos' and registro_id = current_setting('t.prod'))::text, current_setting('t.filas'), 'auditoría: guardar sin cambios no agrega fila');
+select pg_temp.como('99999999-6000-0000-0000-000000000002');
+select public.guardar_producto('aaaaaaaa-6000-0000-0000-000000000001', jsonb_build_object('id', current_setting('t.prod'), 'codigo', 'P1', 'nombre', 'Dos', 'tipo', 'producto'));
+reset role;
+select cmp_ok((select updated_at from public.productos where id = current_setting('t.prod')::uuid), '>', '2020-01-01'::timestamptz, 'updated_at: un cambio real sí lo mueve');
 update public.rol_permisos set permiso = 'vender' where false;
 delete from public.rol_permisos where tipo_negocio = 'tienda' and rol = 'contador' and permiso = 'ver_costos';
 select is((select count(*) from public.auditoria where tabla = 'rol_permisos' and registro_id = 'tienda:contador:ver_costos' and accion = 'delete' and negocio_id is null), 1::bigint, 'trigger: rol_permisos audita sin negocio y con clave de 3 columnas');
@@ -63,6 +78,10 @@ select cmp_ok((select count(*) from public.auditoria where tabla = 'producto_pre
 select pg_temp.como('99999999-6000-0000-0000-000000000003');
 select cmp_ok((select count(*) from public.auditoria where tabla = 'producto_precios'), '>', 0::bigint, 'lectura: el contador tiene ver_reportes');
 select is((select count(*) from public.auditoria where negocio_id is null), 0::bigint, 'lectura: las filas sin negocio no se ven por la API');
+select is((select count(*) from public.auditoria where tabla = 'usuario_negocio'), 0::bigint, 'lectura: el contador no lee usuario_negocio (pide usuarios)');
+select cmp_ok((select count(*) from public.auditoria where tabla = 'productos'), '>', 0::bigint, 'lectura: el contador sí lee productos');
+select pg_temp.como('99999999-6000-0000-0000-000000000001');
+select cmp_ok((select count(*) from public.auditoria where tabla = 'usuario_negocio'), '>', 0::bigint, 'lectura: el dueño lee usuario_negocio');
 select pg_temp.como('99999999-6000-0000-0000-000000000004');
 select is((select count(*) from public.auditoria), 0::bigint, 'lectura: el vendedor no ve auditoría');
 select pg_temp.como('99999999-6000-0000-0000-000000000005');
@@ -82,32 +101,37 @@ select throws_ok($$update public.auditoria set tabla = 'x'$$, 'P0001', 'ERP_SOLO
 select throws_ok($$delete from public.auditoria$$, 'P0001', 'ERP_SOLO_AGREGAR', 'append-only: delete rechazado');
 select throws_ok($$truncate public.auditoria$$, 'P0001', 'ERP_SOLO_AGREGAR', 'append-only: truncate rechazado');
 
--- auditar_cuenta: d administra a m (vendedor en T, empleado en L; d es dueño de ambos).
+-- auditar_cuenta: solo service_role, y solo si el baneo ya rige. m: vendedor en T, empleado en L. d es el actor.
 select pg_temp.como('99999999-6000-0000-0000-000000000001');
-select lives_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000006', false)$$, 'cuenta: desactivar se registra');
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', false)$$, '42501', null, 'cuenta: authenticated no ejecuta auditar_cuenta');
+reset role;
+set local role anon;
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', false)$$, '42501', null, 'cuenta: anon no ejecuta auditar_cuenta');
+reset role;
+set local role service_role;
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', false)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: forjar una desactivación sin baneo real falla');
+reset role;
+update auth.users set banned_until = now() + interval '1 day' where id = '99999999-6000-0000-0000-000000000006';
+set local role service_role;
+select lives_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', false)$$, 'cuenta: desactivar con el baneo vigente se registra');
 reset role;
 select results_eq(
   $$select negocio_id::text, accion, antes ->> 'activo', despues ->> 'activo', usuario_id::text, tabla, registro_id from public.auditoria where tabla = 'perfiles' order by negocio_id$$,
   $$values ('aaaaaaaa-6000-0000-0000-000000000001', 'desactivar', 'true', 'false', '99999999-6000-0000-0000-000000000001', 'perfiles', '99999999-6000-0000-0000-000000000006'),
            ('aaaaaaaa-6000-0000-0000-000000000002', 'desactivar', 'true', 'false', '99999999-6000-0000-0000-000000000001', 'perfiles', '99999999-6000-0000-0000-000000000006')$$,
-  'cuenta: una fila por negocio de la cuenta, con el autor');
-select pg_temp.como('99999999-6000-0000-0000-000000000001');
-select lives_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000006', true)$$, 'cuenta: reactivar se registra');
+  'cuenta: una fila por negocio de la cuenta, con el actor recibido');
+update auth.users set banned_until = null where id = '99999999-6000-0000-0000-000000000006';
+set local role service_role;
+select lives_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', true)$$, 'cuenta: reactivar se registra');
 reset role;
 select is((select count(*) from public.auditoria where tabla = 'perfiles' and accion = 'reactivar' and despues ->> 'activo' = 'true'), 2::bigint, 'cuenta: reactivar deja una fila por negocio');
-select pg_temp.como('99999999-6000-0000-0000-000000000001');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000006', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: estado nulo');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: nadie audita a sí mismo');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-0000000000ff', false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: cuenta inexistente');
-select throws_ok($$select public.auditar_cuenta(null, false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: usuario nulo');
-select pg_temp.como('99999999-6000-0000-0000-000000000002');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000007', false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: el encargado de T no tiene usuarios');
-select pg_temp.como('99999999-6000-0000-0000-000000000005');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000007', false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: dueño de otro negocio');
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000006', false)$$, 'P0001', 'ERP_SIN_PERMISO', 'cuenta: no basta administrar uno de sus negocios');
-reset role;
-set local role anon;
-select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000006', false)$$, '42501', null, 'cuenta: anon no ejecuta auditar_cuenta');
+update auth.users set banned_until = now() + interval '1 day' where id = '99999999-6000-0000-0000-000000000006';
+set local role service_role;
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', true)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: forjar una reactivación con la cuenta baneada falla');
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-000000000006', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: estado nulo');
+select throws_ok($$select public.auditar_cuenta(null, '99999999-6000-0000-0000-000000000006', false)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: actor nulo');
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', null, false)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: usuario nulo');
+select throws_ok($$select public.auditar_cuenta('99999999-6000-0000-0000-000000000001', '99999999-6000-0000-0000-0000000000ff', false)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cuenta: cuenta inexistente');
 reset role;
 select is((select count(*) from public.auditoria where tabla = 'perfiles'), 4::bigint, 'cuenta: los rechazos no dejaron filas');
 

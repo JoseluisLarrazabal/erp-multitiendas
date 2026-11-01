@@ -24,7 +24,7 @@ create table public.productos (
   unidad text not null default 'unidad' check (unidad in ('unidad', 'kg')),
   controla_serie boolean not null default false,
   garantia_meses integer check (garantia_meses is null or garantia_meses >= 0),
-  stock_minimo numeric(12,3) check (stock_minimo is null or stock_minimo >= 0),
+  stock_minimo numeric(12,3) check (stock_minimo is null or (stock_minimo >= 0 and stock_minimo <> 'NaN')),
   foto_path text,
   activo boolean not null default true,
   created_at timestamptz not null default now(),
@@ -43,7 +43,7 @@ create table public.producto_precios (
   negocio_id uuid not null,
   producto_id uuid not null,
   lista text not null check (lista in ('contado', 'credito', 'mayorista', 'minimo', 'normal', 'express')),
-  monto numeric(12,2) not null check (monto >= 0),
+  monto numeric(12,2) not null check (monto > 0 and monto <> 'NaN'),
   moneda text not null check (moneda in ('BOB', 'USD')),
   updated_at timestamptz not null default now(),
   primary key (producto_id, lista),
@@ -55,9 +55,10 @@ create index producto_precios_negocio_producto_idx on public.producto_precios (n
 create table public.tipos_cambio (
   id uuid primary key default gen_random_uuid(),
   negocio_id uuid not null references public.negocios (id),
-  valor numeric(10,4) not null check (valor > 0),
+  valor numeric(10,4) not null check (valor > 0 and valor <> 'NaN'),
   vigente_desde timestamptz not null default clock_timestamp(),
-  usuario_id uuid references public.perfiles (id)
+  -- Sin FK: la tabla es append-only y con FK una cuenta jamás podría borrarse.
+  usuario_id uuid
 );
 create index tipos_cambio_vigente_idx on public.tipos_cambio (negocio_id, vigente_desde desc);
 
@@ -69,7 +70,12 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  new.updated_at := now();
+  -- Guardar sin cambios no mueve updated_at (ni la versión, ni deja fila en auditoría).
+  if to_jsonb(new) - 'updated_at' is distinct from to_jsonb(old) - 'updated_at' then
+    new.updated_at := now();
+  else
+    new.updated_at := old.updated_at;
+  end if;
   return new;
 end;
 $$;

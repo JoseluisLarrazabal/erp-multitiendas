@@ -103,6 +103,8 @@ export const MENSAJES_ERROR: Record<string, string> = {
   ERP_CLAVE_DEBIL: "La contraseña necesita al menos 8 caracteres, con letras y dígitos.",
   ERP_CUENTA_HUERFANA:
     "No se pudo asignar el negocio y la cuenta nueva quedó sin negocio. Avisa a soporte.",
+  ERP_AUDITORIA:
+    "El cambio se aplicó, pero no quedó registrado en la auditoría. Avisa al administrador.",
   ERP_INTERNO: "Algo salió mal de nuestro lado. Intenta de nuevo.",
 };
 
