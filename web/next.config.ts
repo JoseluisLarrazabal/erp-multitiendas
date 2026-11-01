@@ -1,3 +1,4 @@
+import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -15,8 +16,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // El SW vive fuera de /pos; este encabezado permite su alcance.
+        source: "/sw-pos/:path*",
+        headers: [{ key: "Service-Worker-Allowed", value: "/pos" }],
+      },
     ];
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
