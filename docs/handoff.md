@@ -75,8 +75,16 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       Números de serie sin datos reales. Lavandería y frial: 0 filas reales.
     - Cambio desde el 30-10: los 597 productos ya tienen código interno ("1" a "597"). No consta quién lo cargó.
     - Fila 582: `8.998206720297E12` da 13 dígitos, pero falla el dígito verificador EAN-13. Volver a escanear.
-    - **Respuestas de los 3 forms: no leídas.** Planillas de respuestas: 401 sin login y acceso denegado con
-      `jencarlosmoral2`; el editor del form Lider tampoco abre con esa cuenta. No se sabe si el cliente contestó.
+    - **Form Lider contestado el 2026-10-27** (1 respuesta, confirmada), leído el 2026-11-01 con `jencarlosmoral2`.
+      Lavandería y frial: acceso denegado con esa cuenta, no se sabe si contestaron.
+    - Imprescindible para el cliente: precios según tipo de cambio diario. Recomendado: precio en USD y Bs calculado.
+    - Resuelto en Lider: tienda y depósito, costo promedio, listas contado/crédito/mayorista, clientes por negocio,
+      sin traspasos. No quiere panel de los 3 negocios, y el contrato tampoco lo pide: propuesto quitar el consolidado.
+    - **Alcance, pendiente CTO:** crédito con cuotas, cuentas por cobrar, reservas y proveedores no están en la cláusula
+      tercera. Recomendado cotizarlos aparte (cláusula décima) y avisar antes de diseñar.
+    - **Plazo:** corre desde la firma y la recepción de precios e inventario (cláusulas quinta y undécima). Faltan los
+      precios. Recomendado avisarlo por escrito.
+    - 7 contradicciones entre form y planilla por confirmar; la principal es serie "en todos los productos" con 0 series.
 - **Próximo:** (1) stack DECIDIDO en `docs/stack.md` (Vercel Hobby + dominio, Supabase Free + backups propios cifrados con prueba de restauración); (2) núcleo
   del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
