@@ -102,9 +102,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   ni Vercel. El prototipo `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como
   mapa de módulos y referencia visual.
   - PR #24 hecho: `web/`, Supabase local en puertos 54420-54429 y CI de 8 pasos.
-  - Base de tenencia: 6 tablas, matriz de permisos, RLS de solo lectura y RPC de usuarios y dispositivos. Usuarios de
-    prueba en `supabase/seed.sql`.
-  - Spike de service worker: `@serwist/turbopack` sirve, resultado en `docs/stack.md`.
+  - PR #26 hecho: 6 tablas, matriz de permisos, RLS de solo lectura y RPC de usuarios y dispositivos. Usuarios de prueba
+    en `supabase/seed.sql`.
+  - PR #25 hecho: spike de service worker, `@serwist/turbopack` sirve. Resultado en `docs/stack.md`.
+  - Login, proxy, shell del panel y selector de negocio. Login, logout y cambio de negocio corren en el navegador, sin
+    server actions (`docs/plan-fase-0.md`). Falta PR 4: `admin-usuarios` y pantallas de usuarios y dispositivos.
   - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
     cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
   - Codex: no verificado en esta fase.

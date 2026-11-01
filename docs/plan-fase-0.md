@@ -27,8 +27,10 @@ PR 5 no depende de 2 a 4 y puede correr en paralelo tras PR 1.
 - **UI:** sin bake-off. El prototipo ya fija la dirección visual: se llevan sus tokens de `app/globals.css` a `web/`, y
   cada pantalla sigue el camino único de `impeccable`. No se copia su CSS de clases sueltas: Tailwind y shadcn.
 - **Iconos:** `lucide-react`, el set de shadcn y del prototipo.
-- **Negocio activo:** cookie validada en servidor contra los negocios del usuario. Es preferencia de UI: la seguridad
-  sigue en RLS.
+- **Negocio activo:** cookie que escribe el cliente y que el servidor valida contra los negocios del usuario. Es
+  preferencia de UI: la seguridad sigue en RLS.
+- **Login y logout en el navegador:** sin server actions, porque `/pos` precacheado conserva bundles viejos y un ID de
+  action es por build. Login en cliente usa la IP real para el límite de Auth y termina con navegación completa.
 - **Permisos en UI:** se leen de `usuario_negocio`, `negocios` y `rol_permisos`. Ocultar es comodidad; decide la RPC.
 - **Perfil:** trigger sobre `auth.users` crea `perfiles`, para que cuenta y perfil nazcan juntos.
 
@@ -57,13 +59,10 @@ global a la cuenta.
 - Service worker con alcance solo en `/pos`: el panel nunca debe quedar bajo su control.
 - `proxy.ts` no debe interceptar el service worker ni estáticos.
 
-## Pendiente para PR 3, de la revisión del scaffold
+## Para la fase 6
 
-- `globals.css` solo tiene tokens del prototipo. Faltan los de shadcn (`popover`, `input`, `ring`, `secondary`,
-  `destructive`) y el import `shadcn/tailwind.css`. Se agregan al instalar los primeros componentes.
-- Sin CSP todavía. La sesión de `@supabase/ssr` queda en cookies que el navegador puede leer, así que PR 3 agrega CSP.
-- Producción debe repetir lo de `config.toml`: registro público apagado, contraseña mínima y `auto_expose_new_tables`
-  apagado. Va en la lista de la fase 6.
+Producción debe repetir lo de `config.toml`: `[auth] enable_signup = false`, proveedor email encendido, contraseña mínima
+y `auto_expose_new_tables` apagado.
 
 ## Fuera de esta fase
 
