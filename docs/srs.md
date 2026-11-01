@@ -73,6 +73,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RF-CAT-08 | Plazo de garantía por producto | La nota muestra la garantía | RL |
 | RF-CAT-09 | Desactivar en vez de borrar | Un producto con movimientos no se borra | HO |
 | RF-CAT-10 | Variantes como productos separados | Cada color tiene su código y su stock | RL |
+| RF-CAT-11 | Carga masiva de precios en el panel | El encargado edita listas y moneda en una grilla, filtra los productos sin precio y guarda solo lo cambiado | HO |
 
 ### 3.3 Inventario y kardex
 
@@ -159,7 +160,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-MIG-01 | Importar catálogo de Lider | Script repetible con reporte de filas rechazadas. Stock total igual a la fuente | CT, RL |
+| RF-MIG-01 | Importar catálogo de Lider | Script repetible con reporte de filas rechazadas. Stock total igual a la fuente. Los precios los carga el cliente | CT, RL |
 | RF-MIG-02 | Stock inicial | Se carga con movimientos `inicial` del kardex | HO |
 
 ### 3.11 Entrega B
@@ -280,7 +281,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 |---|---|---|
 | D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión y precios en USD | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
 | D-02 | Entrega de frial sin catálogo | Acordarlo por escrito para que no trabe el acta |
-| D-03 | Aviso de que el plazo depende de recibir precios | Escrito al cliente, antes de empezar |
+| D-03 | Aviso de que el arranque depende de que el cliente cargue sus precios | Escrito al cliente. Ya no frena el desarrollo ni la importación (CTO, 2026-11-01) |
 | D-04 | Firma del contrato | Confirmar la fecha. `docs/handoff.md` la da como pendiente |
 
 ## 8. Trazabilidad con el contrato
@@ -291,7 +292,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 | Tienda: ventas y punto de venta | RF-VEN-01 a RF-VEN-14, RF-CAJ-01 a RF-CAJ-04 |
 | Tienda: inventario de productos | RF-INV-01, RF-INV-03 a RF-INV-08 |
 | Tienda: kardex | RF-INV-02 |
-| Tienda: catálogo por categoría y marca | RF-CAT-01 a RF-CAT-10 |
+| Tienda: catálogo por categoría y marca | RF-CAT-01 a RF-CAT-11 |
 | Tienda: clientes | RF-CLI-01, RF-CLI-02 |
 | Tienda: reportes de ventas | RF-REP-01, RF-REP-04, RF-REP-05 |
 | Lavandería: recepción de órdenes | RF-LAV-01 a RF-LAV-03, RF-LAV-08, RF-LAV-09 |

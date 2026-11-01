@@ -66,7 +66,7 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 |---|---|---|
 | `categorias` | id, negocio_id, nombre | |
 | `productos` | id, negocio_id, codigo, codigo_barras, nombre, marca, modelo, categoria_id, tipo (`producto`\|`servicio`\|`insumo`), unidad (`unidad`\|`kg`), controla_serie, garantia_meses, stock_minimo, foto_path, activo, updated_at | servicio = lavandería, insumo = Entrega B |
-| `producto_precios` | producto_id, lista, monto, moneda (`BOB`\|`USD`) | listas: `contado`, `credito`, `mayorista`, `minimo`, `normal`, `express` |
+| `producto_precios` | negocio_id, producto_id, lista, monto, moneda (`BOB`\|`USD`) | listas: `contado`, `credito`, `mayorista`, `minimo`, `normal`, `express` |
 | `tipos_cambio` | id, negocio_id, valor, vigente_desde, usuario_id | append-only; rige el más reciente |
 | `series` | id, producto_id, serie, ubicacion_id, estado (`disponible`\|`vendida`\|`devuelta`), venta_id | solo productos con `controla_serie` |
 
@@ -81,12 +81,12 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 | Tabla | Campos clave | Notas |
 |---|---|---|
 | `movimientos_inventario` | id, negocio_id, ubicacion_id, producto_id, tipo, cantidad (con signo), costo_unitario, ref_tipo, ref_id, usuario_id, motivo, created_at | **append-only**: un trigger rechaza `UPDATE/DELETE` |
-| `stock` | producto_id, ubicacion_id, cantidad, costo_promedio | lo mantiene un trigger en la misma transacción. Es solo caché del kardex |
+| `stock` | negocio_id, producto_id, ubicacion_id, cantidad, costo_promedio | lo mantiene un trigger en la misma transacción. Es solo caché del kardex. `costo_promedio` es `numeric(12,4)` y sin `select` para `authenticated` |
 | `conteos` / `conteo_items` | id, negocio_id, ubicacion_id, fecha, usuario_id / producto_id, cantidad_sistema, cantidad_contada | cada diferencia genera un `ajuste` |
 
 - Valores de `tipo`: `inicial`, `compra`, `entrada`, `venta`, `anulacion_venta`, `ajuste`, `danado`, `cambio_garantia`,
   `devolucion_cliente`, `devolucion_proveedor`, `traslado_salida`, `traslado_entrada`, `reserva`, `reserva_liberada`,
-  `consumo`.
+  `consumo`, `ajuste_costo`. Este último tiene cantidad 0 y fija `costo_promedio`, para cargar costos sin tocar stock.
 - `ajustar_inventario` registra `ajuste`, `danado`, `cambio_garantia` y `devolucion_proveedor`, siempre con motivo.
 - Costo:
   - Promedio ponderado recalculado en cada entrada con costo.
@@ -190,7 +190,8 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 ### Auditoría
 
 - `auditoria` (tabla, registro_id, accion, antes, despues, usuario_id, created_at).
-- Se llena con trigger sobre `productos`, `producto_precios`, `tipos_cambio`, `usuario_negocio` y `rol_permisos`.
+- Se llena con trigger sobre `productos`, `producto_precios`, `tipos_cambio`, `usuario_negocio` y `rol_permisos`. Desactivar
+  una cuenta lo registra `auditar_cuenta`, que llama `admin-usuarios`.
 
 ## Catálogo de RPC
 
@@ -199,8 +200,8 @@ Toda escritura contable pasa por estas funciones. `plan-pruebas.md` exige casos 
 | Módulo | RPC |
 |---|---|
 | Usuarios | `asignar_usuario`, `quitar_usuario`, `registrar_dispositivo`; cuentas por Edge Function `admin-usuarios` (`docs/arquitectura.md`) |
-| Catálogo | `registrar_tipo_cambio`, `precio_bs`, `catalogo_pos` |
-| Inventario | `registrar_entrada`, `ajustar_inventario`, `trasladar_stock`, `registrar_conteo` |
+| Catálogo | `guardar_categoria`, `guardar_producto`, `desactivar_producto`, `guardar_precios`, `registrar_tipo_cambio`, `precio_bs`, `catalogo_pos` |
+| Inventario | `registrar_entrada`, `ajustar_inventario`, `trasladar_stock`, `registrar_conteo`, `registrar_series`, `fijar_costos`, `costos_stock`, `kardex_producto`, `stock_inconsistente` |
 | Ventas | `registrar_venta`, `anular_venta`, `devolver_venta` |
 | Caja | `abrir_caja`, `registrar_movimiento_caja`, `cerrar_caja` |
 | Lavandería | `crear_orden`, `cambiar_estado_orden`, `entregar_orden`, `anular_orden` |

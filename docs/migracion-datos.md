@@ -1,7 +1,7 @@
 # Migración de datos
 
-El arranque carga los 597 productos de Lider con un script repetible, después de que el cliente entregue precios. Solo
-la planilla de carga es fuente; lo que no pase las reglas va a un reporte de rechazos.
+El arranque carga los 597 productos de Lider con un script repetible, sin precios: el cliente los carga en el panel
+(CTO, 2026-11-01). Solo la planilla de carga es fuente; lo que no pase las reglas va a un reporte de rechazos.
 
 ## Estado de las fuentes (2026-11-01)
 
@@ -36,10 +36,10 @@ Filas numeradas como en Sheets.
 
 `Código de barras` se lee como texto en toda la importación. Nunca como número.
 
-## Lo que debe pedir el cliente antes
+## Lo que debe hacer o entregar el cliente antes
 
-1. Precios: contado, crédito, mayorista, mínimo. Indicar qué productos van en USD.
-2. Costos, aunque sean aproximados. Sin costo, ganancia y valor del stock no dan cifras útiles.
+1. Cargar en `/panel/precios` contado, crédito, mayorista y mínimo, y marcar qué productos van en USD.
+2. Cargar ahí los costos, aunque sean aproximados. Sin costo, ganancia y valor del stock no dan cifras útiles.
 3. Stock mínimo, al menos por categoría.
 4. Qué productos llevan serie, y las series en stock.
 5. Decisiones sobre duplicados y categorías.

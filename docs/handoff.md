@@ -97,13 +97,12 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Alcance v1 (CTO, 2026-11-01):** incluye todo: contrato más crédito, reservas, proveedores e insumos. Se avisó que
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
   - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
-  - **Pendiente cliente:** precios, y preguntas P-01 a P-17 del SRS.
+  - **Pendiente cliente:** cargar precios en el panel, y preguntas P-01 a P-17 del SRS.
 - **Fase 0 cerrada (2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Hito cumplido: login real, RLS probado y CI
   verde. Hecha en una sesión; la estimación era 3 días. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
   referencia visual.
-  - **Próximo:** fase 1 de `docs/roadmap.md`. La importación necesita precios de Lider y P-01 a P-05; catálogo, kardex y
-    tipo de cambio no.
+  - **Próximo:** fase 1, plan en `docs/plan-fase-1.md`.
   - **No verificado:** Safari, Firefox, Vercel, equipos del cliente, JWT asimétrico en `getClaims`, reintento de
     `error.tsx`, y vacío de dispositivos. Foco del menú móvil con reintento por frames, sin causa raíz.
   - **Riesgo:** dos dueños que se desactivan a la vez pueden dejar el negocio sin dueño; se recupera con `service_role`.
@@ -118,6 +117,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
     cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
   - Codex: no verificado en esta fase.
+- **Fase 1 en curso (2026-11-01):** plan en `docs/plan-fase-1.md`. **El cliente carga sus precios en el panel** (CTO,
+  2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.
