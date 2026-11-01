@@ -38,7 +38,7 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 |---|---|---|
 | `negocios` | id, nombre, tipo (`tienda`\|`lavanderia`\|`frial`), nit, datos de nota, tope_descuento | 3 filas |
 | `ubicaciones` | id, negocio_id, nombre, tipo (`local`\|`deposito`) | Lider: tienda y depósito. Lavandería y frial: local |
-| `perfiles` | id (= auth.uid), nombre, activo | |
+| `perfiles` | id (= auth.uid), nombre, activo | `activo` lo mantiene un trigger desde `auth.users.banned_until`; nadie lo escribe a mano |
 | `usuario_negocio` | usuario_id, negocio_id, rol | un usuario puede estar en varios negocios |
 | `rol_permisos` | tipo_negocio, rol, permiso | seed desde la matriz del SRS, sección 4 |
 | `dispositivos` | id, negocio_id, ubicacion_id, nombre, prefijo (`C1`) | se registra con conexión, con el permiso `usuarios` |
@@ -50,6 +50,11 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 - Helpers SQL (`stable`, `security definer`):
   - `mis_negocios()` devuelve setof uuid.
   - `tiene_permiso(negocio_id, permiso)` devuelve bool.
+  - `comparte_negocio(usuario_id)` devuelve bool; la usa la policy de `perfiles`.
+  - `puede_administrar_cuenta(usuario_id)` devuelve bool; la consulta la Edge Function `admin-usuarios` con el JWT del
+    llamador antes de banear (regla 3 de `docs/plan-fase-0.md`).
+  - `es_dueno(negocio_id)` devuelve bool; privado (sin `grant`), solo lo llaman las funciones `security definer`.
+  - Las cuentas con `perfiles.activo = false` quedan fuera de `mis_negocios()` y `tiene_permiso()`.
 - Policies: `negocio_id in (select mis_negocios())`.
 
 ### Catálogo
@@ -190,7 +195,7 @@ Toda escritura contable pasa por estas funciones. `plan-pruebas.md` exige casos 
 
 | Módulo | RPC |
 |---|---|
-| Usuarios | `asignar_usuario`, `registrar_dispositivo`; cuentas por Edge Function `admin-usuarios` (`docs/arquitectura.md`) |
+| Usuarios | `asignar_usuario`, `quitar_usuario`, `registrar_dispositivo`; cuentas por Edge Function `admin-usuarios` (`docs/arquitectura.md`) |
 | Catálogo | `registrar_tipo_cambio`, `precio_bs`, `catalogo_pos` |
 | Inventario | `registrar_entrada`, `ajustar_inventario`, `trasladar_stock`, `registrar_conteo` |
 | Ventas | `registrar_venta`, `anular_venta`, `devolver_venta` |
