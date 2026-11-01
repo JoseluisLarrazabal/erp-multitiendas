@@ -21,7 +21,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     requerido, confirmación final obligatoria. **No verificado:** planilla de carga en vivo (privada; revisar a mano) ni
     respuesta de prueba punta a punta. Codex: no verificado.
   - **Pendiente CTO:** compartir planilla de carga con el correo del cliente (Editor) y mandar link del form por WhatsApp.
-    Registrar aquí la fecha de envío. El plazo de 30 días corre desde que el cliente lo devuelve completo.
+    Registrar aquí la fecha de envío.
   - Plan: `docs/plan-formulario-lider.md`.
 - **Formularios lavandería y frial: CREADOS (2026-10-26, PR #2).** Mismo archivo, renombrado a
   `formularios/apps-script/relevamiento.gs`. Tiene 3 funciones: `crearTodoLavanderia` (82 preguntas, 9 secciones),
@@ -48,8 +48,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Pendiente CTO (ambos):** compartir cada planilla de carga con el correo del cliente (Editor), mandar los links
     por WhatsApp y registrar aquí la fecha de envío.
   - Plan: `docs/plan-formularios-lavanderia-frial.md`.
-- **Formularios ENVIADOS al cliente: 2026-10-26** (los 3 links por WhatsApp). Esperando respuestas; el plazo de
-  30 días corre desde que los devuelva completos.
+- **Formularios ENVIADOS al cliente: 2026-10-26** (los 3 links por WhatsApp). El plazo de 30 días calendario corre
+  desde la firma y la recepción de la información (cláusulas quinta y undécima).
   - **Planillas de carga: acceso "Cualquier persona con el enlace"** (decisión del CTO, 2026-10-27). El link solo se
     mandó al cliente. El CTO acepta el riesgo: el link también está en la intro del form, que se puede reenviar, y la
     planilla va a tener costos y datos personales. Recomendado pasarla a **Restringido** apenas termine la carga.
@@ -90,14 +90,20 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     - **Plazo:** corre desde la firma y la recepción de precios e inventario (cláusulas quinta y undécima). Faltan los
       precios. Recomendado avisarlo por escrito.
     - 7 contradicciones entre form y planilla por confirmar; la principal es serie "en todos los productos" con 0 series.
-- **Próximo:** (1) stack DECIDIDO en `docs/stack.md` (Vercel Hobby + dominio, Supabase Free + backups propios cifrados con prueba de restauración); (2) núcleo
-  del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
+- **Documentación del proyecto (2026-11-01):** plan en `docs/plan-documentacion.md`.
+  - Requisitos: `docs/srs.md`. Fuente: `docs/relevamiento.md`.
+  - Diseño: `docs/arquitectura.md`, `docs/plan-modelo-datos.md`, `docs/stack.md`.
+  - Desarrollo: `docs/estandares-codigo.md`, `docs/plan-pruebas.md`, `docs/roadmap.md`, `docs/migracion-datos.md`.
+  - **Alcance v1 (CTO, 2026-11-01):** incluye todo: contrato más crédito, reservas, proveedores e insumos. Se avisó que
+    no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
+  - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
+  - **Pendiente cliente:** precios, y preguntas P-01 a P-17 del SRS.
+- **Próximo:** fase 0 de `docs/roadmap.md` (scaffold en `web/`, CI, migraciones base, auth, RLS). El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
   referencia visual.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
-  Propuesta a confirmar en el diseño del modelo: tabla `negocios` + columna `negocio_id` en las tablas operativas
-  (productos, ventas, kardex, órdenes, caja), con RLS según los negocios asignados a cada usuario. `usuarios` es
-  compartida; `clientes` compartida o por negocio según lo que conteste en la sección 4 del form de Lider.
+  Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
+  según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.
 
 - **Sin integración con el SIN (CTO, 2026-10-26):** no habrá facturación electrónica ni ninguna integración con
   Impuestos Nacionales. Descartado. El comprobante es una nota de venta propia (impresa o PDF). Si en el form de Lider
@@ -128,7 +134,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Estructura de la app (CTO, 2026-10-26):** una sola app Next.js, con un despliegue y un login. El acceso a cada
   parte depende del rol, y la grilla de permisos sale del formulario (sección 3).
   - **Panel (`/panel`, el ERP):** productos y precios, inventario y kardex, ajustes, compras y proveedores, clientes,
-    caja (vista y administración), reportes, consolidado de los 3 negocios, usuarios y configuración.
+    caja (vista y administración), reportes por negocio, usuarios y configuración.
     - Responsive: el dueño lo usa desde el celular y el encargado desde la PC.
     - Instalable (manifest). Sin service worker: sin conexión muestra "sin conexión", nunca datos viejos.
   - **POS (`/pos`, empleados):** venta, apertura y cierre de caja propia, y consulta rápida de stock y precio.
@@ -138,15 +144,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 
 ## Pendientes / a decidir en la planificación
 
-- **Stack:** la base (Next.js, Supabase, PWA) se puede definir ahora. Queda abierta hasta tener las respuestas de
-  los formularios: la impresión directa ESC/POS y el cajón de dinero, según el hardware (sección 3).
-- **Supabase Free:** según lo que sabemos, no tiene backups automáticos y se pausa tras 7 días sin actividad. Hay que
-  elegir entre Pro y un `pg_dump` programado. Revisar los términos actuales.
-
-- **Hosting de la app:** Vercel Hobby es solo para uso no comercial; si lo detectan pueden suspender la cuenta
-  (y caerían todos los proyectos de esa cuenta, incluido Elegance). Alternativa gratis con uso comercial:
-  Cloudflare Workers/Pages (Next.js vía OpenNext). Decidir y verificar términos vigentes.
-- **Frial:** unidad de medida por peso (decimales en kg) en ventas, stock y kardex desde el diseño.
-- **Lavandería:** flujo de estados de la orden y cobro (¿anticipo al recibir / saldo al entregar?).
-- **Roles de usuario** por negocio (¿un usuario ve los 3 negocios o solo el suyo?).
-- **Carga inicial de datos:** formato en que el cliente entrega listados de productos, precios e inventario.
+- Decisiones del CTO: D-01 a D-04 en `docs/srs.md`, sección 7.
+- Preguntas para el cliente: P-01 a P-17 en esa misma sección.
+- Resuelto y documentado: impresión sin ESC/POS (`docs/arquitectura.md`), backups y hosting (`docs/stack.md`), estados
+  y cobro de lavandería y roles (`docs/srs.md`), carga inicial (`docs/migracion-datos.md`).
