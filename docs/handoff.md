@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-10-26.
+Última actualización: 2026-11-01.
 
 ## Estado actual
 
@@ -70,6 +70,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     - Para limpiar antes de importar: 4 filas con "aro 20/29" en código de barras, 17 códigos repetidos, 13 productos
       repetidos, 1 código en notación científica, categoría "Hornos" duplicada.
     - El síntoma que reportó el cliente sigue sin confirmar. Lavandería y frial solo tienen las filas de ejemplo.
+  - **Revisión 2026-11-01:** informe: https://claude.ai/artifact/DJeZuyDC3x9TZpnPtqyK39
+    - Planillas de carga exportadas sin login. Lider: 597 productos, 2.633 unidades, 0 precios. Clientes, Usuarios y
+      Números de serie sin datos reales. Lavandería y frial: 0 filas reales.
+    - Cambio desde el 30-10: los 597 productos ya tienen código interno ("1" a "597"). No consta quién lo cargó.
+    - Fila 582: `8.998206720297E12` da 13 dígitos, pero falla el dígito verificador EAN-13. Volver a escanear.
+    - **Respuestas de los 3 forms: no leídas.** Planillas de respuestas: 401 sin login y acceso denegado con
+      `jencarlosmoral2`; el editor del form Lider tampoco abre con esa cuenta. No se sabe si el cliente contestó.
 - **Próximo:** (1) stack DECIDIDO en `docs/stack.md` (Vercel Hobby + dominio, Supabase Free + backups propios cifrados con prueba de restauración); (2) núcleo
   del modelo de datos en `docs/plan-modelo-datos.md` (borrador del núcleo listo; lo marcado [FORM] espera respuestas); (3) scaffold de la app real. El prototipo
   `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
