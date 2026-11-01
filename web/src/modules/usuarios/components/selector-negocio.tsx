@@ -9,9 +9,10 @@ import { guardarNegocio } from "../negocio-cliente";
 type Props = {
   negocios: readonly NegocioUsuario[];
   activoId: string;
-  // Corre antes de guardar la preferencia; devuelve un error para abortar el cambio.
+  // Corre antes de guardar la preferencia; devuelve un error para abortar el cambio, o `false` si el usuario lo
+  // canceló (se aborta sin mensaje).
   // Sin él se guarda y se recarga: el servidor vuelve a decidir qué ve el usuario en el negocio nuevo.
-  alCambiar?: (negocioId: string) => Promise<string | null>;
+  alCambiar?: (negocioId: string) => Promise<string | null | false>;
   className?: string;
 };
 
@@ -26,6 +27,7 @@ export function SelectorNegocio({ negocios, activoId, alCambiar, className }: Pr
     setPendiente(true);
     const fallo = alCambiar ? await alCambiar(id) : null;
     setPendiente(false);
+    if (fallo === false) return;
     if (fallo) return setError(fallo);
     guardarNegocio(id);
     if (!alCambiar) window.location.reload();

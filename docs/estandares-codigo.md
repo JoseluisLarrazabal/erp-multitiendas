@@ -44,7 +44,8 @@ Reglas verificables para `web/`, `supabase/` y `scripts/`. Lo que una herramient
 - `app/` importa módulos por su `index.ts`.
 - Un módulo importa a otro solo por su `index.ts`. Sin ciclos.
 - Excepción: un módulo con server actions las expone en `panel.ts`, segunda entrada solo para páginas del panel. Así no
-  entran al bundle precacheado de `/pos`.
+  entran al bundle precacheado de `/pos`. Lo que solo corre en servidor y necesitan páginas fuera del panel (portada,
+  sin-acceso) sale por `servidor.ts`, que `panel.ts` reexporta; `/pos` no importa ninguna de las dos.
 - `lib/` no importa `modules/`.
 - ESLint lo impone con `no-restricted-imports`.
 

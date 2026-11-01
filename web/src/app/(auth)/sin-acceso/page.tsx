@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { BotonCerrarSesion, obtenerContexto } from "@/modules/usuarios";
+import { BotonCerrarSesion } from "@/modules/usuarios";
+import { obtenerContexto } from "@/modules/usuarios/servidor";
 
 export const metadata: Metadata = { title: "Sin acceso · ERP Multitiendas" };
 

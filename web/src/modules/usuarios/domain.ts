@@ -5,7 +5,9 @@ export const COOKIE_NEGOCIO = "negocio_activo";
 // Quien tiene alguno de estos permisos en el negocio activo entra al panel; el resto va al POS.
 const PERMISOS_PANEL = ["ver_reportes", "editar_productos", "usuarios"];
 
-export type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
+// `codigo`: código ERP_* de la RPC cuando el fallo vino de la base (las acciones del panel no lo usan).
+export type Resultado<T> =
+  { ok: true; data: T } | { ok: false; error: string; codigo?: string | null };
 
 // Entrada de una server action -> datos validados, o null. Compartido por las actions de los módulos del panel.
 export function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {
@@ -39,6 +41,16 @@ export function elegirNegocioActivo(
   preferido: string | undefined,
 ): NegocioUsuario | null {
   return negocios.find((n) => n.negocioId === preferido) ?? negocios[0] ?? null;
+}
+
+// Re-chequeo de fondo con la sesión ya lista: el negocio en pantalla se conserva si sigue siendo del usuario; solo
+// el cambio explícito del usuario cambia de negocio (si no, el carrito y la venta en duda se perderían al remontar).
+export function negocioDeRecheck(
+  negocios: readonly NegocioUsuario[],
+  actualId: string | null,
+  preferido: string | undefined,
+): NegocioUsuario | null {
+  return negocios.find((n) => n.negocioId === actualId) ?? elegirNegocioActivo(negocios, preferido);
 }
 
 export type Destino = "/panel" | "/pos" | "/sin-acceso";
@@ -121,3 +133,8 @@ export const mensajeDeError = (codigo: string | undefined) =>
 
 // Los errores de RPC llegan como texto; solo cuenta el código ERP_* que contengan.
 export const codigoDeMensaje = (mensaje: string | undefined) => mensaje?.match(/ERP_[A-Z_]+/)?.[0];
+
+// Una verificación de fondo (evento `online`) que falla no puede sacar una sesión que ya estaba lista: desmontaría la
+// venta en curso. Solo una respuesta cierta de sesión perdida cambia de fase (ver `caducada` en use-pos-sesion).
+export const conservarLista = <T extends { fase: string }>(actual: T, nueva: T): T =>
+  actual.fase === "lista" && nueva.fase !== "lista" ? actual : nueva;

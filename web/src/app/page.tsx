@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { destinoInicial, obtenerContexto } from "@/modules/usuarios";
+import { destinoInicial } from "@/modules/usuarios";
+import { obtenerContexto } from "@/modules/usuarios/servidor";
 
 // Portada: solo decide a dónde ir. Sin sesión, al login; con sesión, según permisos.
 export default async function Home() {

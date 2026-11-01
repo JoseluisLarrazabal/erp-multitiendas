@@ -1,5 +1,6 @@
 import { PanelShell } from "@/components/panel/panel-shell";
-import { BotonCerrarSesion, etiquetaRol, exigirPanel, SelectorNegocio } from "@/modules/usuarios";
+import { BotonCerrarSesion, etiquetaRol, SelectorNegocio } from "@/modules/usuarios";
+import { exigirPanel } from "@/modules/usuarios/panel";
 
 const iniciales = (nombre: string) =>
   nombre
