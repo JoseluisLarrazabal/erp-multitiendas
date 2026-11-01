@@ -82,6 +82,7 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 |---|---|---|
 | `movimientos_inventario` | id, negocio_id, ubicacion_id, producto_id, tipo, cantidad (con signo), costo_unitario, ref_tipo, ref_id, usuario_id, motivo, created_at | **append-only**: un trigger rechaza `UPDATE/DELETE` |
 | `stock` | negocio_id, producto_id, ubicacion_id, cantidad, costo_promedio | lo mantiene un trigger en la misma transacción. Es solo caché del kardex. `costo_promedio` es `numeric(12,4)` y sin `select` para `authenticated` |
+| `operaciones_inventario` | id (UUID de la operación), negocio_id, huella, created_at | idempotencia de las RPC de inventario: la misma operación con otros datos da `ERP_OPERACION_REPETIDA`. **append-only**, sin acceso para `authenticated` |
 | `conteos` / `conteo_items` | id, negocio_id, ubicacion_id, fecha, usuario_id / producto_id, cantidad_sistema, cantidad_contada | cada diferencia genera un `ajuste` |
 
 - Valores de `tipo`: `inicial`, `compra`, `entrada`, `venta`, `anulacion_venta`, `ajuste`, `danado`, `cambio_garantia`,

@@ -95,3 +95,19 @@ insert into public.producto_precios (negocio_id, producto_id, lista, monto, mone
   ('a0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-00000000000a', 'express', 18, 'BOB');
 
 insert into public.tipos_cambio (negocio_id, valor) values ('a0000000-0000-0000-0000-000000000001', 6.96);
+
+-- Stock inicial por kardex (el trigger arma `stock`). Tienda Demo: Tienda y Depósito. Frial: kg con decimales.
+insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, ref_tipo, motivo)
+select p.negocio_id, p.ubicacion_id, p.producto_id, 'inicial', p.cantidad, p.costo, 'seed', 'Stock inicial de desarrollo'
+from (values
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000001'::uuid, 5::numeric, 1200::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000002'::uuid, 'e0000000-0000-0000-0000-000000000001'::uuid, 10::numeric, 1200::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000002'::uuid, 3::numeric, 2100::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000003'::uuid, 40::numeric, 12.5::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000002'::uuid, 'e0000000-0000-0000-0000-000000000003'::uuid, 60::numeric, 12.5::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000004'::uuid, 25::numeric, 35::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000005'::uuid, 80::numeric, 8::numeric),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000002'::uuid, 'e0000000-0000-0000-0000-000000000006'::uuid, 12::numeric, 20::numeric),
+  ('a0000000-0000-0000-0000-000000000003'::uuid, 'b0000000-0000-0000-0000-000000000004'::uuid, 'e0000000-0000-0000-0000-000000000007'::uuid, 35.250::numeric, 38.4::numeric),
+  ('a0000000-0000-0000-0000-000000000003'::uuid, 'b0000000-0000-0000-0000-000000000004'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid, 18.5::numeric, 27::numeric)
+) as p (negocio_id, ubicacion_id, producto_id, cantidad, costo);

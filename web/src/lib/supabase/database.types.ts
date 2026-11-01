@@ -57,6 +57,52 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"conteo_items": {
+                  Row: {
+                    "cantidad_contada": number,"cantidad_sistema": number,"conteo_id": string,"negocio_id": string,"producto_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad_contada": number,"cantidad_sistema": number,"conteo_id": string,"negocio_id": string,"producto_id": string
+                  }
+                  Update: {
+                    "cantidad_contada"?: number,"cantidad_sistema"?: number,"conteo_id"?: string,"negocio_id"?: string,"producto_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conteo_items_negocio_id_conteo_id_fkey"
+      columns: ["negocio_id","conteo_id"]
+isOneToOne: false
+      referencedRelation: "conteos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "conteo_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"conteos": {
+                  Row: {
+                    "fecha": string,"id": string,"motivo": string | null,"negocio_id": string,"ubicacion_id": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "fecha"?: string,"id": string,"motivo"?: string | null,"negocio_id": string,"ubicacion_id": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "fecha"?: string,"id"?: string,"motivo"?: string | null,"negocio_id"?: string,"ubicacion_id"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conteos_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"dispositivos": {
                   Row: {
                     "created_at": string,"id": string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string
@@ -77,6 +123,32 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     }
                   ]
+                },"movimientos_inventario": {
+                  Row: {
+                    "cantidad": number,"costo_unitario": number | null,"created_at": string,"id": string,"motivo": string | null,"negocio_id": string,"producto_id": string,"ref_id": string | null,"ref_tipo": string | null,"tipo": string,"ubicacion_id": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"costo_unitario"?: number | null,"created_at"?: string,"id"?: string,"motivo"?: string | null,"negocio_id": string,"producto_id": string,"ref_id"?: string | null,"ref_tipo"?: string | null,"tipo": string,"ubicacion_id": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "cantidad"?: number,"costo_unitario"?: number | null,"created_at"?: string,"id"?: string,"motivo"?: string | null,"negocio_id"?: string,"producto_id"?: string,"ref_id"?: string | null,"ref_tipo"?: string | null,"tipo"?: string,"ubicacion_id"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "movimientos_inventario_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "movimientos_inventario_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"negocios": {
                   Row: {
                     "created_at": string,"datos_nota": string | null,"id": string,"nit": string | null,"nombre": string,"tipo": string,"tope_descuento": number
@@ -90,6 +162,26 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"operaciones_inventario": {
+                  Row: {
+                    "created_at": string,"huella": string,"id": string,"negocio_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"huella": string,"id": string,"negocio_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"huella"?: string,"id"?: string,"negocio_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "operaciones_inventario_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"perfiles": {
                   Row: {
@@ -164,6 +256,58 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"series": {
+                  Row: {
+                    "created_at": string,"estado": string,"id": string,"negocio_id": string,"producto_id": string,"serie": string,"ubicacion_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"estado"?: string,"id"?: string,"negocio_id": string,"producto_id": string,"serie": string,"ubicacion_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"estado"?: string,"id"?: string,"negocio_id"?: string,"producto_id"?: string,"serie"?: string,"ubicacion_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "series_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "series_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"stock": {
+                  Row: {
+                    "cantidad": number,"costo_promedio": number | null,"negocio_id": string,"producto_id": string,"ubicacion_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad"?: number,"costo_promedio"?: number | null,"negocio_id": string,"producto_id": string,"ubicacion_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "cantidad"?: number,"costo_promedio"?: number | null,"negocio_id"?: string,"producto_id"?: string,"ubicacion_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "stock_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
                   ]
                 },"tipos_cambio": {
                   Row: {
@@ -251,20 +395,34 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "asignar_usuario":
+            "ajustar_inventario":
+{ Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"asignar_usuario":
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
                            },
 "auditar_cuenta":
 { Args: { "p_activo": boolean,"p_actor_id": string,"p_usuario_id": string }; Returns: undefined
                            },
+"bloquear_series":
+{ Args: { "p_cantidad": number,"p_ids": (string)[],"p_negocio_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: undefined
+                           },
 "comparte_negocio":
 { Args: { "p_usuario_id": string }; Returns: boolean
+                           },
+"costos_stock":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "costo_promedio": number,"producto_id": string,"ubicacion_id": string
+            }[]
                            },
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
                            },
 "es_dueno":
 { Args: { "p_negocio_id": string }; Returns: boolean
+                           },
+"fijar_costos":
+{ Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string }; Returns: number
                            },
 "guardar_categoria":
 { Args: { "p_id": string,"p_negocio_id": string,"p_nombre": string }; Returns: string
@@ -275,11 +433,21 @@ isOneToOne: false
 "guardar_producto":
 { Args: { "p_datos": Json,"p_negocio_id": string }; Returns: string
                            },
+"kardex_producto":
+{ Args: { "p_desde_id"?: string,"p_limite"?: number,"p_producto_id": string,"p_ubicacion_id"?: string }; Returns: {
+              "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
+            }[]
+                           },
 "mis_negocios":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
 "precio_bs":
 { Args: { "p_lista": string,"p_producto_id": string }; Returns: number
+                           },
+"productos_stock_bajo":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "cantidad": number,"codigo": string,"nombre": string,"producto_id": string,"stock_minimo": number
+            }[]
                            },
 "puede_administrar_cuenta":
 { Args: { "p_usuario_id": string }; Returns: boolean
@@ -290,15 +458,61 @@ isOneToOne: false
 "quitar_usuario":
 { Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: undefined
                            },
+"reclamar_operacion":
+{ Args: { "p_huella": string,"p_id": string,"p_negocio_id": string }; Returns: boolean
+                           },
+"registrar_conteo":
+{ Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number
+                           },
 "registrar_dispositivo":
 { Args: { "p_negocio_id": string,"p_nombre": string,"p_prefijo": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"registrar_entrada":
+{ Args: { "p_cantidad": number,"p_costo_unitario": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"registrar_series":
+{ Args: { "p_negocio_id": string,"p_producto_id": string,"p_series": (string)[],"p_ubicacion_id": string }; Returns: number
                            },
 "registrar_tipo_cambio":
 { Args: { "p_negocio_id": string,"p_valor": number }; Returns: string
                            },
+"stock_inconsistente":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "cantidad_kardex": number,"cantidad_stock": number,"producto_id": string,"ubicacion_id": string
+            }[]
+                           },
 "tiene_permiso":
 { Args: { "p_negocio_id": string,"p_permiso": string }; Returns: boolean
-                           }
+                           },
+"trasladar_stock":
+{ Args: { "p_cantidad": number,"p_destino_id": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_origen_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[] }; Returns: string
+                           },
+"validar_inventario":
+{ Args: { "p_cantidad": number,"p_negocio_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: {
+              "activo": boolean,
+"categoria_id": string | null,
+"codigo": string,
+"codigo_barras": string | null,
+"controla_serie": boolean,
+"created_at": string,
+"foto_path": string | null,
+"garantia_meses": number | null,
+"id": string,
+"marca": string | null,
+"modelo": string | null,
+"negocio_id": string,
+"nombre": string,
+"stock_minimo": number | null,
+"tipo": string,
+"unidad": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "productos"
+        isOneToOne: true
+        isSetofReturn: false
+      } }
           }
           Enums: {
             [_ in never]: never
