@@ -123,6 +123,18 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - PR 1 `feat/caja-clientes-datos`: `clientes`, `caja_sesiones`, `caja_movimientos` y sus RPC (RF-CLI-01/02,
     RF-CAJ-01 a 04). Nuevo error `ERP_EFECTIVO_INSUFICIENTE`. pgTAP 778 en verde; concurrencia probada a mano (pgTAP no
     la cubre). Diferido a fase 3: hora y usuario del equipo en caja sin conexión. Codex: no verificado (sin cuota).
+  - PR 2 `feat/ventas-datos`: `ventas`, `venta_items`, `venta_pagos`, `devoluciones`, `devolucion_items`, `catalogo_pos`,
+    `registrar_venta`, `anular_venta`, `devolver_venta`, `fijar_tope_descuento`, cierre con `total_qr` (RF-VEN-01 a 08,
+    RF-CAJ-03, RF-CAT-07). pgTAP 1036 en verde. Concurrencia probada a mano, pgTAP no la cubre: replay de 20 con el mismo
+    UUID, número repetido, anular contra devolver, 30 ventas con cierre en medio, 8 devoluciones paralelas de venta mixta.
+    Sin deadlocks, stock igual al kardex. La revisión cambió reglas de dinero; detalle en `docs/plan-fase-2.md`:
+    - El piso de precio es `least(minimo, lista elegida)`; bajo el piso exige `descontar` y cuenta para el tope.
+    - `tope_descuento` arranca en 0: **ningún negocio descuenta hasta configurarlo**. RPC lista, pantalla en el PR 4. El
+      valor por negocio lo define el cliente.
+    - La devolución reparte por medio según lo cobrado: una venta QR no saca efectivo.
+    - Anular pasadas 24 h exige `devolver_fuera_plazo`. QR en línea exige `verificado: true`. Lavandería exige cliente.
+    - Pendiente para la fase 3: la venta offline debe marcarse para revisión en vez de rechazarse por piso o tope.
+    - Codex: no verificado (sin cuota).
 - **Fase 1 cerrada (2026-11-01):** plan en `docs/plan-fase-1.md`. 5 PRs (#30 a #34), hecha en una sesión; la
   estimación era 6 días. **Próximo:** fase 2 de `docs/roadmap.md`, POS y caja. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
