@@ -11,9 +11,11 @@ export const CUENTAS = {
   encargadoTienda: "encargado.tienda@erp.test",
   encargadoLavanderia: "encargado.lavanderia@erp.test",
   multi: "multi@erp.test",
-  // Solo la usa la prueba de cuenta desactivada: nadie más debe depender de ella.
   contador: "contador.tienda@erp.test",
 } as const;
+// La cuenta que auth.spec desactiva un rato. Ninguna otra prueba la usa ni guarda su sesión: así el baneo no
+// interfiere con nada y no hace falta serializar proyectos.
+export const CUENTA_DESACTIVABLE = "baneable@erp.test";
 export const NEGOCIOS = {
   tienda: { id: "a0000000-0000-0000-0000-000000000001", nombre: "Tienda Demo" },
   lavanderia: { id: "a0000000-0000-0000-0000-000000000002", nombre: "Lavandería Demo" },
@@ -51,14 +53,12 @@ export async function fijarBaneo(correo: string, baneada: boolean) {
   );
 }
 
-// Crea `cantidad` productos (sin precio) por PostgREST con la sesión guardada de la cuenta: llenar una segunda página
-// de la grilla por la UI tardaría minutos. Código y nombre: `<prefijo>-<n>`, con n de 3 dígitos (orden estable).
-export async function crearProductosEnLote(
+// Llamada a PostgREST con la sesión guardada de la cuenta (sin login nuevo). Devuelve el estado y el JSON.
+export async function apiComo(
   cuenta: keyof typeof CUENTAS,
-  negocioId: string,
-  prefijo: string,
-  cantidad: number,
-) {
+  ruta: string,
+  opciones: { metodo?: "GET" | "POST"; cuerpo?: unknown } = {},
+): Promise<{ status: number; json: unknown }> {
   try {
     process.loadEnvFile(".env.local");
   } catch {
@@ -80,29 +80,56 @@ export async function crearProductosEnLote(
   const { access_token } = JSON.parse(
     Buffer.from(decodeURIComponent(valor).replace(/^base64-/, ""), "base64url").toString(),
   ) as { access_token: string };
+  const r = await fetch(`${url}/rest/v1/${ruta}`, {
+    method: opciones.metodo ?? "GET",
+    headers: {
+      apikey,
+      Authorization: `Bearer ${access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: opciones.cuerpo === undefined ? undefined : JSON.stringify(opciones.cuerpo),
+  });
+  return { status: r.status, json: await r.json().catch(() => null) };
+}
+
+// Crea `cantidad` productos (sin precio) por PostgREST con la sesión guardada de la cuenta: llenar una segunda página
+// de la grilla por la UI tardaría minutos. Código y nombre: `<prefijo>-<n>`, con n de 3 dígitos (orden estable).
+export async function crearProductosEnLote(
+  cuenta: keyof typeof CUENTAS,
+  negocioId: string,
+  prefijo: string,
+  cantidad: number,
+) {
   const crear = async (n: number) => {
     const sufijo = String(n).padStart(3, "0");
-    const r = await fetch(`${url}/rest/v1/rpc/guardar_producto`, {
-      method: "POST",
-      headers: {
-        apikey,
-        Authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const r = await apiComo(cuenta, "rpc/guardar_producto", {
+      metodo: "POST",
+      cuerpo: {
         p_negocio_id: negocioId,
         p_datos: {
           codigo: `${prefijo}-${sufijo}`,
           nombre: `${prefijo} ${sufijo}`,
           tipo: "producto",
         },
-      }),
+      },
     });
-    if (!r.ok) throw new Error(`No se creó el producto ${sufijo}: ${r.status}`);
+    if (r.status >= 300) throw new Error(`No se creó el producto ${sufijo}: ${r.status}`);
   };
   for (let n = 1; n <= cantidad; n += 10) {
     await Promise.all(
       Array.from({ length: Math.min(10, cantidad - n + 1) }, (_, i) => crear(n + i)),
     );
   }
+}
+
+// Navega y espera a que hidrate: con la carga de varios workers, un clic o un archivo antes de la hidratación se
+// pierde. React marca con __reactProps$ cada nodo que hidrata, así que se espera a que todos los controles lo
+// tengan (networkidle no lo garantizaba y tapó una falla de hidratación).
+export async function ir(page: Page, url: string) {
+  await page.goto(url);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("input, select, button, form")].every((c) =>
+      Object.keys(c).some((k) => k.startsWith("__reactProps$")),
+    ),
+  );
 }

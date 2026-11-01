@@ -4,3 +4,5 @@ pnpm-lock.yaml
 test-results
 playwright-report
 src/lib/supabase/database.types.ts
+
+tests/e2e/.auth

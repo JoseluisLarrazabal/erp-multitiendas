@@ -31,7 +31,8 @@ from (values
   ('c0000000-0000-0000-0000-000000000004'::uuid, 'vendedor.tienda@erp.test', 'Vendedor Tienda'),
   ('c0000000-0000-0000-0000-000000000005'::uuid, 'empleado.lavanderia@erp.test', 'Empleado Lavandería'),
   ('c0000000-0000-0000-0000-000000000006'::uuid, 'encargado.lavanderia@erp.test', 'Encargado Lavandería'),
-  ('c0000000-0000-0000-0000-000000000007'::uuid, 'multi@erp.test', 'Multinegocio Demo')
+  ('c0000000-0000-0000-0000-000000000007'::uuid, 'multi@erp.test', 'Multinegocio Demo'),
+  ('c0000000-0000-0000-0000-000000000008'::uuid, 'baneable@erp.test', 'Cuenta Baneable')
 ) as u (id, email, nombre);
 
 insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -51,7 +52,8 @@ insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
   ('c0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000002', 'empleado'),
   ('c0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000002', 'encargado'),
   ('c0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000001', 'vendedor'),
-  ('c0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000002', 'empleado');
+  ('c0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000002', 'empleado'),
+  ('c0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000002', 'empleado');
 
 insert into public.dispositivos (negocio_id, ubicacion_id, nombre, prefijo) values
   ('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Caja 1', 'C1');

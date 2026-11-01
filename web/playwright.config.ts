@@ -10,7 +10,7 @@ export default defineConfig({
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
       name: "chromium",
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/auth\.setup\.ts/],
       dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
