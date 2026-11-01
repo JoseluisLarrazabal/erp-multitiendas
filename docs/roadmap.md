@@ -22,9 +22,10 @@ arranca con la firma y la recepción de precios e inventario; ver D-03 y D-04 en
 | 6 Salida | A | Backups, restauración, dominio, carga real, capacitación, paralelo, acta | RF-TR-10, RNF-08, RNF-09, RNF-12 | 3 | Todo lo anterior |
 | 7 Extras | B | Crédito, reservas, proveedores, insumos | RF-CRE-*, RF-RES-*, RF-COM-*, RF-INS-* | 10 a 15 | Fase 6; D-01, P-07 y P-12 |
 
-Entrega A suma 30 días de trabajo. El contrato da 30 días **calendario**, unos 21 a 22 hábiles: solo entra trabajando
-todos los días, o empezando antes. Fases 0 a 3 y 5 no necesitan al cliente, salvo la importación, así que conviene
-adelantarlas antes de que corra el plazo. El panel crece desde la fase 1; la fase 5 cierra su versión responsive.
+Entrega A suma 30 días de trabajo y el contrato da 30 días **calendario**. Decisión del CTO (2026-11-01): se trabaja
+todos los días, sin descansos, así que el plan entra justo y sin margen. Un solo día perdido se recupera adelantando:
+fases 0 a 3 y 5 no necesitan al cliente, salvo la importación, y pueden empezar antes de que corra el plazo. El panel
+crece desde la fase 1; la fase 5 cierra su versión responsive.
 
 ## Orden dentro de cada fase
 
@@ -69,7 +70,7 @@ Se piden en un solo mensaje antes de la fase 1. Detalle en `docs/migracion-datos
 | Riesgo | Efecto | Mitigación |
 |---|---|---|
 | Alcance mayor al contrato | Atraso, costo no pagado | Fases A y B, adenda (D-01) |
-| Entrega A excede 30 días calendario | Incumplimiento de plazo | Adelantar fases sin cliente antes de que corra el plazo |
+| Entrega A excede 30 días calendario | Incumplimiento de plazo | Trabajo diario (decisión CTO) y adelantar fases sin cliente antes de que corra el plazo |
 | Cliente no entrega precios | Sin arranque | Aviso escrito (D-03); plazo ampliado por cláusula quinta |
 | Frial sin abrir | Acta discutida | Acuerdo escrito (D-02) |
 | Service worker con Turbopack | Fase 3 se alarga | Spike en fase 0 |
