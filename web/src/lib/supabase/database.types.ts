@@ -585,6 +585,9 @@ isOneToOne: false
 "registrar_series":
 { Args: { "p_negocio_id": string,"p_producto_id": string,"p_series": (string)[],"p_ubicacion_id": string }; Returns: number
                            },
+"registrar_stock_inicial":
+{ Args: { "p_items": Json,"p_negocio_id": string }; Returns: Json
+                           },
 "registrar_tipo_cambio":
 { Args: { "p_negocio_id": string,"p_valor": number }; Returns: string
                            },

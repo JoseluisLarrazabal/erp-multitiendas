@@ -202,7 +202,7 @@ Toda escritura contable pasa por estas funciones. `plan-pruebas.md` exige casos 
 |---|---|
 | Usuarios | `asignar_usuario`, `quitar_usuario`, `registrar_dispositivo`; cuentas por Edge Function `admin-usuarios` (`docs/arquitectura.md`) |
 | Catálogo | `guardar_categoria`, `guardar_producto`, `desactivar_producto`, `guardar_precios`, `registrar_tipo_cambio`, `precio_bs`, `catalogo_pos` |
-| Inventario | `registrar_entrada`, `ajustar_inventario`, `trasladar_stock`, `registrar_conteo`, `registrar_series`, `fijar_costos`, `costos_stock`, `kardex_producto`, `stock_inconsistente` |
+| Inventario | `registrar_entrada`, `ajustar_inventario`, `trasladar_stock`, `registrar_conteo`, `registrar_series`, `fijar_costos`, `costos_stock`, `kardex_producto`, `stock_inconsistente`, `registrar_stock_inicial` (solo `service_role`, la usa `scripts/importacion/`: lote de hasta 500, idempotente por producto, sin `auth.uid()`) |
 | Ventas | `registrar_venta`, `anular_venta`, `devolver_venta` |
 | Caja | `abrir_caja`, `registrar_movimiento_caja`, `cerrar_caja` |
 | Lavandería | `crear_orden`, `cambiar_estado_orden`, `entregar_orden`, `anular_orden` |

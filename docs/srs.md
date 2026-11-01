@@ -257,11 +257,11 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 
 | ID | Pregunta | Supuesto | Afecta |
 |---|---|---|---|
-| P-01 | ¿Qué productos llevan número de serie? "Todos" no coincide con vasos y platos, y hay 0 series cargadas | `controla_serie` activo en equipos grandes, a marcar con el cliente | RF-CAT-07 |
-| P-02 | ¿Faltan productos? Declaró 100 a 500 y cargó 597 | La planilla manda | RF-MIG-01 |
-| P-03 | ¿Se cobra en dólares? Marcó "Ambas", pero solo acepta efectivo en Bs y QR | Solo Bs | RN-01 |
-| P-04 | ¿Existen muebles, colchones y motos? Marcados en el form, con 0 productos | Categorías sin productos no se importan | RF-MIG-01 |
-| P-05 | ¿Se conservan los códigos "1" a "597"? Dijo no usar códigos propios | Se conservan como código interno | RF-CAT-01 |
+| P-01 | ¿Qué productos llevan número de serie? "Todos" no coincide con vasos y platos, y hay 0 series cargadas | `controla_serie` activo en equipos grandes, a marcar con el cliente. **Aplicado:** la importación no activa series; se marcan en el panel | RF-CAT-07 |
+| P-02 | ¿Faltan productos? Declaró 100 a 500 y cargó 597 | La planilla manda. **Aplicado** | RF-MIG-01 |
+| P-03 | ¿Se cobra en dólares? Marcó "Ambas", pero solo acepta efectivo en Bs y QR | Solo Bs. **Aplicado:** la importación no carga precios ni monedas | RN-01 |
+| P-04 | ¿Existen muebles, colchones y motos? Marcados en el form, con 0 productos | Categorías sin productos no se importan. **Aplicado:** 53 categorías usadas | RF-MIG-01 |
+| P-05 | ¿Se conservan los códigos "1" a "597"? Dijo no usar códigos propios | Se conservan como código interno. **Aplicado** | RF-CAT-01 |
 | P-06 | ¿Cómo entrega los saldos de crédito? Quiere migrarlos y no tiene lista de clientes | Carga manual de 1 a 20 créditos | RF-CRE-06 |
 | P-07 | ¿El 2,5 % mensual es sobre saldo o sobre el total? | Sobre saldo. **Bloquea RF-CRE-02** | RF-CRE-02 |
 | P-08 | Regla de redondeo de Bs al convertir desde USD | 2 decimales | RF-CAT-05 |
