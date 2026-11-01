@@ -128,6 +128,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     (RF-CAT-11). Tipo de cambio pide confirmar si varía más de 20 %. Sin probar en navegador: USD sin tipo de cambio,
     costo "Varía", registrar tras confirmar el cambio brusco, fallo parcial al guardar, lector de pantalla, móvil táctil.
     **Codex sin cuota hasta el 2026-11-16:** al volver, correr `verify-fix` sobre el `fix:` de CI y revisar fases 0 y 1.
+  - PR 4 hecho: stock por ubicación, kardex, entrada, salida, traslado, conteo y series, con selector de producto para
+    lector USB. E2E-03 completo con la cuenta contador. El test de baneo usa su propia cuenta (`baneable@erp.test`).
+    Sin probar: series de punta a punta en navegador y conteo de más de 500 ítems.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.

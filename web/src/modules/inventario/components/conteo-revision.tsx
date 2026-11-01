@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/panel/campo";
@@ -28,6 +28,7 @@ export function ConteoRevision({
   alVolver: () => void;
   alConfirmar: (motivo: string, series: Record<string, string[]>) => void;
 }) {
+  const titulo = useRef<HTMLHeadingElement>(null);
   const [motivo, setMotivo] = useState("");
   const [series, setSeries] = useState<Record<string, string[]>>({});
   const [faltan, setFaltan] = useState<string | null>(null);
@@ -39,6 +40,9 @@ export function ConteoRevision({
   const sinDiferencia = filas.length - conDiferencia.length;
   // Un faltante de un producto con serie debe decir qué series ya no están.
   const exigeSeries = (f: (typeof filas)[number]) => f.producto.controlaSerie && f.diferencia < 0;
+
+  // Al pasar a revisión, el foco va al encabezado: el lector de pantalla anuncia el cambio de vista.
+  useEffect(() => titulo.current?.focus(), []);
 
   function confirmar() {
     const mala = conDiferencia.find(
@@ -53,7 +57,15 @@ export function ConteoRevision({
   }
 
   return (
-    <section aria-label="Revisión del conteo" className="flex flex-col gap-5">
+    <section aria-labelledby="cont-revision-titulo" className="flex flex-col gap-5">
+      <h2
+        id="cont-revision-titulo"
+        ref={titulo}
+        tabIndex={-1}
+        className="text-lg font-semibold outline-none"
+      >
+        Revisión del conteo
+      </h2>
       <p className="text-sm">
         {conDiferencia.length === 0
           ? "No hay diferencias: el conteo coincide con el sistema y no genera ajustes."
@@ -91,20 +103,6 @@ export function ConteoRevision({
           ))}
         </ul>
       )}
-      <Campo
-        id="cont-motivo"
-        etiqueta="Motivo (opcional)"
-        ayuda="Si lo dejas vacío, queda “Conteo de inventario”."
-      >
-        <Input
-          id="cont-motivo"
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          maxLength={200}
-          autoComplete="off"
-          className="h-10"
-        />
-      </Campo>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -112,6 +110,20 @@ export function ConteoRevision({
         }}
         className="flex flex-col gap-3"
       >
+        <Campo
+          id="cont-motivo"
+          etiqueta="Motivo (opcional)"
+          ayuda="Si lo dejas vacío, queda “Conteo de inventario”."
+        >
+          <Input
+            id="cont-motivo"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            maxLength={200}
+            autoComplete="off"
+            className="h-10"
+          />
+        </Campo>
         <PieOperacion
           etiqueta="Confirmar conteo"
           pendiente={pendiente}

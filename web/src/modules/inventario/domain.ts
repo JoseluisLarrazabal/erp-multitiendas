@@ -83,6 +83,9 @@ const MENSAJES_INVENTARIO: Record<string, string> = {
 export const mensajeDeInventario = (codigo: string | undefined) =>
   codigo ? MENSAJES_INVENTARIO[codigo] : undefined;
 
+export const FALLA_STOCK_ORIGEN =
+  "No se pudo leer el stock del origen. Puedes trasladar igual, pero no se avisará si supera el stock.";
+
 export const MENSAJE_DATOS = "Revisa los datos: hay algo incompleto o inválido.";
 
 const conMiles = (enteros: string) => enteros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");

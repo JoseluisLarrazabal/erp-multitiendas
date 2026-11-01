@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { CUENTAS, fijarBaneo, iniciarSesionUI, rutaAuth, vigilarCsp } from "./helpers";
+import {
+  CUENTA_DESACTIVABLE,
+  CUENTAS,
+  fijarBaneo,
+  iniciarSesionUI,
+  rutaAuth,
+  vigilarCsp,
+} from "./helpers";
 
 // E2E-01 (RF-TR-01)
 test.describe("sin sesión", () => {
@@ -49,9 +56,9 @@ test.describe("sin sesión", () => {
   }) => {
     try {
       // Con sesión viva: se desactiva después de entrar (el JWT dura hasta 1 hora).
-      await iniciarSesionUI(page, CUENTAS.contador);
+      await iniciarSesionUI(page, CUENTA_DESACTIVABLE);
       await expect(page).toHaveURL(/\/(panel|pos)$/);
-      await fijarBaneo(CUENTAS.contador, true);
+      await fijarBaneo(CUENTA_DESACTIVABLE, true);
       await page.goto("/panel");
       await expect(page).toHaveURL(/\/sin-acceso$/);
       await expect(page.getByRole("heading", { name: "Sin acceso" })).toBeVisible();
@@ -61,10 +68,10 @@ test.describe("sin sesión", () => {
       await expect(page).toHaveURL(/\/login$/);
 
       // Con la cuenta ya desactivada: el login falla con el mensaje genérico.
-      await iniciarSesionUI(page, CUENTAS.contador);
+      await iniciarSesionUI(page, CUENTA_DESACTIVABLE);
       await expect(page.getByRole("alert").filter({ hasText: /incorrectos/ })).toBeVisible();
     } finally {
-      await fijarBaneo(CUENTAS.contador, false);
+      await fijarBaneo(CUENTA_DESACTIVABLE, false);
     }
   });
 });

@@ -1,27 +1,27 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { SelectNativo } from "@/components/ui/select-nativo";
-import { Campo, propsCampo, type Errores } from "@/components/panel/campo";
+import { validarCampos, type Errores } from "@/components/panel/campo";
 import { registrarSalida, stockProductoAccion } from "../actions";
 import {
   ayudaSalida,
   formatearCantidad,
   mensajeCantidad,
+  MENSAJE_DATOS,
   parsearCantidad,
-  TIPOS_SALIDA,
   type ProductoElegible,
   type TipoSalida,
   type Ubicacion,
 } from "../domain";
 import { salidaSchema } from "../schemas";
-import { SelectUbicacion } from "./select-ubicacion";
+import { camposSalida } from "./campos-operacion";
+import { CampoCantidad } from "./campo-cantidad";
 import { CampoMotivo } from "./campo-motivo";
 import { PieOperacion } from "./pie-operacion";
 import { ResumenStock } from "./resumen-stock";
 import { SelectorProducto } from "./selector-producto";
 import { SelectorSeries } from "./selector-series";
+import { TipoUbicacionSalida } from "./tipo-ubicacion-salida";
 import { useCarga } from "./use-carga";
 import { useOperacion } from "./use-operacion";
 
@@ -41,6 +41,7 @@ export function FormSalida({
   const [motivoTexto, setMotivoTexto] = useState("");
   const [series, setSeries] = useState<string[]>([]);
   const [errores, setErrores] = useState<Errores>({});
+  const [general, setGeneral] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
   const stock = useCarga(producto && `${negocioId}|${producto.id}`, () =>
     stockProductoAccion({ negocioId, productoId: producto!.id }),
@@ -74,11 +75,24 @@ export function FormSalida({
       motivo,
       serieIds: salidaConSerie ? series : null,
     };
-    if (!Object.keys(nuevos).length && !salidaSchema.safeParse(datos).success)
-      nuevos["sal-cantidad"] = mensajeCantidad(producto?.unidad, conSigno);
-    setErrores(nuevos);
     const primero = Object.keys(nuevos)[0];
-    if (primero) return formulario.current?.querySelector<HTMLElement>(`#${primero}`)?.focus();
+    if (primero) {
+      setErrores(nuevos);
+      setGeneral(null);
+      return formulario.current?.querySelector<HTMLElement>(`#${primero}`)?.focus();
+    }
+    const v = validarCampos(
+      e.currentTarget,
+      salidaSchema,
+      datos,
+      camposSalida(producto?.unidad, conSigno),
+    );
+    if ("errores" in v) {
+      setErrores(v.errores);
+      return setGeneral(Object.keys(v.errores).length ? null : MENSAJE_DATOS);
+    }
+    setErrores({});
+    setGeneral(null);
 
     const saliente = producto!;
     enviar(
@@ -121,54 +135,32 @@ export function FormSalida({
         unidad={producto?.unidad ?? "unidad"}
         cargando={stock.cargando}
       />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Campo id="sal-tipo" etiqueta="Tipo">
-          <SelectNativo
-            id="sal-tipo"
-            value={tipo}
-            onChange={(e) => {
-              setTipo(e.target.value as TipoSalida);
-              setSeries([]);
-            }}
-          >
-            {TIPOS_SALIDA.map((t) => (
-              <option key={t.valor} value={t.valor}>
-                {t.etiqueta}
-              </option>
-            ))}
-          </SelectNativo>
-        </Campo>
-        <Campo id="sal-ubicacion" etiqueta="Ubicación">
-          <SelectUbicacion
-            ubicaciones={ubicaciones}
-            id="sal-ubicacion"
-            value={ubicacionId}
-            onChange={(e) => {
-              setUbicacionId(e.target.value);
-              setSeries([]);
-            }}
-          />
-        </Campo>
-      </div>
-      <Campo
+      <TipoUbicacionSalida
+        ubicaciones={ubicaciones}
+        tipo={tipo}
+        ubicacionId={ubicacionId}
+        alCambiarTipo={(t) => {
+          setTipo(t);
+          setSeries([]);
+        }}
+        alCambiarUbicacion={(id) => {
+          setUbicacionId(id);
+          setSeries([]);
+        }}
+        errores={errores}
+      />
+      <CampoCantidad
         id="sal-cantidad"
-        etiqueta="Cantidad"
+        unidad={producto?.unidad}
         ayuda={ayudaSalida(conSigno, producto?.unidad)}
-        error={errores["sal-cantidad"]}
-      >
-        <Input
-          id="sal-cantidad"
-          value={cantidadTexto}
-          onChange={(e) => {
-            setCantidadTexto(e.target.value);
-            setSeries([]);
-          }}
-          inputMode={conSigno ? "text" : producto?.unidad === "kg" ? "decimal" : "numeric"}
-          autoComplete="off"
-          className="h-10 sm:max-w-64"
-          {...propsCampo("sal-cantidad", errores, true)}
-        />
-      </Campo>
+        valor={cantidadTexto}
+        alCambiar={(t) => {
+          setCantidadTexto(t);
+          setSeries([]);
+        }}
+        errores={errores}
+        inputMode={conSigno ? "text" : undefined}
+      />
       {salidaConSerie && producto && (
         <SelectorSeries
           id="sal-series"
@@ -189,7 +181,12 @@ export function FormSalida({
         alCambiar={setMotivoTexto}
         errores={errores}
       />
-      <PieOperacion etiqueta="Registrar" pendiente={pendiente} error={error} exito={exito} />
+      <PieOperacion
+        etiqueta="Registrar"
+        pendiente={pendiente}
+        error={general ?? error}
+        exito={exito}
+      />
     </form>
   );
 }

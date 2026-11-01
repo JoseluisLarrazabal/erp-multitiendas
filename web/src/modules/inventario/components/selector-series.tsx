@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { seriesDisponiblesAccion } from "../actions";
+import { casilla } from "./casilla";
 import { useCarga } from "./use-carga";
-
-const casilla =
-  "accent-primary size-4 rounded border-input focus-visible:ring-ring/50 focus-visible:ring-3";
 
 // Series disponibles del producto en una ubicación, para elegir cuáles salen (salida, traslado, conteo con faltante).
 // Controlado: `seleccion` son ids de serie. `necesarias` es cuántas hay que marcar.

@@ -27,7 +27,7 @@ export function SelectorProducto({ negocioId, id, valor, alElegir, idSiguiente, 
   const campo = useRef<HTMLInputElement>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout>>(undefined);
   const consulta = useRef(0);
-  const volverAlCampo = useRef(false);
+  const huboValor = useRef(false);
   const [texto, setTexto] = useState("");
   const [opciones, setOpciones] = useState<ProductoElegible[]>([]);
   const [activo, setActivo] = useState(-1);
@@ -39,10 +39,13 @@ export function SelectorProducto({ negocioId, id, valor, alElegir, idSiguiente, 
     if (window.matchMedia("(pointer: fine)").matches) campo.current?.focus();
     return () => clearTimeout(temporizador.current);
   }, []);
-  // Tras "Cambiar" o tras registrar, el foco vuelve al campo de búsqueda.
+  // Tras "Cambiar" o tras registrar (hubo producto y ya no), el foco vuelve al campo de búsqueda.
   useEffect(() => {
-    if (valor === null && volverAlCampo.current) campo.current?.focus();
-    volverAlCampo.current = valor === null;
+    if (valor !== null) huboValor.current = true;
+    else if (huboValor.current) {
+      huboValor.current = false;
+      campo.current?.focus();
+    }
   }, [valor]);
 
   async function buscar(q: string): Promise<ProductoElegible[]> {

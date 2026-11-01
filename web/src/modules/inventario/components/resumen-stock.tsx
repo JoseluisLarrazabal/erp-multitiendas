@@ -6,30 +6,37 @@ export function ResumenStock({
   stock,
   unidad,
   cargando,
+  falla,
 }: {
   ubicaciones: readonly Ubicacion[];
   stock: Record<string, number> | null;
   unidad: Unidad;
   cargando: boolean;
+  // Aviso si no se pudo leer; el formulario decide qué implica para el envío.
+  falla?: string | null;
 }) {
-  if (cargando) return <p className="text-muted-foreground text-sm">Leyendo el stock…</p>;
-  if (!stock) return null;
   return (
-    <p className="text-muted-foreground text-sm">
-      Stock actual:{" "}
-      {ubicaciones.map((u, i) => {
-        const n = stock[u.id] ?? 0;
-        return (
-          <span key={u.id}>
-            {i > 0 && " · "}
-            {u.nombre}{" "}
-            <strong className={n < 0 ? "text-destructive" : "text-foreground"}>
-              {formatearCantidad(n, unidad)}
-              {n < 0 && " (negativo)"}
-            </strong>
-          </span>
-        );
-      })}
+    <p role="status" className="text-muted-foreground text-sm empty:sr-only">
+      {cargando && "Leyendo el stock…"}
+      {!cargando && !stock && falla}
+      {!cargando && stock && (
+        <>
+          Stock actual:{" "}
+          {ubicaciones.map((u, i) => {
+            const n = stock[u.id] ?? 0;
+            return (
+              <span key={u.id}>
+                {i > 0 && " · "}
+                {u.nombre}{" "}
+                <strong className={n < 0 ? "text-destructive" : "text-foreground"}>
+                  {formatearCantidad(n, unidad)}
+                  {n < 0 && " (negativo)"}
+                </strong>
+              </span>
+            );
+          })}
+        </>
+      )}
     </p>
   );
 }

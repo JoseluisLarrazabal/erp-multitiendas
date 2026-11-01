@@ -9,8 +9,8 @@ import {
   type Producto,
 } from "./inventario-helpers";
 
-// E2E-03, parte de la cuenta contador: ve costos pero no edita productos. Corre en un proyecto aparte, al final:
-// auth.spec desactiva esta cuenta un rato y, mientras tanto, su sesión no sirve.
+// E2E-03, parte de la cuenta contador: ve costos pero no edita productos. Usa la sesión guardada de auth.setup;
+// el baneo de auth.spec va sobre otra cuenta (CUENTA_DESACTIVABLE), así que no hay orden entre proyectos.
 test.use({ storageState: rutaAuth("contador") });
 
 let p: Producto;

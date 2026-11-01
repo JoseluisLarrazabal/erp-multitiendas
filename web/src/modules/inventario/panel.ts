@@ -8,6 +8,7 @@ export { FormSeries } from "./components/form-series";
 export { FormTraslado } from "./components/form-traslado";
 export { ListaKardex } from "./components/lista-kardex";
 export { ListaStock } from "./components/lista-stock";
+export { PaginaOperacion } from "./components/pagina-operacion";
 export { ResumenStock } from "./components/resumen-stock";
 export {
   contarStockBajo,

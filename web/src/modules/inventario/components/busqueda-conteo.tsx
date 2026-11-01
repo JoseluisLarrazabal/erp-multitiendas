@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,14 @@ export function BusquedaConteo({
   alCambiar: (valor: string) => void;
   alBuscar: (e: FormEvent) => void;
 }) {
+  const campo = useRef<HTMLInputElement>(null);
   return (
     <form
-      onSubmit={alBuscar}
+      onSubmit={(e) => {
+        alBuscar(e);
+        // El texto queda seleccionado: el siguiente escaneo lo reemplaza sin borrar a mano.
+        campo.current?.select();
+      }}
       role="search"
       aria-label="Buscar productos a contar"
       className="flex min-w-60 flex-1 items-end gap-2"
@@ -25,6 +30,7 @@ export function BusquedaConteo({
       <div className="flex flex-1 flex-col gap-1.5">
         <Label htmlFor="cont-q">Buscar</Label>
         <Input
+          ref={campo}
           id="cont-q"
           type="search"
           value={valor}

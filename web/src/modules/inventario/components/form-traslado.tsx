@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { Campo, propsCampo, type Errores } from "@/components/panel/campo";
+import { validarCampos, type Errores } from "@/components/panel/campo";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { stockProductoAccion, trasladar } from "../actions";
 import {
@@ -10,17 +9,21 @@ import {
   textoAviso,
   formatearCantidad,
   mensajeCantidad,
+  FALLA_STOCK_ORIGEN,
+  MENSAJE_DATOS,
   parsearCantidad,
   type ProductoElegible,
   type Ubicacion,
 } from "../domain";
 import { trasladoSchema } from "../schemas";
-import { SelectUbicacion } from "./select-ubicacion";
+import { camposTraslado } from "./campos-operacion";
+import { CampoCantidad } from "./campo-cantidad";
 import { CampoMotivo } from "./campo-motivo";
 import { PieOperacion } from "./pie-operacion";
 import { ResumenStock } from "./resumen-stock";
 import { SelectorProducto } from "./selector-producto";
 import { SelectorSeries } from "./selector-series";
+import { UbicacionesTraslado } from "./ubicaciones-traslado";
 import { useCarga } from "./use-carga";
 import { useOperacion } from "./use-operacion";
 
@@ -39,6 +42,7 @@ export function FormTraslado({
   const [motivo, setMotivo] = useState("");
   const [series, setSeries] = useState<string[]>([]);
   const [errores, setErrores] = useState<Errores>({});
+  const [general, setGeneral] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
   const [aviso, setAviso] = useState(false);
   const stock = useCarga(producto && `${negocioId}|${producto.id}`, () =>
@@ -46,7 +50,8 @@ export function FormTraslado({
   );
 
   const cantidad = producto ? parsearCantidad(cantidadTexto, producto.unidad) : null;
-  const enOrigen = stock.datos?.[origenId] ?? 0;
+  // null = stock desconocido (cargando o fallido): no se inventa 0 ni se avisa de sobre-stock.
+  const enOrigen = stock.datos ? (stock.datos[origenId] ?? 0) : null;
   const datos = (id: string) => ({
     operacionId: id,
     negocioId,
@@ -81,18 +86,30 @@ export function FormTraslado({
   function alEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setExito(null);
+    setGeneral(null);
     const nuevos: Errores = {};
     if (!producto) nuevos["tra-producto"] = "Elige un producto.";
     else if (cantidad === null) nuevos["tra-cantidad"] = mensajeCantidad(producto.unidad);
-    if (origenId === destinoId) nuevos["tra-destino"] = "El destino debe ser distinto del origen.";
     if (producto?.controlaSerie && cantidad !== null && series.length !== cantidad)
       nuevos["tra-series"] = `Marca exactamente ${cantidad} serie(s).`;
-    if (!Object.keys(nuevos).length && !trasladoSchema.safeParse(datos(operacionId)).success)
-      nuevos["tra-cantidad"] = mensajeCantidad(producto?.unidad);
-    setErrores(nuevos);
     const primero = Object.keys(nuevos)[0];
-    if (primero) return e.currentTarget.querySelector<HTMLElement>(`#${primero}`)?.focus();
-    if (cantidad! > enOrigen) return setAviso(true); // RN-04: se permite, pero se avisa antes
+    if (primero) {
+      setErrores(nuevos);
+      return e.currentTarget.querySelector<HTMLElement>(`#${primero}`)?.focus();
+    }
+    const v = validarCampos(
+      e.currentTarget,
+      trasladoSchema,
+      datos(operacionId),
+      camposTraslado(producto?.unidad),
+    );
+    if ("errores" in v) {
+      setErrores(v.errores);
+      return setGeneral(Object.keys(v.errores).length ? null : MENSAJE_DATOS);
+    }
+    setErrores({});
+    if (stock.cargando) return; // el botón ya está deshabilitado; Enter no debe saltarse la lectura
+    if (enOrigen !== null && cantidad! > enOrigen) return setAviso(true); // RN-04: se permite, pero se avisa antes
     enviar((id) => trasladar(datos(id)), limpiar);
   }
   const nombreOrigen = ubicaciones.find((u) => u.id === origenId)?.nombre ?? "el origen";
@@ -120,48 +137,30 @@ export function FormTraslado({
         stock={stock.datos}
         unidad={producto?.unidad ?? "unidad"}
         cargando={stock.cargando}
+        falla={stock.error && FALLA_STOCK_ORIGEN}
       />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Campo id="tra-origen" etiqueta="Origen">
-          <SelectUbicacion
-            ubicaciones={ubicaciones}
-            id="tra-origen"
-            value={origenId}
-            onChange={(e) => {
-              setOrigenId(e.target.value);
-              setSeries([]);
-            }}
-          />
-        </Campo>
-        <Campo id="tra-destino" etiqueta="Destino" error={errores["tra-destino"]}>
-          <SelectUbicacion
-            ubicaciones={ubicaciones}
-            id="tra-destino"
-            value={destinoId}
-            onChange={(e) => setDestinoId(e.target.value)}
-            {...propsCampo("tra-destino", errores)}
-          />
-        </Campo>
-      </div>
-      <Campo
+      <UbicacionesTraslado
+        ubicaciones={ubicaciones}
+        origenId={origenId}
+        destinoId={destinoId}
+        alCambiarOrigen={(id) => {
+          setOrigenId(id);
+          setSeries([]);
+        }}
+        alCambiarDestino={setDestinoId}
+        errores={errores}
+      />
+      <CampoCantidad
         id="tra-cantidad"
-        etiqueta="Cantidad"
+        unidad={producto?.unidad}
         ayuda={ayudaCantidad(producto?.unidad)}
-        error={errores["tra-cantidad"]}
-      >
-        <Input
-          id="tra-cantidad"
-          value={cantidadTexto}
-          onChange={(e) => {
-            setCantidadTexto(e.target.value);
-            setSeries([]);
-          }}
-          inputMode={producto?.unidad === "kg" ? "decimal" : "numeric"}
-          autoComplete="off"
-          className="h-10 sm:max-w-64"
-          {...propsCampo("tra-cantidad", errores, true)}
-        />
-      </Campo>
+        valor={cantidadTexto}
+        alCambiar={(t) => {
+          setCantidadTexto(t);
+          setSeries([]);
+        }}
+        errores={errores}
+      />
       {producto?.controlaSerie && cantidad !== null && (
         <SelectorSeries
           id="tra-series"
@@ -183,14 +182,15 @@ export function FormTraslado({
       <PieOperacion
         etiqueta="Registrar traslado"
         pendiente={pendiente}
-        error={error}
+        error={general ?? error}
         exito={exito}
+        deshabilitado={stock.cargando}
       />
       <ConfirmarAccion
         abierto={aviso}
         alCambiarAbierto={setAviso}
         titulo="El traslado supera el stock del origen"
-        descripcion={textoAviso(nombreOrigen, enOrigen, cantidad ?? 0, producto?.unidad)}
+        descripcion={textoAviso(nombreOrigen, enOrigen ?? 0, cantidad ?? 0, producto?.unidad)}
         confirmar="Trasladar igual"
         destructiva={false}
         accion={confirmarTraslado}

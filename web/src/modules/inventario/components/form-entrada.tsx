@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Campo,
@@ -21,6 +21,8 @@ import {
 } from "../domain";
 import { entradaSchema } from "../schemas";
 import { SelectUbicacion } from "./select-ubicacion";
+import { CampoCantidad } from "./campo-cantidad";
+import { CampoMotivo } from "./campo-motivo";
 import { PieOperacion } from "./pie-operacion";
 import { ResumenStock } from "./resumen-stock";
 import { SelectorProducto } from "./selector-producto";
@@ -44,9 +46,13 @@ export function FormEntrada({
   ubicaciones: readonly Ubicacion[];
   verCostos: boolean;
 }) {
-  const formulario = useRef<HTMLFormElement>(null);
   const { operacionId, pendiente, error, enviar } = useOperacion();
   const [producto, setProducto] = useState<ProductoElegible | null>(null);
+  // Controlados: tras registrar solo se limpian producto, cantidad y costo; la ubicación se conserva.
+  const [ubicacionId, setUbicacionId] = useState(ubicaciones[0]?.id ?? "");
+  const [cantidadTexto, setCantidadTexto] = useState("");
+  const [costoTexto, setCostoTexto] = useState("");
+  const [motivo, setMotivo] = useState("");
   const [errores, setErrores] = useState<Errores>({});
   const [general, setGeneral] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
@@ -57,8 +63,8 @@ export function FormEntrada({
   function alEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setExito(null);
-    const f = new FormData(e.currentTarget);
-    const cantidad = String(f.get("cantidad"));
+    const cantidad = cantidadTexto;
+    const costo = verCostos ? costoTexto : "";
     const nuevos: Errores = {};
     if (!producto) nuevos["ent-producto"] = "Elige un producto.";
     else if (parsearCantidad(cantidad, producto.unidad) === null)
@@ -74,10 +80,10 @@ export function FormEntrada({
         operacionId,
         negocioId,
         productoId: producto!.id,
-        ubicacionId: String(f.get("ubicacion")),
+        ubicacionId,
         cantidad,
-        costo: verCostos ? String(f.get("costo") ?? "") : "",
-        motivo: String(f.get("motivo") ?? ""),
+        costo,
+        motivo,
       },
       CAMPOS,
     );
@@ -97,12 +103,14 @@ export function FormEntrada({
           productoId: entrante.id,
           ubicacionId: v.datos.ubicacionId,
           cantidad,
-          costo: verCostos ? String(f.get("costo") ?? "") : "",
-          motivo: String(f.get("motivo") ?? ""),
+          costo,
+          motivo,
         }),
       () => {
-        formulario.current?.reset();
         setProducto(null);
+        setCantidadTexto("");
+        setCostoTexto("");
+        setMotivo("");
         setExito(
           `Entrada registrada: ${formatearCantidad(cantidadNum, entrante.unidad)} de ${entrante.nombre}.`,
         );
@@ -112,7 +120,6 @@ export function FormEntrada({
 
   return (
     <form
-      ref={formulario}
       onSubmit={alEnviar}
       noValidate
       aria-label="Registrar entrada"
@@ -137,23 +144,22 @@ export function FormEntrada({
       />
       <div className="grid gap-5 sm:grid-cols-2">
         <Campo id="ent-ubicacion" etiqueta="Ubicación">
-          <SelectUbicacion ubicaciones={ubicaciones} id="ent-ubicacion" name="ubicacion" />
-        </Campo>
-        <Campo
-          id="ent-cantidad"
-          etiqueta="Cantidad"
-          ayuda={ayudaCantidad(producto?.unidad)}
-          error={errores["ent-cantidad"]}
-        >
-          <Input
-            id="ent-cantidad"
-            name="cantidad"
-            inputMode={producto?.unidad === "kg" ? "decimal" : "numeric"}
-            autoComplete="off"
-            className="h-10"
-            {...propsCampo("ent-cantidad", errores, true)}
+          <SelectUbicacion
+            ubicaciones={ubicaciones}
+            id="ent-ubicacion"
+            value={ubicacionId}
+            onChange={(e) => setUbicacionId(e.target.value)}
           />
         </Campo>
+        <CampoCantidad
+          id="ent-cantidad"
+          unidad={producto?.unidad}
+          ayuda={ayudaCantidad(producto?.unidad)}
+          valor={cantidadTexto}
+          alCambiar={setCantidadTexto}
+          errores={errores}
+          className="h-10"
+        />
       </div>
       {verCostos && (
         <Campo
@@ -164,7 +170,8 @@ export function FormEntrada({
         >
           <Input
             id="ent-costo"
-            name="costo"
+            value={costoTexto}
+            onChange={(e) => setCostoTexto(e.target.value)}
             inputMode="decimal"
             autoComplete="off"
             className="h-10 sm:max-w-64"
@@ -172,9 +179,13 @@ export function FormEntrada({
           />
         </Campo>
       )}
-      <Campo id="ent-motivo" etiqueta="Motivo (opcional)" error={errores["ent-motivo"]}>
-        <Input id="ent-motivo" name="motivo" maxLength={200} autoComplete="off" className="h-10" />
-      </Campo>
+      <CampoMotivo
+        id="ent-motivo"
+        etiqueta="Motivo (opcional)"
+        valor={motivo}
+        alCambiar={setMotivo}
+        errores={errores}
+      />
       <PieOperacion
         etiqueta="Registrar entrada"
         pendiente={pendiente}

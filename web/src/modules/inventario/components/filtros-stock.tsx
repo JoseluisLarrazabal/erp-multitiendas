@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { FiltrosStock } from "../schemas";
 import { CampoBusquedaStock } from "./campo-busqueda-stock";
-
-const casilla =
-  "accent-primary size-4 rounded border-input focus-visible:ring-ring/50 focus-visible:ring-3";
+import { casilla } from "./casilla";
 
 // GET puro, sin JavaScript. El lector USB teclea y pulsa Enter, que envía el formulario.
 export function FiltrosStockForm({

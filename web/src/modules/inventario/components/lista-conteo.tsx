@@ -33,8 +33,10 @@ export function ListaConteo({
               <span className="text-muted-foreground block font-mono text-xs">{p.codigo}</span>
             </span>
             <Input
+              id={`cont-cant-${p.id}`}
               aria-label={`Contado de ${p.nombre}`}
               aria-invalid={malos.has(p.id) ? true : undefined}
+              aria-describedby={malos.has(p.id) ? `cont-ayuda-${p.id}` : undefined}
               value={b?.texto ?? ""}
               onChange={(e) => alEscribir(p, e.target.value)}
               inputMode={p.unidad === "kg" ? "decimal" : "numeric"}
@@ -47,6 +49,11 @@ export function ListaConteo({
             <span className="text-muted-foreground text-xs">
               Sistema: {formatearCantidad(p.sistema, p.unidad)}
             </span>
+            {malos.has(p.id) && (
+              <span id={`cont-ayuda-${p.id}`} className="text-destructive text-right text-xs">
+                Entero, o con coma si es kg
+              </span>
+            )}
           </li>
         );
       })}

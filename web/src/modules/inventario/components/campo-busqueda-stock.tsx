@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 export function CampoBusquedaStock({ defaultValue }: { defaultValue: string }) {
   const campo = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (window.matchMedia("(pointer: fine)").matches) campo.current?.focus();
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    campo.current?.focus();
+    campo.current?.select();
   }, []);
   return (
     <Input

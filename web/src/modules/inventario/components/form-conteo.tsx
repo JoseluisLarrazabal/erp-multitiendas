@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { paginaConteoAccion, registrarConteo } from "../actions";
-import { MAX_ITEMS_CONTEO, PAGINA_CONTEO, parsearCantidad, type Ubicacion } from "../domain";
+import { MAX_ITEMS_CONTEO, parsearCantidad, type Ubicacion } from "../domain";
 import type { FilaConteo } from "../queries";
 import { BusquedaConteo } from "./busqueda-conteo";
-import { PaginacionConteo } from "./paginacion-conteo";
-import { ListaConteo, type Borrador } from "./lista-conteo";
+import { type Borrador } from "./lista-conteo";
+import { PieConteo } from "./pie-conteo";
+import { ResultadosConteo } from "./resultados-conteo";
 import { ConteoRevision } from "./conteo-revision";
 import { SelectUbicacion } from "./select-ubicacion";
+import { useFocoConteo } from "./use-foco-conteo";
 import { useCarga } from "./use-carga";
 import { useOperacion } from "./use-operacion";
 
@@ -38,8 +39,7 @@ export function FormConteo({
     paginaConteoAccion({ negocioId, ubicacionId, q, pagina }),
   );
   const contados = Object.values(borradores).filter((b) => b.texto.trim() !== "");
-  const filas = datos.datos?.filas ?? [];
-  const paginas = Math.max(1, Math.ceil((datos.datos?.total ?? 0) / PAGINA_CONTEO));
+  const foco = useFocoConteo(datos, revisando);
 
   function escribir(producto: FilaConteo, texto: string) {
     setExito(null);
@@ -49,7 +49,11 @@ export function FormConteo({
 
   function buscar(e: FormEvent) {
     e.preventDefault();
-    setQ(busqueda.trim());
+    const nueva = busqueda.trim();
+    foco.trasBuscar();
+    // Misma búsqueda: la clave no cambia y no recargaría. Así reintenta tras un error o con productos recién cambiados.
+    if (nueva === q && pagina === 1) datos.recargar();
+    setQ(nueva);
     setPagina(1);
   }
 
@@ -59,6 +63,9 @@ export function FormConteo({
     );
     if (invalidos.length) {
       setMalos(new Set(invalidos.map((b) => b.producto.id)));
+      // Solo las filas de la página visible tienen campo; las de otras páginas quedan marcadas al volver.
+      const primero = invalidos.find((b) => document.getElementById(`cont-cant-${b.producto.id}`));
+      if (primero) document.getElementById(`cont-cant-${primero.producto.id}`)?.focus();
       return setAviso(
         "Hay cantidades inválidas. Usa números enteros, o con coma si el producto es en kg.",
       );
@@ -99,8 +106,10 @@ export function FormConteo({
       },
       () => {
         setBorradores({});
+        foco.alSalirDeRevision("cont-exito");
         setRevisando(false);
         setPagina(1);
+        datos.recargar(); // "Sistema" debe mostrar lo recién contado
         setExito(`Conteo registrado: ${ajustes} ajuste(s) generado(s).`);
       },
     );
@@ -114,7 +123,10 @@ export function FormConteo({
         items={items}
         pendiente={pendiente}
         error={error}
-        alVolver={() => setRevisando(false)}
+        alVolver={() => {
+          foco.alSalirDeRevision("cont-revisar");
+          setRevisando(false);
+        }}
         alConfirmar={confirmar}
       />
     );
@@ -153,40 +165,22 @@ export function FormConteo({
           </button>
         </p>
       )}
-      {datos.error && (
-        <p role="alert" className="text-destructive text-sm">
-          {datos.error}
-        </p>
-      )}
-      {datos.cargando && (
-        <p role="status" className="text-muted-foreground text-sm">
-          Cargando productos…
-        </p>
-      )}
-      {datos.datos && filas.length === 0 && (
-        <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-          {q ? "Ningún producto coincide con la búsqueda." : "Aún no hay productos para contar."}
-        </p>
-      )}
-      {filas.length > 0 && (
-        <ListaConteo filas={filas} borradores={borradores} malos={malos} alEscribir={escribir} />
-      )}
-      {datos.datos && datos.datos.total > PAGINA_CONTEO && (
-        <PaginacionConteo pagina={pagina} paginas={paginas} alCambiar={setPagina} />
-      )}
-      <div className="flex flex-col gap-2">
-        <div>
-          <Button className="h-10" onClick={revisar} disabled={pendiente}>
-            Revisar diferencias ({contados.length})
-          </Button>
-        </div>
-        <p role="alert" className="text-destructive text-sm empty:hidden">
-          {aviso ?? error}
-        </p>
-        <p role="status" className="text-sm font-medium">
-          {exito}
-        </p>
-      </div>
+      <ResultadosConteo
+        carga={datos}
+        hayBusqueda={q !== ""}
+        pagina={pagina}
+        borradores={borradores}
+        malos={malos}
+        alEscribir={escribir}
+        alCambiarPagina={setPagina}
+      />
+      <PieConteo
+        contados={contados.length}
+        pendiente={pendiente}
+        aviso={aviso ?? error}
+        exito={exito}
+        alRevisar={revisar}
+      />
     </div>
   );
 }

@@ -4,8 +4,8 @@ import { apiComo, NEGOCIOS } from "./helpers";
 
 // Datos de las pruebas de inventario: cada prueba crea sus productos por PostgREST con la sesión guardada del dueño
 // (código, nombre y barras únicos por corrida), sin logins nuevos.
-export const corrida = Date.now().toString(36).toUpperCase();
-const marca = String(Date.now() % 1e8).padStart(8, "0");
+export const corrida = randomUUID().slice(0, 8).toUpperCase();
+const marca = String(Number.parseInt(randomUUID().slice(0, 8), 16) % 1e8).padStart(8, "0");
 let contador = 0;
 export const tienda = NEGOCIOS.tienda.id;
 

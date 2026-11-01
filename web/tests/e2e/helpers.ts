@@ -11,9 +11,11 @@ export const CUENTAS = {
   encargadoTienda: "encargado.tienda@erp.test",
   encargadoLavanderia: "encargado.lavanderia@erp.test",
   multi: "multi@erp.test",
-  // auth.spec la banea un rato (cuenta desactivada): sus otras pruebas van en contador.spec.ts, que corre al final.
   contador: "contador.tienda@erp.test",
 } as const;
+// La cuenta que auth.spec desactiva un rato. Ninguna otra prueba la usa ni guarda su sesión: así el baneo no
+// interfiere con nada y no hace falta serializar proyectos.
+export const CUENTA_DESACTIVABLE = "baneable@erp.test";
 export const NEGOCIOS = {
   tienda: { id: "a0000000-0000-0000-0000-000000000001", nombre: "Tienda Demo" },
   lavanderia: { id: "a0000000-0000-0000-0000-000000000002", nombre: "Lavandería Demo" },

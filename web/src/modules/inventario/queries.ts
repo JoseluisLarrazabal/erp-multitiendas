@@ -22,14 +22,10 @@ const COLUMNAS_LISTA =
   "id, codigo, codigo_barras, nombre, unidad, controla_serie, activo, stock_minimo, stock_total, stock_bajo";
 const COLUMNAS_ELEGIBLE = "id, codigo, codigo_barras, nombre, unidad, controla_serie";
 
-type FilaLista = {
-  id: string | null;
-  codigo: string | null;
-  codigo_barras: string | null;
-  nombre: string | null;
-  unidad: string | null;
-  controla_serie: boolean | null;
-};
+type FilaLista = Pick<
+  Database["public"]["Views"]["inventario_lista"]["Row"],
+  "id" | "codigo" | "codigo_barras" | "nombre" | "unidad" | "controla_serie"
+>;
 
 const aElegible = (p: FilaLista): ProductoElegible => ({
   id: p.id!,
@@ -213,12 +209,13 @@ export async function buscarProductos(
       .eq("negocio_id", negocioId)
       .eq("activo", true);
   const q = sanearBusqueda(texto);
-  const exacto = /^[\w.-]+$/.test(texto)
-    ? await base().or(`codigo.eq.${texto},codigo_barras.eq.${texto}`).limit(LIMITE_BUSQUEDA)
-    : { data: [], error: null };
-  const parecidos = q
-    ? await base().or(filtroTexto(q)).order("nombre").limit(LIMITE_BUSQUEDA)
-    : { data: [], error: null };
+  const sinFilas = { data: [], error: null };
+  const [exacto, parecidos] = await Promise.all([
+    /^[\w.-]+$/.test(texto)
+      ? base().or(`codigo.eq.${texto},codigo_barras.eq.${texto}`).limit(LIMITE_BUSQUEDA)
+      : sinFilas,
+    q ? base().or(filtroTexto(q)).order("nombre").limit(LIMITE_BUSQUEDA) : sinFilas,
+  ]);
   if (exacto.error || parecidos.error) return falla("No se pudo buscar el producto.");
   const vistos = new Set<string>();
   const filas = [...exacto.data, ...parecidos.data].filter((p) => {
