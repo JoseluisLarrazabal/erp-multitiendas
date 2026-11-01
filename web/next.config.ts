@@ -13,7 +13,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${esProduccion ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob: ${supabaseOrigen}`.trim(),
   "font-src 'self'",
   `connect-src 'self' ${supabaseOrigen}${esProduccion ? "" : " ws://localhost:* ws://127.0.0.1:*"}`.trim(),
   "worker-src 'self'",

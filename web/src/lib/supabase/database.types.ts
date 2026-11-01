@@ -81,6 +81,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "conteo_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
     }
                   ]
                 },"conteos": {
@@ -140,6 +146,12 @@ isOneToOne: false
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
       referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "movimientos_inventario_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
       referencedColumns: ["negocio_id","id"]
     },{
       foreignKeyName: "movimientos_inventario_negocio_id_ubicacion_id_fkey"
@@ -215,6 +227,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
     }
                   ]
                 },"productos": {
@@ -276,6 +294,12 @@ isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
     },{
+      foreignKeyName: "series_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
       foreignKeyName: "series_negocio_id_ubicacion_id_fkey"
       columns: ["negocio_id","ubicacion_id"]
 isOneToOne: false
@@ -300,6 +324,12 @@ isOneToOne: false
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
       referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "stock_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
       referencedColumns: ["negocio_id","id"]
     },{
       foreignKeyName: "stock_negocio_id_ubicacion_id_fkey"
@@ -390,6 +420,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"productos_lista": {
+                  Row: {
+                    "activo": boolean,"categoria_id": string | null,"categoria_nombre": string | null,"codigo": string,"codigo_barras": string | null,"con_precio": boolean | null,"foto_path": string | null,"id": string,"marca": string | null,"modelo": string | null,"moneda_principal": string | null,"monto_principal": number | null,"negocio_id": string,"nombre": string,"principal_bs": number | null,"tipo": string,"unidad": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "productos_negocio_id_categoria_id_fkey"
+      columns: ["negocio_id","categoria_id"]
+isOneToOne: false
+      referencedRelation: "categorias"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "productos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
     }
                   ]
                 }
@@ -440,6 +496,9 @@ isOneToOne: false
                            },
 "mis_negocios":
 { Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"negocio_de_ruta_foto":
+{ Args: { "p_ruta": string }; Returns: string
                            },
 "precio_bs":
 { Args: { "p_lista": string,"p_producto_id": string }; Returns: number

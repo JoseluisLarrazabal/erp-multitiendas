@@ -5,7 +5,7 @@ import { Menu, ShoppingCart, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
-import { ITEMS, PanelNav } from "./panel-nav";
+import { itemDeRuta, PanelNav } from "./panel-nav";
 
 type Props = {
   negocio: React.ReactNode;
@@ -17,7 +17,7 @@ type Props = {
 export function PanelShell({ negocio, usuario, permisos, children }: Props) {
   const [abierto, setAbierto] = useState(false);
   const ruta = usePathname();
-  const titulo = ITEMS.find((i) => i.href === ruta)?.etiqueta ?? "Panel";
+  const titulo = itemDeRuta(ruta)?.etiqueta ?? "Panel";
 
   const botonAbrir = useRef<HTMLButtonElement>(null);
   const botonCerrar = useRef<HTMLButtonElement>(null);

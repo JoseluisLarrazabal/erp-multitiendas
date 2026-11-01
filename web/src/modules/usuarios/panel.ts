@@ -1,6 +1,7 @@
 // Segunda entrada del módulo, solo para páginas de /panel. Arrastra las server actions: si estuviera en
 // index.ts, /pos y /login (precacheados) cargarían sus referencias aunque no las usen. Verificado en el build.
-export { exigirPermiso } from "./contexto";
+export { exigirAlgunPermiso, exigirPermiso } from "./contexto";
+export { codigoDeMensaje, mensajeDeError, type Resultado } from "./domain";
 export { UsuariosTabla } from "./components/usuarios-tabla";
 export { FormUsuarioNuevo } from "./components/form-usuario-nuevo";
 export { FormPersonaExistente } from "./components/form-persona-existente";

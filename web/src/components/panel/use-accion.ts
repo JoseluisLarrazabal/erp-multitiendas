@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ERROR_CONEXION } from "../login";
-import type { Resultado } from "../domain";
+import { ERROR_CONEXION } from "@/lib/supabase/errores";
+
+export type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
 
 // Corre una server action, expone pendiente y el mensaje de error ya en español.
 // Un rechazo (red caída, servidor no disponible) se muestra inline: nunca llega al error boundary.
