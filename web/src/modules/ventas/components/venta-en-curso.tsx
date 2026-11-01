@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PanelCaja } from "@/modules/caja";
 import { bs } from "../domain";
 import { useVenta, type OpcionesVenta } from "../use-venta";
 import { AvisosVenta } from "./avisos-venta";
@@ -15,7 +17,10 @@ export function VentaEnCurso({
   alCambiarEquipo,
   ...opciones
 }: OpcionesVenta & { alCambiarEquipo: () => void }) {
-  const v = useVenta(opciones);
+  // La caja reemplaza la zona de venta sin desmontar el hook: el carrito sigue intacto. Con la caja a la vista
+  // F2 y "/" no actúan.
+  const [verCaja, setVerCaja] = useState(false);
+  const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || verCaja });
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
 
@@ -31,8 +36,11 @@ export function VentaEnCurso({
         alCambiarEquipo={() =>
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
-        consulta={v.consulta}
-        alCambiarModo={v.setConsulta}
+        modo={verCaja ? "caja" : v.consulta ? "consulta" : "vender"}
+        alCambiarModo={(m) => {
+          setVerCaja(m === "caja");
+          if (m !== "caja") v.setConsulta(m === "consulta");
+        }}
       />
       <AvisosVenta
         anuncio={v.anuncio}
@@ -42,7 +50,20 @@ export function VentaEnCurso({
         catalogo={v.estado}
         alReintentarCatalogo={() => void v.recargar()}
       />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      {verCaja && (
+        <PanelCaja
+          nombreEquipo={equipo.nombre}
+          sesionId={cajaId}
+          ventaPendiente={v.bloqueado}
+          alCerrar={() => opciones.cajaCerrada(equipo.id)}
+          alYaCerrada={() => opciones.verificarCaja(equipo.id)}
+          alVolver={() => setVerCaja(false)}
+        />
+      )}
+      <div
+        hidden={verCaja}
+        className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] [&[hidden]]:hidden"
+      >
         <ZonaProductos
           catalogo={v.catalogo}
           busqueda={v.busqueda}
@@ -76,7 +97,7 @@ export function VentaEnCurso({
         />
       </div>
 
-      {!v.consulta && (
+      {!v.consulta && !verCaja && (
         <div className="bg-card fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
           <p className="flex-1 text-xl font-bold tabular-nums">{bs(totales?.total ?? 0)}</p>
           <Button

@@ -1,24 +1,26 @@
 "use client";
 
-import { ScanBarcode, Search } from "lucide-react";
+import { Landmark, ScanBarcode, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Equipo } from "../queries";
 
-// Equipo en uso y modo (vender o consulta rápida). Con una venta pendiente no se cambia de equipo.
+export type ModoPos = "vender" | "consulta" | "caja";
+
+// Equipo en uso y modo (vender, consulta rápida o caja). Con una venta pendiente no se cambia de equipo.
 export function BarraEquipo({
   equipo,
   cajaAbierta,
   pendiente,
   alCambiarEquipo,
-  consulta,
+  modo,
   alCambiarModo,
 }: {
   equipo: Equipo;
   cajaAbierta: boolean;
   pendiente: boolean;
   alCambiarEquipo: () => void;
-  consulta: boolean;
-  alCambiarModo: (consulta: boolean) => void;
+  modo: ModoPos;
+  alCambiarModo: (modo: ModoPos) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -42,21 +44,30 @@ export function BarraEquipo({
       <div className="ml-auto flex gap-1" role="group" aria-label="Modo">
         <Button
           type="button"
-          variant={consulta ? "outline" : "secondary"}
+          variant={modo === "vender" ? "secondary" : "outline"}
           className="h-10"
-          aria-pressed={!consulta}
-          onClick={() => alCambiarModo(false)}
+          aria-pressed={modo === "vender"}
+          onClick={() => alCambiarModo("vender")}
         >
           <ScanBarcode /> Vender
         </Button>
         <Button
           type="button"
-          variant={consulta ? "secondary" : "outline"}
+          variant={modo === "consulta" ? "secondary" : "outline"}
           className="h-10"
-          aria-pressed={consulta}
-          onClick={() => alCambiarModo(true)}
+          aria-pressed={modo === "consulta"}
+          onClick={() => alCambiarModo("consulta")}
         >
           <Search /> Consulta rápida
+        </Button>
+        <Button
+          type="button"
+          variant={modo === "caja" ? "secondary" : "outline"}
+          className="h-10"
+          aria-pressed={modo === "caja"}
+          onClick={() => alCambiarModo("caja")}
+        >
+          <Landmark /> Caja
         </Button>
       </div>
     </div>

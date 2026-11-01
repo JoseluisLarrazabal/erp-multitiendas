@@ -102,6 +102,11 @@ export function usePosCaja(negocioId: string, permisos: readonly string[]) {
     return null;
   }, []);
 
+  // El servidor confirmó el cierre: no hay que volver a preguntarle.
+  const cajaCerrada = useCallback((equipoId: string) => {
+    setFase((f) => (f.t === "lista" && f.equipo.id === equipoId ? { ...f, cajaId: null } : f));
+  }, []);
+
   // Tras un rechazo por topes o permisos: el tope de descuento puede haber cambiado.
   const recargarNegocio = useCallback(async () => {
     const r = await cargarNegocio(createClient(), negocioId);
@@ -116,6 +121,7 @@ export function usePosCaja(negocioId: string, permisos: readonly string[]) {
     cambiarEquipo,
     alAbrirCaja,
     verificarCaja,
+    cajaCerrada,
     recargarNegocio,
   };
 }

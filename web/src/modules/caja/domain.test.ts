@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsearMontoInicial } from "./domain";
+import { parsearMontoInicial, parsearMontoPositivo } from "./domain";
 
 describe("parsearMontoInicial", () => {
   it("vacío es cero; acepta coma y punto; rechaza el resto", () => {
@@ -9,5 +9,15 @@ describe("parsearMontoInicial", () => {
     expect(parsearMontoInicial("1,234")).toBeNull();
     expect(parsearMontoInicial("-5")).toBeNull();
     expect(parsearMontoInicial("abc")).toBeNull();
+  });
+});
+
+describe("parsearMontoPositivo", () => {
+  it("exige monto mayor a cero", () => {
+    expect(parsearMontoPositivo("")).toBeNull();
+    expect(parsearMontoPositivo("0")).toBeNull();
+    expect(parsearMontoPositivo("0,00")).toBeNull();
+    expect(parsearMontoPositivo("25,5")).toBe(2550);
+    expect(parsearMontoPositivo("-1")).toBeNull();
   });
 });

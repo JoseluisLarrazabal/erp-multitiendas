@@ -184,3 +184,45 @@ export async function liberarCliente(clienteId: string) {
     },
   });
 }
+
+// Venta por RPC con la sesión del vendedor (la prueba mira el panel, no el POS). Número: el siguiente al contador del
+// servidor. Devuelve id y número.
+export async function venderApi(opts: {
+  equipoId: string;
+  cajaId: string;
+  items: { producto: ProductoPos; cantidad: number; precio: number }[];
+  efectivo: number;
+  qr?: number;
+}) {
+  const equipo = await equipoC1();
+  const id = crypto.randomUUID();
+  const numero = `C1-${String(equipo.ultimo_numero + 1).padStart(6, "0")}`;
+  const total = opts.items.reduce((t, i) => t + i.cantidad * i.precio, 0);
+  const pagos: { medio: string; monto: number; verificado?: boolean }[] = [];
+  if (opts.efectivo > 0) pagos.push({ medio: "efectivo", monto: opts.efectivo });
+  if (opts.qr) pagos.push({ medio: "qr", monto: opts.qr, verificado: true });
+  const r = await apiComo("vendedor", "rpc/registrar_venta", {
+    metodo: "POST",
+    cuerpo: {
+      p_venta: {
+        id,
+        dispositivo_id: opts.equipoId,
+        caja_sesion_id: opts.cajaId,
+        numero,
+        creada_en_cliente: new Date().toISOString(),
+        descuento: 0,
+        total,
+        items: opts.items.map((i) => ({
+          producto_id: i.producto.id,
+          lista: "contado",
+          cantidad: i.cantidad,
+          precio_unitario: i.precio,
+          descuento: 0,
+        })),
+        pagos,
+      },
+    },
+  });
+  expect(r.status).toBeLessThan(300);
+  return { id, numero };
+}
