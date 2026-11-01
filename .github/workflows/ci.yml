@@ -88,6 +88,9 @@ jobs:
       - name: 7b. Edge Function admin-usuarios e integración
         run: |
           nohup pnpm exec supabase functions serve --workdir .. > "$RUNNER_TEMP/functions.log" 2>&1 &
+          # `supabase start` ya dejó un runtime que responde 401; `functions serve` lo recrea (502 en medio).
+          # Esperar su línea de "listo" antes de sondear, o el 401 del contenedor viejo cuenta como éxito.
+          for i in $(seq 1 60); do grep -q 'Serving functions on' "$RUNNER_TEMP/functions.log" && break; sleep 2; done
           # verify_jwt rechaza sin token con 401: basta para saber que el runtime ya sirve la función.
           for i in $(seq 1 60); do
             codigo=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/admin-usuarios" || true)
