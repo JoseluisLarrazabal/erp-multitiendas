@@ -23,14 +23,17 @@
     "db:types": "supabase gen types typescript --local --workdir .. > src/lib/supabase/database.types.ts.tmp && mv src/lib/supabase/database.types.ts.tmp src/lib/supabase/database.types.ts || { rm -f src/lib/supabase/database.types.ts.tmp; exit 1; }"
   },
   "dependencies": {
+    "@serwist/turbopack": "9.5.13",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "esbuild": "0.28.2",
     "lucide-react": "1.65.0",
     "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "serwist": "9.5.13",
     "tailwind-merge": "3.7.0",
     "zod": "4.6.7"
   },
