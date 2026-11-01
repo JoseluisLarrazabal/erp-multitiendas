@@ -85,11 +85,27 @@ jobs:
       - name: 7. next build
         run: pnpm build
 
+      - name: 7b. Edge Function admin-usuarios e integración
+        run: |
+          nohup pnpm exec supabase functions serve --workdir .. > "$RUNNER_TEMP/functions.log" 2>&1 &
+          # verify_jwt rechaza sin token con 401: basta para saber que el runtime ya sirve la función.
+          for i in $(seq 1 60); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$NEXT_PUBLIC_SUPABASE_URL/functions/v1/admin-usuarios" || true)
+            [ "$codigo" = "401" ] && break
+            sleep 2
+          done
+          [ "$codigo" = "401" ] || { cat "$RUNNER_TEMP/functions.log"; exit 1; }
+          pnpm test:integracion
+
       - name: 8. Playwright
         run: |
           pnpm db:reset
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
+
+      - name: Log de functions serve
+        if: failure()
+        run: cat "$RUNNER_TEMP/functions.log" || true
 
       - name: Subir reporte y trazas de Playwright
         if: failure()

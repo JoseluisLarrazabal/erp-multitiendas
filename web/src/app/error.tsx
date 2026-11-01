@@ -1,15 +1,25 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function Error({ reset }: { error: Error; reset: () => void }) {
+// retry() vuelve a pedir al servidor y re-renderiza el segmento; reset() solo limpiaría el estado (Next 16.3+).
+export default function Error({ retry }: { error: unknown; retry: () => void }) {
+  const titulo = useRef<HTMLHeadingElement>(null);
+  useEffect(() => titulo.current?.focus(), []);
+
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="text-2xl font-bold tracking-tight">Algo salió mal</h1>
+    <main
+      role="alert"
+      className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center"
+    >
+      <h1 ref={titulo} tabIndex={-1} className="text-2xl font-bold tracking-tight outline-none">
+        Algo salió mal
+      </h1>
       <p className="text-muted-foreground max-w-sm text-sm">
         No pudimos cargar esta pantalla. Revisa tu conexión e inténtalo de nuevo.
       </p>
-      <Button onClick={reset}>Reintentar</Button>
+      <Button onClick={() => retry()}>Reintentar</Button>
     </main>
   );
 }

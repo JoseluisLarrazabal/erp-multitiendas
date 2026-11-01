@@ -42,3 +42,72 @@ export function destinoInicial(
   if (!activo) return "/sin-acceso";
   return tieneAccesoPanel(permisos) ? "/panel" : "/pos";
 }
+
+const ORDEN_ROLES = Object.keys(ETIQUETA_ROL);
+
+// `dueno` solo lo asigna un dueño (regla 1); la RPC lo exige igual, esto solo evita ofrecer lo que se rechazaría.
+export const rolesOfrecidos = (roles: readonly string[], llamadorEsDueno: boolean) =>
+  ORDEN_ROLES.filter((r) => roles.includes(r) && (llamadorEsDueno || r !== "dueno"));
+
+export type FilaUsuario = {
+  usuarioId: string;
+  nombre: string;
+  rol: string;
+  activo: boolean;
+  esYo: boolean;
+  // Resultado de puede_administrar_cuenta (regla 3): sirve para desactivar y reactivar.
+  puedeAdministrar: boolean;
+};
+
+export type AccionesFila = {
+  cambiarRol: boolean;
+  quitar: boolean;
+  desactivar: boolean;
+  reactivar: boolean;
+};
+
+const SIN_ACCIONES: AccionesFila = {
+  cambiarRol: false,
+  quitar: false,
+  desactivar: false,
+  reactivar: false,
+};
+
+// Ocultar es comodidad: decide la RPC. Mi fila y la de un dueño (si no soy dueño) no llevan acciones.
+export function accionesDeFila(fila: FilaUsuario, llamadorEsDueno: boolean): AccionesFila {
+  if (fila.esYo || (fila.rol === "dueno" && !llamadorEsDueno)) return SIN_ACCIONES;
+  return {
+    cambiarRol: true,
+    quitar: true,
+    desactivar: fila.activo && fila.puedeAdministrar,
+    reactivar: !fila.activo && fila.puedeAdministrar,
+  };
+}
+
+export type PersonaExterna = { usuarioId: string; nombre: string };
+
+export type Dispositivo = { id: string; nombre: string; prefijo: string; ubicacion: string };
+export type Ubicacion = { id: string; nombre: string };
+
+// Códigos estables de la RPC y de admin-usuarios, traducidos para la persona.
+export const MENSAJES_ERROR: Record<string, string> = {
+  ERP_SIN_PERMISO: "No tienes permiso para hacer esto.",
+  ERP_SIN_SESION: "Tu sesión terminó. Vuelve a ingresar.",
+  ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
+  ERP_DUENO_PROTEGIDO: "Solo un dueño del negocio puede asignar o modificar a un dueño.",
+  ERP_AUTOGESTION: "No puedes cambiar tu propio rol ni quitarte a ti mismo.",
+  ERP_ULTIMO_NEGOCIO:
+    "Es el último negocio de esta cuenta, no se puede quitar. Desactívala en su lugar.",
+  ERP_PREFIJO_DUPLICADO: "Ya hay un dispositivo con ese prefijo en este negocio.",
+  ERP_CORREO_EXISTE: "Ya existe una cuenta con ese correo.",
+  ERP_CLAVE_DEBIL: "La contraseña necesita al menos 8 caracteres, con letras y dígitos.",
+  ERP_CUENTA_HUERFANA:
+    "No se pudo asignar el negocio y la cuenta nueva quedó sin negocio. Avisa a soporte.",
+  ERP_INTERNO: "Algo salió mal de nuestro lado. Intenta de nuevo.",
+};
+
+export const mensajeDeError = (codigo: string | undefined) =>
+  (codigo && MENSAJES_ERROR[codigo]) || MENSAJES_ERROR.ERP_INTERNO!;
+
+// Los errores de RPC llegan como texto; solo cuenta el código ERP_* que contengan.
+export const codigoDeMensaje = (mensaje: string | undefined) => mensaje?.match(/ERP_[A-Z_]+/)?.[0];

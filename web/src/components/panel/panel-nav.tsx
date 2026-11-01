@@ -2,17 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, MonitorSmartphone, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Lo incompleto no se muestra: solo rutas que existen. Cada módulo agrega la suya al entregarse.
-export const ITEMS = [{ href: "/panel", etiqueta: "Inicio", icono: LayoutDashboard }];
+type Item = { href: string; etiqueta: string; icono: LucideIcon; permiso?: string };
 
-export function PanelNav({ alNavegar }: { alNavegar: () => void }) {
+export const ITEMS: Item[] = [
+  { href: "/panel", etiqueta: "Inicio", icono: LayoutDashboard },
+  { href: "/panel/usuarios", etiqueta: "Usuarios", icono: Users, permiso: "usuarios" },
+  {
+    href: "/panel/dispositivos",
+    etiqueta: "Dispositivos",
+    icono: MonitorSmartphone,
+    permiso: "usuarios",
+  },
+];
+
+// Ocultar es comodidad: cada página vuelve a exigir el permiso en el servidor.
+export const itemsVisibles = (permisos: readonly string[]) =>
+  ITEMS.filter((i) => !i.permiso || permisos.includes(i.permiso));
+
+export function PanelNav({
+  permisos,
+  alNavegar,
+}: {
+  permisos: readonly string[];
+  alNavegar: () => void;
+}) {
   const ruta = usePathname();
   return (
     <nav aria-label="Principal" className="flex flex-col gap-0.5">
-      {ITEMS.map(({ href, etiqueta, icono: Icono }) => {
+      {itemsVisibles(permisos).map(({ href, etiqueta, icono: Icono }) => {
         const activo = ruta === href;
         return (
           <Link

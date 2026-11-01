@@ -10,9 +10,10 @@ const iniciales = (nombre: string) =>
     .join("");
 
 export default async function PanelLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { usuario, negocios, activo } = await exigirPanel();
+  const { usuario, negocios, activo, permisos } = await exigirPanel();
   return (
     <PanelShell
+      permisos={permisos}
       negocio={<SelectorNegocio negocios={negocios} activoId={activo.negocioId} />}
       usuario={
         <div className="flex flex-col gap-3 border-t pt-4">

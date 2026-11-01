@@ -9,7 +9,8 @@ import nextTs from "eslint-config-next/typescript";
 // (p. ej. components/a/b/ con ../../../otro) ni ciclos entre módulos. Si aparecen, agregar
 // dependency-cruiser.
 const soloIndex = {
-  group: ["@/modules/*/*", "**/modules/*/*"],
+  // panel.ts es la única segunda entrada permitida: ver su cabecera.
+  group: ["@/modules/*/*", "**/modules/*/*", "!@/modules/*/panel"],
   message: "Un módulo solo se importa por su index.ts (@/modules/<nombre>).",
 };
 const libNoImportaModulos = {
@@ -21,6 +22,13 @@ const noSalirDelModulo = (patron) => ({
   group: [patron],
   message: "Un módulo no importa relativo fuera de su carpeta; usar @/modules/<nombre>.",
 });
+
+// /pos se precachea y un ID de server action es por build: ningún archivo de /pos importa actions.
+// panel.ts reexporta las acciones: tampoco se importa desde /pos.
+const sinActions = ["**/actions", "./actions", "@/modules/*/panel"].map((patron) => ({
+  group: [patron],
+  message: "/pos no usa server actions (precache).",
+}));
 
 export default defineConfig([
   ...nextVitals,
@@ -51,6 +59,30 @@ export default defineConfig([
     files: ["src/modules/*/components/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [soloIndex, noSalirDelModulo("../../*")] }],
+    },
+  },
+  {
+    files: ["src/app/(pos)/**/*.{ts,tsx}", "src/sw.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [soloIndex, ...sinActions] }],
+    },
+  },
+  {
+    files: ["src/modules/usuarios/use-pos-sesion.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [soloIndex, noSalirDelModulo("../*"), ...sinActions] },
+      ],
+    },
+  },
+  {
+    files: ["src/modules/usuarios/components/pos-sesion.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [soloIndex, noSalirDelModulo("../../*"), ...sinActions] },
+      ],
     },
   },
 ]);

@@ -53,6 +53,9 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
   - `comparte_negocio(usuario_id)` devuelve bool; la usa la policy de `perfiles`.
   - `puede_administrar_cuenta(usuario_id)` devuelve bool; la consulta la Edge Function `admin-usuarios` con el JWT del
     llamador antes de banear (regla 3 de `docs/plan-fase-0.md`).
+  - `puede_asignar_rol(negocio_id, rol)` devuelve bool: permiso `usuarios`, rol existente para el tipo de negocio y, si el
+    rol es `dueno`, que el llamador sea dueño. La consulta `admin-usuarios` antes de crear una cuenta; `asignar_usuario` sigue
+    imponiendo sus reglas.
   - `es_dueno(negocio_id)` devuelve bool; privado (sin `grant`), solo lo llaman las funciones `security definer`.
   - Las cuentas con `perfiles.activo = false` quedan fuera de `mis_negocios()` y `tiene_permiso()`.
 - Policies: `negocio_id in (select mis_negocios())`.
