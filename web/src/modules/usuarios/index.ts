@@ -1,4 +1,3 @@
-export { exigirPanel, exigirPermiso, obtenerContexto, type Contexto } from "./contexto";
 export {
   destinoInicial,
   etiquetaRol,
@@ -9,4 +8,5 @@ export {
 export { LoginForm } from "./components/login-form";
 export { BotonCerrarSesion } from "./components/boton-cerrar-sesion";
 export { SelectorNegocio } from "./components/selector-negocio";
-export { PosSesion } from "./components/pos-sesion";
+export { PosBarra } from "./components/pos-sesion";
+export { usePosSesion, type SesionPos } from "./use-pos-sesion";

@@ -9,8 +9,8 @@ import nextTs from "eslint-config-next/typescript";
 // (p. ej. components/a/b/ con ../../../otro) ni ciclos entre módulos. Si aparecen, agregar
 // dependency-cruiser.
 const soloIndex = {
-  // panel.ts es la única segunda entrada permitida: ver su cabecera.
-  group: ["@/modules/*/*", "**/modules/*/*", "!@/modules/*/panel"],
+  // panel.ts y servidor.ts son las únicas segundas entradas permitidas: ver sus cabeceras.
+  group: ["@/modules/*/*", "**/modules/*/*", "!@/modules/*/panel", "!@/modules/*/servidor"],
   message: "Un módulo solo se importa por su index.ts (@/modules/<nombre>).",
 };
 const libNoImportaModulos = {
@@ -24,11 +24,13 @@ const noSalirDelModulo = (patron) => ({
 });
 
 // /pos se precachea y un ID de server action es por build: ningún archivo de /pos importa actions.
-// panel.ts reexporta las acciones: tampoco se importa desde /pos.
-const sinActions = ["**/actions", "./actions", "@/modules/*/panel"].map((patron) => ({
-  group: [patron],
-  message: "/pos no usa server actions (precache).",
-}));
+// panel.ts reexporta las acciones y servidor.ts trae cookies(): tampoco se importan desde /pos.
+const sinActions = ["**/actions", "./actions", "@/modules/*/panel", "@/modules/*/servidor"].map(
+  (patron) => ({
+    group: [patron],
+    message: "/pos no usa server actions (precache).",
+  }),
+);
 
 export default defineConfig([
   ...nextVitals,

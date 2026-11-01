@@ -66,3 +66,27 @@
     background: color-mix(in srgb, var(--primary) 22%, transparent);
   }
 }
+
+/* Nota de venta (/pos): papel por clase de página. Sin cromo de la app: lo demás lleva print:hidden.
+   `size: 80mm auto` es inválido (auto solo vale solo) y Chromium imprime Letter: el ticket lleva dos longitudes.
+   shortcut: alto fijo de 297 mm porque CSS no tiene "alto del contenido"; una impresora de rollo con corte al final
+   del trabajo lo recorta, otra puede avanzar papel en blanco. Para alto exacto habría que medir la nota en JS. */
+@page nota80 {
+  size: 80mm 297mm;
+  margin: 3mm;
+}
+@page notaa4 {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  body {
+    background: #fff;
+  }
+  .nota-80 {
+    page: nota80;
+  }
+  .nota-a4 {
+    page: notaa4;
+  }
+}

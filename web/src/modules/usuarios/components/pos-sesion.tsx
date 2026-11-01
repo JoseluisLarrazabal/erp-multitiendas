@@ -5,15 +5,25 @@ import { Button } from "@/components/ui/button";
 import { BotonCerrarSesion } from "./boton-cerrar-sesion";
 import { SelectorNegocio } from "./selector-negocio";
 import { tieneAccesoPanel } from "../domain";
-import { usePosSesion } from "../use-pos-sesion";
+import type { SesionPos } from "../use-pos-sesion";
 
-// Barra del POS. El <h1> y el cuerpo viven en la página estática; esto solo añade lo que depende de la sesión.
-export function PosSesion() {
-  const { sesion, cambiarActivo, reintentar } = usePosSesion();
+// Barra del POS: presentacional. La sesión la lee quien la monta (una sola vez por pantalla).
+export function PosBarra({
+  sesion,
+  cambiarActivo,
+  reintentar,
+  titulo,
+}: {
+  sesion: SesionPos;
+  cambiarActivo: (id: string) => Promise<string | null | false>;
+  reintentar: () => void;
+  titulo: React.ReactNode;
+}) {
   const sinConexion = sesion.fase === "sin-conexion";
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 print:hidden">
+      {titulo}
       {sesion.fase === "verificando" && (
         <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
           <Loader2 className="size-4 animate-spin" aria-hidden /> Verificando sesión…
@@ -37,10 +47,25 @@ export function PosSesion() {
           </Button>
         </div>
       )}
+      {sesion.fase === "lista" && sesion.caducada && (
+        <p
+          role="alert"
+          className="border-destructive text-destructive rounded-lg border p-3 text-sm"
+        >
+          Tu sesión caducó. La venta en pantalla no se pierde: inicia sesión en{" "}
+          <a href="/login" target="_blank" rel="noopener" className="underline">
+            otra pestaña
+          </a>{" "}
+          con la misma cuenta y vuelve aquí.
+          <Button type="button" variant="outline" className="ml-2 h-10" onClick={reintentar}>
+            Ya inicié sesión
+          </Button>
+        </p>
+      )}
       {sesion.fase === "lista" && (
         <div className="contents">
           <SelectorNegocio
-            className="w-64"
+            className="w-52 sm:w-64"
             negocios={sesion.negocios}
             activoId={sesion.activoId}
             alCambiar={cambiarActivo}

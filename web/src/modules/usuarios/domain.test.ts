@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   accionesDeFila,
   codigoDeMensaje,
+  conservarLista,
   destinoInicial,
   elegirNegocioActivo,
   MENSAJES_ERROR,
+  negocioDeRecheck,
   mensajeDeError,
   rolesOfrecidos,
   tieneAccesoPanel,
@@ -92,5 +94,30 @@ describe("errores ERP_*", () => {
   it("extrae el código del texto de Postgres", () => {
     expect(codigoDeMensaje("ERP_PREFIJO_DUPLICADO")).toBe("ERP_PREFIJO_DUPLICADO");
     expect(codigoDeMensaje("otra cosa")).toBeUndefined();
+  });
+});
+
+describe("negocioDeRecheck", () => {
+  it("conserva el negocio en pantalla aunque la cookie diga otro", () => {
+    expect(negocioDeRecheck([a, b], "b", "a")).toBe(b);
+  });
+  it("si el activo ya no es del usuario, o aún no hay, usa la cookie", () => {
+    expect(negocioDeRecheck([a, b], "z", "b")).toBe(b);
+    expect(negocioDeRecheck([a, b], null, "b")).toBe(b);
+    expect(negocioDeRecheck([], "a", "a")).toBeNull();
+  });
+});
+
+describe("conservarLista", () => {
+  const lista = { fase: "lista", id: 1 };
+  it("un fallo de fondo no saca una sesión lista", () => {
+    expect(conservarLista(lista, { fase: "error", id: 2 })).toBe(lista);
+    expect(conservarLista(lista, { fase: "sin-conexion", id: 2 })).toBe(lista);
+  });
+  it("una sesión lista nueva sí reemplaza, y fuera de lista todo cambia", () => {
+    const nueva = { fase: "lista", id: 3 };
+    expect(conservarLista(lista, nueva)).toBe(nueva);
+    const error = { fase: "error", id: 0 };
+    expect(conservarLista({ fase: "verificando", id: 0 }, error)).toBe(error);
   });
 });

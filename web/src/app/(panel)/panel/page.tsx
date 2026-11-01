@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Boxes } from "lucide-react";
-import { etiquetaRol, exigirPanel } from "@/modules/usuarios";
+import { etiquetaRol } from "@/modules/usuarios";
+import { exigirPanel } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Inicio · ERP Multitiendas" };
 
