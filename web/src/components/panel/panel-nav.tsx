@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Banknote,
+  Boxes,
   CircleDollarSign,
   LayoutDashboard,
   MonitorSmartphone,
@@ -31,6 +32,12 @@ export const ITEMS: Item[] = [
     etiqueta: "Productos",
     icono: Package,
     permisos: ["editar_productos", "ver_costos"],
+  },
+  {
+    href: "/panel/inventario",
+    etiqueta: "Inventario",
+    icono: Boxes,
+    permisos: ["ajustar_inventario", "ver_reportes"],
   },
   {
     href: "/panel/precios",

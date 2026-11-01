@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { crearProductosEnLote, NEGOCIOS, rutaAuth, vigilarCsp } from "./helpers";
+import { crearProductosEnLote, ir, NEGOCIOS, rutaAuth, vigilarCsp } from "./helpers";
 
 // RF-CAT-01, 03, 04, 11, 12. Cada prueba crea sus propios productos (código y barras únicos por corrida):
 // no depende del orden ni de lo que dejó otra. Reutilizan las sesiones de auth.setup, sin logins nuevos.
@@ -19,18 +19,6 @@ const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAHDSZ0QAAAABJRU5ErkJggg==",
   "base64",
 );
-
-// Navega y espera a que hidrate: con la carga de varios workers, un clic o un archivo antes de la hidratación se
-// pierde. React marca con __reactProps$ cada nodo que hidrata, así que se espera a que todos los controles lo
-// tengan (networkidle no lo garantizaba y tapó una falla de hidratación).
-async function ir(page: Page, url: string) {
-  await page.goto(url);
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll("input, select, button, form")].every((c) =>
-      Object.keys(c).some((k) => k.startsWith("__reactProps$")),
-    ),
-  );
-}
 
 type Datos = { codigo: string; nombre: string; barras?: string; tipo?: string };
 

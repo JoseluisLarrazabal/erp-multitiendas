@@ -9,6 +9,7 @@ for (const cuenta of [
   "multi",
   "encargadoTienda",
   "encargadoLavanderia",
+  "contador",
 ] as const) {
   setup(`sesión de ${cuenta}`, async ({ page }) => {
     await iniciarSesionUI(page, CUENTAS[cuenta]);

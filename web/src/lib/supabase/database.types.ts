@@ -79,6 +79,12 @@ isOneToOne: false
       foreignKeyName: "conteo_items_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "conteo_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
     },{
@@ -142,6 +148,12 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
+      foreignKeyName: "movimientos_inventario_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
       foreignKeyName: "movimientos_inventario_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
@@ -225,6 +237,12 @@ isOneToOne: false
       foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
     },{
@@ -291,6 +309,12 @@ isOneToOne: false
       foreignKeyName: "series_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "series_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
       referencedRelation: "productos"
       referencedColumns: ["negocio_id","id"]
     },{
@@ -320,6 +344,12 @@ isOneToOne: false
                   }
                   Relationships: [
                     {
+      foreignKeyName: "stock_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
       foreignKeyName: "stock_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
@@ -408,13 +438,33 @@ isOneToOne: false
                 }
           }
           Views: {
-            "producto_precios_bs": {
+            "inventario_lista": {
+                  Row: {
+                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_total": number | null,"unidad": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "productos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"producto_precios_bs": {
                   Row: {
                     "lista": string,"moneda": string,"monto": number,"monto_bs": number | null,"negocio_id": string,"producto_id": string,"tipo_cambio": number | null
                   }
                   ComputedFields: never
                   Relationships: [
                     {
+      foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
       foreignKeyName: "producto_precios_negocio_id_producto_id_fkey"
       columns: ["negocio_id","producto_id"]
 isOneToOne: false
