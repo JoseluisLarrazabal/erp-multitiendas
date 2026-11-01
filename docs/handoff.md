@@ -119,6 +119,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Codex: no verificado en esta fase.
 - **Fase 1 en curso (2026-11-01):** plan en `docs/plan-fase-1.md`. **El cliente carga sus precios en el panel** (CTO,
   2026-11-01): la importación no los espera y se agrega RF-CAT-11, carga masiva.
+  - PR 1 hecho: tablas de catálogo y auditoría, vista `producto_precios_bs`, RPC de escritura. `auditar_cuenta` solo con
+    `service_role`. Sin probar: ruta `ERP_AUDITORIA` de `admin-usuarios`. Codex: no verificado.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.
