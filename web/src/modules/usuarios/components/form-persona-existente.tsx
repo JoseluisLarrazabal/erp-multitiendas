@@ -7,8 +7,14 @@ import { SelectNativo } from "@/components/ui/select-nativo";
 import { asignarUsuario } from "../actions";
 import { etiquetaRol, mensajeDeError, type PersonaExterna } from "../domain";
 import { asignarUsuarioSchema } from "../schemas";
-import { Campo, propsCampo, validarCampos, type Campos, type Errores } from "./campo";
-import { useAccion } from "./use-accion";
+import {
+  Campo,
+  propsCampo,
+  validarCampos,
+  type Campos,
+  type Errores,
+} from "@/components/panel/campo";
+import { useAccion } from "@/components/panel/use-accion";
 
 type Props = { negocioId: string; roles: readonly string[]; personas: readonly PersonaExterna[] };
 

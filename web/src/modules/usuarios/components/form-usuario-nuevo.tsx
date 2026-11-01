@@ -8,8 +8,14 @@ import { SelectNativo } from "@/components/ui/select-nativo";
 import { crearUsuario } from "../actions";
 import { etiquetaRol, mensajeDeError } from "../domain";
 import { crearUsuarioSchema } from "../schemas";
-import { Campo, propsCampo, validarCampos, type Campos, type Errores } from "./campo";
-import { useAccion } from "./use-accion";
+import {
+  Campo,
+  propsCampo,
+  validarCampos,
+  type Campos,
+  type Errores,
+} from "@/components/panel/campo";
+import { useAccion } from "@/components/panel/use-accion";
 
 type Props = { negocioId: string; roles: readonly string[] };
 

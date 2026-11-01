@@ -62,3 +62,12 @@ export async function exigirPermiso(
   if (!contexto.permisos.includes(permiso)) redirect("/panel");
   return contexto;
 }
+
+// Igual que exigirPermiso, pero basta con uno de los permisos (p. ej. editar_productos o ver_costos).
+export async function exigirAlgunPermiso(
+  permisos: readonly string[],
+): Promise<Contexto & { activo: NegocioUsuario }> {
+  const contexto = await exigirPanel();
+  if (!permisos.some((p) => contexto.permisos.includes(p))) redirect("/panel");
+  return contexto;
+}

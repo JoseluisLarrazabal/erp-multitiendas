@@ -124,6 +124,10 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - PR 2 hecho: kardex, stock por trigger, series, conteos, costos ocultos por columna. Idempotencia por operación con
     `operaciones_inventario`. Concurrencia probada a mano: 20 reintentos dejan 1 movimiento, 60 traslados opuestos sin
     deadlock, stock igual al kardex. DB-12 se completa en la fase 3. Codex: no verificado.
+  - PR 3 hecho: productos, categorías, fotos en bucket privado, tipo de cambio y grilla masiva `/panel/precios`
+    (RF-CAT-11). Tipo de cambio pide confirmar si varía más de 20 %. Sin probar en navegador: USD sin tipo de cambio,
+    costo "Varía", registrar tras confirmar el cambio brusco, fallo parcial al guardar, lector de pantalla, móvil táctil.
+    **Codex sin cuota hasta el 2026-11-16:** al volver, correr `verify-fix` sobre el `fix:` de CI y revisar fases 0 y 1.
 - **Base de datos centralizada (CTO, 2026-10-26):** los 3 negocios en **una sola base** (un proyecto Supabase).
   Tabla `negocios` + columna `negocio_id` en las tablas operativas (productos, ventas, kardex, órdenes, caja), con RLS
   según los negocios asignados a cada usuario. `usuarios` es compartida; `clientes` es por negocio.

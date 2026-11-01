@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Resultado } from "../domain";
-import { useAccion } from "./use-accion";
+import { useAccion, type Resultado } from "./use-accion";
 
 type Props = {
   titulo: string;

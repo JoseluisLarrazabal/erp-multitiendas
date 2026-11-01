@@ -96,7 +96,7 @@ select pg_temp.como(pg_temp.i('d'));
 select public.registrar_entrada(pg_temp.i('O10'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U1'), 10, 5, null);
 select public.registrar_entrada(pg_temp.i('O11'), pg_temp.i('T'), pg_temp.i('P1'), pg_temp.i('U2'), 5, null, null);
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 7.5)), 'carga de costos'), 2, 'costos: un ajuste_costo por fila de stock');
-select results_eq($$select s.cantidad, c.costo_promedio from public.costos_stock(pg_temp.i('T')) c join public.stock s using (producto_id, ubicacion_id) where producto_id = pg_temp.i('P1') order by s.cantidad$$,
+select results_eq($$select s.cantidad, c.costo_promedio from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')]) c join public.stock s using (producto_id, ubicacion_id) where producto_id = pg_temp.i('P1') order by s.cantidad$$,
   $$values (5.000::numeric, 7.5000::numeric), (10.000::numeric, 7.5000::numeric)$$, 'costos: ambas ubicaciones quedan con el costo y el stock intacto');
 reset role;
 select results_eq($$select tipo, cantidad, ref_id, motivo from public.movimientos_inventario where producto_id = pg_temp.i('P1') and tipo = 'ajuste_costo'$$,
@@ -105,7 +105,7 @@ select pg_temp.como(pg_temp.i('d'));
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 7.5)), null), 0, 'costos: el mismo costo no genera movimientos');
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PK'), 'costo', 3)), null), 2, 'costos: sin stock fija el costo en cada ubicación del negocio');
 select is((select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('PK') and tipo = 'ajuste_costo'), 2::bigint, 'costos: un ajuste_costo por ubicación, sin cantidad');
-select results_eq($$select ubicacion_id, s.cantidad, c.costo_promedio from public.costos_stock(pg_temp.i('T')) c join public.stock s using (producto_id, ubicacion_id) where producto_id = pg_temp.i('PK') order by ubicacion_id$$,
+select results_eq($$select ubicacion_id, s.cantidad, c.costo_promedio from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')]) c join public.stock s using (producto_id, ubicacion_id) where producto_id = pg_temp.i('PK') order by ubicacion_id$$,
   $$values (pg_temp.i('U1'), 0.000::numeric, 3.0000::numeric), (pg_temp.i('U2'), 0.000::numeric, 3.0000::numeric)$$, 'costos: el producto sin stock conserva su costo');
 select is(public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'costo', 0)), null), 2, 'costos: costo 0 es válido');
 select throws_ok($$select public.fijar_costos(pg_temp.i('T'), '[]', null)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'costos: lote vacío');

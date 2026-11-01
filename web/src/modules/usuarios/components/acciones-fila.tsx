@@ -4,8 +4,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { desactivarUsuario, quitarUsuario, reactivarUsuario } from "../actions";
 import { type AccionesFila, type FilaUsuario } from "../domain";
-import { ConfirmarAccion } from "./confirmar-accion";
-import { useAccion } from "./use-accion";
+import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
+import { useAccion } from "@/components/panel/use-accion";
 
 type Props = {
   fila: FilaUsuario;

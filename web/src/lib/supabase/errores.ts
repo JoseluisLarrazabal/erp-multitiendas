@@ -15,3 +15,5 @@ export function esSinSesion(error: unknown): boolean {
   const status = (error as ErrorAuth)?.status;
   return status === 401 || status === 403;
 }
+
+export const ERROR_CONEXION = "No pudimos conectar. Intenta de nuevo.";

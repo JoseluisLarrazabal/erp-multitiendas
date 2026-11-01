@@ -1,9 +1,17 @@
+import type { ZodType } from "zod";
+
 export const COOKIE_NEGOCIO = "negocio_activo";
 
 // Quien tiene alguno de estos permisos en el negocio activo entra al panel; el resto va al POS.
 const PERMISOS_PANEL = ["ver_reportes", "editar_productos", "usuarios"];
 
 export type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
+
+// Entrada de una server action -> datos validados, o null. Compartido por las actions de los módulos del panel.
+export function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {
+  const r = schema.safeParse(entrada);
+  return r.success ? r.data : null;
+}
 
 export type NegocioUsuario = {
   negocioId: string;

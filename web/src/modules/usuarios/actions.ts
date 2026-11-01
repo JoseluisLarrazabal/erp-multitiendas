@@ -4,9 +4,8 @@
 // (lo impone ESLint en src/app/(pos), el service worker y los dos archivos de módulo que corren en /pos).
 import { revalidatePath } from "next/cache";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import type { ZodType } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { codigoDeMensaje, mensajeDeError, type Resultado } from "./domain";
+import { codigoDeMensaje, mensajeDeError, validar, type Resultado } from "./domain";
 import {
   asignarUsuarioSchema,
   crearUsuarioSchema,
@@ -16,11 +15,6 @@ import {
 } from "./schemas";
 
 const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensajeDeError(codigo) });
-
-function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {
-  const r = schema.safeParse(entrada);
-  return r.success ? r.data : null;
-}
 
 // Cuerpo { ok: false, error } de admin-usuarios; el SDK lo entrega dentro del error en respuestas no 2xx.
 async function invocarAdmin(cuerpo: Record<string, unknown>): Promise<Resultado<null>> {

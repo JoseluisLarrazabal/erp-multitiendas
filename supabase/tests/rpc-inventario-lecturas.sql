@@ -1,6 +1,6 @@
 -- DB-04, DB-12 en reconciliación; costos_stock, kardex_producto, stock_inconsistente, productos_stock_bajo.
 begin;
-select plan(31);
+select plan(32);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -105,15 +105,16 @@ insert into public.stock (negocio_id, producto_id, ubicacion_id, cantidad, costo
 
 -- costos_stock
 select pg_temp.como(pg_temp.i('d'));
-select results_eq($$select producto_id, ubicacion_id, costo_promedio from public.costos_stock(pg_temp.i('T')) order by producto_id, ubicacion_id$$,
+select results_eq($$select producto_id, ubicacion_id, costo_promedio from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')]) order by producto_id, ubicacion_id$$,
   format($$values (%L::uuid, %L::uuid, 9.0000::numeric), (%L::uuid, %L::uuid, 9.0000::numeric), (%L::uuid, %L::uuid, 2.0000::numeric)$$,
     pg_temp.i('P1'), pg_temp.i('U1'), pg_temp.i('P1'), pg_temp.i('U2'), pg_temp.i('PK'), pg_temp.i('U1')), 'costos_stock: promedio por producto y ubicación');
 select pg_temp.como(pg_temp.i('c'));
-select is((select count(*) from public.costos_stock(pg_temp.i('T'))), 3::bigint, 'costos_stock: el contador (ver_costos) puede');
+select is((select count(*) from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')])), 3::bigint, 'costos_stock: el contador (ver_costos) puede');
+select is((select count(*) from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('PK')])), 1::bigint, 'costos_stock: solo devuelve los productos pedidos');
 select pg_temp.como(pg_temp.i('v'));
-select throws_ok($$select * from public.costos_stock(pg_temp.i('T'))$$, 'P0001', 'ERP_SIN_PERMISO', 'costos_stock: el vendedor no puede');
+select throws_ok($$select * from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')])$$, 'P0001', 'ERP_SIN_PERMISO', 'costos_stock: el vendedor no puede');
 select pg_temp.como(pg_temp.i('x'));
-select throws_ok($$select * from public.costos_stock(pg_temp.i('T'))$$, 'P0001', 'ERP_SIN_PERMISO', 'costos_stock: usuario de otro negocio');
+select throws_ok($$select * from public.costos_stock(pg_temp.i('T'), array[pg_temp.i('P1'), pg_temp.i('PK')])$$, 'P0001', 'ERP_SIN_PERMISO', 'costos_stock: usuario de otro negocio');
 
 -- kardex_producto
 reset role;

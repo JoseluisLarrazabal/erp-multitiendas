@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import { asignarUsuario } from "../actions";
 import { etiquetaRol, type FilaUsuario } from "../domain";
-import { ConfirmarAccion } from "./confirmar-accion";
+import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 
 type Props = {
   fila: FilaUsuario;
