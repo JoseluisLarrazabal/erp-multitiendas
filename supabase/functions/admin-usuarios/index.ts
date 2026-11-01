@@ -140,6 +140,12 @@ Deno.serve(async (req) => {
       ban_duration: datos.accion === "desactivar" ? "876000h" : "none",
     });
     if (errorBan) return falla("ERP_INTERNO");
+    // El baneo ya rige: si la auditoría falla se avisa, no se oculta ni se deshace.
+    const { error: errorAuditoria } = await llamador.rpc("auditar_cuenta", {
+      p_usuario_id: datos.usuario_id,
+      p_activo: datos.accion === "reactivar",
+    });
+    if (errorAuditoria) return falla("ERP_AUDITORIA");
     return responder({ ok: true, data: { usuario_id: datos.usuario_id } });
   } catch {
     return falla("ERP_INTERNO");

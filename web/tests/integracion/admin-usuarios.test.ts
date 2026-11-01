@@ -6,6 +6,7 @@ const CLAVE = "Prueba-ERP-2026";
 const TIENDA = "a0000000-0000-0000-0000-000000000001";
 const LAVANDERIA = "a0000000-0000-0000-0000-000000000002";
 const MULTI = "c0000000-0000-0000-0000-000000000007";
+const DUENO = "c0000000-0000-0000-0000-000000000001";
 
 const URL_API = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -55,11 +56,14 @@ const crear = (jwt: string, extra: Record<string, unknown> = {}) => {
 };
 
 let dueno = "";
+let clienteDueno = cliente();
 let encargadoTienda = "";
 let encargadoLav = "";
 
 beforeAll(async () => {
-  dueno = (await entrar("dueno@erp.test")).jwt;
+  const sesionDueno = await entrar("dueno@erp.test");
+  dueno = sesionDueno.jwt;
+  clienteDueno = sesionDueno.c;
   encargadoTienda = (await entrar("encargado.tienda@erp.test")).jwt;
   encargadoLav = (await entrar("encargado.lavanderia@erp.test")).jwt;
   expect([dueno, encargadoTienda, encargadoLav].every(Boolean)).toBe(true);
@@ -184,5 +188,17 @@ describe("desactivar y reactivar", () => {
     const alta = await invocar(dueno, { accion: "reactivar", usuario_id: objetivo.id });
     expect(alta.cuerpo.ok).toBe(true);
     expect((await entrar(objetivo.correo, "Clave-prueba-1")).error).toBeNull();
+
+    // Ambos cambios de estado quedan en auditoría, con el dueño como autor.
+    const { data: filas } = await clienteDueno
+      .from("auditoria")
+      .select("accion, usuario_id")
+      .eq("tabla", "perfiles")
+      .eq("registro_id", objetivo.id)
+      .order("id");
+    expect(filas).toEqual([
+      { accion: "desactivar", usuario_id: DUENO },
+      { accion: "reactivar", usuario_id: DUENO },
+    ]);
   });
 });
