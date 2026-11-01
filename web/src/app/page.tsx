@@ -1,7 +1,9 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-semibold tracking-tight">ERP Multitiendas</h1>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { destinoInicial, obtenerContexto } from "@/modules/usuarios";
+
+// Portada: solo decide a dónde ir. Sin sesión, al login; con sesión, según permisos.
+export default async function Home() {
+  const contexto = await obtenerContexto();
+  if (!contexto) redirect("/login");
+  redirect(destinoInicial(contexto.activo, contexto.permisos));
 }

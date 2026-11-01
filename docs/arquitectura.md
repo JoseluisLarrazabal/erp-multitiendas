@@ -124,6 +124,9 @@ Reglas:
 - Fotos en un bucket con policies por negocio.
 - Encabezados de seguridad en `next.config`.
 - Lectura de la matriz en cada RPC: ocultar un botón no es control de acceso.
+- Cada página de `/panel` llama su guarda, no solo el layout: Next no re-ejecuta un layout conservado en peticiones RSC
+  parciales.
+- `/pos` no usa server actions: el precache conserva bundles de builds anteriores y un ID de action es por build.
 - CI, teléfonos y datos de crédito no van a logs.
 
 ## Datos y operación

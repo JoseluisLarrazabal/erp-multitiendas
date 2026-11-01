@@ -67,6 +67,16 @@ jobs:
           pnpm db:reset
           pnpm db:test
 
+      - name: 5b. Variables de Supabase local para build y E2E
+        run: |
+          salida=$(pnpm exec supabase status -o env --workdir .. 2>/dev/null | grep -E '^(API_URL|ANON_KEY)=')
+          eval "$salida"
+          echo "::add-mask::$ANON_KEY"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+          } >> "$GITHUB_ENV"
+
       - name: 6. Tipos generados sin diferencias
         run: |
           pnpm db:types
@@ -77,6 +87,7 @@ jobs:
 
       - name: 8. Playwright
         run: |
+          pnpm db:reset
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
 
