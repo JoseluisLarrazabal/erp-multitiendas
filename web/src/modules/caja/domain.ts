@@ -1,10 +1,13 @@
-import { formatearBs } from "@/lib/format/moneda";
+import { formatearBs, parsearMonto } from "@/lib/format/moneda";
 
-// "100", "100,50", "" (= 0) -> centavos; null si no es un monto válido.
+// Tope de los schemas de caja (9_999_999 Bs) en centavos.
+const MAX_CENTAVOS_CAJA = 999_999_999;
+
+// "100", "100,50", "" (= 0) -> centavos; null si no es un monto válido o pasa el tope de caja.
 export function parsearMontoInicial(texto: string): number | null {
   if (texto.trim() === "") return 0;
-  const m = /^(\d{1,7})(?:[.,](\d{1,2}))?$/.exec(texto.trim());
-  return m ? Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0")) : null;
+  const c = parsearMonto(texto);
+  return c === null || c > MAX_CENTAVOS_CAJA ? null : c;
 }
 
 // "50", "50,5" -> centavos; null si no es un monto válido o es cero (un movimiento exige monto > 0).

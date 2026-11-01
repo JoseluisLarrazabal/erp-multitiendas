@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import type { ResumenCarrito } from "./carrito";
-import { contadorInicial, formatearNumero, secuenciaAgotada, siguienteSecuencia } from "./domain";
+import { formatearNumero, secuenciaAgotada, siguienteSecuencia } from "./domain";
 import { guardarContador, leerContador } from "./equipo-local";
 import { enviarVenta, existeVenta, type Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
@@ -27,7 +27,7 @@ type Pendiente = {
 };
 
 const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_SIN_PRECIO"];
-const MAX_NUMERO_DUPLICADO = 25;
+export const MAX_NUMERO_DUPLICADO = 25;
 const MENSAJE_CUENTA =
   "La sesión caducó o es de otra cuenta. Vuelve a entrar con la misma cuenta que hizo esta venta; no la cobres de nuevo hasta comprobarla.";
 const MENSAJE_AGOTADA = "Numeración del equipo agotada, avisa al encargado.";
@@ -66,7 +66,7 @@ export function useEnvio(opts: {
   const contador = useRef(0);
   // Último número usado: el mayor entre el contador local y el del servidor (borrar el navegador no repite números).
   useEffect(() => {
-    contador.current = contadorInicial(leerContador(equipo.id), equipo.ultimoNumero);
+    contador.current = Math.max(leerContador(equipo.id), equipo.ultimoNumero);
   }, [equipo.id, equipo.ultimoNumero]);
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const pendiente = useRef<Pendiente | null>(null);
@@ -111,7 +111,22 @@ export function useEnvio(opts: {
       for (let duplicados = 0; ; duplicados++) {
         const r = await enviarVenta(createClient(), p.payload);
         if (r.ok) return cerrarEnExito(p);
-        if (r.codigo === "ERP_NUMERO_DUPLICADO" && duplicados < MAX_NUMERO_DUPLICADO) {
+        if (r.red) {
+          p.enDuda = true;
+          return setEstado({ t: "red", mensaje: r.error });
+        }
+        // Cualquier rechazo de un envío en duda se comprueba antes de actuar: el intento anterior pudo guardarla.
+        if (p.enDuda) {
+          const existe = await existeVenta(createClient(), p.ventaId);
+          if (!existe.ok) return setEstado({ t: "red", mensaje: existe.error });
+          if (existe.data) return cerrarEnExito(p);
+          p.enDuda = false; // no existe: los duplicados siguientes son de números que esta venta nunca guardó
+        }
+        if (r.codigo === "ERP_NUMERO_DUPLICADO") {
+          if (duplicados >= MAX_NUMERO_DUPLICADO) {
+            pendiente.current = null;
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_DUPLICADOS });
+          }
           guardarContador(equipo.id, p.seq); // ese número ya es de otra venta
           contador.current = Math.max(contador.current, p.seq); // una pestaña atrasada no se queda atascada
           const seq = siguienteSecuencia(p.seq, contador.current, leerContador(equipo.id));
@@ -126,22 +141,11 @@ export function useEnvio(opts: {
           Object.assign(p, { seq, ...siguiente });
           continue;
         }
-        if (r.red) {
-          p.enDuda = true;
-          return setEstado({ t: "red", mensaje: r.error });
-        }
-        if (p.enDuda) {
-          const existe = await existeVenta(createClient(), p.ventaId);
-          if (!existe.ok) return setEstado({ t: "red", mensaje: existe.error });
-          if (existe.data) return cerrarEnExito(p);
-        }
         pendiente.current = null;
         if (r.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
         else if (r.codigo && CODIGOS_PRECIO.includes(r.codigo)) await alErrorPrecios();
         return setEstado({ t: "rechazada", mensaje: r.error });
       }
-      pendiente.current = null;
-      setEstado({ t: "rechazada", mensaje: MENSAJE_DUPLICADOS });
     } finally {
       ocupado.current = false;
     }

@@ -9,7 +9,6 @@ export const ETIQUETA_ESTADO: Record<string, string> = {
   completada: "Completada",
   anulada: "Anulada",
 };
-export const ETIQUETA_MEDIO: Record<string, string> = { efectivo: "Efectivo", qr: "QR" };
 export const ETIQUETA_ORIGEN: Record<string, string> = {
   online: "Con conexión",
   offline: "Sin conexión",

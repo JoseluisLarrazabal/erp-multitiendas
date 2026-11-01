@@ -16,6 +16,7 @@ import {
   venderApi,
   ventasDeLaCaja,
 } from "./pos-helpers";
+import { MAX_NUMERO_DUPLICADO } from "../../src/modules/ventas/use-envio";
 
 // E2E-04 y E2E-08 comparten archivo a propósito: el equipo C1 y su caja son únicos, y los archivos corren en paralelo.
 // Sesión guardada del vendedor (rol sin `descontar`, con `vender` y `caja`). Un solo equipo (C1) y una sola caja:
@@ -410,6 +411,114 @@ test("envío en duda: el primer intento guarda pero la respuesta se corta; el se
   // El rechazo con código de una venta en duda se comprueba contra la base: existe, así que es éxito, no error.
   await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
   expect(llamadas).toBe(2);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+  expect(await stockEn(a.id)).toBe(3);
+});
+
+const cuerpoDuplicado = JSON.stringify({
+  code: "P0001",
+  message: "ERP_NUMERO_DUPLICADO",
+  details: null,
+  hint: null,
+});
+const ventaDe = (cuerpo: string) =>
+  (JSON.parse(cuerpo) as { p_venta: { id: string; numero: string } }).p_venta;
+
+test("número duplicado: el reintento conserva el id, toma el número siguiente y deja una sola venta", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+
+  const cuerpos: string[] = [];
+  await page.route("**/rest/v1/rpc/registrar_venta", (route) => {
+    cuerpos.push(route.request().postData() ?? "");
+    if (cuerpos.length === 1)
+      return route.fulfill({ status: 400, contentType: "application/json", body: cuerpoDuplicado });
+    return route.continue();
+  });
+
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+
+  expect(cuerpos).toHaveLength(2);
+  const v1 = ventaDe(cuerpos[0] ?? "");
+  const v2 = ventaDe(cuerpos[1] ?? "");
+  expect(v2.id).toBe(v1.id);
+  expect(Number(v2.numero.split("-")[1])).toBe(Number(v1.numero.split("-")[1]) + 1);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]?.numero).toBe(v2.numero);
+});
+
+test("envío en duda con número duplicado: la venta ya se guardó, el reintento no renumera ni duplica", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+
+  let llamadas = 0;
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    llamadas += 1;
+    if (llamadas === 1) {
+      await route.fetch(); // la base guarda la venta...
+      return route.abort("connectionfailed"); // ...pero la respuesta no llega
+    }
+    return route.fulfill({ status: 400, contentType: "application/json", body: cuerpoDuplicado });
+  });
+
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
+  await cobro.getByRole("button", { name: "Reintentar envío" }).click();
+
+  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+  expect(llamadas).toBe(2);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+  expect(await stockEn(a.id)).toBe(3);
+});
+
+test("número duplicado sin salida: agotados los reintentos el POS rechaza con el mensaje de numeración y no manda más", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+
+  let llamadas = 0;
+  await page.route("**/rest/v1/rpc/registrar_venta", (route) => {
+    llamadas += 1;
+    return route.fulfill({ status: 400, contentType: "application/json", body: cuerpoDuplicado });
+  });
+
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("alert")).toContainText("No se pudo asignar un número de nota");
+  expect(llamadas).toBe(MAX_NUMERO_DUPLICADO + 1);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+});
+
+test("descartar una venta que sí llegó al servidor termina como éxito con nota y no la duplica", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    await route.fetch(); // la base guarda la venta...
+    return route.abort("connectionfailed"); // ...pero la respuesta no llega
+  });
+
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
+  await cobro.getByRole("button", { name: "Descartar" }).click();
+
+  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
   expect(await stockEn(a.id)).toBe(3);
 });

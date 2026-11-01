@@ -9,6 +9,8 @@ const PERMISOS_PANEL = ["ver_reportes", "editar_productos", "usuarios"];
 export type Resultado<T> =
   { ok: true; data: T } | { ok: false; error: string; codigo?: string | null };
 
+export const falla = (error: string): Resultado<never> => ({ ok: false, error });
+
 // Entrada de una server action -> datos validados, o null. Compartido por las actions de los módulos del panel.
 export function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {
   const r = schema.safeParse(entrada);

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { Resultado } from "@/modules/usuarios";
+import { falla, type Resultado } from "@/modules/usuarios";
 import type { Movimiento } from "./domain";
 import { listarMovimientos } from "./queries";
 import { resumenCajaSchema, type ResumenCaja } from "./schemas";
@@ -8,7 +8,6 @@ import { resumenCajaSchema, type ResumenCaja } from "./schemas";
 // Lecturas de /panel/cajas. Solo columnas listadas. Los totales del arqueo salen de resumen_caja (SQL), nunca de sumar
 // listas en la web: las listas se truncan.
 type Cliente = SupabaseClient<Database>;
-const falla = (error: string): { ok: false; error: string } => ({ ok: false, error });
 
 export type FilaSesion = {
   id: string;

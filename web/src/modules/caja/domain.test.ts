@@ -9,6 +9,8 @@ describe("parsearMontoInicial", () => {
     expect(parsearMontoInicial("1,234")).toBeNull();
     expect(parsearMontoInicial("-5")).toBeNull();
     expect(parsearMontoInicial("abc")).toBeNull();
+    expect(parsearMontoInicial("9999999,99")).toBe(999_999_999);
+    expect(parsearMontoInicial("10000000")).toBeNull();
   });
 });
 
@@ -19,5 +21,7 @@ describe("parsearMontoPositivo", () => {
     expect(parsearMontoPositivo("0,00")).toBeNull();
     expect(parsearMontoPositivo("25,5")).toBe(2550);
     expect(parsearMontoPositivo("-1")).toBeNull();
+    expect(parsearMontoPositivo("9999999,99")).toBe(999_999_999);
+    expect(parsearMontoPositivo("10000000")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { Resultado } from "@/modules/usuarios/panel";
+import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
   costoUnico,
   sanearBusqueda,
@@ -17,8 +17,6 @@ import {
 type Cliente = SupabaseClient<Database>;
 // `pagina` es la efectiva: la pedida acotada a [1, páginas].
 type Pagina<T> = { filas: T[]; total: number; pagina: number };
-
-const falla = (texto: string): Resultado<never> => ({ ok: false, error: texto });
 
 export async function listarProductos(
   supabase: Cliente,

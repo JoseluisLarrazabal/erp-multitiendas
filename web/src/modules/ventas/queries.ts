@@ -1,12 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { errorRpc, esFalloDeRed, MENSAJE_RED } from "@/lib/erp-errores";
-import type { Resultado } from "@/modules/usuarios";
+import { falla, type Resultado } from "@/modules/usuarios";
 import { leerCatalogo, respuestaVentaSchema, type Catalogo, type VentaPayload } from "./schemas";
 
 // Reciben el cliente del navegador: /pos es cliente. Todo select lista columnas; nunca costos.
 type Cliente = SupabaseClient<Database>;
-const falla = (error: string): { ok: false; error: string } => ({ ok: false, error });
 
 export type Equipo = {
   id: string;
@@ -79,11 +78,11 @@ export async function cargarCatalogo(
     : falla("El catálogo llegó con un formato inesperado.");
 }
 
-// catalogo_pos no devuelve la marca: se pide aparte, por páginas, y la búsqueda funciona sin ella.
+// catalogo_pos no devuelve la marca: se pide aparte, por páginas, y la búsqueda funciona sin ella. Si una página falla se devuelve lo cargado y `completas: false`.
 export async function cargarMarcas(
   supabase: Cliente,
   negocioId: string,
-): Promise<Map<string, string>> {
+): Promise<{ marcas: Map<string, string>; completas: boolean }> {
   const marcas = new Map<string, string>();
   for (let desde = 0; ; desde += 1000) {
     const { data, error } = await supabase
@@ -94,11 +93,11 @@ export async function cargarMarcas(
       .not("marca", "is", null)
       .order("id")
       .range(desde, desde + 999);
-    if (error || !data) break;
+    if (error || !data) return { marcas, completas: false };
     for (const f of data) if (f.marca) marcas.set(f.id, f.marca);
     if (data.length < 1000) break;
   }
-  return marcas;
+  return { marcas, completas: true };
 }
 
 export type SerieDisponible = { id: string; serie: string };

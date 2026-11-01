@@ -2,7 +2,8 @@ import { Dato, Seccion } from "@/modules/catalogo/panel";
 import { formatearFechaHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { aMilesimas, formatearCantidad } from "../domain";
-import { ETIQUETA_MEDIO, ETIQUETA_ORIGEN } from "../domain-panel";
+import { ETIQUETA_MEDIO } from "../domain";
+import { ETIQUETA_ORIGEN } from "../domain-panel";
 import type { DetalleVenta } from "../lecturas-panel";
 import { EstadoVenta } from "./estado-venta";
 
@@ -72,7 +73,7 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
         <ul aria-label="Pagos" className="divide-y text-sm">
           {v.pagos.map((p) => (
             <li key={p.id} className="flex justify-between py-2 tabular-nums">
-              <span>{ETIQUETA_MEDIO[p.medio] ?? p.medio}</span>
+              <span>{ETIQUETA_MEDIO[p.medio]}</span>
               <span className="font-semibold">{formatearBs(p.monto)}</span>
             </li>
           ))}
