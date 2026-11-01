@@ -113,3 +113,7 @@ from (values
   ('a0000000-0000-0000-0000-000000000003'::uuid, 'b0000000-0000-0000-0000-000000000004'::uuid, 'e0000000-0000-0000-0000-000000000007'::uuid, 35.250::numeric, 38.4::numeric),
   ('a0000000-0000-0000-0000-000000000003'::uuid, 'b0000000-0000-0000-0000-000000000004'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid, 18.5::numeric, 27::numeric)
 ) as p (negocio_id, ubicacion_id, producto_id, cantidad, costo);
+
+-- Clientes de prueba (ficticios), uno por negocio de tienda.
+insert into public.clientes (id, negocio_id, nombre, ci_nit, telefono, direccion) values
+  ('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Cliente Demo', '0000001', '70000001', 'Calle Ficticia 1');
