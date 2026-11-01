@@ -7,6 +7,8 @@ export const CLAVE = "Prueba-ERP-2026";
 export const CUENTAS = {
   dueno: "dueno@erp.test",
   vendedor: "vendedor.tienda@erp.test",
+  encargadoTienda: "encargado.tienda@erp.test",
+  encargadoLavanderia: "encargado.lavanderia@erp.test",
   multi: "multi@erp.test",
   // Solo la usa la prueba de cuenta desactivada: nadie más debe depender de ella.
   contador: "contador.tienda@erp.test",

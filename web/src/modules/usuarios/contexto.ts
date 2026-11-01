@@ -53,3 +53,12 @@ export const exigirPanel = cache(async (): Promise<Contexto & { activo: NegocioU
   if (!tieneAccesoPanel(contexto.permisos)) redirect("/pos");
   return { ...contexto, activo: contexto.activo };
 });
+
+// Guarda de una página que exige un permiso concreto. Sin él, vuelve al inicio del panel.
+export async function exigirPermiso(
+  permiso: string,
+): Promise<Contexto & { activo: NegocioUsuario }> {
+  const contexto = await exigirPanel();
+  if (!contexto.permisos.includes(permiso)) redirect("/panel");
+  return contexto;
+}

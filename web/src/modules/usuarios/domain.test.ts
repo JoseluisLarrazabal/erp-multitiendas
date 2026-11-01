@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  accionesDeFila,
+  codigoDeMensaje,
   destinoInicial,
   elegirNegocioActivo,
+  MENSAJES_ERROR,
+  mensajeDeError,
+  rolesOfrecidos,
   tieneAccesoPanel,
+  type FilaUsuario,
   type NegocioUsuario,
 } from "./domain";
 
@@ -32,5 +38,59 @@ describe("destinoInicial", () => {
   it("manda al POS al resto y a sin-acceso sin negocio", () => {
     expect(destinoInicial(a, ["vender", "caja"])).toBe("/pos");
     expect(destinoInicial(null, [])).toBe("/sin-acceso");
+  });
+});
+
+const fila = (extra: Partial<FilaUsuario> = {}): FilaUsuario => ({
+  usuarioId: "u",
+  nombre: "Ana",
+  rol: "vendedor",
+  activo: true,
+  esYo: false,
+  puedeAdministrar: true,
+  ...extra,
+});
+
+describe("accionesDeFila", () => {
+  it("mi fila no tiene acciones", () => {
+    expect(Object.values(accionesDeFila(fila({ esYo: true }), true)).some(Boolean)).toBe(false);
+  });
+  it("una fila dueño no tiene acciones si no soy dueño", () => {
+    const f = fila({ rol: "dueno" });
+    expect(Object.values(accionesDeFila(f, false)).some(Boolean)).toBe(false);
+    expect(accionesDeFila(f, true).quitar).toBe(true);
+  });
+  it("desactivar y reactivar dependen del estado y de puede_administrar_cuenta", () => {
+    expect(accionesDeFila(fila(), false)).toMatchObject({ desactivar: true, reactivar: false });
+    expect(accionesDeFila(fila({ activo: false }), false)).toMatchObject({
+      desactivar: false,
+      reactivar: true,
+    });
+    expect(accionesDeFila(fila({ puedeAdministrar: false }), false)).toMatchObject({
+      cambiarRol: true,
+      desactivar: false,
+      reactivar: false,
+    });
+  });
+});
+
+describe("rolesOfrecidos", () => {
+  const roles = ["empleado", "dueno", "encargado"];
+  it("ofrece dueno solo a un dueño y respeta el orden", () => {
+    expect(rolesOfrecidos(roles, false)).toEqual(["encargado", "empleado"]);
+    expect(rolesOfrecidos(roles, true)).toEqual(["dueno", "encargado", "empleado"]);
+  });
+});
+
+describe("errores ERP_*", () => {
+  it("todo código traducible tiene mensaje en español y lo desconocido cae al genérico", () => {
+    for (const c of Object.keys(MENSAJES_ERROR)) expect(mensajeDeError(c)).not.toBe("");
+    expect(mensajeDeError("ERP_CORREO_EXISTE")).toMatch(/correo/);
+    expect(mensajeDeError("ERP_NUEVO")).toBe(MENSAJES_ERROR.ERP_INTERNO);
+    expect(mensajeDeError(undefined)).toBe(MENSAJES_ERROR.ERP_INTERNO);
+  });
+  it("extrae el código del texto de Postgres", () => {
+    expect(codigoDeMensaje("ERP_PREFIJO_DUPLICADO")).toBe("ERP_PREFIJO_DUPLICADO");
+    expect(codigoDeMensaje("otra cosa")).toBeUndefined();
   });
 });

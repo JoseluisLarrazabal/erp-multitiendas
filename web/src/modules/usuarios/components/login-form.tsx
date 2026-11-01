@@ -1,7 +1,7 @@
 "use client";
 
 import { navegarA } from "@/lib/navegar";
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,15 @@ import { createClient } from "@/lib/supabase/browser";
 import { ERROR_CONEXION, ERROR_CREDENCIALES, mensajeErrorLogin } from "../login";
 import { loginSchema } from "../schemas";
 
+const sinSuscripcion = () => () => {};
+
 export function LoginForm() {
+  // false en el servidor y durante la hidratación, true después: enviar antes haría un POST nativo a /login.
+  const hidratado = useSyncExternalStore(
+    sinSuscripcion,
+    () => true,
+    () => false,
+  );
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const invalido = error !== null;
@@ -45,7 +53,7 @@ export function LoginForm() {
   }
 
   return (
-    // method=post: si se envía antes de hidratar, que las credenciales no viajen en la URL.
+    // method=post como red de seguridad: con el botón deshabilitado hasta hidratar, Enter tampoco envía.
     <form method="post" onSubmit={(e) => void enviar(e)} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="correo">Correo</Label>
@@ -77,7 +85,7 @@ export function LoginForm() {
       <p id="login-error" role="alert" className="text-destructive min-h-5 text-sm">
         {error}
       </p>
-      <Button type="submit" size="lg" className="h-10 text-sm" disabled={enviando}>
+      <Button type="submit" size="lg" className="h-10 text-sm" disabled={enviando || !hidratado}>
         {enviando && <Loader2 className="animate-spin" aria-hidden />}
         {enviando ? "Ingresando…" : "Ingresar"}
       </Button>

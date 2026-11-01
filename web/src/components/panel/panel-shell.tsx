@@ -10,10 +10,11 @@ import { ITEMS, PanelNav } from "./panel-nav";
 type Props = {
   negocio: React.ReactNode;
   usuario: React.ReactNode;
+  permisos: readonly string[];
   children: React.ReactNode;
 };
 
-export function PanelShell({ negocio, usuario, children }: Props) {
+export function PanelShell({ negocio, usuario, permisos, children }: Props) {
   const [abierto, setAbierto] = useState(false);
   const ruta = usePathname();
   const titulo = ITEMS.find((i) => i.href === ruta)?.etiqueta ?? "Panel";
@@ -93,7 +94,7 @@ export function PanelShell({ negocio, usuario, children }: Props) {
           </Button>
         </div>
         {negocio}
-        <PanelNav alNavegar={() => setAbierto(false)} />
+        <PanelNav permisos={permisos} alNavegar={() => setAbierto(false)} />
         <div className="mt-auto flex flex-col gap-3">
           {/* <a>, no next/link: ir a /pos con navegación suave dejaría el service worker mal enlazado. */}
           <a

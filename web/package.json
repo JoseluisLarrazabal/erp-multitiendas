@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integracion": "vitest run -c vitest.integracion.config.ts",
     "test:e2e": "playwright test",
     "db:start": "supabase start --workdir ..",
     "db:stop": "supabase stop --workdir ..",

@@ -152,6 +152,9 @@ isOneToOne: false
 "puede_administrar_cuenta":
 { Args: { "p_usuario_id": string }; Returns: boolean
                            },
+"puede_asignar_rol":
+{ Args: { "p_negocio_id": string,"p_rol": string }; Returns: boolean
+                           },
 "quitar_usuario":
 { Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: undefined
                            },

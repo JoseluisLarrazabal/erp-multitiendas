@@ -98,15 +98,23 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
   - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
   - **Pendiente cliente:** precios, y preguntas P-01 a P-17 del SRS.
-- **Fase 0 en curso (desde 2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Todo local, sin proyectos en Supabase
-  ni Vercel. El prototipo `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como
-  mapa de módulos y referencia visual.
+- **Fase 0 cerrada (2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Hito cumplido: login real, RLS probado y CI
+  verde. Hecha en una sesión; la estimación era 3 días. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
+  `sistema-de-gestion-multinacional/` NO se pule: es una maqueta estática y queda solo como mapa de módulos y
+  referencia visual.
+  - **Próximo:** fase 1 de `docs/roadmap.md`. La importación necesita precios de Lider y P-01 a P-05; catálogo, kardex y
+    tipo de cambio no.
+  - **No verificado:** Safari, Firefox, Vercel, equipos del cliente, JWT asimétrico en `getClaims`, reintento de
+    `error.tsx`, y vacío de dispositivos. Foco del menú móvil con reintento por frames, sin causa raíz.
+  - **Riesgo:** dos dueños que se desactivan a la vez pueden dejar el negocio sin dueño; se recupera con `service_role`.
+    CI usa cerca de 25 logins de los 30 por 5 minutos que permite Auth local.
   - PR #24 hecho: `web/`, Supabase local en puertos 54420-54429 y CI de 8 pasos.
   - PR #26 hecho: 6 tablas, matriz de permisos, RLS de solo lectura y RPC de usuarios y dispositivos. Usuarios de prueba
     en `supabase/seed.sql`.
   - PR #25 hecho: spike de service worker, `@serwist/turbopack` sirve. Resultado en `docs/stack.md`.
-  - Login, proxy, shell del panel y selector de negocio. Login, logout y cambio de negocio corren en el navegador, sin
-    server actions (`docs/plan-fase-0.md`). Falta PR 4: `admin-usuarios` y pantallas de usuarios y dispositivos.
+  - PR #27 hecho: login, proxy, shell del panel y selector de negocio. Login, logout y cambio de negocio corren en el
+    navegador, sin server actions (`docs/plan-fase-0.md`).
+  - Edge Function `admin-usuarios`, pantallas de usuarios y dispositivos, integración en CI.
   - `[auth.email] enable_signup` debe quedar en `true`: en `false` apaga el login por correo. El registro público lo
     cierra `[auth] enable_signup = false`. Autorizado por el CTO el 2026-11-01. Repetir en producción.
   - Codex: no verificado en esta fase.
