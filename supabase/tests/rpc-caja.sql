@@ -135,10 +135,10 @@ select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select public.cerrar_caja(pg_temp.i('S1'), 99.75)$$, 'P0001', 'ERP_SIN_PERMISO', 'otro negocio no cierra');
 select pg_temp.como(pg_temp.i('v'));
 select throws_ok($$select public.cerrar_caja(pg_temp.i('S1'), -1)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'contado negativo');
-select is(public.cerrar_caja(pg_temp.i('S1'), 90), '{"monto_esperado": 99.75, "diferencia": -9.75}'::jsonb, 'esperado con ingresos, gastos y retiros; faltante');
+select is(public.cerrar_caja(pg_temp.i('S1'), 90), '{"monto_esperado": 99.75, "diferencia": -9.75, "total_qr": 0}'::jsonb, 'esperado con ingresos, gastos y retiros; faltante');
 select is((select monto_contado || '/' || monto_esperado || '/' || diferencia from public.caja_sesiones where id = pg_temp.i('S1')), '90.00/99.75/-9.75', 'guardado en la sesión');
 select ok((select cerrada_en is not null and usuario_cierre = pg_temp.i('v') from public.caja_sesiones where id = pg_temp.i('S1')), 'hora y usuario de cierre');
-select is(public.cerrar_caja(pg_temp.i('S1'), 90), '{"monto_esperado": 99.75, "diferencia": -9.75}'::jsonb, 'repetir con el mismo contado devuelve lo guardado');
+select is(public.cerrar_caja(pg_temp.i('S1'), 90), '{"monto_esperado": 99.75, "diferencia": -9.75, "total_qr": 0}'::jsonb, 'repetir con el mismo contado devuelve lo guardado');
 select throws_ok($$select public.cerrar_caja(pg_temp.i('S1'), 91)$$, 'P0001', 'ERP_CAJA_CERRADA', 'repetir con otro contado');
 select ok((select s.cerrada_en >= max(m.created_at) from public.caja_sesiones s join public.caja_movimientos m on m.sesion_id = s.id
   where s.id = pg_temp.i('S1') group by s.cerrada_en), 'cerrada_en no es anterior a sus movimientos');
@@ -150,7 +150,7 @@ select lives_ok($$select pg_temp.abrir('S4', 'T', 'D1', 10)$$, 'tras cerrar, el 
 -- DB-20: las sesiones de un negocio no afectan a las de otro
 select pg_temp.como(pg_temp.i('x'));
 select lives_ok($$select pg_temp.abrir('S5', 'L', 'DL', 500)$$, 'L abre su caja mientras T tiene sesiones');
-select is(public.cerrar_caja(pg_temp.i('S5'), 500), '{"monto_esperado": 500, "diferencia": 0}'::jsonb, 'cierre de L sin efecto de T');
+select is(public.cerrar_caja(pg_temp.i('S5'), 500), '{"monto_esperado": 500, "diferencia": 0, "total_qr": 0}'::jsonb, 'cierre de L sin efecto de T');
 select is((select count(*) from public.caja_sesiones)::integer, 1, 'x solo ve las sesiones de L');
 select pg_temp.como(pg_temp.i('d'));
 select is((select count(*) from public.caja_sesiones where cerrada_en is null)::integer, 2, 'T conserva sus 2 sesiones abiertas (S3, S4); la de L ya cerró');

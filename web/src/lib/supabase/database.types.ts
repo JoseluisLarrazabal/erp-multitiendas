@@ -205,16 +205,80 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     }
                   ]
-                },"dispositivos": {
+                },"devolucion_items": {
                   Row: {
-                    "created_at": string,"id": string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string
+                    "cantidad": number,"devolucion_id": string,"id": string,"monto": number,"negocio_id": string,"venta_item_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string
+                    "cantidad": number,"devolucion_id": string,"id"?: string,"monto": number,"negocio_id": string,"venta_item_id": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"negocio_id"?: string,"nombre"?: string,"prefijo"?: string,"ubicacion_id"?: string
+                    "cantidad"?: number,"devolucion_id"?: string,"id"?: string,"monto"?: number,"negocio_id"?: string,"venta_item_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "devolucion_items_negocio_id_devolucion_id_fkey"
+      columns: ["negocio_id","devolucion_id"]
+isOneToOne: false
+      referencedRelation: "devoluciones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "devolucion_items_negocio_id_venta_item_id_fkey"
+      columns: ["negocio_id","venta_item_id"]
+isOneToOne: false
+      referencedRelation: "venta_items"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"devoluciones": {
+                  Row: {
+                    "caja_sesion_id": string,"created_at": string,"dispositivo_id": string,"huella": string,"id": string,"monto": number,"monto_efectivo": number,"motivo": string,"negocio_id": string,"usuario_id": string,"venta_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "caja_sesion_id": string,"created_at"?: string,"dispositivo_id": string,"huella": string,"id": string,"monto": number,"monto_efectivo": number,"motivo": string,"negocio_id": string,"usuario_id": string,"venta_id": string
+                  }
+                  Update: {
+                    "caja_sesion_id"?: string,"created_at"?: string,"dispositivo_id"?: string,"huella"?: string,"id"?: string,"monto"?: number,"monto_efectivo"?: number,"motivo"?: string,"negocio_id"?: string,"usuario_id"?: string,"venta_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "devoluciones_negocio_id_caja_sesion_id_fkey"
+      columns: ["negocio_id","caja_sesion_id"]
+isOneToOne: false
+      referencedRelation: "caja_sesiones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "devoluciones_negocio_id_dispositivo_id_fkey"
+      columns: ["negocio_id","dispositivo_id"]
+isOneToOne: false
+      referencedRelation: "dispositivos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "devoluciones_negocio_id_venta_id_fkey"
+      columns: ["negocio_id","venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "devoluciones_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"dispositivos": {
+                  Row: {
+                    "created_at": string,"id": string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string,"ultimo_numero": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"negocio_id": string,"nombre": string,"prefijo": string,"ubicacion_id": string,"ultimo_numero"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"negocio_id"?: string,"nombre"?: string,"prefijo"?: string,"ubicacion_id"?: string,"ultimo_numero"?: number
                   }
                   Relationships: [
                     {
@@ -525,6 +589,132 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"venta_items": {
+                  Row: {
+                    "cantidad": number,"costo_unitario": number | null,"descuento": number,"descuento_venta": number,"id": string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor": number,"precio_unitario": number,"producto_id": string,"serie_id": string | null,"total_linea": number,"venta_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor": number,"precio_unitario": number,"producto_id": string,"serie_id"?: string | null,"total_linea": number,"venta_id": string
+                  }
+                  Update: {
+                    "cantidad"?: number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea"?: number,"lista"?: string,"negocio_id"?: string,"precio_lista_servidor"?: number,"precio_unitario"?: number,"producto_id"?: string,"serie_id"?: string | null,"total_linea"?: number,"venta_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "venta_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "venta_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "venta_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "venta_items_negocio_id_venta_id_fkey"
+      columns: ["negocio_id","venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "venta_items_serie_id_fkey"
+      columns: ["serie_id"]
+isOneToOne: false
+      referencedRelation: "series"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"venta_pagos": {
+                  Row: {
+                    "id": string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string
+                  }
+                  Update: {
+                    "id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"venta_id"?: string,"verificacion"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "venta_pagos_negocio_id_venta_id_fkey"
+      columns: ["negocio_id","venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"ventas": {
+                  Row: {
+                    "anulada_en": string | null,"anulada_por": string | null,"caja_sesion_id": string,"cliente_id": string | null,"condicion": string,"creada_en_cliente": string,"descuento": number,"dispositivo_id": string,"enviada_por": string,"estado": string,"huella": string,"id": string,"motivo_anulacion": string | null,"negocio_id": string,"numero": string,"origen": string,"recibida_en": string,"subtotal": number,"tipo_cambio": number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id": string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente": string,"descuento"?: number,"dispositivo_id": string,"enviada_por": string,"estado"?: string,"huella": string,"id": string,"motivo_anulacion"?: string | null,"negocio_id": string,"numero": string,"origen": string,"recibida_en"?: string,"subtotal": number,"tipo_cambio"?: number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
+                  }
+                  Update: {
+                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id"?: string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente"?: string,"descuento"?: number,"dispositivo_id"?: string,"enviada_por"?: string,"estado"?: string,"huella"?: string,"id"?: string,"motivo_anulacion"?: string | null,"negocio_id"?: string,"numero"?: string,"origen"?: string,"recibida_en"?: string,"subtotal"?: number,"tipo_cambio"?: number | null,"total"?: number,"ubicacion_id"?: string,"vendedor_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ventas_anulada_por_fkey"
+      columns: ["anulada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ventas_enviada_por_fkey"
+      columns: ["enviada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ventas_negocio_id_caja_sesion_id_fkey"
+      columns: ["negocio_id","caja_sesion_id"]
+isOneToOne: false
+      referencedRelation: "caja_sesiones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ventas_negocio_id_cliente_id_fkey"
+      columns: ["negocio_id","cliente_id"]
+isOneToOne: false
+      referencedRelation: "clientes"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ventas_negocio_id_dispositivo_id_fkey"
+      columns: ["negocio_id","dispositivo_id"]
+isOneToOne: false
+      referencedRelation: "dispositivos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ventas_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ventas_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ventas_vendedor_id_fkey"
+      columns: ["vendedor_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -597,6 +787,9 @@ isOneToOne: false
 "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
+"anular_venta":
+{ Args: { "p_motivo": string,"p_venta_id": string }; Returns: Json
+                           },
 "asignar_foto_producto":
 { Args: { "p_foto_path": string,"p_producto_id": string }; Returns: undefined
                            },
@@ -608,6 +801,9 @@ isOneToOne: false
                            },
 "bloquear_series":
 { Args: { "p_cantidad": number,"p_ids": (string)[],"p_negocio_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: undefined
+                           },
+"bloquear_stock":
+{ Args: { "p_negocio_id": string,"p_producto_ids": (string)[],"p_ubicacion_id": string }; Returns: undefined
                            },
 "caja_sesion_abierta":
 { Args: { "p_dispositivo_id": string }; Returns: {
@@ -629,6 +825,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"catalogo_pos":
+{ Args: { "p_ubicacion_id": string }; Returns: Json
+                           },
 "cerrar_caja":
 { Args: { "p_monto_contado": number,"p_sesion_id": string }; Returns: Json
                            },
@@ -643,6 +842,9 @@ isOneToOne: false
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
                            },
+"devolver_venta":
+{ Args: { "p_devolucion": Json }; Returns: Json
+                           },
 "efectivo_esperado":
 { Args: { "p_sesion_id": string }; Returns: number
                            },
@@ -651,6 +853,9 @@ isOneToOne: false
                            },
 "fijar_costos":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string }; Returns: number
+                           },
+"fijar_tope_descuento":
+{ Args: { "p_negocio_id": string,"p_tope": number }; Returns: number
                            },
 "guardar_categoria":
 { Args: { "p_id": string,"p_negocio_id": string,"p_nombre": string }; Returns: string
@@ -674,6 +879,21 @@ isOneToOne: false
                            },
 "negocio_de_ruta_foto":
 { Args: { "p_ruta": string }; Returns: string
+                           },
+"payload_claves":
+{ Args: { "p": Json,"p_claves": (string)[] }; Returns: undefined
+                           },
+"payload_numero":
+{ Args: { "p": Json,"p_clave": string,"p_dec": number,"p_defecto"?: number }; Returns: number
+                           },
+"payload_texto":
+{ Args: { "p": Json,"p_clave": string,"p_max": number }; Returns: string
+                           },
+"payload_timestamp":
+{ Args: { "p": Json,"p_clave": string }; Returns: string
+                           },
+"payload_uuid":
+{ Args: { "p": Json,"p_clave": string,"p_nulo": boolean }; Returns: string
                            },
 "precio_bs":
 { Args: { "p_lista": string,"p_producto_id": string }; Returns: number
@@ -716,6 +936,15 @@ isOneToOne: false
 "registrar_tipo_cambio":
 { Args: { "p_negocio_id": string,"p_valor": number }; Returns: string
                            },
+"registrar_venta":
+{ Args: { "p_venta": Json }; Returns: Json
+                           },
+"resolver_devolucion_existente":
+{ Args: { "p_dev": Omit<Database["public"]['Tables']["devoluciones"]['Row'], Database["public"]['Tables']["devoluciones"]['ComputedFields']>,"p_huella": string,"p_negocio_id": string }; Returns: Json
+                           },
+"resolver_venta_existente":
+{ Args: { "p_huella": string,"p_negocio_id": string,"p_venta": Omit<Database["public"]['Tables']["ventas"]['Row'], Database["public"]['Tables']["ventas"]['ComputedFields']> }; Returns: Json
+                           },
 "stock_inconsistente":
 { Args: { "p_negocio_id": string }; Returns: {
               "cantidad_kardex": number,"cantidad_stock": number,"producto_id": string,"ubicacion_id": string
@@ -723,6 +952,9 @@ isOneToOne: false
                            },
 "tiene_permiso":
 { Args: { "p_negocio_id": string,"p_permiso": string }; Returns: boolean
+                           },
+"total_qr_sesion":
+{ Args: { "p_sesion_id": string }; Returns: number
                            },
 "trasladar_stock":
 { Args: { "p_cantidad": number,"p_destino_id": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_origen_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[] }; Returns: string
