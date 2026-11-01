@@ -101,6 +101,8 @@ Sin bake-off: `impeccable`, tokens existentes y `lucide-react`. Gate `web-design
 - Idempotente: `(negocio_id, codigo)` y un índice único parcial que admite un solo `inicial` por producto y ubicación.
 - Barras repetidas: conserva la primera fila y deja vacías las demás, con aviso en el reporte, hasta que el cliente decida.
 - Producción se ejecuta en la fase 6.
+- Escribe con `service_role` directo sobre tablas (las RPC exigen `auth.uid()`). Migración `20261101170000_importacion_service_role`: solo `select` e `insert` donde hace falta; `stock` y `auditoria` los llenan los triggers, con `usuario_id` null.
+- Reglas y resultado de la corrida local: `docs/migracion-datos.md`.
 
 ## Trampas
 
@@ -114,6 +116,7 @@ Sin bake-off: `impeccable`, tokens existentes y `lucide-react`. Gate `web-design
 
 ## Fuera de esta fase
 
+- **Fotos de la planilla (pendiente):** el xlsx trae 292 embebidas (filas 5 a 296). Extraerlas y subirlas a Storage queda para un PR aparte; la importación no las toca.
 - `catalogo_pos` y búsqueda en POS: fases 2 y 3. E2E-08 también.
 - Pantalla de auditoría y reporte de reconciliación: fase 5.
 - CRUD de ubicaciones: se crean por script y seed. Son 2 en Lider y 1 en los demás.
