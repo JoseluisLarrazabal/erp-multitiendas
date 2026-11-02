@@ -156,13 +156,19 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     FIFO por producto en el negocio (una entrada sin lote o un traslado lo rompían por ubicación); `guardar_producto`
     conserva el peso si el form no lo manda. Descartado: limitar el select de `lotes` por permiso (código y
     vencimiento no son sensibles). pgTAP 1467, E2E 141. Producción sin sesión OK. Codex: no verificado (sin cuota).
-  - PR 2 `feat/frial-ui`: entrada con lote y vencimiento (solo frial, sin series, fecha mínima hoy en La Paz),
+  - PR 2 `feat/frial-ui` (#57): entrada con lote y vencimiento (solo frial, sin series, fecha mínima hoy en La Paz),
     `/panel/inventario/vencimientos` (7/15/30 días, "Entró en" porque el saldo es del negocio), peso del paquete en el
     producto, merma por defecto en la salida del frial, E2E-10 y `frial.spec.ts` (11 casos). Migración
     `20261102130000_frial_ajustes.sql`: lotes solo en frial y `unidad` en `lotes_por_vencer`. Descartado: rotar la
     operación al editar lote tras un fallo (mismo comportamiento que el resto de formularios de inventario).
     pgTAP 1469, Vitest 330, E2E 146. **No verificado:** pantalla en móvil real y lector de pantalla.
-  - **Próximo:** PR 3 `feat/reportes-datos`.
+  - PR 3 `feat/reportes-datos`: RPC `reporte_ventas` (día, vendedor, producto, categoría, marca; ganancia con foto del
+    costo), `reporte_stock` (valor, stock bajo, sin movimiento por última salida del kardex) y `reporte_caja` (una fila
+    por sesión vía `resumen_caja`). Fecha de venta = `recibida_en` en La Paz (una venta sin conexión cuenta el día que
+    llegó). Devoluciones restan en su fecha. Servicios con costo 0; productos sin costo quedan fuera de la ganancia y se
+    cuentan. Totales de caja suman esperado/contado/diferencia solo de sesiones cerradas. Límite aceptado: más de 5.000
+    productos activos da `ERP_LOTE_GRANDE` en stock (Lider tiene 597). pgTAP 1541.
+  - **Próximo:** PR 4 `feat/reportes-panel`.
 - **Fase 4 cerrada (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.

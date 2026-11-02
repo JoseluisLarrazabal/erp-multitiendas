@@ -1095,6 +1095,15 @@ isOneToOne: false
 "registrar_venta":
 { Args: { "p_offline"?: Json,"p_venta": Json }; Returns: Json
                            },
+"reporte_caja":
+{ Args: { "p_desde": string,"p_hasta": string,"p_negocio_id": string }; Returns: Json
+                           },
+"reporte_stock":
+{ Args: { "p_dias_sin_movimiento"?: number,"p_negocio_id": string }; Returns: Json
+                           },
+"reporte_ventas":
+{ Args: { "p_agrupar": string,"p_desde": string,"p_hasta": string,"p_negocio_id": string }; Returns: Json
+                           },
 "resolver_devolucion_existente":
 { Args: { "p_dev": Omit<Database["public"]['Tables']["devoluciones"]['Row'], Database["public"]['Tables']["devoluciones"]['ComputedFields']>,"p_huella": string,"p_negocio_id": string }; Returns: Json
                            },
