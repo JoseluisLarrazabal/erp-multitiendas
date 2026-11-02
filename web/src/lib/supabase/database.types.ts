@@ -301,6 +301,44 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     }
                   ]
+                },"lotes": {
+                  Row: {
+                    "cantidad": number,"codigo": string,"created_at": string,"id": string,"movimiento_id": string,"negocio_id": string,"producto_id": string,"ubicacion_id": string,"usuario_id": string | null,"vence": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"codigo": string,"created_at"?: string,"id"?: string,"movimiento_id": string,"negocio_id": string,"producto_id": string,"ubicacion_id": string,"usuario_id"?: string | null,"vence": string
+                  }
+                  Update: {
+                    "cantidad"?: number,"codigo"?: string,"created_at"?: string,"id"?: string,"movimiento_id"?: string,"negocio_id"?: string,"producto_id"?: string,"ubicacion_id"?: string,"usuario_id"?: string | null,"vence"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lotes_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "lotes_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "lotes_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "lotes_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"movimientos_inventario": {
                   Row: {
                     "cantidad": number,"costo_unitario": number | null,"created_at": string,"id": string,"motivo": string | null,"negocio_id": string,"producto_id": string,"ref_id": string | null,"ref_tipo": string | null,"tipo": string,"ubicacion_id": string,"usuario_id": string | null
@@ -485,14 +523,14 @@ isOneToOne: false
                   ]
                 },"productos": {
                   Row: {
-                    "activo": boolean,"categoria_id": string | null,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"created_at": string,"foto_path": string | null,"garantia_meses": number | null,"id": string,"marca": string | null,"modelo": string | null,"negocio_id": string,"nombre": string,"stock_minimo": number | null,"tipo": string,"unidad": string,"updated_at": string
+                    "activo": boolean,"categoria_id": string | null,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"created_at": string,"foto_path": string | null,"garantia_meses": number | null,"id": string,"marca": string | null,"modelo": string | null,"negocio_id": string,"nombre": string,"peso_paquete_kg": number | null,"stock_minimo": number | null,"tipo": string,"unidad": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "activo"?: boolean,"categoria_id"?: string | null,"codigo": string,"codigo_barras"?: string | null,"controla_serie"?: boolean,"created_at"?: string,"foto_path"?: string | null,"garantia_meses"?: number | null,"id"?: string,"marca"?: string | null,"modelo"?: string | null,"negocio_id": string,"nombre": string,"stock_minimo"?: number | null,"tipo": string,"unidad"?: string,"updated_at"?: string
+                    "activo"?: boolean,"categoria_id"?: string | null,"codigo": string,"codigo_barras"?: string | null,"controla_serie"?: boolean,"created_at"?: string,"foto_path"?: string | null,"garantia_meses"?: number | null,"id"?: string,"marca"?: string | null,"modelo"?: string | null,"negocio_id": string,"nombre": string,"peso_paquete_kg"?: number | null,"stock_minimo"?: number | null,"tipo": string,"unidad"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "activo"?: boolean,"categoria_id"?: string | null,"codigo"?: string,"codigo_barras"?: string | null,"controla_serie"?: boolean,"created_at"?: string,"foto_path"?: string | null,"garantia_meses"?: number | null,"id"?: string,"marca"?: string | null,"modelo"?: string | null,"negocio_id"?: string,"nombre"?: string,"stock_minimo"?: number | null,"tipo"?: string,"unidad"?: string,"updated_at"?: string
+                    "activo"?: boolean,"categoria_id"?: string | null,"codigo"?: string,"codigo_barras"?: string | null,"controla_serie"?: boolean,"created_at"?: string,"foto_path"?: string | null,"garantia_meses"?: number | null,"id"?: string,"marca"?: string | null,"modelo"?: string | null,"negocio_id"?: string,"nombre"?: string,"peso_paquete_kg"?: number | null,"stock_minimo"?: number | null,"tipo"?: string,"unidad"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -848,7 +886,7 @@ isOneToOne: false
                   ]
                 },"productos_lista": {
                   Row: {
-                    "activo": boolean,"categoria_id": string | null,"categoria_nombre": string | null,"codigo": string,"codigo_barras": string | null,"con_precio": boolean | null,"foto_path": string | null,"id": string,"marca": string | null,"modelo": string | null,"moneda_principal": string | null,"monto_principal": number | null,"negocio_id": string,"nombre": string,"principal_bs": number | null,"tipo": string,"unidad": string
+                    "activo": boolean,"categoria_id": string | null,"categoria_nombre": string | null,"codigo": string,"codigo_barras": string | null,"con_precio": boolean | null,"foto_path": string | null,"id": string,"marca": string | null,"modelo": string | null,"moneda_principal": string | null,"monto_principal": number | null,"negocio_id": string,"nombre": string,"peso_paquete_kg": number | null,"principal_bs": number | null,"tipo": string,"unidad": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -976,6 +1014,9 @@ isOneToOne: false
               "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
             }[]
                            },
+"lotes_por_vencer":
+{ Args: { "p_dias"?: number,"p_negocio_id": string }; Returns: Json
+                           },
 "mis_negocios":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
@@ -1035,6 +1076,9 @@ isOneToOne: false
                            },
 "registrar_entrada":
 { Args: { "p_cantidad": number,"p_costo_unitario": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
+                           },
+"registrar_entrada_lote":
+{ Args: { "p_cantidad": number,"p_costo_unitario": number,"p_lote": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string,"p_vence": string }; Returns: string
                            },
 "registrar_movimiento_caja":
 { Args: { "p_id": string,"p_monto": number,"p_motivo": string,"p_offline"?: Json,"p_sesion_id": string,"p_tipo": string }; Returns: string
@@ -1098,6 +1142,7 @@ isOneToOne: false
 "modelo": string | null,
 "negocio_id": string,
 "nombre": string,
+"peso_paquete_kg": number | null,
 "stock_minimo": number | null,
 "tipo": string,
 "unidad": string,

@@ -49,6 +49,7 @@ export const ETIQUETA_MOVIMIENTO: Record<string, string> = {
   anulacion_venta: "Anulación de venta",
   ajuste: "Ajuste",
   danado: "Dañado",
+  merma: "Merma",
   cambio_garantia: "Cambio por garantía",
   devolucion_cliente: "Devolución de cliente",
   devolucion_proveedor: "Devolución a proveedor",
@@ -62,11 +63,12 @@ export const ETIQUETA_MOVIMIENTO: Record<string, string> = {
 
 export const etiquetaMovimiento = (tipo: string) => ETIQUETA_MOVIMIENTO[tipo] ?? tipo;
 
-export type TipoSalida = "ajuste" | "danado" | "cambio_garantia" | "devolucion_proveedor";
+export type TipoSalida = "ajuste" | "danado" | "merma" | "cambio_garantia" | "devolucion_proveedor";
 
 export const TIPOS_SALIDA: { valor: TipoSalida; etiqueta: string }[] = [
   { valor: "ajuste", etiqueta: "Ajuste (con signo)" },
   { valor: "danado", etiqueta: "Dañado" },
+  { valor: "merma", etiqueta: "Merma" },
   { valor: "cambio_garantia", etiqueta: "Cambio por garantía" },
   { valor: "devolucion_proveedor", etiqueta: "Devolución a proveedor" },
 ];
