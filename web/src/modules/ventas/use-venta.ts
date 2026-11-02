@@ -21,16 +21,21 @@ import type { DatosNegocio, Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
 import { useAtajos } from "./use-atajos";
 import { useCatalogo } from "./use-catalogo";
+import type { ColaPos } from "./use-cola";
 import { useEnvio } from "./use-envio";
 import { useFocoVenta } from "./use-foco-venta";
 import { useVendedor } from "./use-vendedor";
 import type { NotaVenta } from "./venta";
 
 // Lo que PosApp necesita saber de la venta para frenar un cambio de negocio.
-export type GuardaVenta = { lineas: () => number; hayPendiente: () => boolean };
+export type GuardaVenta = { lineas: () => number; hayPendiente: () => Promise<boolean> };
 
 export type OpcionesVenta = {
   negocioId: string;
+  // Motor y estado de la cola, montados por encima de la venta (ver useColaPos).
+  cola: ColaPos;
+  // La sesión caducó o es de otra cuenta: no se cobra.
+  sesionCaducada: boolean;
   tipoNegocio: string;
   negocio: DatosNegocio;
   equipo: Equipo;
@@ -44,8 +49,6 @@ export type OpcionesVenta = {
   registrarGuarda: (g: GuardaVenta) => void;
   // Un diálogo de fuera de la venta (cambio de negocio) está abierto: F2 y "/" no deben actuar.
   atajosBloqueados: boolean;
-  // Sesión caducada en la barra: no se envía, ni se descarta, ni se comprueba una venta en duda.
-  sesionCaducada: boolean;
 };
 
 // Estado y acciones de la venta en curso: catálogo, carrito, cliente, cobro y envío.
@@ -61,6 +64,8 @@ export function useVenta(o: OpcionesVenta) {
   const [cobrando, setCobrando] = useState(false);
   const [confirmandoEquipo, setConfirmandoEquipo] = useState(false);
   const [nota, setNota] = useState<NotaVenta | null>(null);
+  // La nota se entregó pero la venta aún no llegó al servidor (queda en la cola).
+  const [notaEnCola, setNotaEnCola] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [anuncio, setAnuncio] = useState("");
   const vendedor = useVendedor(o.usuarioId);
@@ -101,8 +106,9 @@ export function useVenta(o: OpcionesVenta) {
     setCobrando(false);
   }, [verificarCaja, equipo.id]);
   const alExito = useCallback(
-    (n: NotaVenta, items: VentaPayload["items"]) => {
+    (n: NotaVenta, items: VentaPayload["items"], enviada: boolean) => {
       setNota(n);
+      setNotaEnCola(!enviada);
       despachar({ tipo: "vaciar" });
       setDescuentoVentaTexto("");
       setCliente(null);
@@ -113,13 +119,16 @@ export function useVenta(o: OpcionesVenta) {
     [registrarVenta],
   );
   const envio = useEnvio({
+    negocioId,
+    cola: o.cola,
+    sesionCaducada: o.sesionCaducada,
     equipo,
     cajaId,
+    tipoCambio: catalogoHook.catalogo?.tipoCambio ?? null,
     alErrorPrecios,
     alCajaCerrada,
     alExito,
     usuarioId: o.usuarioId,
-    sesionCaducada: o.sesionCaducada,
   });
   const { hayPendiente, limpiarRechazo } = envio;
 
@@ -197,6 +206,7 @@ export function useVenta(o: OpcionesVenta) {
     confirmandoEquipo,
     setConfirmandoEquipo,
     nota,
+    notaEnCola,
     setNota,
     aviso,
     setAviso,
@@ -215,6 +225,9 @@ export function useVenta(o: OpcionesVenta) {
           clienteObligatorio,
           hayCliente: !!cliente,
         }),
-    bloqueado: hayPendiente(),
+    // El carrito no se edita mientras la venta viaja al servidor.
+    bloqueado: envio.estado.t === "enviando",
+    // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.
+    colaBloquea: o.cola.estado.bloqueaEquipo,
   };
 }

@@ -163,7 +163,7 @@ export async function ventasDeLaCaja(dispositivoId: string) {
   const cajaId = await sesionAbierta(dispositivoId);
   const r = await apiComo(
     "vendedor",
-    `ventas?select=id,numero,total,estado,cliente_id&caja_sesion_id=eq.${cajaId}`,
+    `ventas?select=id,numero,total,estado,cliente_id,origen&caja_sesion_id=eq.${cajaId}`,
   );
   return r.json as {
     id: string;
@@ -171,6 +171,7 @@ export async function ventasDeLaCaja(dispositivoId: string) {
     total: number;
     estado: string;
     cliente_id: string | null;
+    origen: string;
   }[];
 }
 

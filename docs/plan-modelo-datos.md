@@ -155,8 +155,8 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 ### Frial
 
 - Ventas por kg: ya cubiertas por `numeric(12,3)` y `unidad = kg`.
-- Lotes y despiece: **diferidos**. El contrato no los pide y el frial aún no abre. El modelo no los bloquea: se pueden
-  agregar como tablas nuevas que generen movimientos.
+- Lotes con vencimiento: entran en la fase 5 (RF-FRI-05, CTO 2026-11-01), como tablas nuevas que generen movimientos.
+- Despiece: **diferido**. El contrato no lo pide y el frial aún no abre.
 
 ### Crédito (Entrega B)
 

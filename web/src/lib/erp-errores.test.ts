@@ -15,6 +15,11 @@ describe("erp-errores", () => {
   });
   it("distingue fallo de red de un error de base", () => {
     expect(esFalloDeRed({ message: "TypeError: Failed to fetch", code: "" })).toBe(true);
+    // Lo que postgrest-js devuelve al abortar o vencer el tiempo (code vacío): la base pudo no enterarse.
+    expect(esFalloDeRed({ message: "AbortError: This operation was aborted", code: "" })).toBe(
+      true,
+    );
+    expect(esFalloDeRed({ message: "TimeoutError: signal timed out", code: "" })).toBe(true);
     expect(esFalloDeRed({ message: "syntax error", code: "42601" })).toBe(false);
     expect(esFalloDeRed({ message: "ERP_SIN_PERMISO", code: "P0001" })).toBe(false);
   });

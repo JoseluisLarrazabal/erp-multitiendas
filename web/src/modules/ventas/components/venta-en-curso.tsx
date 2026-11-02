@@ -24,7 +24,8 @@ export function VentaEnCurso({
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
 
-  if (v.nota) return <NotaVentaVista nota={v.nota} alNueva={() => v.setNota(null)} />;
+  if (v.nota)
+    return <NotaVentaVista nota={v.nota} enCola={v.notaEnCola} alNueva={() => v.setNota(null)} />;
 
   const totales = v.resumen.totales;
   return (
@@ -32,13 +33,15 @@ export function VentaEnCurso({
       <BarraEquipo
         equipo={equipo}
         cajaAbierta={!!cajaId}
-        pendiente={v.bloqueado}
+        pendiente={v.colaBloquea}
         alCambiarEquipo={() =>
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
         modo={verCaja ? "caja" : v.consulta ? "consulta" : "vender"}
         alCambiarModo={(m) => {
           setVerCaja(m === "caja");
+          // Antes de cerrar la caja se intenta enviar lo que haya en la cola.
+          if (m === "caja") opciones.cola.disparar(true);
           if (m !== "caja") v.setConsulta(m === "consulta");
         }}
       />
@@ -54,7 +57,8 @@ export function VentaEnCurso({
         <PanelCaja
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
-          ventaPendiente={v.bloqueado}
+          ventaPendiente={v.colaBloquea}
+          lecturaColaFallida={opciones.cola.estado.lecturaFallida}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}
           alYaCerrada={() => opciones.verificarCaja(equipo.id)}
           alVolver={() => setVerCaja(false)}
@@ -119,10 +123,8 @@ export function VentaEnCurso({
             envio.limpiarRechazo();
             v.setCobrando(false);
           }}
-          alReintentar={envio.reintentar}
-          alDescartar={envio.descartar}
           alConfirmar={(c) =>
-            envio.confirmar(v.resumen, {
+            void envio.confirmar(v.resumen, {
               clienteId: v.cliente?.id ?? null,
               descuentoVentaTexto: v.descuentoVentaTexto,
               efectivo: c.efectivo,

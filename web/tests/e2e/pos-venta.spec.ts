@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { apiComo, NEGOCIOS, rutaAuth } from "./helpers";
 import { corrida } from "./inventario-helpers";
@@ -16,7 +17,7 @@ import {
   venderApi,
   ventasDeLaCaja,
 } from "./pos-helpers";
-import { MAX_NUMERO_DUPLICADO } from "../../src/modules/ventas/use-envio";
+import { MAX_NUMERO_DUPLICADO } from "../../src/modules/ventas/domain";
 
 // E2E-04 y E2E-08 comparten archivo a propósito: el equipo C1 y su caja son únicos, y los archivos corren en paralelo.
 // Sesión guardada del vendedor (rol sin `descontar`, con `vender` y `caja`). Un solo equipo (C1) y una sola caja:
@@ -89,6 +90,10 @@ test("E2E-04: venta con conexión, pago mixto, nota y stock en base", async ({ p
 
   const nota = page.getByRole("article", { name: /Nota de venta C1-\d{6}/ });
   await expect(nota).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: /Venta C1-\d{6} registrada/ }),
+  ).toBeVisible();
+  await expect(page.getByText("guardada en este equipo")).toHaveCount(0);
   await expect(nota.getByText("Garantía: 6 meses")).toBeVisible();
   await expect(nota.getByText("TOTAL")).toBeVisible();
   await expect(nota.getByText("Bs 130,00").first()).toBeVisible();
@@ -129,13 +134,12 @@ test("E2E-04: venta con conexión, pago mixto, nota y stock en base", async ({ p
   await expect(page.getByText("El carrito está vacío.")).toBeVisible();
 });
 
-test("una falla de red conserva la venta y el reintento manda el mismo payload", async ({
+test("una falla de red deja la venta en la cola con su nota y el reenvío manda la misma venta con p_offline", async ({
   page,
 }) => {
   const a = await crearProductoConPrecio({ contado: 20, stock: 3 });
   await abrirCajaPorUI(page, "0");
-  await page.keyboard.type(a.codigo);
-  await page.keyboard.press("Enter");
+  await agregarPorCodigo(page, a.codigo);
 
   const cuerpos: string[] = [];
   let fallar = true;
@@ -148,21 +152,26 @@ test("una falla de red conserva la venta y el reintento manda el mismo payload",
     return route.continue();
   });
 
-  await page
-    .getByRole("button", { name: /^Cobrar/ })
-    .first()
-    .click();
-  const cobro = page.getByRole("alertdialog", { name: "Cobrar venta" });
-  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(cobro.getByRole("alert")).toContainText("Sin conexión");
-  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
+  await confirmarVenta(page);
+  // La venta ya se entregó al cliente: nota y aviso, sin diálogo de reintento ni de descarte.
+  await expect(notaVisible(page)).toBeVisible();
+  await expect(notaEnCola(page)).toBeVisible();
+  await expect(sinEnviar(page, 1)).toBeVisible();
   expect(await stockEn(a.id)).toBe(3);
-  await cobro.getByRole("button", { name: "Reintentar envío" }).click();
-  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
 
   expect(cuerpos).toHaveLength(2);
-  expect(cuerpos[1]).toBe(cuerpos[0]);
+  const [primero, reenvio] = cuerpos.map((c) => JSON.parse(c) as Record<string, unknown>);
+  expect(primero).not.toHaveProperty("p_offline");
+  expect(reenvio?.p_venta).toEqual(primero?.p_venta);
+  expect(reenvio?.p_offline).toMatchObject({
+    numero_impreso: (primero?.p_venta as { numero: string }).numero,
+  });
   expect(await stockEn(a.id)).toBe(2);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]?.origen).toBe("offline");
 });
 
 test("sin permiso de descuento el POS lo indica y no deja bajar del mínimo", async ({ page }) => {
@@ -234,6 +243,24 @@ test("consulta rápida muestra precios y stock sin tocar el carrito", async ({ p
 async function agregarPorCodigo(page: Page, codigo: string) {
   await page.keyboard.type(codigo);
   await page.keyboard.press("Enter");
+}
+
+// Vuelve la conexión: el motor de la cola reenvía lo pendiente sin esperar la espera del reintento.
+async function volverLaRed(page: Page) {
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+}
+const sinEnviar = (page: Page, n: number) =>
+  page.getByText(n === 1 ? "1 venta sin enviar" : `${n} ventas sin enviar`);
+const notaVisible = (page: Page) => page.getByRole("article", { name: /Nota de venta/ });
+// Con la venta en la cola, la nota no dice "registrada": aún no llegó al servidor.
+const notaEnCola = (page: Page) =>
+  page.getByRole("status").filter({
+    hasText: /Venta C1-\d{6} guardada en este equipo\. Se enviará al volver la conexión\./,
+  });
+
+async function confirmarVenta(page: Page) {
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
 }
 
 async function abrirCobro(page: Page) {
@@ -376,7 +403,7 @@ test("venta en kg con decimales: total y stock exactos en base", async ({ page }
   expect(await stockEn(a.id)).toBe(3.745);
 });
 
-test("envío en duda: el primer intento guarda pero la respuesta se corta; el segundo recibe un rechazo y no duplica", async ({
+test("respuesta perdida: la venta ya estaba guardada, el reenvío recibe un rechazo, se comprueba y no duplica", async ({
   page,
 }) => {
   const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
@@ -402,16 +429,19 @@ test("envío en duda: el primer intento guarda pero la respuesta se corta; el se
     });
   });
 
-  const cobro = await abrirCobro(page);
-  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible();
+  await expect(sinEnviar(page, 1)).toBeVisible();
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
-  await cobro.getByRole("button", { name: "Reintentar envío" }).click();
+  await volverLaRed(page);
 
-  // El rechazo con código de una venta en duda se comprueba contra la base: existe, así que es éxito, no error.
-  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+  // El rechazo con código de una venta en duda se comprueba contra la base: existe, así que sale de la cola sin error.
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Ventas rechazadas" })).toHaveCount(0);
   expect(llamadas).toBe(2);
-  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]?.origen).toBe("online");
   expect(await stockEn(a.id)).toBe(3);
 });
 
@@ -470,12 +500,11 @@ test("envío en duda con número duplicado: la venta ya se guardó, el reintento
     return route.fulfill({ status: 400, contentType: "application/json", body: cuerpoDuplicado });
   });
 
-  const cobro = await abrirCobro(page);
-  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
-  await cobro.getByRole("button", { name: "Reintentar envío" }).click();
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible();
+  await volverLaRed(page);
 
-  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
   expect(llamadas).toBe(2);
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
   expect(await stockEn(a.id)).toBe(3);
@@ -501,26 +530,327 @@ test("número duplicado sin salida: agotados los reintentos el POS rechaza con e
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
 });
 
-test("descartar una venta que sí llegó al servidor termina como éxito con nota y no la duplica", async ({
+// Fase 3, PR 2: la cola persistente. Comparten el equipo C1 y su caja con todo lo de arriba (en serie).
+test("E2E-05: venta sin conexión, nota y aviso; al volver la red se envía una vez como offline", async ({
   page,
+  context,
 }) => {
-  const a = await crearProductoConPrecio({ contado: 25, stock: 4 });
+  const a = await crearProductoConPrecio({ contado: 30, stock: 4 });
   await abrirCajaPorUI(page, "0");
   await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
 
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible();
+  await expect(notaEnCola(page)).toBeVisible();
+  await expect(page.getByText(/registrada$/)).toHaveCount(0);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  expect(await stockEn(a.id)).toBe(4);
+
+  // La cola está en IndexedDB: sobrevive a la recarga, y al montar vuelve a intentar.
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByRole("searchbox", { name: "Buscar producto" })).toBeVisible();
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]).toMatchObject({ total: 30, estado: "completada", origen: "offline" });
+  expect(await stockEn(a.id)).toBe(3);
+});
+
+test("primer intento colgado: a los 8 s la venta queda en la cola y el reenvío la entrega una vez", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 15, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  // La ruta nunca responde: solo el tiempo máximo del intento lo corta.
+  await page.route("**/rest/v1/rpc/registrar_venta", () => new Promise<void>(() => undefined));
+
+  const inicio = Date.now();
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible({ timeout: 20_000 });
+  expect(Date.now() - inicio).toBeGreaterThanOrEqual(7_500);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  await page.unroute("**/rest/v1/rpc/registrar_venta");
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(await stockEn(a.id)).toBe(2);
+});
+
+test("cerrar la pestaña en un primer intento colgado: al reabrir la venta sale en la lista y no se envió sola", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 17, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  // La petición nunca sale: la pestaña muere con el primer intento en curso.
+  await page.route("**/rest/v1/rpc/registrar_venta", () => new Promise<void>(() => undefined));
+  await confirmarVenta(page);
+  await expect(page.getByRole("button", { name: "Enviando…" })).toBeVisible();
+  // Cerrar antes de que la fila llegue a IndexedDB no probaría nada.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const abrir = indexedDB.open("erp-pos");
+            abrir.onerror = () => reject(abrir.error);
+            abrir.onsuccess = () => {
+              const contar = abrir.result.transaction("cola").objectStore("cola").count();
+              contar.onsuccess = () => resolve(contar.result);
+              contar.onerror = () => reject(contar.error);
+            };
+          }),
+      ),
+    )
+    .toBe(1);
+  await page.close();
+
+  const nueva = await context.newPage();
+  await fijarEquipo(nueva, equipoId);
+  await nueva.goto("/pos");
+  const lista = nueva.getByRole("region", { name: "Ventas rechazadas" });
+  await expect(lista).toContainText("El cobro se interrumpió antes de la nota");
+  await expect(lista).toContainText("Bs 17,00");
+  await nueva.waitForTimeout(1500); // el motor ya corrió al montar: no la reenvía
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  expect(await stockEn(a.id)).toBe(3);
+});
+
+test("respuesta perdida con la venta ya guardada: el reenvío no duplica y conserva origen online", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 18, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  let llamadas = 0;
   await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    llamadas += 1;
+    if (llamadas > 1) return route.continue();
     await route.fetch(); // la base guarda la venta...
     return route.abort("connectionfailed"); // ...pero la respuesta no llega
   });
 
-  const cobro = await abrirCobro(page);
-  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(cobro.getByRole("alert")).toContainText("no se pierde");
-  await cobro.getByRole("button", { name: "Descartar" }).click();
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible();
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
 
-  await expect(page.getByRole("article", { name: /Nota de venta/ })).toBeVisible();
+  expect(llamadas).toBe(2);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]?.origen).toBe("online");
+  expect(await stockEn(a.id)).toBe(2);
+});
+
+const cuerpoCajaCerrada = JSON.stringify({
+  code: "P0001",
+  message: "ERP_CAJA_CERRADA",
+  details: null,
+  hint: null,
+});
+
+// Deja una venta rechazada en la cola: el primer intento no llega y el reenvío recibe un rechazo con código.
+async function ventaRechazada(page: Page, contado: number) {
+  const a = await crearProductoConPrecio({ contado, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  let llamadas = 0;
+  await page.route("**/rest/v1/rpc/registrar_venta", (route) => {
+    llamadas += 1;
+    if (llamadas === 1) return route.abort("connectionfailed");
+    return route.fulfill({ status: 400, contentType: "application/json", body: cuerpoCajaCerrada });
+  });
+  await confirmarVenta(page);
+  await expect(notaVisible(page)).toBeVisible();
+  await volverLaRed(page);
+  const lista = page.getByRole("region", { name: "Ventas rechazadas" });
+  await expect(lista).toBeVisible();
+  await expect(lista).toContainText("La caja de este equipo está cerrada");
+  await expect(lista).toContainText(`Bs ${contado},00`);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  return { a, lista };
+}
+
+test("rechazo al reenviar: la fila queda visible y Reintentar la entrega cuando el servidor la acepta", async ({
+  page,
+}) => {
+  const { a, lista } = await ventaRechazada(page, 21);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  // Descartar exige `devolver_fuera_plazo` (encargado y dueño): el vendedor solo ve el aviso.
+  await expect(lista.getByRole("button", { name: /^Descartar/ })).toHaveCount(0);
+  await expect(lista).toContainText("avisa al encargado");
+
+  await page.unroute("**/rest/v1/rpc/registrar_venta");
+  await lista.getByRole("button", { name: /^Reintentar la venta/ }).click();
+  await expect(lista).toHaveCount(0);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas).toHaveLength(1);
+  expect(ventas[0]).toMatchObject({ total: 21, origen: "offline" });
+  expect(await stockEn(a.id)).toBe(2);
+});
+
+test.describe("descartar con permiso de encargado", () => {
+  test.use({ storageState: rutaAuth("dueno") });
+  test("rechazo al reenviar: Descartar exige escribir DESCARTAR y no deja rastro en la base", async ({
+    page,
+  }) => {
+    const { a, lista } = await ventaRechazada(page, 22);
+    await lista.getByRole("button", { name: /^Descartar la venta/ }).click();
+    const dialogo = page.getByRole("alertdialog");
+    const confirmar = dialogo.getByRole("button", { name: "Descartar venta" });
+    await expect(dialogo).toContainText("Bs 22,00");
+    await expect(confirmar).toBeDisabled();
+    await dialogo.getByLabel(/Escribe DESCARTAR/).fill("descartar");
+    await expect(confirmar).toBeDisabled();
+    await dialogo.getByLabel(/Escribe DESCARTAR/).fill("DESCARTAR");
+    await confirmar.click();
+    await expect(lista).toHaveCount(0);
+    expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+    expect(await stockEn(a.id)).toBe(3);
+  });
+});
+
+test("E2E-07: con la cola pendiente el cierre de caja está bloqueado y se habilita al vaciarse", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 12, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await page.getByLabel("Efectivo contado (Bs)").fill("12");
+  const cerrar = page.getByRole("button", { name: "Cerrar caja" }).first();
+  await expect(cerrar).toBeDisabled();
+  await expect(page.getByText("Hay ventas sin enviar o rechazadas en este equipo")).toBeVisible();
+
+  await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(cerrar).toBeEnabled({ timeout: 15_000 });
+  await cerrar.click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cerrar caja" }).click();
+  await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 12,00");
+  expect(await sesionAbierta(equipoId)).toBeNull();
+});
+
+test("dos pestañas con la misma cola: una sola venta en la base", async ({ page, context }) => {
+  const a = await crearProductoConPrecio({ contado: 14, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  const otra = await context.newPage();
+  await fijarEquipo(otra, equipoId);
+  await otra.goto("/pos");
+  await expect(otra.getByRole("searchbox", { name: "Buscar producto" })).toBeVisible();
+
+  let envios = 0;
+  await context.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    envios += 1;
+    await new Promise((r) => setTimeout(r, 500)); // da tiempo a que la otra pestaña intente a la vez
+    return route.continue();
+  });
+  await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  await context.setOffline(false);
+  await Promise.all([volverLaRed(page), volverLaRed(otra)]);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  expect(envios).toBe(1);
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
-  expect(await stockEn(a.id)).toBe(3);
+  expect(await stockEn(a.id)).toBe(2);
+});
+
+test("sin conexión un cobro con QR no se acepta", async ({ page, context }) => {
+  const a = await crearProductoConPrecio({ contado: 40, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  const cobro = await abrirCobro(page);
+  await context.setOffline(true);
+  await cobro.getByRole("button", { name: "Todo QR" }).click();
+  await cobro.getByLabel(/Confirmo que recibí/).check();
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("alert")).toContainText("necesita conexión");
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  await cobro.getByRole("button", { name: "Volver" }).click();
+  await expect(page.getByRole("list", { name: "Carrito" }).getByRole("listitem")).toHaveCount(1);
+  await context.setOffline(false);
+});
+
+test("otra cuenta en otra pestaña: el cobro se rechaza, no se encola y el carrito queda", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 33, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  const cobro = await abrirCobro(page);
+  // Otra pestaña del mismo navegador entra con otra cuenta: las cookies de sesión son las de esa cuenta.
+  const otra = JSON.parse(readFileSync(rutaAuth("encargadoTienda"), "utf8")) as {
+    cookies: Parameters<typeof context.addCookies>[0];
+  };
+  await context.clearCookies();
+  await context.addCookies(otra.cookies);
+
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("alert")).toContainText("La sesión caducó o es de otra cuenta");
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  expect(await stockEn(a.id)).toBe(2);
+  await cobro.getByRole("button", { name: "Volver" }).click();
+  await expect(page.getByRole("list", { name: "Carrito" }).getByRole("listitem")).toHaveCount(1);
+});
+
+test("con una venta en la cola y el equipo sin elegir, el aviso sale y la venta se envía", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 17, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  // Vuelve la red pero el envío sigue sin llegar, y la lista de equipos trae otros: ninguno es el guardado.
+  await context.route("**/rest/v1/rpc/registrar_venta", (route) => route.abort("connectionfailed"));
+  await context.route("**/rest/v1/dispositivos*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        ["Caja X", "Caja Y"].map((nombre, i) => ({
+          id: crypto.randomUUID(),
+          nombre,
+          prefijo: `X${i}`,
+          ubicacion_id: crypto.randomUUID(),
+          ultimo_numero: 0,
+        })),
+      ),
+    }),
+  );
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Elegir equipo" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Buscar producto" })).toHaveCount(0);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  await context.unroute("**/rest/v1/rpc/registrar_venta");
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+  expect(await stockEn(a.id)).toBe(2);
 });
 
 test("QR: cualquier cambio del monto borra la confirmación", async ({ page }) => {

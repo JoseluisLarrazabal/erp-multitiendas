@@ -146,6 +146,10 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     con anulación y devolución parcial, cajas con detalle, y tope de descuento. RPC nueva `resumen_caja`. pgTAP 1057,
     Vitest 188, E2E 98 en verde. Revisión de seguridad sin hallazgos. No verificado: cerrar caja con venta en duda y
     filtro inválido solo en Vitest, sin E2E. Codex: no verificado (sin cuota).
+- **Decisiones del CTO (2026-11-01):** contrato firmado (falta la fecha exacta). El cliente carga desde el panel servicios,
+  precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
+  para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
+  siguen fuera.
 - **Fase 3 en curso (2026-11-01):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
   no existe aún. Productos con serie y lavandería piden conexión hasta entonces (0 series cargadas, P-01 abierta).
   - PR 1 `feat/offline-datos`: `p_offline` en `registrar_venta`, `abrir_caja` y `registrar_movimiento_caja`; marcas de
@@ -153,6 +157,17 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     `revisar_venta`, `reconciliacion_ventas`; `resumen_caja` muestra `qr_pendiente`. DB-12 completo. Límite aceptado: devolver una venta con QR rechazado
     baja el QR neto de la sesión aunque esa plata nunca entró; no sale efectivo. Revisión de seguridad sin hallazgos.
     Codex: no verificado (sin cuota).
+  - PR 2 `feat/offline-cola`: Dexie, `lib/offline`, toda venta entra a la cola y se envía desde ahí. Aviso de pendientes
+    siempre a la vista, lista de rechazadas (Descartar solo con `devolver_fuera_plazo` y confirmación escrita), cierre
+    bloqueado con cola (RN-07, también si no se puede leer la cola), cerrojo por fila y por número de equipo. Una venta
+    cuya pestaña murió antes de la nota no se envía sola: queda rechazada para decidir a mano. E2E-05 y E2E-07.
+    2 rondas de revisión. Riesgo aceptado: si fallan a la vez `quitar` y `marcarRechazada` tras un rechazo en línea, la
+    fila queda pendiente y el motor la reenvía. No verificado: Firefox, Safari, deshabilitar Reintentar y mensaje de
+    `PanelCaja` sin test automático. Sin red el QR sigue bloqueado hasta el PR 3. Codex: no verificado (sin cuota).
+- **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
+  `PRUEBA-1` con stock. Producto, entrada, caja y venta `C1-000001` corrieron por las RPC con ese usuario simulado desde la
+  CLI: stock 19, kardex 19, arqueo sin diferencia. **No verificado:** esa venta desde el navegador; el login lo hace el
+  CTO.
 - **Fase 2 cerrada (2026-11-01):** 4 PRs, plan en `docs/plan-fase-2.md`. **Próximo:** fase 3, venta y órdenes sin
   conexión (`docs/roadmap.md`).
   - Corrida final sobre `main` `0cb5fe8`, build de producción y base recién reseteada, en local: POS con lector simulado,

@@ -32,6 +32,7 @@ export const catalogoSchema = z.object({
 });
 export type Catalogo = {
   version: string;
+  tipoCambio: number | null;
   ubicaciones: { id: string; nombre: string }[];
   productos: ProductoPos[];
 };
@@ -43,6 +44,7 @@ export function leerCatalogo(json: unknown): Catalogo | null {
   if (!r.success) return null;
   return {
     version: r.data.version,
+    tipoCambio: r.data.tipo_cambio !== null && r.data.tipo_cambio > 0 ? r.data.tipo_cambio : null,
     ubicaciones: r.data.ubicaciones,
     productos: r.data.productos.map((p) => {
       const precios: PreciosCentavos = {
@@ -107,6 +109,12 @@ export const ventaPayloadSchema = z.strictObject({
   pagos: z.array(pagoVentaSchema).min(1).max(10),
 });
 export type VentaPayload = z.infer<typeof ventaPayloadSchema>;
+
+// Lo que la cola guarda de una venta: el payload y el tipo de cambio que vio el vendedor (va en `p_offline`).
+export const payloadColaVentaSchema = z.object({
+  venta: ventaPayloadSchema,
+  tipo_cambio: z.number().positive().nullable(),
+});
 
 export const respuestaVentaSchema = z.object({
   id: z.guid(),

@@ -27,6 +27,9 @@ todos los días, sin descansos, así que el plan entra justo y sin margen. Un so
 fases 0 a 3 y 5 no necesitan al cliente, salvo la importación, y pueden empezar antes de que corra el plazo. El panel
 crece desde la fase 1; la fase 5 cierra su versión responsive.
 
+Objetivo del CTO (2026-11-01): terminar en 2 semanas como máximo, con trabajo diario. Contrato firmado. Las estimaciones
+de la tabla no se recalculan. La fase 5 suma RF-FRI-04 a 07 y queda sin validar en esa misma estimación.
+
 ## Orden dentro de cada fase
 
 1. Migración con RLS y pruebas pgTAP.
@@ -61,8 +64,9 @@ la importación no los espera.
 | Bloqueo | Frena |
 |---|---|
 | Precios y costos de Lider, cargados por el cliente en el panel | Arranque |
-| Respuestas P-01 a P-05 | Corrida final de la importación; corre antes con supuestos |
-| Servicios y precios de lavandería | Arranque de lavandería |
+| Respuestas P-02 a P-05 | Corrida final de la importación; corre antes con supuestos |
+| Servicios y precios de lavandería, cargados por el cliente en el panel | Uso real de lavandería; no frena el desarrollo |
+| Productos con serie y tope de descuento, cargados por el cliente en el panel | Uso real; no frena el desarrollo |
 | P-07 interés de crédito | Fase 7 |
 | P-12 anticipo de reservas | Fase 7 |
 
