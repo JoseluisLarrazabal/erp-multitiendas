@@ -254,3 +254,175 @@ export async function enIndexedDb(
     [tabla, prefijo],
   );
 }
+
+// Lavandería: el encargado opera la caja del equipo L1 (el del seed). Mismo patrón que la tienda, otra cuenta y negocio.
+export const lavanderia = NEGOCIOS.lavanderia.id;
+const CUENTA_LAV = "encargadoLavanderia" as const;
+export const CLIENTE_LAVANDERIA = "f0000000-0000-0000-0000-000000000002";
+export const SERVICIO_LAVADO = "e0000000-0000-0000-0000-000000000009"; // SRV-001: normal 15, express 25
+
+export async function equipoL1() {
+  const r = await apiComo(
+    CUENTA_LAV,
+    `dispositivos?select=id,prefijo,ultimo_numero&negocio_id=eq.${lavanderia}&prefijo=eq.L1`,
+  );
+  const fila = (r.json as { id: string; prefijo: string; ultimo_numero: number }[])[0];
+  if (!fila) throw new Error("El seed no tiene el equipo L1.");
+  return fila;
+}
+
+export async function sesionAbiertaL1(dispositivoId: string) {
+  const r = await apiComo(CUENTA_LAV, "rpc/caja_sesion_abierta", {
+    metodo: "POST",
+    cuerpo: { p_dispositivo_id: dispositivoId },
+  });
+  return (r.json as { id: string }[])[0]?.id ?? null;
+}
+
+export async function cerrarCajaL1(dispositivoId: string) {
+  const id = await sesionAbiertaL1(dispositivoId);
+  if (!id) return;
+  const r = await apiComo(CUENTA_LAV, "rpc/cerrar_caja", {
+    metodo: "POST",
+    cuerpo: { p_sesion_id: id, p_monto_contado: 0 },
+  });
+  expect(r.status).toBeLessThan(300);
+}
+
+export async function abrirCajaL1Api(dispositivoId: string) {
+  const r = await apiComo(CUENTA_LAV, "rpc/abrir_caja", {
+    metodo: "POST",
+    cuerpo: {
+      p_id: crypto.randomUUID(),
+      p_negocio_id: lavanderia,
+      p_dispositivo_id: dispositivoId,
+      p_monto_inicial: 100,
+    },
+  });
+  expect(r.status).toBeLessThan(300);
+}
+
+export async function fijarEquipoL1(page: Page, dispositivoId: string) {
+  await page.addInitScript(
+    ([clave, id]) => localStorage.setItem(clave!, id!),
+    [`erp:pos:equipo:${lavanderia}`, dispositivoId],
+  );
+}
+
+export async function ventasDeLaCajaL1(dispositivoId: string) {
+  const cajaId = await sesionAbiertaL1(dispositivoId);
+  const r = await apiComo(
+    CUENTA_LAV,
+    `ventas?select=id,numero,total,estado,origen,motivos_revision&caja_sesion_id=eq.${cajaId}`,
+  );
+  return r.json as {
+    id: string;
+    numero: string;
+    total: number;
+    estado: string;
+    origen: string;
+    motivos_revision: string[];
+  }[];
+}
+
+export async function resumenCajaL1(dispositivoId: string) {
+  const r = await apiComo(CUENTA_LAV, "rpc/resumen_caja", {
+    metodo: "POST",
+    cuerpo: { p_sesion_id: await sesionAbiertaL1(dispositivoId) },
+  });
+  return r.json as {
+    esperado: number;
+    qr_neto: number;
+    ventas_efectivo: number;
+    cantidad_ventas: number;
+  };
+}
+
+export async function ordenesPorId(id: string) {
+  const r = await apiComo(
+    CUENTA_LAV,
+    `ordenes?select=estado,cliente_nombre,cliente_telefono,prendas,casillero,express,fecha_prometida,retirada_por,retiro_con,documento_retiro,motivo_anulacion&id=eq.${id}`,
+  );
+  return r.json as {
+    estado: string;
+    cliente_nombre: string;
+    cliente_telefono: string | null;
+    prendas: number;
+    casillero: string | null;
+    express: boolean;
+    fecha_prometida: string;
+    retirada_por: string | null;
+    retiro_con: string | null;
+    documento_retiro: string | null;
+    motivo_anulacion: string | null;
+  }[];
+}
+
+export async function eventosDeOrden(id: string) {
+  const r = await apiComo(
+    CUENTA_LAV,
+    `orden_eventos?select=estado&orden_id=eq.${id}&order=created_at`,
+  );
+  return (r.json as { estado: string }[]).map((e) => e.estado);
+}
+
+// Orden por RPC, sin pasar por la pantalla (prepara el caso de la anulación). Lista normal, un lavado.
+export async function crearOrdenApi(opts: { equipoId: string; cajaId: string }) {
+  const equipo = await equipoL1();
+  const id = crypto.randomUUID();
+  const r = await apiComo(CUENTA_LAV, "rpc/crear_orden", {
+    metodo: "POST",
+    cuerpo: {
+      p_venta: {
+        id,
+        dispositivo_id: opts.equipoId,
+        caja_sesion_id: opts.cajaId,
+        numero: `L1-${String(equipo.ultimo_numero + 1).padStart(6, "0")}`,
+        cliente_id: CLIENTE_LAVANDERIA, // en línea la lavandería exige cliente
+        creada_en_cliente: new Date().toISOString(),
+        descuento: 0,
+        total: 15,
+        items: [
+          {
+            producto_id: SERVICIO_LAVADO,
+            lista: "normal",
+            cantidad: 1,
+            precio_unitario: 15,
+            descuento: 0,
+            serie_id: null,
+          },
+        ],
+        pagos: [{ medio: "efectivo", monto: 15 }],
+      },
+      p_orden: {
+        express: false,
+        prendas: 1,
+        fecha_prometida: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
+      },
+    },
+  });
+  expect(r.status, JSON.stringify(r.json)).toBeLessThan(300);
+  return id;
+}
+
+// Limpieza: una orden de prueba no se borra (la base es append-only), pero sí se anula para que no se acumulen activas.
+export async function anularOrdenApi(id: string) {
+  await apiComo(CUENTA_LAV, "rpc/anular_orden", {
+    metodo: "POST",
+    cuerpo: { p_orden_id: id, p_motivo: "Limpieza de prueba" },
+  });
+}
+
+// Las ventas sin conexión de la lavandería nacen "por revisar" (sin_cliente) y no se borran. Se marcan revisadas para no
+// ensuciar la reconciliación, que otras pruebas esperan vacía en este negocio.
+export async function revisarPendientesL1() {
+  const r = await apiComo(
+    CUENTA_LAV,
+    `ventas?select=id&negocio_id=eq.${lavanderia}&revisada_por=is.null&motivos_revision=not.eq.{}`,
+  );
+  for (const v of r.json as { id: string }[])
+    await apiComo(CUENTA_LAV, "rpc/revisar_venta", {
+      metodo: "POST",
+      cuerpo: { p_venta_id: v.id },
+    });
+}

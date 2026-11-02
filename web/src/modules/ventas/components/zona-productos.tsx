@@ -1,7 +1,7 @@
 "use client";
 
 import type { Catalogo } from "../schemas";
-import type { ProductoPos } from "../domain";
+import type { Lista, ProductoPos } from "../domain";
 import { CampoBusqueda, ListaResultados } from "./buscador";
 
 // Búsqueda y resultados del catálogo (a la izquierda del carrito).
@@ -15,6 +15,7 @@ export function ZonaProductos({
   resultados,
   ubicacionId,
   tipoNegocio,
+  lista,
   alAgregar,
 }: {
   catalogo: Catalogo | null;
@@ -26,6 +27,7 @@ export function ZonaProductos({
   resultados: readonly ProductoPos[];
   ubicacionId: string;
   tipoNegocio: string;
+  lista: Lista;
   alAgregar: (p: ProductoPos) => void;
 }) {
   return (
@@ -49,6 +51,7 @@ export function ZonaProductos({
           ubicacionId={ubicacionId}
           consulta={consulta}
           tipoNegocio={tipoNegocio}
+          lista={lista}
           alAgregar={alAgregar}
         />
       )}

@@ -153,6 +153,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Fase 4 en curso (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.
+  - PR 1 #53 `feat/lavanderia-datos` (mergeado): `ordenes`, `orden_eventos`, `crear_orden`, `cambiar_estado_orden`,
+    `entregar_orden`, `anular_orden`; `ERP_ES_ORDEN` en `anular_venta`/`devolver_venta` sobre órdenes activas; seed local
+    con equipo `L1`. pgTAP 1390. Migración aplicada en staging. Producción sin sesión OK (1280 y 390 px, CSP, SW 200).
+    Revisiones: code-review (6 de 10 aplicados), ponytail, security sin hallazgos. Codex: no verificado (sin cuota).
+    Límite: `anular_orden` con caja abierta hereda `ERP_EFECTIVO_INSUFICIENTE` y la regla de 24 h de `anular_venta`.
 - **Fase 3 cerrada (2026-11-02):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
   no existe aún. Productos con serie y lavandería piden conexión hasta entonces (0 series cargadas, P-01 abierta).
   - PR 1 `feat/offline-datos`: `p_offline` en `registrar_venta`, `abrir_caja` y `registrar_movimiento_caja`; marcas de

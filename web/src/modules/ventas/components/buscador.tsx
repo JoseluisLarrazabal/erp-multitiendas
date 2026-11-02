@@ -9,6 +9,7 @@ import {
   formatearCantidad,
   LISTAS,
   motivoNoVendible,
+  type Lista,
   type ProductoPos,
 } from "../domain";
 
@@ -65,6 +66,7 @@ export function ListaResultados({
   ubicacionId,
   consulta,
   tipoNegocio,
+  lista,
   alAgregar,
 }: {
   productos: readonly ProductoPos[];
@@ -72,6 +74,7 @@ export function ListaResultados({
   ubicacionId: string;
   consulta: boolean;
   tipoNegocio: string;
+  lista: Lista;
   alAgregar: (p: ProductoPos) => void;
 }) {
   return (
@@ -81,7 +84,7 @@ export function ListaResultados({
     >
       {productos.map((p) => {
         const stock = p.stockPorUbicacion[ubicacionId] ?? 0;
-        const motivo = motivoNoVendible(p, tipoNegocio);
+        const motivo = motivoNoVendible(p, tipoNegocio, lista);
         return (
           <li key={p.id} className="flex items-start gap-3 px-3 py-2.5">
             <div className="min-w-0 flex-1">
@@ -134,7 +137,7 @@ export function ListaResultados({
               (motivo === null ? (
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className="text-sm font-semibold tabular-nums">
-                    {bs(p.precios.contado ?? 0)}
+                    {bs(p.precios[lista] ?? 0)}
                   </span>
                   <Button
                     type="button"

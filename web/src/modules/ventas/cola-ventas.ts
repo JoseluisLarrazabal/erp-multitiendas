@@ -91,7 +91,7 @@ export async function enviarVentaDeCola(
   const p = payloadColaVentaSchema.safeParse(fila.payload);
   if (!p.success)
     return { resultado: { t: "rechazo", error: MENSAJE_ILEGIBLE }, numero: fila.numeroImpreso };
-  const { tipo_cambio: tipoCambio } = p.data;
+  const { tipo_cambio: tipoCambio, orden } = p.data;
   let venta = p.data.venta;
   // El primer intento ya comprobó la cuenta al cobrar. Un reenvío con la sesión de otra cuenta sí sale: el servidor
   // marca `otra_cuenta` y la venta conserva a quien vendió.
@@ -119,7 +119,7 @@ export async function enviarVentaDeCola(
           tipo_cambio: tipoCambio,
           numero_impreso: fila.numeroImpreso,
         };
-    const r = await enviarVenta(supabase, venta, offline);
+    const r = await enviarVenta(supabase, venta, offline, orden);
     if (r.ok) return ok();
     // Solo un código ERP_ es una respuesta definitiva de la base; cualquier otro fallo (PGRST, 40P01, 5xx) puede
     // ser transitorio y la venta ya se cobró: se reintenta hasta MAX_INTENTOS_INESPERADOS. Sin respuesta (r.red)
@@ -157,7 +157,7 @@ export async function enviarVentaDeCola(
     // número impreso y el servidor marca `renumerada`.
     const nota = fila.nota;
     await actualizarFila(fila.id, {
-      payload: { venta, tipo_cambio: tipoCambio },
+      payload: { venta, tipo_cambio: tipoCambio, ...(orden ? { orden } : {}) },
       ...(primerIntento
         ? {
             numeroImpreso: numero,

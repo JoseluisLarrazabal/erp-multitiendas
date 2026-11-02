@@ -77,8 +77,10 @@ const getSession = (sesion: OpcionesCliente["sesion"]) => async () => {
   return { data: { session: sesion === false ? null : { user: { id: uuid(5) } } }, error: null };
 };
 function cliente(opts: OpcionesCliente) {
-  const llamadas: { p_venta: { numero: string }; p_offline?: unknown }[] = [];
-  const rpc = vi.fn((_: string, args: (typeof llamadas)[number]) => {
+  const llamadas: { p_venta: { numero: string }; p_offline?: unknown; p_orden?: unknown }[] = [];
+  const funciones: string[] = [];
+  const rpc = vi.fn((nombre: string, args: (typeof llamadas)[number]) => {
+    funciones.push(nombre);
     llamadas.push(args);
     const r = opts.respuestas[Math.min(llamadas.length - 1, opts.respuestas.length - 1)]!;
     return { abortSignal: () => (opts.respuesta ? opts.respuesta() : Promise.resolve(r)) };
@@ -99,7 +101,7 @@ function cliente(opts: OpcionesCliente) {
       }),
     }),
   } as unknown as SupabaseClient<Database>;
-  return { supabase, llamadas };
+  return { supabase, llamadas, funciones };
 }
 const exito: Respuesta = { data: { id: venta.id, numero: "C1-000007", total: 25 }, error: null };
 const fila = (extra: Partial<FilaCola> = {}) => ({ ...nuevaFila, intentos: 0, ...extra });
@@ -122,6 +124,38 @@ describe("enviarVentaDeCola", () => {
       p_venta: venta,
       p_offline: { vendedor_id: uuid(5), tipo_cambio: 6.96, numero_impreso: "C1-000007" },
     });
+  });
+
+  it("con orden llama a crear_orden con p_orden (y p_offline en el reenvío); sin orden, a registrar_venta", async () => {
+    const orden = { express: true, prendas: 3, fecha_prometida: "2026-11-05", casillero: "A1" };
+    const conOrden = fila({ payload: { venta, tipo_cambio: 6.96, orden } });
+    const a = cliente({ respuestas: [exito] });
+    await enviarVentaDeCola(conOrden, a.supabase, true);
+    expect(a.funciones).toEqual(["crear_orden"]);
+    expect(a.llamadas[0]).toEqual({ p_venta: venta, p_orden: orden });
+
+    const b = cliente({ respuestas: [exito] });
+    await enviarVentaDeCola({ ...conOrden, intentos: 1 }, b.supabase, false);
+    expect(b.llamadas[0]).toMatchObject({ p_orden: orden, p_offline: { vendedor_id: uuid(5) } });
+
+    const c = cliente({ respuestas: [exito] });
+    await enviarVentaDeCola(fila(), c.supabase, true);
+    expect(c.funciones).toEqual(["registrar_venta"]);
+  });
+
+  it("al renumerar una venta con orden, la orden se conserva en la fila", async () => {
+    const orden = { express: false, prendas: 2, fecha_prometida: "2026-11-05" };
+    await baseOffline().cola.clear();
+    await encolar({ ...nuevaFila, payload: { venta, tipo_cambio: 6.96, orden } });
+    const c = cliente({ respuestas: [{ data: null, error: duplicado }, exito] });
+    await enviarVentaDeCola(
+      fila({ payload: { venta, tipo_cambio: 6.96, orden } }),
+      c.supabase,
+      true,
+    );
+    expect(c.funciones).toEqual(["crear_orden", "crear_orden"]);
+    const [guardada] = (await leerFilas()).filas;
+    expect(guardada?.payload).toMatchObject({ orden, venta: { numero: "C1-000008" } });
   });
 
   it("sin sesión pausa sin llamar al servidor", async () => {

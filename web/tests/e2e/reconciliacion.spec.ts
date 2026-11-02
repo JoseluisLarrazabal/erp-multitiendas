@@ -260,8 +260,12 @@ test.describe("negocio sin ventas sin conexión", () => {
   test.use({ storageState: rutaAuth("encargadoLavanderia") });
 
   test("estado vacío claro", async ({ page }) => {
-    await ir(page, "/panel/reconciliacion");
-    await expect(page.getByText("No hay ventas para revisar.")).toBeVisible();
+    // lavanderia.spec.ts deja una venta sin conexión por revisar un instante (la marca revisada al terminar la prueba):
+    // si coincide con esta, recargar la lista basta.
+    await expect(async () => {
+      await ir(page, "/panel/reconciliacion");
+      await expect(page.getByText("No hay ventas para revisar.")).toBeVisible({ timeout: 2_000 });
+    }).toPass();
     await expect(page.getByText("Ningún producto tiene stock negativo.")).toBeVisible();
   });
 });

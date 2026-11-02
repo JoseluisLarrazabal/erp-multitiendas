@@ -21,7 +21,10 @@ export function CarritoLineas({
   ubicacionId,
   despachar,
   bloqueado,
+  listaFija = false,
 }: {
+  // Lavandería: la lista la fija el interruptor Express de la orden, no cada línea.
+  listaFija?: boolean;
   lineas: readonly LineaResuelta[];
   permisos: Permisos;
   ubicacionId: string;
@@ -76,7 +79,7 @@ export function CarritoLineas({
               className="grid grid-cols-2 gap-2 sm:[grid-template-columns:var(--columnas)]"
               style={
                 {
-                  "--columnas": `5rem repeat(${1 + (puedeBajar ? 1 : 0) + (listas.length > 1 ? 1 : 0)}, minmax(0, 1fr))`,
+                  "--columnas": `5rem repeat(${1 + (puedeBajar ? 1 : 0) + (listas.length > 1 && !listaFija ? 1 : 0)}, minmax(0, 1fr))`,
                 } as React.CSSProperties
               }
             >
@@ -121,7 +124,7 @@ export function CarritoLineas({
                   />
                 </label>
               )}
-              {listas.length > 1 && (
+              {listas.length > 1 && !listaFija && (
                 <label className="flex flex-col gap-0.5 text-xs">
                   <span className="text-muted-foreground">Lista</span>
                   <SelectNativo
