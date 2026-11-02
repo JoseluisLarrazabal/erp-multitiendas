@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { apiComo, NEGOCIOS, rutaAuth } from "./helpers";
 
-// Panel de órdenes (fase 4, PR 3). Serial: comparten la caja L1 de la lavandería. Cada orden se anula al final.
+// Panel de órdenes (fase 4, PR 3). Serial: comparten la caja L2 de la lavandería (propia, para no chocar con lavanderia.spec que usa L1). Cada orden se anula al final.
 test.describe.configure({ mode: "serial" });
 
 const lavanderia = NEGOCIOS.lavanderia.id;
@@ -15,7 +15,7 @@ let numero = "";
 const CLIENTE_ID = "f0000000-0000-0000-0000-000000000002"; // seed
 const cliente = "Cliente Lavandería Demo";
 
-async function sesionL1() {
+async function sesionL2() {
   const r = await apiComo("encargadoLavanderia", "rpc/caja_sesion_abierta", {
     metodo: "POST",
     cuerpo: { p_dispositivo_id: equipoId },
@@ -29,7 +29,7 @@ const extras: string[] = [];
 async function crearOrdenApi() {
   const id = crypto.randomUUID();
   siguienteNumero += 1;
-  const num = `L1-${String(siguienteNumero).padStart(6, "0")}`;
+  const num = `L2-${String(siguienteNumero).padStart(6, "0")}`;
   const r = await apiComo("encargadoLavanderia", "rpc/crear_orden", {
     metodo: "POST",
     cuerpo: {
@@ -63,12 +63,12 @@ async function crearOrdenApi() {
 test.beforeAll(async () => {
   const d = await apiComo(
     "encargadoLavanderia",
-    `dispositivos?select=id,prefijo,ultimo_numero&negocio_id=eq.${lavanderia}&prefijo=eq.L1`,
+    `dispositivos?select=id,prefijo,ultimo_numero&negocio_id=eq.${lavanderia}&prefijo=eq.L2`,
   );
   const fila = (d.json as { id: string; ultimo_numero: number }[])[0];
-  if (!fila) throw new Error("El seed no tiene el equipo L1.");
+  if (!fila) throw new Error("El seed no tiene el equipo L2.");
   equipoId = fila.id;
-  cajaId = (await sesionL1()) ?? "";
+  cajaId = (await sesionL2()) ?? "";
   if (!cajaId) {
     cajaId = crypto.randomUUID();
     const a = await apiComo("encargadoLavanderia", "rpc/abrir_caja", {
@@ -138,7 +138,7 @@ test.describe("encargado de lavandería", () => {
   });
 
   test("búsqueda por número y filtro Sin recoger vacío", async ({ page }) => {
-    await page.goto("/panel/ordenes?q=L1-");
+    await page.goto("/panel/ordenes?q=L2-");
     await expect(page.getByRole("link", { name: new RegExp(numero) })).toBeVisible();
     await page.goto(`/panel/ordenes?q=${numero}`);
     await expect(page.getByRole("link", { name: new RegExp(numero) })).toBeVisible();

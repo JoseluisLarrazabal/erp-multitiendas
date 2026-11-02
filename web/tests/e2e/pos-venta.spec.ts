@@ -1645,8 +1645,16 @@ test("sesión caducada al reconectar: la cola se pausa, pide login y tras entrar
   await confirmarVenta(page);
   await expect(sinEnviar(page, 1)).toBeVisible();
 
-  // El token ya no vale: sin cookies de sesión.
+  // El token ya no vale: sin cookies y el servidor lo rechaza (el cliente aún lo guarda en memoria y, sin esto,
+  // el motor de la cola podría enviar antes de que el chequeo de sesión lo pause).
   await context.clearCookies();
+  const expirado = (route: Route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "PGRST301", message: "JWT expired" }),
+    });
+  await page.route("**/rest/v1/rpc/registrar_venta*", expirado);
   await context.setOffline(false);
   await volverLaRed(page);
   await expect(page.getByText(/Tu sesión caducó/)).toBeVisible();
@@ -1660,6 +1668,7 @@ test("sesión caducada al reconectar: la cola se pausa, pide login y tras entrar
   await iniciarSesionUI(otra, CUENTAS.vendedor);
   await expect(otra).toHaveURL(/\/pos$/);
   await otra.close();
+  await page.unroute("**/rest/v1/rpc/registrar_venta*", expirado);
   await page.getByRole("button", { name: "Ya inicié sesión" }).click();
   await expect(sinEnviar(page, 1)).toHaveCount(0, { timeout: 20_000 });
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);

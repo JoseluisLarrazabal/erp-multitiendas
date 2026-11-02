@@ -57,7 +57,8 @@ insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
 
 insert into public.dispositivos (negocio_id, ubicacion_id, nombre, prefijo) values
   ('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Caja 1', 'C1'),
-  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L1', 'L1');
+  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L1', 'L1'),
+  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L2', 'L2');
 
 -- Catálogo de desarrollo: Tienda (2 productos en USD, 1 sin precio), Frial (cortes en kg), Lavandería (servicios).
 insert into public.categorias (id, negocio_id, nombre) values
