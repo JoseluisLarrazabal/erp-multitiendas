@@ -28,9 +28,11 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
       // IndexedDB no disponible: no hay cola que vaciar.
     }
   }
+  // Se reprograma siempre, aunque `vaciar` solo dejara una repetición: si esa espera es de OTRO motor (detenido) no corre
+  // y este quedaría sin temporizador. Cuesta una lectura de IndexedDB de más.
   function disparar(forzar = false) {
     if (!activo) return;
-    void vaciar({ ...o, forzar })
+    void vaciar({ ...o, forzar, activo: () => activo })
       .catch(() => undefined)
       .then(programar);
   }

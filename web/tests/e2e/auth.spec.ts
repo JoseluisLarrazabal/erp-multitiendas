@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   CUENTA_DESACTIVABLE,
   CUENTAS,
+  esperarHidratacion,
   fijarBaneo,
   iniciarSesionUI,
   rutaAuth,
@@ -45,7 +46,10 @@ test.describe("sin sesión", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
     verCsp();
 
-    await page.getByRole("button", { name: "Cerrar sesión" }).click();
+    // Tras el login completo el HTML se ve antes de hidratar: un clic en ese hueco se pierde (sin petición de logout).
+    const cerrar = page.getByRole("button", { name: "Cerrar sesión" });
+    await esperarHidratacion(page, cerrar);
+    await cerrar.click();
     await expect(page).toHaveURL(/\/login$/);
     await page.goto("/panel");
     await expect(page).toHaveURL(/\/login$/);
@@ -64,7 +68,9 @@ test.describe("sin sesión", () => {
       await expect(page.getByRole("heading", { name: "Sin acceso" })).toBeVisible();
       await page.goto("/pos");
       await expect(page).toHaveURL(/\/sin-acceso$/);
-      await page.getByRole("button", { name: "Cerrar sesión" }).click();
+      const cerrar = page.getByRole("button", { name: "Cerrar sesión" });
+      await esperarHidratacion(page, cerrar);
+      await cerrar.click();
       await expect(page).toHaveURL(/\/login$/);
 
       // Con la cuenta ya desactivada: el login falla con el mensaje genérico.

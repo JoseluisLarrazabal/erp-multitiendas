@@ -5,6 +5,7 @@ import { useSerwist } from "@serwist/turbopack/react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { observarFilas } from "@/lib/offline/motor";
+import { alCambiarControlador } from "@/lib/sw-controlador";
 import { ConfirmarDescarte } from "@/modules/ventas";
 
 // Tiempo razonable para que el service worker quede activo tras abrir /pos.
@@ -63,17 +64,16 @@ export function AvisoActualizacion({ lineasEnCurso }: { lineasEnCurso: () => num
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    // Sin controlador previo el cambio es la primera instalación (clients.claim), no una actualización.
-    const habiaControlador = !!navigator.serviceWorker.controller;
-    const alCambiar = () => {
-      if (!habiaControlador) return;
-      // Recarga una sola vez, cuando la versión nueva ya controla la página y la pidió esta pestaña.
-      if (inicioAqui.current) return location.reload();
-      setOtraPestana(true);
-      setAplicando(false);
-    };
-    navigator.serviceWorker.addEventListener("controllerchange", alCambiar);
-    return () => navigator.serviceWorker.removeEventListener("controllerchange", alCambiar);
+    return alCambiarControlador(
+      navigator.serviceWorker,
+      () => {
+        // Recarga una sola vez, cuando la versión nueva ya controla la página y la pidió esta pestaña.
+        if (inicioAqui.current) return location.reload();
+        setOtraPestana(true);
+        setAplicando(false);
+      },
+      () => inicioAqui.current,
+    );
   }, []);
 
   function aplicar() {

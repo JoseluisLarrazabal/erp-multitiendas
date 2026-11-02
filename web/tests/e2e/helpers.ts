@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 // Cuentas del seed (supabase/seed.sql). Contraseña común de desarrollo local.
 export const CLAVE = "Prueba-ERP-2026";
@@ -122,14 +122,21 @@ export async function crearProductosEnLote(
   }
 }
 
-// Navega y espera a que hidrate: con la carga de varios workers, un clic o un archivo antes de la hidratación se
-// pierde. React marca con __reactProps$ cada nodo que hidrata, así que se espera a que todos los controles lo
-// tengan (networkidle no lo garantizaba y tapó una falla de hidratación).
+// Espera a que hidrate: con la carga de varios workers, un clic o un archivo antes de la hidratación se
+// pierde. React marca con __reactProps$ cada nodo que hidrata, así que se espera a que todos los controles de
+// `alcance` (por defecto `main`; un elemento ajeno a React, de una extensión, no cuenta) lo tengan (networkidle no
+// lo garantizaba y tapó una falla de hidratación).
+export async function esperarHidratacion(page: Page, alcance?: Locator) {
+  const raiz = await (alcance ?? page.locator("main").first()).elementHandle();
+  await page.waitForFunction((r) => {
+    const base = r ?? document;
+    const controles = [...base.querySelectorAll("input, select, button, form")];
+    if (r) controles.push(r);
+    return controles.every((c) => Object.keys(c).some((k) => k.startsWith("__reactProps$")));
+  }, raiz);
+}
+
 export async function ir(page: Page, url: string) {
   await page.goto(url);
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll("input, select, button, form")].every((c) =>
-      Object.keys(c).some((k) => k.startsWith("__reactProps$")),
-    ),
-  );
+  await esperarHidratacion(page);
 }
