@@ -18,9 +18,9 @@ import {
   MENSAJE_COBRO_FALLIDO,
   protegerCobro,
   enviarVentaDeCola,
-  leerSesion,
   revisarDescarte,
 } from "./cola-ventas";
+import { leerSesion } from "@/lib/supabase/sesion";
 import { MAX_NUMERO_DUPLICADO } from "./domain";
 import type { payloadColaVentaSchema } from "./schemas";
 

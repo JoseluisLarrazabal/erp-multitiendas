@@ -39,3 +39,14 @@ export function limitesDelDia(dia: string): { inicio: string; fin: string } | nu
     fin: new Date(inicio.getTime() + 86_400_000).toISOString(),
   };
 }
+
+// "hace un momento", "hace 5 min", "hace 3 h", "hace 2 días". Para la edad de datos guardados.
+export function formatearHace(desdeMs: number, ahoraMs: number = Date.now()): string {
+  const min = Math.max(0, Math.floor((ahoraMs - desdeMs) / 60_000));
+  if (min < 1) return "hace un momento";
+  if (min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
+}

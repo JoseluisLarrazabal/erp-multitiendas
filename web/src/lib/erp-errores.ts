@@ -38,7 +38,9 @@ export function errorRpc(error: NonNullable<ErrorRpc>): {
   ok: false;
   error: string;
   codigo: string | null;
+  red: boolean;
 } {
   const codigo = codigoErp(error);
-  return { ok: false, codigo, error: esFalloDeRed(error) ? MENSAJE_RED : mensajeErp(codigo) };
+  const red = esFalloDeRed(error);
+  return { ok: false, codigo, red, error: red ? MENSAJE_RED : mensajeErp(codigo) };
 }

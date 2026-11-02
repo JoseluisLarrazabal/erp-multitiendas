@@ -3,6 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AperturaCaja } from "@/modules/caja";
+import { useEffect } from "react";
+import { leerCatalogoDesde } from "../contexto-ventas";
 import { usePosCaja } from "../use-pos-caja";
 import { useColaPos } from "../use-cola";
 import type { GuardaVenta } from "../use-venta";
@@ -21,6 +23,7 @@ export function PosVenta({
   registrarGuarda,
   atajosBloqueados,
   sesionCaducada,
+  alCambiarCatalogo,
 }: {
   negocioId: string;
   negociosIds: readonly string[];
@@ -31,6 +34,7 @@ export function PosVenta({
   registrarGuarda: (g: GuardaVenta) => void;
   atajosBloqueados: boolean;
   sesionCaducada: boolean;
+  alCambiarCatalogo: (desde: number | null) => void;
 }) {
   const {
     fase,
@@ -42,7 +46,7 @@ export function PosVenta({
     verificarCaja,
     cajaCerrada,
     recargarNegocio,
-  } = usePosCaja(negocioId, permisos);
+  } = usePosCaja(negocioId, permisos, usuarioId);
   // Motor y aviso por encima de las fases: con el equipo sin elegir o la carga fallida la cola se envía y se ve igual.
   const cola = useColaPos(
     negociosIds,
@@ -50,6 +54,19 @@ export function PosVenta({
     usuarioId,
     sesionCaducada,
   );
+
+  // Con la caja cerrada aún no hay venta montada que cargue el catálogo: la barra lee su edad de lo guardado.
+  const ubicacionPendiente = fase.t === "abrir" ? fase.equipo.ubicacionId : null;
+  useEffect(() => {
+    if (!ubicacionPendiente) return;
+    let cancelado = false;
+    void leerCatalogoDesde(usuarioId, negocioId, ubicacionPendiente).then(
+      (d) => !cancelado && alCambiarCatalogo(d),
+    );
+    return () => {
+      cancelado = true;
+    };
+  }, [ubicacionPendiente, usuarioId, negocioId, alCambiarCatalogo]);
 
   const aviso = (
     <AvisoCola
@@ -105,8 +122,10 @@ export function PosVenta({
           <AperturaCaja
             negocioId={negocioId}
             dispositivoId={fase.equipo.id}
+            usuarioId={usuarioId}
             nombreEquipo={fase.equipo.nombre}
             alAbrir={alAbrirCaja}
+            alEncolar={() => cola.disparar()}
           />
         );
       case "lista":
@@ -116,8 +135,10 @@ export function PosVenta({
               <AperturaCaja
                 negocioId={negocioId}
                 dispositivoId={fase.equipo.id}
+                usuarioId={usuarioId}
                 nombreEquipo={fase.equipo.nombre}
                 alAbrir={alAbrirCaja}
+                alEncolar={() => cola.disparar()}
               />
             )}
             {/* Sin cajaId la venta sigue montada (carrito intacto) pero no cobra hasta abrir la caja. */}
@@ -139,6 +160,7 @@ export function PosVenta({
               cajaCerrada={cajaCerrada}
               registrarGuarda={registrarGuarda}
               atajosBloqueados={atajosBloqueados}
+              alCambiarCatalogo={alCambiarCatalogo}
             />
           </>
         ) : null;

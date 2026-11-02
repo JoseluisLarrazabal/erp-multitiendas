@@ -1,4 +1,4 @@
-import { isAuthRetryableFetchError, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   actualizarFila,
   conCerrojo,
@@ -15,7 +15,9 @@ import {
   type ResultadoEnvio,
 } from "@/lib/offline/cola";
 import { MENSAJE_RED } from "@/lib/erp-errores";
+import { MAX_INTENTOS_INESPERADOS } from "@/lib/offline/envio";
 import type { Database } from "@/lib/supabase/database.types";
+import { leerSesion } from "@/lib/supabase/sesion";
 import {
   formatearNumero,
   MAX_NUMERO_DUPLICADO,
@@ -23,7 +25,7 @@ import {
   siguienteSecuencia,
 } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
-import { enviarVenta, existeVenta, TIEMPO_ENVIO_MS, type OfflineVenta } from "./queries";
+import { enviarVenta, existeVenta, type OfflineVenta } from "./queries";
 import { payloadColaVentaSchema } from "./schemas";
 
 export const TIPO_VENTA = "venta";
@@ -42,10 +44,6 @@ export const MENSAJE_CAMBIO =
 const MENSAJE_VOLVER_A_ENTRAR = "Vuelve a entrar con tu cuenta para comprobarla.";
 const MENSAJE_LIMPIEZA =
   "La venta no se pudo limpiar de este equipo. Recarga la página antes de cobrarla de nuevo.";
-
-// Errores del servidor sin código ERP_ (PGRST, 40P01, 5xx) pueden ser transitorios: se reintentan este número de veces
-// y después la fila pasa a rechazada, para que una fila envenenada no corte la cola para siempre.
-const MAX_INTENTOS_INESPERADOS = 5;
 
 export type EntradaVenta = Pick<
   FilaCola,
@@ -67,25 +65,6 @@ export async function mayorSecuenciaEnCola(dispositivoId: string): Promise<numbe
     if (f.numeroImpreso) mayor = Math.max(mayor, secuenciaDe(f.numeroImpreso));
   }
   return mayor;
-}
-
-// "red": no se pudo saber (sin red o más de 8 s). "ninguna": no hay sesión, o Auth respondió que no vale.
-export type SesionLeida = "red" | "ninguna" | { usuarioId: string };
-
-export async function leerSesion(supabase: SupabaseClient<Database>): Promise<SesionLeida> {
-  let reloj: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const limite = new Promise<never>((_, no) => {
-      reloj = setTimeout(() => no(new Error("sin respuesta")), TIEMPO_ENVIO_MS);
-    });
-    const { data, error } = await Promise.race([supabase.auth.getSession(), limite]);
-    if (error) return isAuthRetryableFetchError(error) ? "red" : "ninguna";
-    return data.session ? { usuarioId: data.session.user.id } : "ninguna";
-  } catch {
-    return "red";
-  } finally {
-    clearTimeout(reloj);
-  }
 }
 
 // Al cobrar con red: la RLS ocultaría una venta ya guardada si la sesión es de otra cuenta o no existe, y no habría
@@ -147,10 +126,17 @@ export async function enviarVentaDeCola(
     // siempre se reintenta.
     const inesperado = !r.codigo && fila.intentos >= MAX_INTENTOS_INESPERADOS;
     if (r.red || (!r.codigo && !inesperado))
-      return { resultado: { t: "red", error: r.error }, numero: venta.numero };
+      return {
+        resultado: { t: "red", error: r.error, respondio: !r.red },
+        numero: venta.numero,
+      };
     if (enDuda || r.codigo === "ERP_OPERACION_REPETIDA") {
       const existe = await existeVenta(supabase, venta.id);
-      if (!existe.ok) return { resultado: { t: "red", error: existe.error }, numero: venta.numero };
+      if (!existe.ok)
+        return {
+          resultado: { t: "red", error: existe.error, respondio: !existe.red },
+          numero: venta.numero,
+        };
       if (existe.data) return ok();
       enDuda = false; // no existe: los duplicados siguientes son de números que esta venta nunca guardó
     }

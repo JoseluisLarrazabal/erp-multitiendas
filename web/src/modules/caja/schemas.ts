@@ -40,3 +40,26 @@ export const resumenCajaSchema = z.object({
   cantidad_movimientos: z.number(),
 });
 export type ResumenCaja = z.infer<typeof resumenCajaSchema>;
+
+// Lo que la cola guarda de una apertura y de un movimiento hechos sin conexión. `creada_en` es la hora del equipo y va
+// en `p_offline`; el servidor la limita a su propia hora.
+const fechaIso = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/);
+export const payloadAperturaSchema = z.object({
+  id: z.guid(),
+  negocio_id: z.guid(),
+  dispositivo_id: z.guid(),
+  monto_inicial: z.number().min(0),
+  creada_en: fechaIso,
+});
+export type PayloadApertura = z.infer<typeof payloadAperturaSchema>;
+export const payloadMovimientoSchema = z.object({
+  id: z.guid(),
+  sesion_id: z.guid(),
+  tipo: z.enum(["ingreso", "gasto", "retiro"]),
+  monto: z.number().positive(),
+  motivo: z.string().min(1),
+  creada_en: fechaIso,
+});
+export type PayloadMovimiento = z.infer<typeof payloadMovimientoSchema>;

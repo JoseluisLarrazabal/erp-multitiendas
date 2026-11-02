@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { baseOffline } from "./db";
+import { avisarRed } from "./red";
 
 // Cola genérica de operaciones pendientes. No conoce ventas ni caja: cada tipo trae su enviador.
 export const filaColaSchema = z.object({
@@ -28,11 +29,12 @@ export type FilaNueva = Pick<
   Partial<Pick<FilaCola, "entregada">>;
 
 // red: la base pudo no enterarse (corta el vaciado y reintenta con backoff). rechazo: la base respondió que no
-// (queda `rechazada`, nunca se borra sola). pausa: no se puede enviar ahora, sin contar como fallo (no salió ninguna
+// (queda `rechazada`, nunca se borra sola). `respondio` en red: el servidor contestó (o no se sabe) con un error que se
+// reintenta: no prueba que falte la red. pausa: no se puede enviar ahora, sin contar como fallo (no salió ninguna
 // petición: sin sesión o sin poder comprobarla).
 export type ResultadoEnvio =
   | { t: "ok" }
-  | { t: "red"; error: string }
+  | { t: "red"; error: string; respondio?: boolean }
   | { t: "rechazo"; error: string; codigo?: string | null }
   | { t: "pausa" };
 export type Enviador = (fila: FilaCola) => Promise<ResultadoEnvio>;
@@ -217,8 +219,11 @@ async function enviarFila(
   try {
     r = await enviador(fila);
   } catch {
-    r = { t: "red", error: "No se pudo enviar. Se reintentará." };
+    r = { t: "red", error: "No se pudo enviar. Se reintentará.", respondio: true };
   }
+  // Una respuesta del servidor (ok o rechazo) prueba que hay red; un fallo sin respuesta, lo contrario.
+  if (r.t === "ok" || r.t === "rechazo") avisarRed(true);
+  else if (r.t === "red" && !r.respondio) avisarRed(false);
   if (r.t === "ok") await quitar(fila.id);
   else if (r.t === "rechazo") await marcarRechazada(fila.id, r.error);
   else if (r.t === "red") {

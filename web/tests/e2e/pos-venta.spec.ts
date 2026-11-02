@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { apiComo, NEGOCIOS, rutaAuth } from "./helpers";
+import { apiComo, CUENTAS, iniciarSesionUI, NEGOCIOS, rutaAuth } from "./helpers";
 import { corrida } from "./inventario-helpers";
 import {
   abrirCajaApi,
@@ -245,6 +245,37 @@ async function agregarPorCodigo(page: Page, codigo: string) {
   await page.keyboard.press("Enter");
 }
 
+async function pagosDe(ventaId: string) {
+  const r = await apiComo(
+    "vendedor",
+    `venta_pagos?select=medio,monto,verificacion&venta_id=eq.${ventaId}&order=medio`,
+  );
+  return r.json as { medio: string; monto: number; verificacion: string }[];
+}
+
+// Filas de la base local del POS (IndexedDB): cuántas hay en una tabla y cuántas claves de `datos` empiezan por un prefijo.
+async function enIndexedDb(page: Page, tabla: "cola" | "datos", prefijo = ""): Promise<number> {
+  return page.evaluate(
+    ([t, p]) =>
+      new Promise<number>((ok, no) => {
+        const req = indexedDB.open("erp-pos");
+        req.onerror = () => no(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(t!)) return ok(0);
+          const todo = db.transaction(t!).objectStore(t!).getAll();
+          todo.onsuccess = () => {
+            db.close();
+            const filas = todo.result as { clave?: string }[];
+            ok(filas.filter((f) => t === "cola" || (f.clave ?? "").startsWith(p!)).length);
+          };
+          todo.onerror = () => no(todo.error);
+        };
+      }),
+    [tabla, prefijo],
+  );
+}
+
 // Vuelve la conexión: el motor de la cola reenvía lo pendiente sin esperar la espera del reintento.
 async function volverLaRed(page: Page) {
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
@@ -437,7 +468,7 @@ test("respuesta perdida: la venta ya estaba guardada, el reenvío recibe un rech
 
   // El rechazo con código de una venta en duda se comprueba contra la base: existe, así que sale de la cola sin error.
   await expect(sinEnviar(page, 1)).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Ventas rechazadas" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Operaciones rechazadas" })).toHaveCount(0);
   expect(llamadas).toBe(2);
   const ventas = await ventasDeLaCaja(equipoId);
   expect(ventas).toHaveLength(1);
@@ -615,12 +646,15 @@ test("cerrar la pestaña en un primer intento colgado: al reabrir la venta sale 
   const nueva = await context.newPage();
   await fijarEquipo(nueva, equipoId);
   await nueva.goto("/pos");
-  const lista = nueva.getByRole("region", { name: "Ventas rechazadas" });
+  const lista = nueva.getByRole("region", { name: "Operaciones rechazadas" });
   await expect(lista).toContainText("El cobro se interrumpió antes de la nota");
   await expect(lista).toContainText("Bs 17,00");
   await nueva.waitForTimeout(1500); // el motor ya corrió al montar: no la reenvía
-  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
-  expect(await stockEn(a.id)).toBe(3);
+  // La petición retenida puede escaparse al cerrar la pestaña; solo un reenvío de la cola llevaría origen offline.
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas.length).toBeLessThanOrEqual(1);
+  expect(ventas.filter((v) => v.origen !== "online")).toHaveLength(0);
+  expect(await stockEn(a.id)).toBe(3 - ventas.length);
 });
 
 test("respuesta perdida con la venta ya guardada: el reenvío no duplica y conserva origen online", async ({
@@ -671,7 +705,7 @@ async function ventaRechazada(page: Page, contado: number) {
   await confirmarVenta(page);
   await expect(notaVisible(page)).toBeVisible();
   await volverLaRed(page);
-  const lista = page.getByRole("region", { name: "Ventas rechazadas" });
+  const lista = page.getByRole("region", { name: "Operaciones rechazadas" });
   await expect(lista).toBeVisible();
   await expect(lista).toContainText("La caja de este equipo está cerrada");
   await expect(lista).toContainText(`Bs ${contado},00`);
@@ -734,7 +768,9 @@ test("E2E-07: con la cola pendiente el cierre de caja está bloqueado y se habil
   await page.getByLabel("Efectivo contado (Bs)").fill("12");
   const cerrar = page.getByRole("button", { name: "Cerrar caja" }).first();
   await expect(cerrar).toBeDisabled();
-  await expect(page.getByText("Hay ventas sin enviar o rechazadas en este equipo")).toBeVisible();
+  await expect(
+    page.getByText("Hay operaciones sin enviar o rechazadas en este equipo"),
+  ).toBeVisible();
 
   await context.setOffline(false);
   await volverLaRed(page);
@@ -772,20 +808,56 @@ test("dos pestañas con la misma cola: una sola venta en la base", async ({ page
   expect(await stockEn(a.id)).toBe(2);
 });
 
-test("sin conexión un cobro con QR no se acepta", async ({ page, context }) => {
+test("sin conexión el QR se cobra como pendiente de verificar, sin casilla, y llega como pendiente", async ({
+  page,
+  context,
+}) => {
   const a = await crearProductoConPrecio({ contado: 40, stock: 2 });
   await abrirCajaPorUI(page, "0");
   await agregarPorCodigo(page, a.codigo);
-  const cobro = await abrirCobro(page);
   await context.setOffline(true);
+  const cobro = await abrirCobro(page);
   await cobro.getByRole("button", { name: "Todo QR" }).click();
-  await cobro.getByLabel(/Confirmo que recibí/).check();
+  await expect(cobro.getByLabel(/Confirmo que recibí/)).toHaveCount(0);
+  await expect(cobro.getByText("QR pendiente de verificar")).toBeVisible();
   await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(cobro.getByRole("alert")).toContainText("necesita conexión");
-  await expect(sinEnviar(page, 1)).toHaveCount(0);
-  await cobro.getByRole("button", { name: "Volver" }).click();
-  await expect(page.getByRole("list", { name: "Carrito" }).getByRole("listitem")).toHaveCount(1);
+  await expect(notaVisible(page)).toContainText("QR pendiente de verificar");
+  await expect(notaEnCola(page)).toBeVisible();
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
   await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0, { timeout: 15_000 });
+  const [venta] = await ventasDeLaCaja(equipoId);
+  expect(venta?.origen).toBe("offline");
+  expect(await pagosDe(venta!.id)).toEqual([{ medio: "qr", monto: 40, verificacion: "pendiente" }]);
+});
+
+test("navigator.onLine dice sin red pero el servidor responde: el QR pendiente salta el primer intento y viaja con p_offline", async ({
+  page,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 22, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  const cuerpos: Record<string, unknown>[] = [];
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    cuerpos.push(route.request().postDataJSON() as Record<string, unknown>);
+    await route.continue();
+  });
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false });
+    window.dispatchEvent(new Event("offline"));
+  });
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Todo QR" }).click();
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(notaVisible(page)).toBeVisible();
+  await expect.poll(() => cuerpos.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  expect(cuerpos.every((c) => "p_offline" in c)).toBe(true);
+  await expect.poll(async () => (await ventasDeLaCaja(equipoId)).length).toBe(1);
+  const [venta] = await ventasDeLaCaja(equipoId);
+  expect(venta?.origen).toBe("offline");
+  expect((await pagosDe(venta!.id))[0]?.verificacion).toBe("pendiente");
 });
 
 test("otra cuenta en otra pestaña: el cobro se rechaza, no se encola y el carrito queda", async ({
@@ -1350,4 +1422,242 @@ test.describe("panel: permisos", () => {
     await page.goto("/panel/descuento");
     await expect(page).toHaveURL(/\/panel$/);
   });
+});
+
+// Fase 3, PR 3: arranque sin red. Comparten el equipo C1 (en serie).
+test("E2E-06: recargar el POS sin red lo abre con el catálogo guardado y vende", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 18, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await expect.poll(() => enIndexedDb(page, "datos", "catalogo:")).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText(/Sin conexión\. Catálogo de/)).toBeVisible();
+  await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
+  await agregarPorCodigo(page, a.codigo);
+  await confirmarVenta(page);
+  await expect(notaEnCola(page)).toBeVisible();
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  // El carrito no sobrevive a la recarga (no aplica); la cola sí.
+  await page.reload();
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(sinEnviar(page, 1)).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.getByText(/Sin conexión\. Catálogo de/)).toHaveCount(0);
+  expect((await ventasDeLaCaja(equipoId))[0]).toMatchObject({ total: 18, origen: "offline" });
+});
+
+test("mañana sin internet: abre caja, vende efectivo y QR, registra un gasto, recarga, reconecta y cierra", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 30, stock: 5 });
+  const b = await crearProductoConPrecio({ contado: 20, stock: 5 });
+  // Contexto previo: un día de trabajo con red que termina cerrando la caja desde el POS.
+  await abrirCajaPorUI(page, "0");
+  await expect.poll(() => enIndexedDb(page, "datos", "catalogo:")).toBe(1);
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await page.getByLabel("Efectivo contado (Bs)").fill("0");
+  await page.getByRole("button", { name: "Cerrar caja" }).first().click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cerrar caja" }).click();
+  await expect(page.getByTestId("cierre-esperado")).toBeVisible();
+  await page.getByRole("button", { name: "Listo" }).click();
+  await expect(page.getByLabel("Efectivo inicial (Bs)")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true);
+
+  const antes = Date.now();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText(/Sin conexión\. Catálogo de/)).toBeVisible();
+  await page.getByLabel("Efectivo inicial (Bs)").fill("50");
+  await page.getByRole("button", { name: "Abrir caja" }).click();
+  await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
+
+  await agregarPorCodigo(page, a.codigo);
+  await confirmarVenta(page);
+  await expect(notaEnCola(page)).toBeVisible();
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+  await agregarPorCodigo(page, b.codigo);
+  const cobro = await abrirCobro(page);
+  await cobro.getByRole("button", { name: "Todo QR" }).click();
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(notaVisible(page)).toContainText("QR pendiente de verificar");
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await page.getByLabel("Tipo", { exact: true }).selectOption("gasto");
+  await page.getByLabel("Monto (Bs)").fill("5");
+  await page.getByLabel("Motivo", { exact: true }).fill("Bolsas");
+  await page.getByRole("button", { name: "Registrar movimiento" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "guardado sin conexión" })).toBeVisible();
+  await expect(page.getByText("Disponible con conexión.")).toBeVisible();
+  await expect(page.getByText("Cerrar la caja necesita conexión.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar caja" }).first()).toBeDisabled();
+
+  await page.reload();
+  await expect(
+    page.getByText(/2 ventas, 1 apertura de caja y 1 movimiento de caja sin enviar/),
+  ).toBeVisible();
+  expect(await sesionAbierta(equipoId)).toBeNull();
+
+  await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(page.getByText(/sin enviar/)).toHaveCount(0, { timeout: 20_000 });
+
+  const cajaId = (await sesionAbierta(equipoId))!;
+  const sesion = (
+    (
+      await apiComo(
+        "vendedor",
+        `caja_sesiones?select=origen,enviada_por,usuario_apertura,abierta_en&id=eq.${cajaId}`,
+      )
+    ).json as {
+      origen: string;
+      enviada_por: string;
+      usuario_apertura: string;
+      abierta_en: string;
+    }[]
+  )[0]!;
+  expect(sesion.origen).toBe("offline");
+  expect(sesion.enviada_por).toBe(sesion.usuario_apertura);
+  // La hora es la del equipo al abrir, no la de la sincronización.
+  expect(Date.parse(sesion.abierta_en)).toBeGreaterThanOrEqual(antes - 2_000);
+  expect(Date.parse(sesion.abierta_en)).toBeLessThan(Date.now() - 1_000);
+  const ventas = await ventasDeLaCaja(equipoId);
+  expect(ventas.map((v) => v.origen)).toEqual(["offline", "offline"]);
+  const pagos = (await Promise.all(ventas.map((v) => pagosDe(v.id)))).flat();
+  expect(pagos.map((p) => `${p.medio}:${p.verificacion}`).sort()).toEqual([
+    "efectivo:no_aplica",
+    "qr:pendiente",
+  ]);
+  const movs = (
+    await apiComo("vendedor", `caja_movimientos?select=tipo,monto,origen&sesion_id=eq.${cajaId}`)
+  ).json as { tipo: string; monto: number; origen: string }[];
+  expect(movs).toEqual([{ tipo: "gasto", monto: 5, origen: "offline" }]);
+  // Orden: las ventas se aceptaron porque la apertura llegó antes (sin ella darían ERP_CAJA_CERRADA).
+  // Stock = 5 menos lo vendido y coincide con la suma del kardex.
+  for (const p of [a, b]) {
+    expect(await stockEn(p.id)).toBe(4);
+    const kardex = (
+      await apiComo("dueno", `movimientos_inventario?select=cantidad&producto_id=eq.${p.id}`)
+    ).json as { cantidad: number }[];
+    expect(kardex.reduce((t, k) => t + Number(k.cantidad), 0)).toBe(4);
+  }
+
+  // Con la cola vacía el cierre ya funciona (la recarga dejó el POS en modo vender).
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await page.getByLabel("Efectivo contado (Bs)").fill("75");
+  await page.getByRole("button", { name: "Cerrar caja" }).first().click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cerrar caja" }).click();
+  await expect(page.getByTestId("cierre-esperado")).toBeVisible();
+  expect(await sesionAbierta(equipoId)).toBeNull();
+});
+
+test("sin red un producto con serie pide conexión y no entra al carrito", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 60, stock: 1, controlaSerie: true });
+  await registrarSeries(a.id, [`S-${a.codigo}`]);
+  await abrirCajaPorUI(page, "0");
+  await context.setOffline(true);
+  await page.keyboard.type(a.codigo);
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Este producto necesita conexión")).toBeVisible();
+  await expect(page.getByText("El carrito está vacío.")).toBeVisible();
+  // Cambiar de equipo, cliente y cierre de caja también piden conexión.
+  await expect(page.getByRole("button", { name: "Cambiar equipo" })).toBeDisabled();
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Cerrar caja" }).first()).toBeDisabled();
+  await context.setOffline(false);
+});
+
+test("cerrar sesión borra el contexto y conserva la cola", async ({ page }) => {
+  const a = await crearProductoConPrecio({ contado: 14, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  await expect.poll(() => enIndexedDb(page, "datos")).toBeGreaterThan(0);
+  await agregarPorCodigo(page, a.codigo);
+  // El servidor no responde: el primer intento falla y la venta queda en la cola.
+  await page.route("**/rest/v1/rpc/registrar_venta", (route) => route.abort());
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  // El logout real revocaría la sesión guardada que comparten los demás archivos: se atiende en local.
+  await page.route("**/auth/v1/logout*", (route) => route.fulfill({ status: 204 }));
+  await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(await enIndexedDb(page, "datos")).toBe(0);
+  expect(await enIndexedDb(page, "cola")).toBe(1);
+});
+
+test("sesión caducada al reconectar: la cola se pausa, pide login y tras entrar se envía", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 16, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  // El token ya no vale: sin cookies de sesión.
+  await context.clearCookies();
+  await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(page.getByText(/Tu sesión caducó/)).toBeVisible();
+  await expect(page.getByText(/Inicia sesión para enviarlas/)).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  expect(await enIndexedDb(page, "cola")).toBe(1);
+
+  // Vuelve a entrar con la misma cuenta (otra pestaña, mismo navegador) y la cola se retoma.
+  const otra = await context.newPage();
+  await iniciarSesionUI(otra, CUENTAS.vendedor);
+  await expect(otra).toHaveURL(/\/pos$/);
+  await otra.close();
+  await page.getByRole("button", { name: "Ya inicié sesión" }).click();
+  await expect(sinEnviar(page, 1)).toHaveCount(0, { timeout: 20_000 });
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+});
+
+test("actualización disponible: el botón se habilita solo con la cola vacía", async ({
+  page,
+  context,
+}) => {
+  // Simula el evento `waiting` del provider: probar dos builds seguidos no es viable aquí (ver docs/stack.md).
+  const a = await crearProductoConPrecio({ contado: 11, stock: 2 });
+  await abrirCajaPorUI(page, "0");
+  const esperar = () =>
+    page.evaluate(() =>
+      (
+        window as unknown as { serwist: { dispatchEvent: (e: unknown) => void } }
+      ).serwist.dispatchEvent({
+        type: "waiting",
+      }),
+    );
+  await esperar();
+  const boton = page.getByRole("button", { name: "Actualizar ahora" });
+  await expect(page.getByText("Actualización disponible.")).toBeVisible();
+  await expect(boton).toBeEnabled();
+
+  await agregarPorCodigo(page, a.codigo);
+  await context.setOffline(true);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+  await expect(boton).toBeDisabled();
+  await expect(page.getByText(/cuando se envíen/)).toBeVisible();
+
+  await context.setOffline(false);
+  await volverLaRed(page);
+  await expect(boton).toBeEnabled({ timeout: 15_000 });
 });

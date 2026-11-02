@@ -3,7 +3,9 @@
 import { navegarA } from "@/lib/navegar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
-import { esErrorTransitorio, esSinSesion } from "@/lib/supabase/errores";
+import { avisarRed, useSinRed } from "@/lib/offline/red";
+import { esErrorTransitorio, esSinRedAuth, esSinSesion } from "@/lib/supabase/errores";
+import { borrarContextoLocal, guardarSesionLocal, leerSesionLocal } from "./contexto-local";
 import { conservarLista, negocioDeRecheck, type NegocioUsuario } from "./domain";
 import { leerNegocioGuardado } from "./negocio-cliente";
 import { listarMisNegocios, permisosDeRol } from "./queries";
@@ -28,10 +30,8 @@ const ERROR_AUTH = "No pudimos verificar tu sesión.";
 // /pos es estático: no hay servidor que decida, así que la guarda vive en el cliente.
 // Solo va a /login si no hay sesión o es inválida; cualquier otro fallo de Auth es `error` y no navega
 // (si no, /login ↔ /pos harían bucle). Con la sesión ya `lista`, un re-chequeo de fondo nunca la reemplaza por
-// un error ni navega: conserva la pantalla y, si la sesión se perdió de verdad, marca `caducada`. Sin red abre con lo que haya: la venta se guarda en la cola y la
-// RLS decide al sincronizar.
-// shortcut: sin red no se muestra el negocio ni los permisos, porque no se cachean; cuando la cola offline
-// guarde el snapshot en IndexedDB (fase 3), leerlos de ahí.
+// un error ni navega: conserva la pantalla y, si la sesión se perdió de verdad, marca `caducada`. Sin red abre con el contexto guardado en IndexedDB (cuenta, negocios y permisos de la última vez con red), sin mirar
+// la cookie: la venta se guarda en la cola y la RLS decide al sincronizar. Sin contexto, muestra la pantalla de sin conexión.
 export function usePosSesion(): {
   sesion: SesionPos;
   cambiarActivo: (id: string) => Promise<string | null>;
@@ -47,6 +47,14 @@ export function usePosSesion(): {
       sesion.fase === "lista" ? { usuarioId: sesion.usuarioId, activoId: sesion.activoId } : null;
   }, [sesion]);
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
+
+  // Un fetch fallido también cuenta como sin red (navigator.onLine miente): al recuperarse se vuelve a verificar.
+  const sinRed = useSinRed();
+  const estabaSinRed = useRef(sinRed);
+  useEffect(() => {
+    if (estabaSinRed.current && !sinRed) reintentar();
+    estabaSinRed.current = sinRed;
+  }, [sinRed, reintentar]);
 
   // Al volver la red o la pestaña se vuelve a verificar, sin recargar (tras iniciar sesión en otra pestaña).
   useEffect(() => {
@@ -67,18 +75,32 @@ export function usePosSesion(): {
       if (!cancelado) setSesion((actual) => conservarLista(actual, s));
     };
 
+    // Un lista ya en pantalla no se reemplaza por una copia vieja: el carrito y los permisos vigentes mandan.
+    async function desdeLocal() {
+      if (vista.current) return;
+      const local = await leerSesionLocal();
+      if (!local) return publicar({ fase: "sin-conexion" });
+      publicar({ fase: "lista", ...local });
+    }
+
     async function verificar() {
-      if (!navigator.onLine) return publicar({ fase: "sin-conexion" });
+      if (!navigator.onLine) return desdeLocal();
       const supabase = createClient();
       const { data, error } = await supabase.auth.getUser();
       const ya = vista.current;
       if (error) {
-        if (esSinSesion(error)) {
-          if (!ya) return navegarA("/login");
+        if (esSinRedAuth(error)) {
+          avisarRed(false);
+          return desdeLocal();
+        }
+        // Con la sesión ya lista, un token que no refresca (400 de Auth) también es sesión perdida.
+        if (esSinSesion(error) || (ya && !esErrorTransitorio(error))) {
+          if (!ya) {
+            await borrarContextoLocal();
+            return navegarA("/login");
+          }
           return setSesion((s) => (s.fase === "lista" ? { ...s, caducada: true } : s));
         }
-        if (esErrorTransitorio(error) && !navigator.onLine)
-          return publicar({ fase: "sin-conexion" });
         return publicar({ fase: "error", mensaje: ERROR_AUTH });
       }
 
@@ -87,28 +109,38 @@ export function usePosSesion(): {
       if (ya && data.user.id !== ya.usuarioId)
         return setSesion((s) => (s.fase === "lista" ? { ...s, caducada: true } : s));
 
+      const caida = (r: { error: string; red?: boolean }) => {
+        if (!r.red) return publicar({ fase: "error", mensaje: r.error });
+        avisarRed(false);
+        return desdeLocal();
+      };
       const negocios = await listarMisNegocios(supabase, data.user.id);
-      if (!negocios.ok) return publicar({ fase: "error", mensaje: negocios.error });
+      if (!negocios.ok) return caida(negocios);
       const activo = negocioDeRecheck(negocios.data, ya?.activoId ?? null, leerNegocioGuardado());
-      if (!activo) return navegarA("/sin-acceso");
+      if (!activo) {
+        await borrarContextoLocal();
+        return navegarA("/sin-acceso");
+      }
       const permisos = await permisosDeRol(supabase, activo.tipo, activo.rol);
-      if (!permisos.ok) return publicar({ fase: "error", mensaje: permisos.error });
-      publicar({
-        fase: "lista",
+      if (!permisos.ok) return caida(permisos);
+      const lista = {
         usuarioId: data.user.id,
         negocios: negocios.data,
         activoId: activo.negocioId,
         permisos: permisos.data,
-      });
+      };
+      avisarRed(true);
+      await guardarSesionLocal(lista);
+      publicar({ fase: "lista", ...lista });
     }
 
-    verificar().catch((e: unknown) =>
-      publicar(
-        e instanceof TypeError || !navigator.onLine
-          ? { fase: "sin-conexion" }
-          : { fase: "error", mensaje: ERROR_AUTH },
-      ),
-    );
+    verificar().catch((e: unknown) => {
+      if (e instanceof TypeError || !navigator.onLine) {
+        avisarRed(false);
+        return desdeLocal().catch(() => publicar({ fase: "sin-conexion" }));
+      }
+      publicar({ fase: "error", mensaje: ERROR_AUTH });
+    });
     return () => {
       cancelado = true;
     };
@@ -118,10 +150,17 @@ export function usePosSesion(): {
   // La preferencia (cookie) la guarda el selector solo si esto devuelve null.
   async function cambiarActivo(id: string): Promise<string | null> {
     if (sesion.fase !== "lista") return "Sesión no disponible.";
+    if (!navigator.onLine) return "Cambiar de negocio necesita conexión.";
     const nuevo = sesion.negocios.find((n) => n.negocioId === id);
     if (!nuevo) return "No tienes acceso a ese negocio.";
     const permisos = await permisosDeRol(createClient(), nuevo.tipo, nuevo.rol);
     if (!permisos.ok) return permisos.error;
+    await guardarSesionLocal({
+      usuarioId: sesion.usuarioId,
+      negocios: sesion.negocios,
+      activoId: id,
+      permisos: permisos.data,
+    });
     setSesion({ ...sesion, activoId: id, permisos: permisos.data });
     return null;
   }

@@ -5,27 +5,40 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { avisarRed, useSinRed } from "@/lib/offline/red";
 import { createClient } from "@/lib/supabase/browser";
+import { encolarApertura } from "../cola-caja";
 import { parsearMontoInicial } from "../domain";
 import { abrirCaja } from "../queries";
 import { aperturaSchema, type SesionCaja } from "../schemas";
 
 // El UUID de la apertura vive en una ref: reintentar tras un fallo de red reenvía el mismo id.
+const MENSAJE_COLA =
+  "No se pudo guardar la apertura en este equipo. Revisa el espacio y los permisos del navegador, o recarga la página.";
+
+// Con red abre como siempre (un rechazo se muestra aquí y no se encola). Sin red, o si la red falla al abrir, la
+// apertura entra a la cola y el POS usa su UUID como caja local: las ventas siguientes ya apuntan a ella.
 export function AperturaCaja({
   negocioId,
   dispositivoId,
+  usuarioId,
   nombreEquipo,
   alAbrir,
+  alEncolar,
 }: {
   negocioId: string;
   dispositivoId: string;
+  usuarioId: string;
   nombreEquipo: string;
   alAbrir: (sesion: SesionCaja) => void;
+  // Tras encolar la apertura: el motor la envía sin esperar el temporizador.
+  alEncolar: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const intento = useRef<{ id: string; centavos: number } | null>(null);
+  const sinRed = useSinRed();
 
   async function abrir(e: React.FormEvent) {
     e.preventDefault();
@@ -38,15 +51,39 @@ export function AperturaCaja({
       intento.current = { id: crypto.randomUUID(), centavos };
     setError(null);
     setEnviando(true);
-    const r = await abrirCaja(createClient(), {
-      id: intento.current.id,
-      negocioId,
-      dispositivoId,
-      montoInicial: centavos / 100,
-    });
+    const { id } = intento.current;
+    if (!sinRed) {
+      const r = await abrirCaja(createClient(), {
+        id,
+        negocioId,
+        dispositivoId,
+        montoInicial: centavos / 100,
+      });
+      if (r.ok) {
+        avisarRed(true);
+        setEnviando(false);
+        return alAbrir(r.data);
+      }
+      if (!r.red) {
+        setEnviando(false);
+        return setError(r.error);
+      }
+      avisarRed(false);
+    }
+    try {
+      const sesion = await encolarApertura({
+        id,
+        negocioId,
+        dispositivoId,
+        usuarioId,
+        montoInicial: centavos / 100,
+      });
+      alEncolar();
+      alAbrir(sesion);
+    } catch {
+      setError(MENSAJE_COLA);
+    }
     setEnviando(false);
-    if (!r.ok) return setError(r.error);
-    alAbrir(r.data);
   }
 
   return (
@@ -73,6 +110,11 @@ export function AperturaCaja({
           onChange={(e) => setTexto(e.target.value)}
         />
       </div>
+      {sinRed && (
+        <p role="status" className="text-muted-foreground text-sm">
+          Sin red: la apertura se guarda en este equipo y se envía al volver la conexión.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}

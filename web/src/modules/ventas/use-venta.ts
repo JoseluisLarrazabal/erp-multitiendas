@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { leerSinRed, useSinRed } from "@/lib/offline/red";
 import type { ClienteElegido } from "@/modules/clientes";
 import {
   exigeCliente,
@@ -49,12 +50,21 @@ export type OpcionesVenta = {
   registrarGuarda: (g: GuardaVenta) => void;
   // Un diálogo de fuera de la venta (cambio de negocio) está abierto: F2 y "/" no deben actuar.
   atajosBloqueados: boolean;
+  // Edad del catálogo en uso (ms), para la barra de sin conexión.
+  alCambiarCatalogo: (desde: number | null) => void;
 };
 
 // Estado y acciones de la venta en curso: catálogo, carrito, cliente, cobro y envío.
 export function useVenta(o: OpcionesVenta) {
   const { negocioId, equipo, cajaId, recargarNegocio, recargarPermisos, verificarCaja } = o;
-  const catalogoHook = useCatalogo(negocioId, equipo.ubicacionId);
+  const catalogoHook = useCatalogo(negocioId, equipo.ubicacionId, o.usuarioId);
+  const sinRed = useSinRed();
+  const { alCambiarCatalogo } = o;
+  const catalogoDesde = catalogoHook.desde;
+  useEffect(() => {
+    alCambiarCatalogo(catalogoDesde);
+    return () => alCambiarCatalogo(null);
+  }, [catalogoDesde, alCambiarCatalogo]);
   const { estado: estadoCatalogo, indice, recargar, registrarVenta } = catalogoHook;
   const [carrito, despachar] = useReducer(reducirCarrito, []);
   const [descuentoVentaTexto, setDescuentoVentaTexto] = useState("");
@@ -141,6 +151,9 @@ export function useVenta(o: OpcionesVenta) {
 
   function agregar(p: ProductoPos) {
     const motivo = motivoNoVendible(p, o.tipoNegocio);
+    // Las series se eligen contra el servidor (RF-VEN-14).
+    if (p.controlaSerie && leerSinRed())
+      return setAviso(`Este producto necesita conexión: "${p.nombre}" lleva serie.`);
     if (motivo) return setAviso(`"${p.nombre}" no se puede vender: ${motivo.toLowerCase()}.`);
     const igual = lineaIgual(carrito, p);
     siguienteId.current += 1;
@@ -168,6 +181,7 @@ export function useVenta(o: OpcionesVenta) {
   const puedeCobrar =
     !consulta &&
     !!cajaId &&
+    !(sinRed && clienteObligatorio && !cliente) &&
     !!resumen.totales &&
     !resumen.error &&
     (!clienteObligatorio || !!cliente) &&
@@ -220,11 +234,14 @@ export function useVenta(o: OpcionesVenta) {
     abrirCobro,
     motivoBloqueo: consulta
       ? null
-      : motivoBloqueo(resumen, {
-          cajaAbierta: !!cajaId,
-          clienteObligatorio,
-          hayCliente: !!cliente,
-        }),
+      : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
+        ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
+        : motivoBloqueo(resumen, {
+            cajaAbierta: !!cajaId,
+            clienteObligatorio,
+            hayCliente: !!cliente,
+          }),
+    sinRed,
     // El carrito no se edita mientras la venta viaja al servidor.
     bloqueado: envio.estado.t === "enviando",
     // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.

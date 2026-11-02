@@ -55,10 +55,15 @@ export function VentaEnCurso({
       />
       {verCaja && (
         <PanelCaja
+          negocioId={opciones.negocioId}
+          dispositivoId={equipo.id}
+          usuarioId={opciones.usuarioId}
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
+          filas={opciones.cola.filas}
           ventaPendiente={v.colaBloquea}
           lecturaColaFallida={opciones.cola.estado.lecturaFallida}
+          alEncolar={() => opciones.cola.disparar()}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}
           alYaCerrada={() => opciones.verificarCaja(equipo.id)}
           alVolver={() => setVerCaja(false)}
@@ -129,6 +134,7 @@ export function VentaEnCurso({
               descuentoVentaTexto: v.descuentoVentaTexto,
               efectivo: c.efectivo,
               qr: c.qr,
+              qrConfirmado: c.qrConfirmado,
               recibido: c.recibido,
               nota: {
                 negocio: { nombre: negocio.nombre, nit: negocio.nit, datosNota: negocio.datosNota },

@@ -12,6 +12,8 @@ export type DatosEnvio = {
   descuentoVentaTexto: string;
   efectivo: number;
   qr: number;
+  // false: el QR se cobró sin conexión y queda pendiente de verificar (solo viaja con p_offline).
+  qrVerificado: boolean;
 };
 
 // Construye y valida el payload. Se llama una vez al confirmar el cobro: los reintentos reenvían este mismo objeto.
@@ -30,7 +32,7 @@ export function construirPayload(resumen: ResumenCarrito, d: DatosEnvio): VentaP
   }));
   const pagos: VentaPayload["pagos"] = [];
   if (d.efectivo > 0) pagos.push({ medio: "efectivo", monto: aBolivianos(d.efectivo) });
-  if (d.qr > 0) pagos.push({ medio: "qr", monto: aBolivianos(d.qr), verificado: true });
+  if (d.qr > 0) pagos.push({ medio: "qr", monto: aBolivianos(d.qr), verificado: d.qrVerificado });
   const r = ventaPayloadSchema.safeParse({
     id: d.ventaId,
     dispositivo_id: d.dispositivoId,
@@ -65,7 +67,7 @@ export type NotaVenta = {
   subtotal: number;
   descuentoVenta: number;
   total: number;
-  pagos: { medio: "efectivo" | "qr"; monto: number }[];
+  pagos: { medio: "efectivo" | "qr"; monto: number; pendiente?: boolean }[];
   recibido: number;
   vuelto: number;
 };
@@ -73,13 +75,17 @@ export type NotaVenta = {
 // Todo en centavos; la nota se arma con lo que vio el cajero, sin volver a consultar.
 export function construirNota(
   resumen: ResumenCarrito,
-  d: Pick<DatosEnvio, "numero" | "creadaEnCliente" | "efectivo" | "qr" | "descuentoVentaTexto">,
+  d: Pick<
+    DatosEnvio,
+    "numero" | "creadaEnCliente" | "efectivo" | "qr" | "descuentoVentaTexto" | "qrVerificado"
+  >,
   contexto: Pick<NotaVenta, "negocio" | "vendedor" | "cliente"> & { recibido: number },
 ): NotaVenta | null {
   if (!resumen.totales) return null;
   const pagos: NotaVenta["pagos"] = [];
   if (d.efectivo > 0) pagos.push({ medio: "efectivo", monto: d.efectivo });
-  if (d.qr > 0) pagos.push({ medio: "qr", monto: d.qr });
+  if (d.qr > 0)
+    pagos.push({ medio: "qr", monto: d.qr, ...(d.qrVerificado ? {} : { pendiente: true }) });
   return {
     numero: d.numero,
     fechaIso: d.creadaEnCliente,

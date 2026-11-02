@@ -120,7 +120,10 @@ export function NotaVentaVista({
           </p>
           {nota.pagos.map((p) => (
             <p key={p.medio} className="flex justify-between">
-              <span>{ETIQUETA_MEDIO[p.medio]}</span>
+              <span>
+                {ETIQUETA_MEDIO[p.medio]}
+                {p.pendiente && " (QR pendiente de verificar)"}
+              </span>
               <span>{bs(p.monto)}</span>
             </p>
           ))}
@@ -131,6 +134,11 @@ export function NotaVentaVista({
             </p>
           )}
         </div>
+        {nota.pagos.some((p) => p.pendiente) && (
+          <p className="mt-2 text-center font-semibold">
+            QR pendiente de verificar: el pago aún no está confirmado.
+          </p>
+        )}
         <p className="mt-3 text-center">Gracias por su compra</p>
       </article>
     </div>

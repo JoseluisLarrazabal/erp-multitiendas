@@ -7,9 +7,14 @@ const PERMISOS_PANEL = ["ver_reportes", "editar_productos", "usuarios"];
 
 // `codigo`: código ERP_* de la RPC cuando el fallo vino de la base (las acciones del panel no lo usan).
 export type Resultado<T> =
-  { ok: true; data: T } | { ok: false; error: string; codigo?: string | null };
+  { ok: true; data: T } | { ok: false; error: string; codigo?: string | null; red?: boolean };
 
-export const falla = (error: string): Resultado<never> => ({ ok: false, error });
+// `red`: no hubo respuesta del servidor (fallo de transporte), no un error de la base.
+export const falla = (error: string, red?: boolean): Resultado<never> => ({
+  ok: false,
+  error,
+  red,
+});
 
 // Entrada de una server action -> datos validados, o null. Compartido por las actions de los módulos del panel.
 export function validar<T>(schema: ZodType<T>, entrada: unknown): T | null {

@@ -54,3 +54,32 @@ describe("bloqueo del equipo", () => {
     expect(await equipoTieneCola("e1")).toBe(true);
   });
 });
+
+describe("conteo por tipo", () => {
+  it("cuenta ventas, aperturas y movimientos pendientes y lista rechazadas de caja", () => {
+    const e = resumirCola(
+      {
+        ...vacia,
+        filas: [
+          fila({ orden: 1, id: "a0000000-0000-4000-8000-000000000001" }),
+          fila({ orden: 2, id: "a0000000-0000-4000-8000-000000000002", tipo: "apertura" }),
+          fila({ orden: 3, id: "a0000000-0000-4000-8000-000000000003", tipo: "movimiento" }),
+          fila({
+            orden: 4,
+            id: "a0000000-0000-4000-8000-000000000004",
+            tipo: "apertura",
+            estado: "rechazada",
+            error: "x",
+            payload: { id: "a0000000-0000-4000-8000-000000000004" },
+          }),
+        ],
+      },
+      ["n1"],
+      "e1",
+    );
+    expect(e.pendientes).toEqual({ ventas: 1, aperturas: 1, movimientos: 1 });
+    expect(e.rechazadas).toEqual([
+      expect.objectContaining({ tipo: "apertura", titulo: "Apertura de caja", error: "x" }),
+    ]);
+  });
+});

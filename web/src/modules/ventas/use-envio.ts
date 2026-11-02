@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { leerSinRed } from "@/lib/offline/red";
+import { hayAperturaEnCola } from "@/modules/caja";
 import { createClient } from "@/lib/supabase/browser";
 import type { ResumenCarrito } from "./carrito";
 import {
@@ -25,14 +27,14 @@ const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_S
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
   "No se pudo guardar la venta en este equipo, así que no se cobró. Revisa el espacio y los permisos del navegador, o recarga la página.";
-const MENSAJE_QR_SIN_RED =
-  "El pago por QR necesita conexión para verificarse. Cobra en efectivo o espera a tener conexión.";
 
 export type ContextoCobro = {
   clienteId: string | null;
   descuentoVentaTexto: string;
   efectivo: number;
   qr: number;
+  // El cajero confirmó que el QR llegó. Sin conexión no se pide: el pago queda pendiente de verificar.
+  qrConfirmado: boolean;
   recibido: number;
   nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente">;
 };
@@ -80,7 +82,9 @@ export function useEnvio(opts: {
           setEstado({ t: "enviando" });
           // Con red, la cuenta se comprueba antes de cobrar: una sesión caducada o de otra cuenta no cobra ni encola.
           // Si no se puede saber, cuenta como sin red y la venta entra a la cola.
-          let enLinea = navigator.onLine;
+          let enLinea = !leerSinRed();
+          // Con la apertura de la caja aún en la cola el servidor no la conoce: la venta va por la cola, detrás de ella.
+          if (enLinea && (await hayAperturaEnCola(equipo.id))) enLinea = false;
           if (enLinea) {
             const cuenta = caducada.current
               ? "rechazar"
@@ -89,10 +93,10 @@ export function useEnvio(opts: {
               return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
             if (cuenta === "red") enLinea = false;
           }
-          // El QR se verifica contra el banco; sin conexión se ofrece como "pendiente" (fase 3, PR 3).
-          if (c.qr > 0 && !enLinea) {
-            return setEstado({ t: "rechazada", mensaje: MENSAJE_QR_SIN_RED });
-          }
+          // Un QR sin confirmar (pendiente de verificar) nunca viaja en línea: el servidor solo lo acepta con p_offline.
+          // Aunque el servidor responda (navigator.onLine miente), el primer intento se salta y va por la cola.
+          const qrPendiente = c.qr > 0 && !c.qrConfirmado;
+          if (qrPendiente) enLinea = false;
           const ventaId = crypto.randomUUID();
           const armada: { nota?: NotaVenta; items?: VentaPayload["items"] } = {};
           cola.enCurso(ventaId);
@@ -112,6 +116,7 @@ export function useEnvio(opts: {
                   descuentoVentaTexto: c.descuentoVentaTexto,
                   efectivo: c.efectivo,
                   qr: c.qr,
+                  qrVerificado: !qrPendiente,
                 };
                 const payload = construirPayload(resumen, datos);
                 const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
