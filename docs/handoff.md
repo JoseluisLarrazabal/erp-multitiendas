@@ -148,6 +148,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     filtro inválido solo en Vitest, sin E2E. Codex: no verificado (sin cuota).
 - **Fase 3 en curso (2026-11-01):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
   no existe aún. Productos con serie y lavandería piden conexión hasta entonces (0 series cargadas, P-01 abierta).
+  - PR 1 `feat/offline-datos`: `p_offline` en `registrar_venta`, `abrir_caja` y `registrar_movimiento_caja`; marcas de
+    revisión; `origen` y `enviada_por` en caja; `verificar_pago_qr` (también rechaza un QR que nunca llegó),
+    `revisar_venta`, `reconciliacion_ventas`; `resumen_caja` muestra `qr_pendiente`. DB-12 completo. Límite aceptado: devolver una venta con QR rechazado
+    baja el QR neto de la sesión aunque esa plata nunca entró; no sale efectivo. Revisión de seguridad sin hallazgos.
+    Codex: no verificado (sin cuota).
 - **Fase 2 cerrada (2026-11-01):** 4 PRs, plan en `docs/plan-fase-2.md`. **Próximo:** fase 3, venta y órdenes sin
   conexión (`docs/roadmap.md`).
   - Corrida final sobre `main` `0cb5fe8`, build de producción y base recién reseteada, en local: POS con lector simulado,
