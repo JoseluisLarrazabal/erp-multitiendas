@@ -150,7 +150,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
-- **Fase 3 en curso (2026-11-01):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
+- **Fase 3 cerrada (2026-11-02):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
   no existe aún. Productos con serie y lavandería piden conexión hasta entonces (0 series cargadas, P-01 abierta).
   - PR 1 `feat/offline-datos`: `p_offline` en `registrar_venta`, `abrir_caja` y `registrar_movimiento_caja`; marcas de
     revisión; `origen` y `enviada_por` en caja; `verificar_pago_qr` (también rechaza un QR que nunca llegó),
@@ -177,7 +177,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     actualización con dos pestañas, Firefox y Safari, primer arranque sin red con caja cerrada y sin catálogo previo.
     Pendiente para el PR 4: mostrar `enviada_por` en reconciliación, porque quien tiene `caja` puede atribuir una apertura
     sin red a otro miembro. Codex: no verificado (sin cuota).
-  - PR 4 `feat/reconciliacion-panel`: `/panel/reconciliacion` (RF-VEN-13, `ver_reportes`, protegida en servidor).
+  - PR 4 `feat/reconciliacion-panel` (#48, mergeado 2026-11-02; producción verificada sin sesión, `/panel/reconciliacion`
+    redirige a `/login`): `/panel/reconciliacion` (RF-VEN-13, `ver_reportes`, protegida en servidor).
     Ventas a revisar con motivos legibles, "QR cobrado" / "QR no llegó" y "Marcar revisada", con paginación por cursor;
     un cursor de otro negocio vuelve al inicio con aviso. Stock negativo en alguna ubicación: migración
     `20261102100000_inventario_lista_negativo` agrega `stock_negativo` a `inventario_lista`, aplicada en staging. Detalle
@@ -186,6 +187,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     pgTAP 1293, Playwright 128/128. Intermitentes vistos en corridas paralelas, no diagnosticados: `auth.spec` login y
     logout, `pos-venta` "mañana sin internet" (comparte la caja C1), `inventario-flujo` entrada con lector; pasan
     aislados. No verificado: foco con lector de pantalla real, cursor ajeno sin E2E. Codex: no verificado (sin cuota).
+  - **Próximo:** fase 4, lavandería (`docs/roadmap.md`), incluidas las órdenes sin conexión. Pendiente de la fase 3: prueba
+    manual sin internet en producción con Claude in Chrome (reiniciar Claude Code a 2.1.316), SW en espera con dos builds
+    reales, y diagnosticar los E2E intermitentes en corridas paralelas.
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
   `PRUEBA-1` con stock. Producto, entrada, caja y venta `C1-000001` corrieron por las RPC con ese usuario simulado desde la
   CLI: stock 19, kardex 19, arqueo sin diferencia. **Venta en producción con usuario real: verificada.** El CTO entró en
