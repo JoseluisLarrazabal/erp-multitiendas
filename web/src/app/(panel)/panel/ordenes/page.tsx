@@ -30,13 +30,9 @@ export default async function PaginaOrdenes({
   if (activo.tipo !== "lavanderia") redirect("/panel");
   const { filtros, invalido } = leerFiltrosOrdenes(await searchParams);
   const supabase = await createClient();
-  const inicial = await listarOrdenes(supabase, activo.negocioId, filtros, PAGINA_ORDENES);
-  // Un cursor que la consulta rechaza se ignora y se parte del inicio, como un filtro inválido.
-  const cursorIgnorado = !inicial.ok && !!filtros.desde;
-  const lista = cursorIgnorado
-    ? await listarOrdenes(supabase, activo.negocioId, { ...filtros, desde: "" }, PAGINA_ORDENES)
-    : inicial;
-  const desde = cursorIgnorado ? "" : filtros.desde;
+  // Un cursor ilegible ya lo descarta leerFiltrosOrdenes (marca `invalido`); un error de consulta se muestra tal cual.
+  const lista = await listarOrdenes(supabase, activo.negocioId, filtros, PAGINA_ORDENES);
+  const desde = filtros.desde;
   const hayFiltros = !!(filtros.q || filtros.estado);
 
   return (
@@ -47,7 +43,7 @@ export default async function PaginaOrdenes({
       />
       <div className="flex min-w-0 flex-col gap-5">
         <FiltrosOrdenesForm filtros={{ ...filtros, desde: "" }} invalido={invalido} />
-        {(invalido || cursorIgnorado) && (
+        {invalido && (
           <p role="status" className="text-sm font-medium">
             {AVISO_FILTRO_INVALIDO}
           </p>
@@ -63,7 +59,7 @@ export default async function PaginaOrdenes({
               ? "Ninguna orden coincide con los filtros."
               : desde
                 ? "No hay más órdenes."
-                : "Aún no hay órdenes."}
+                : "No hay órdenes activas."}
           </p>
         )}
         {lista.ok && lista.data.filas.length > 0 && <ListaOrdenes ordenes={lista.data.filas} />}

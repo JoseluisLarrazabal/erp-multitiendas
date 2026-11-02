@@ -75,7 +75,11 @@ export default async function PaginaOrden({ params }: { params: Promise<{ id: st
       </p>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          <DetalleOrdenVista o={o} reembolsada={v.estado === "anulada"} />
+          <DetalleOrdenVista
+            o={o}
+            reembolsada={v.estado === "anulada"}
+            conDevolucion={v.devoluciones.length > 0}
+          />
           <DetalleVentaVista v={v} />
         </div>
         {puedeAnular && (

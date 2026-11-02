@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Campo, propsCampo } from "@/components/panel/campo";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
-import { anularOrden } from "../actions-ordenes";
+import { anularOrden } from "../actions";
 
 // Anular exige motivo y confirmación. El servidor decide permiso, estado y si la caja sigue abierta.
 export function AnularOrden({ ordenId, numero }: { ordenId: string; numero: string }) {

@@ -5,12 +5,22 @@ import { ETIQUETA_ESTADO_ORDEN } from "../schemas-ordenes";
 import { diaCalendario, EstadoOrden } from "./lista-ordenes";
 
 export const MENSAJE_REEMBOLSO = "Se devolvió el efectivo de la caja.";
+export const MENSAJE_DEVOLUCION = "Se registró una devolución en Ventas.";
 export const MENSAJE_SIN_REEMBOLSO =
   "La caja de esa orden ya cerró: si corresponde, registra una devolución en Ventas.";
 
 // Solo lectura: ficha e historial. Ítems y pagos los pinta DetalleVentaVista con la venta de la orden.
 // `reembolsada`: la venta quedó anulada, o sea que anular_orden devolvió el efectivo a su caja.
-export function DetalleOrdenVista({ o, reembolsada }: { o: DetalleOrden; reembolsada: boolean }) {
+// `conDevolucion`: la venta tiene devoluciones registradas (caja ya cerrada al anular).
+export function DetalleOrdenVista({
+  o,
+  reembolsada,
+  conDevolucion,
+}: {
+  o: DetalleOrden;
+  reembolsada: boolean;
+  conDevolucion: boolean;
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Seccion titulo="Orden">
@@ -51,7 +61,13 @@ export function DetalleOrdenVista({ o, reembolsada }: { o: DetalleOrden; reembol
             <p>
               Anulada por {o.anuladaPor ?? "—"}. Motivo: {o.motivoAnulacion}
             </p>
-            <p>{reembolsada ? MENSAJE_REEMBOLSO : MENSAJE_SIN_REEMBOLSO}</p>
+            <p>
+              {reembolsada
+                ? MENSAJE_REEMBOLSO
+                : conDevolucion
+                  ? MENSAJE_DEVOLUCION
+                  : MENSAJE_SIN_REEMBOLSO}
+            </p>
           </div>
         )}
       </Seccion>

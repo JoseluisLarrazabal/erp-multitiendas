@@ -170,6 +170,24 @@ test.describe("encargado de lavandería", () => {
     await expect(page.getByText("Algún filtro de la dirección no era válido")).toHaveCount(0);
   });
 
+  test("búsqueda + paginación: la segunda página sigue filtrada y no repite filas", async ({
+    page,
+  }) => {
+    // Depende de la prueba anterior (26+ órdenes del cliente semilla). Se pagina por cursor con q activo.
+    const filas = page.getByRole("list", { name: "Órdenes" }).getByRole("listitem");
+    await page.goto(`/panel/ordenes?q=${encodeURIComponent(cliente)}`);
+    await expect(filas).toHaveCount(25);
+    const primera = await filas.allInnerTexts();
+    await page.getByRole("link", { name: /Siguientes/ }).click();
+    await expect(page.getByRole("link", { name: "Volver al inicio" })).toBeVisible();
+    const segunda = await filas.allInnerTexts();
+    expect(segunda.length).toBeGreaterThan(0);
+    for (const t of segunda) {
+      expect(t).toContain(cliente);
+      expect(primera).not.toContain(t);
+    }
+  });
+
   test("anular la orden devuelve el efectivo y lo muestra", async ({ page }) => {
     await page.goto(`/panel/ordenes/${ordenId}`);
     await page.getByLabel("Motivo de la anulación").fill("Cliente se arrepintió");

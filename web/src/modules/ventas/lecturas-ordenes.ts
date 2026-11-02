@@ -27,7 +27,7 @@ export type FilaOrden = {
 };
 
 const COLUMNAS_LISTA =
-  "id, estado, estado_en, cliente_nombre, prendas, casillero, express, fecha_prometida";
+  "id, estado, estado_en, cliente_nombre, prendas, casillero, express, fecha_prometida, ventas!inner(numero, total)";
 const ERROR_LISTA = "No se pudieron leer las órdenes.";
 
 export async function listarOrdenes(
@@ -36,56 +36,42 @@ export async function listarOrdenes(
   f: FiltrosOrdenes,
   porPagina: number,
 ): Promise<Resultado<{ filas: FilaOrden[]; siguiente: string | null }>> {
-  let c = supabase.from("ordenes").select(COLUMNAS_LISTA).eq("negocio_id", negocioId);
-  if (f.estado === "sin_recoger")
-    c = c.eq("estado", "lista").lt("estado_en", umbralSinRecoger(Date.now()));
-  else if (f.estado) c = c.eq("estado", f.estado);
-  else c = c.in("estado", ACTIVAS);
-
   const q = limpiarBusqueda(f.q);
-  if (q) {
-    // El número vive en la venta (misma id que la orden): se buscan sus ids por prefijo y se suman a la búsqueda por nombre.
-    const numero = q.replace(/[^A-Za-z0-9-]/g, "");
-    const ids = numero
-      ? await supabase
-          .from("ventas")
-          .select("id")
-          .eq("negocio_id", negocioId)
-          .ilike("numero", `${numero}%`)
-          .limit(50)
-      : { data: [], error: null };
-    if (ids.error) return falla(ERROR_LISTA);
-    const porId = ids.data.length ? `,id.in.(${ids.data.map((v) => v.id).join(",")})` : "";
-    c = c.or(`cliente_nombre.ilike."*${q}*"${porId}`);
-  }
-
   const cursor = f.desde ? partirCursor(f.desde) : null;
-  if (cursor)
-    c = c.or(
-      `estado_en.lt."${cursor.estadoEn}",and(estado_en.eq."${cursor.estadoEn}",id.lt.${cursor.id})`,
-    );
+  // Cada consulta pide una de más para saber si hay otra página.
+  const consulta = (columna?: "cliente_nombre" | "ventas.numero") => {
+    let c = supabase.from("ordenes").select(COLUMNAS_LISTA).eq("negocio_id", negocioId);
+    if (f.estado === "sin_recoger")
+      c = c.eq("estado", "lista").lt("estado_en", umbralSinRecoger(Date.now()));
+    else if (f.estado) c = c.eq("estado", f.estado);
+    else c = c.in("estado", ACTIVAS);
+    if (columna) c = c.ilike(columna, `%${q}%`);
+    if (cursor)
+      c = c.or(
+        `estado_en.lt."${cursor.estadoEn}",and(estado_en.eq."${cursor.estadoEn}",id.lt.${cursor.id})`,
+      );
+    return c
+      .order("estado_en", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(porPagina + 1);
+  };
 
-  // Pide una de más para saber si hay otra página.
-  const { data, error } = await c
-    .order("estado_en", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(porPagina + 1);
-  if (error) return falla(ERROR_LISTA);
+  // PostgREST no admite un OR entre una columna de ordenes y una de la venta embebida. Con búsqueda se hacen
+  // dos consultas (nombre y número, ambas con el mismo filtro de estado, cursor y orden) y se unen: el top-N
+  // de la unión sale del top-N de cada una, así que la paginación sigue siendo exacta.
+  const resultados = q
+    ? await Promise.all([consulta("cliente_nombre"), consulta("ventas.numero")])
+    : [await consulta()];
+  if (resultados.some((r) => r.error)) return falla(ERROR_LISTA);
+  const unicas = new Map(resultados.flatMap((r) => r.data ?? []).map((o) => [o.id, o]));
+  // shortcut: el cursor usa estado_en; una orden que cambia de estado entre dos cargas puede saltarse o repetirse, aceptable con este volumen.
+  const data = [...unicas.values()]
+    .sort((a, b) => b.estado_en.localeCompare(a.estado_en) || b.id.localeCompare(a.id))
+    .slice(0, porPagina + 1);
   const pagina = data.slice(0, porPagina);
-  if (pagina.length === 0) return { ok: true, data: { filas: [], siguiente: null } };
-
-  const ventas = await supabase
-    .from("ventas")
-    .select("id, numero, total")
-    .in(
-      "id",
-      pagina.map((o) => o.id),
-    );
-  if (ventas.error) return falla(ERROR_LISTA);
-  const porId = new Map(ventas.data.map((v) => [v.id, v]));
   const filas = pagina.map((o) => ({
     id: o.id,
-    numero: porId.get(o.id)?.numero ?? "—",
+    numero: o.ventas.numero,
     cliente: o.cliente_nombre,
     prendas: o.prendas,
     casillero: o.casillero,
@@ -93,14 +79,15 @@ export async function listarOrdenes(
     estado: o.estado,
     estadoEn: o.estado_en,
     fechaPrometida: o.fecha_prometida,
-    total: Number(porId.get(o.id)?.total ?? 0),
+    total: Number(o.ventas.total),
   }));
-  const ultima = pagina.at(-1)!;
+  const ultima = pagina.at(-1);
   return {
     ok: true,
     data: {
       filas,
-      siguiente: data.length > porPagina ? cursorOrden(ultima.estado_en, ultima.id) : null,
+      siguiente:
+        ultima && data.length > porPagina ? cursorOrden(ultima.estado_en, ultima.id) : null,
     },
   };
 }
