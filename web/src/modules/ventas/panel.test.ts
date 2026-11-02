@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { cantidadADevolver, fueraDePlazo, mensajeDeVentas } from "./domain-panel";
+import {
+  cantidadADevolver,
+  ETIQUETA_MOTIVO,
+  fueraDePlazo,
+  mensajeDeVentas,
+  textoMotivo,
+} from "./domain-panel";
 import {
   anularSchema,
   devolverSchema,
   hrefVentas,
+  leerDesdeReconciliacion,
   leerFiltrosVentas,
+  pagoQrSchema,
+  parsearPagosPendientes,
+  revisarSchema,
   topeSchema,
 } from "./schemas-panel";
 
@@ -104,5 +114,40 @@ describe("schemas del panel de ventas", () => {
       "/panel/ventas?estado=anulada",
     );
     expect(hrefVentas({ pagina: 2 })).toBe("/panel/ventas?pagina=2");
+  });
+});
+
+describe("reconciliación", () => {
+  it("cada motivo de la base tiene un texto en español; uno desconocido se muestra tal cual", () => {
+    expect(Object.keys(ETIQUETA_MOTIVO).sort()).toEqual([
+      "descuento_sin_permiso",
+      "otra_cuenta",
+      "producto_inactivo",
+      "renumerada",
+      "sin_precio",
+      "sobre_tope",
+    ]);
+    expect(textoMotivo("sobre_tope")).toBe("Descuento sobre el tope");
+    expect(textoMotivo("nuevo_motivo")).toBe("nuevo_motivo");
+  });
+  it("acciones: revisar y QR validan ids y el booleano", () => {
+    expect(revisarSchema.safeParse({ ventaId: G }).success).toBe(true);
+    expect(revisarSchema.safeParse({ ventaId: "x" }).success).toBe(false);
+    expect(pagoQrSchema.safeParse({ pagoId: G, cobrado: false }).success).toBe(true);
+    expect(pagoQrSchema.safeParse({ pagoId: G }).success).toBe(false);
+  });
+  it("cursor `desde` inválido se ignora y se avisa; pagos pendientes mal formados fallan", () => {
+    expect(leerDesdeReconciliacion({ desde: G })).toMatchObject({ filtros: { desde: G } });
+    expect(leerDesdeReconciliacion({ desde: "x" })).toMatchObject({
+      filtros: { desde: "" },
+      invalido: true,
+    });
+    expect(parsearPagosPendientes([{ id: G, monto: 10 }]).success).toBe(true);
+    expect(parsearPagosPendientes([{ id: G }]).success).toBe(false);
+  });
+  it("mensajes de revisar y QR", () => {
+    expect(mensajeDeVentas("revisar", "ERP_VENTA_ANULADA")).toBeTruthy();
+    expect(mensajeDeVentas("qr", "ERP_OPERACION_REPETIDA")).toBeTruthy();
+    expect(mensajeDeVentas("qr", "ERP_SIN_PERMISO")).toBeTruthy();
   });
 });

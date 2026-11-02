@@ -5,6 +5,9 @@ import { formatearBs } from "@/lib/format/moneda";
 import { bsONulo, ETIQUETA_MOVIMIENTO } from "../domain";
 import type { DetalleSesion } from "../lecturas-panel";
 
+// `enviadaPor` ya es la etiqueta completa ("Sin conexión, enviada por X"); null si la envió quien la registró.
+const marca = (o: { enviadaPor: string | null }) => o.enviadaPor ?? "Sin conexión";
+
 export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
   const { sesion: s, resumen: r } = d;
   const fila = "flex items-baseline justify-between gap-3 py-2 tabular-nums";
@@ -15,7 +18,7 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
           <Dato t="Equipo" d={s.equipo} />
           <Dato
             t="Apertura"
-            d={`${formatearFechaHora(s.abiertaEn)}${d.abiertaPor ? ` · ${d.abiertaPor}` : ""}`}
+            d={`${formatearFechaHora(s.abiertaEn)}${d.abiertaPor ? ` · ${d.abiertaPor}` : ""}${d.aperturaOffline ? ` · ${marca(d.aperturaOffline)}` : ""}`}
           />
           <Dato
             t="Cierre"
@@ -97,6 +100,11 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{ETIQUETA_MOVIMIENTO[m.tipo]}</span>
                   <span className="text-muted-foreground"> · {m.motivo}</span>
+                  {d.movimientosOffline[m.id] && (
+                    <span className="text-muted-foreground block text-xs">
+                      {marca(d.movimientosOffline[m.id]!)}
+                    </span>
+                  )}
                 </span>
                 <span className="font-medium tabular-nums">
                   {m.tipo === "ingreso" ? "+" : "−"}

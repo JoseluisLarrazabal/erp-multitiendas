@@ -72,3 +72,13 @@ export function hrefVentas(f: Partial<FiltrosVentas>): string {
   const s = p.toString();
   return `/panel/ventas${s ? `?${s}` : ""}`;
 }
+
+// Reconciliación: `desde` es el id de la última venta de la página anterior (paginación por cursor de la RPC).
+export const leerDesdeReconciliacion = (crudo: Parameters<typeof leerFiltros>[2]) =>
+  leerFiltros({ desde: id }, { desde: "" }, crudo);
+
+export const revisarSchema = z.object({ ventaId: id });
+export const pagoQrSchema = z.object({ pagoId: id, cobrado: z.boolean() });
+
+const pagosPendientes = z.array(z.object({ id, monto: z.number() }));
+export const parsearPagosPendientes = (json: unknown) => pagosPendientes.safeParse(json);

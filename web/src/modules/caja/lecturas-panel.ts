@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { textoEnviadaPor } from "@/lib/format/enviada-por";
 import { falla, type Resultado } from "@/modules/usuarios";
 import type { Movimiento } from "./domain";
 import { listarMovimientos } from "./queries";
@@ -83,6 +84,9 @@ export type DetalleSesion = {
   ventas: VentaDeSesion[];
   totalVentas: number;
   resumen: ResumenCaja;
+  // Rastro de lo enviado sin conexión (RN-04). `enviadaPor` solo si difiere de quien lo registró.
+  aperturaOffline: { enviadaPor: string | null } | null;
+  movimientosOffline: Record<string, { enviadaPor: string | null }>;
 };
 
 async function resumenCaja(supabase: Cliente, sesionId: string): Promise<ResumenCaja | null> {
@@ -100,7 +104,7 @@ export async function detalleSesion(
   const { data: s, error } = await supabase
     .from("caja_sesiones")
     .select(
-      "id, dispositivo_id, usuario_apertura, usuario_cierre, abierta_en, cerrada_en, monto_inicial, monto_contado, monto_esperado, diferencia",
+      "id, dispositivo_id, usuario_apertura, usuario_cierre, origen, enviada_por, abierta_en, cerrada_en, monto_inicial, monto_contado, monto_esperado, diferencia",
     )
     .eq("negocio_id", negocioId)
     .eq("id", sesionId)
@@ -108,14 +112,12 @@ export async function detalleSesion(
   if (error) return falla("No se pudo leer la caja.");
   if (!s) return { ok: true, data: null };
 
-  const personas = [s.usuario_apertura, s.usuario_cierre].filter((x): x is string => !!x);
-  const [equipo, perfiles, movs, ventas, resumen] = await Promise.all([
+  const [equipo, movs, ventas, resumen] = await Promise.all([
     supabase
       .from("dispositivos")
       .select("nombre, prefijo")
       .eq("id", s.dispositivo_id)
       .maybeSingle(),
-    supabase.from("perfiles").select("id, nombre").in("id", personas),
     listarMovimientos(supabase, sesionId),
     supabase
       .from("ventas")
@@ -126,8 +128,20 @@ export async function detalleSesion(
       .limit(LIMITE_VENTAS),
     resumenCaja(supabase, sesionId),
   ]);
-  if (equipo.error || perfiles.error || !movs.ok || ventas.error || !resumen)
+  if (equipo.error || !movs.ok || ventas.error || !resumen)
     return falla("No se pudo leer la caja.");
+
+  const personas = [
+    s.usuario_apertura,
+    s.usuario_cierre,
+    s.enviada_por,
+    ...movs.data.offline.map((m) => m.enviadaPor),
+  ].filter((x): x is string => !!x);
+  const perfiles = await supabase
+    .from("perfiles")
+    .select("id, nombre")
+    .in("id", [...new Set(personas)]);
+  if (perfiles.error) return falla("No se pudo leer la caja.");
 
   const nombre = new Map(perfiles.data.map((p) => [p.id, p.nombre]));
   return {
@@ -155,6 +169,28 @@ export async function detalleSesion(
       })),
       totalVentas: ventas.count ?? ventas.data.length,
       resumen,
+      aperturaOffline:
+        s.origen === "offline"
+          ? {
+              enviadaPor: textoEnviadaPor(
+                s.usuario_apertura,
+                s.enviada_por,
+                nombre.get(s.enviada_por ?? "") ?? null,
+              ),
+            }
+          : null,
+      movimientosOffline: Object.fromEntries(
+        movs.data.offline.map((m) => [
+          m.id,
+          {
+            enviadaPor: textoEnviadaPor(
+              m.usuarioId,
+              m.enviadaPor,
+              nombre.get(m.enviadaPor ?? "") ?? null,
+            ),
+          },
+        ]),
+      ),
     },
   };
 }

@@ -13,6 +13,7 @@ import {
   Package,
   Percent,
   Receipt,
+  ScanSearch,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -60,6 +61,12 @@ export const ITEMS: Item[] = [
     etiqueta: "Ventas",
     icono: Receipt,
     permisos: ["ver_reportes", "anular"],
+  },
+  {
+    href: "/panel/reconciliacion",
+    etiqueta: "Reconciliación",
+    icono: ScanSearch,
+    permisos: ["ver_reportes"],
   },
   { href: "/panel/cajas", etiqueta: "Cajas", icono: Landmark, permisos: ["caja", "ver_reportes"] },
   {

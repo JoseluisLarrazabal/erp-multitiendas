@@ -164,7 +164,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     2 rondas de revisión. Riesgo aceptado: si fallan a la vez `quitar` y `marcarRechazada` tras un rechazo en línea, la
     fila queda pendiente y el motor la reenvía. No verificado: Firefox, Safari, deshabilitar Reintentar y mensaje de
     `PanelCaja` sin test automático. Sin red el QR sigue bloqueado hasta el PR 3. Codex: no verificado (sin cuota).
-  - PR 3 `feat/offline-arranque`: contexto en IndexedDB por cuenta y negocio (cuenta, permisos, equipos, caja, catálogo
+  - PR 3 `feat/offline-arranque` (#47, mergeado 2026-11-02; producción verificada con Playwright sin sesión: 1280 y
+    390 px, redirige a `/login`, sin desborde, sw 200): contexto en IndexedDB por cuenta y negocio (cuenta, permisos, equipos, caja, catálogo
     sin costos ni clientes). `/pos` abre sin red con el catálogo guardado (E2E-06). Cerrar sesión borra el contexto y nunca
     la cola. Apertura y movimientos de caja entran a la cola con `p_offline`; mientras la apertura no llega, las ventas y
     movimientos de esa caja van detrás de ella por la cola. QR sin red queda pendiente de verificar. Bloqueos RF-VEN-14:
@@ -176,6 +177,15 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     actualización con dos pestañas, Firefox y Safari, primer arranque sin red con caja cerrada y sin catálogo previo.
     Pendiente para el PR 4: mostrar `enviada_por` en reconciliación, porque quien tiene `caja` puede atribuir una apertura
     sin red a otro miembro. Codex: no verificado (sin cuota).
+  - PR 4 `feat/reconciliacion-panel`: `/panel/reconciliacion` (RF-VEN-13, `ver_reportes`, protegida en servidor).
+    Ventas a revisar con motivos legibles, "QR cobrado" / "QR no llegó" y "Marcar revisada", con paginación por cursor;
+    un cursor de otro negocio vuelve al inicio con aviso. Stock negativo en alguna ubicación: migración
+    `20261102100000_inventario_lista_negativo` agrega `stock_negativo` a `inventario_lista`, aplicada en staging. Detalle
+    de caja y reconciliación muestran "Sin conexión, enviada por X" (cierra el pendiente del PR 3). Aviso `aria-live` y
+    foco tras resolver. Revisión: code-review, ponytail, seguridad (sin hallazgos) y UI; 9 arreglos aplicados. Vitest 277,
+    pgTAP 1293, Playwright 128/128. Intermitentes vistos en corridas paralelas, no diagnosticados: `auth.spec` login y
+    logout, `pos-venta` "mañana sin internet" (comparte la caja C1), `inventario-flujo` entrada con lector; pasan
+    aislados. No verificado: foco con lector de pantalla real, cursor ajeno sin E2E. Codex: no verificado (sin cuota).
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
   `PRUEBA-1` con stock. Producto, entrada, caja y venta `C1-000001` corrieron por las RPC con ese usuario simulado desde la
   CLI: stock 19, kardex 19, arqueo sin diferencia. **Venta en producción con usuario real: verificada.** El CTO entró en

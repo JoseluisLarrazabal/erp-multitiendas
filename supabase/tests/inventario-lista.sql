@@ -1,6 +1,6 @@
 -- Vista inventario_lista: total por producto, stock bajo (igual que productos_stock_bajo), sin servicios, aislada por RLS.
 begin;
-select plan(9);
+select plan(10);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -35,6 +35,10 @@ insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id
   ('aaaaaaaa-8000-0000-0000-000000000001', 'bbbbbbbb-8000-0000-0000-000000000001', 'eeeeeeee-8000-0000-0000-000000000001', 'inicial', 4, 5, 'seed'),
   ('aaaaaaaa-8000-0000-0000-000000000001', 'bbbbbbbb-8000-0000-0000-000000000002', 'eeeeeeee-8000-0000-0000-000000000001', 'inicial', 3, 5, 'seed'),
   ('aaaaaaaa-8000-0000-0000-000000000002', 'bbbbbbbb-8000-0000-0000-000000000003', 'eeeeeeee-8000-0000-0000-000000000005', 'inicial', 9, 1, 'seed');
+-- C queda negativo en U1 (-3) y positivo en U2 (+10): total 7 pero con una ubicación en negativo.
+insert into public.stock (negocio_id, ubicacion_id, producto_id, cantidad) values
+  ('aaaaaaaa-8000-0000-0000-000000000001', 'bbbbbbbb-8000-0000-0000-000000000001', 'eeeeeeee-8000-0000-0000-000000000003', -3),
+  ('aaaaaaaa-8000-0000-0000-000000000001', 'bbbbbbbb-8000-0000-0000-000000000002', 'eeeeeeee-8000-0000-0000-000000000003', 10);
 
 select pg_temp.como('99999999-8000-0000-0000-000000000001');
 select is((select array_agg(codigo order by codigo) from public.inventario_lista), array['A', 'B', 'C'], 'sin servicios y sin productos de otro negocio');
@@ -47,6 +51,12 @@ select is(
   (select array_agg(codigo order by codigo) from public.inventario_lista where stock_bajo),
   (select array_agg(codigo order by codigo) from public.productos_stock_bajo('aaaaaaaa-8000-0000-0000-000000000001')),
   'misma regla que productos_stock_bajo'
+);
+
+select is(
+  (select array_agg(codigo order by codigo) from public.inventario_lista where stock_negativo),
+  array['C'],
+  'negativo: una ubicación en negativo cuenta aunque el total sea positivo'
 );
 
 select pg_temp.como('99999999-8000-0000-0000-000000000002');

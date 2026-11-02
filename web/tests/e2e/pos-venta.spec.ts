@@ -725,8 +725,9 @@ test("rechazo al reenviar: la fila queda visible y Reintentar la entrega cuando 
   await page.unroute("**/rest/v1/rpc/registrar_venta");
   await lista.getByRole("button", { name: /^Reintentar la venta/ }).click();
   await expect(lista).toHaveCount(0);
+  // La fila sale de la lista antes de que la base confirme: con carga en paralelo la lectura llega antes que el insert.
+  await expect.poll(async () => (await ventasDeLaCaja(equipoId)).length).toBe(1);
   const ventas = await ventasDeLaCaja(equipoId);
-  expect(ventas).toHaveLength(1);
   expect(ventas[0]).toMatchObject({ total: 21, origen: "offline" });
   expect(await stockEn(a.id)).toBe(2);
 });

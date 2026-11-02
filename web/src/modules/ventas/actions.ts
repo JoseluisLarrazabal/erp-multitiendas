@@ -7,7 +7,13 @@ import { codigoErp, mensajeErp } from "@/lib/erp-errores";
 import { createClient } from "@/lib/supabase/server";
 import { validar, type Resultado } from "@/modules/usuarios/panel";
 import { mensajeDeVentas, type AccionVentas } from "./domain-panel";
-import { anularSchema, devolverSchema, topeSchema } from "./schemas-panel";
+import {
+  anularSchema,
+  devolverSchema,
+  pagoQrSchema,
+  revisarSchema,
+  topeSchema,
+} from "./schemas-panel";
 
 const fallo = (accion: AccionVentas, error: { message: string } | null): Resultado<never> => {
   const codigo = codigoErp(error ?? undefined);
@@ -19,6 +25,7 @@ const invalido = (accion: AccionVentas): Resultado<never> =>
 function revalidar() {
   revalidatePath("/panel/ventas", "layout");
   revalidatePath("/panel/cajas", "layout");
+  revalidatePath("/panel/reconciliacion");
 }
 
 export async function anularVenta(entrada: unknown): Promise<Resultado<null>> {
@@ -74,5 +81,28 @@ export async function fijarTopeDescuento(entrada: unknown): Promise<Resultado<nu
   });
   if (error) return fallo("tope", error);
   revalidatePath("/panel/descuento");
+  return { ok: true, data: null };
+}
+
+export async function revisarVenta(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(revisarSchema, entrada);
+  if (!d) return invalido("revisar");
+  const { error } = await (await createClient()).rpc("revisar_venta", { p_venta_id: d.ventaId });
+  if (error) return fallo("revisar", error);
+  revalidatePath("/panel/reconciliacion");
+  return { ok: true, data: null };
+}
+
+export async function verificarPagoQr(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(pagoQrSchema, entrada);
+  if (!d) return invalido("qr");
+  const { error } = await (
+    await createClient()
+  ).rpc("verificar_pago_qr", {
+    p_pago_id: d.pagoId,
+    p_cobrado: d.cobrado,
+  });
+  if (error) return fallo("qr", error);
+  revalidar();
   return { ok: true, data: null };
 }

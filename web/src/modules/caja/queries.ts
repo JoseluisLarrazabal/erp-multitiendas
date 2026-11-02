@@ -83,10 +83,19 @@ export async function listarMovimientos(
   supabase: Cliente,
   sesionId: string,
   limite = LIMITE_MOVIMIENTOS,
-): Promise<Resultado<{ movimientos: Movimiento[]; total: number }>> {
+): Promise<
+  Resultado<{
+    movimientos: Movimiento[];
+    total: number;
+    // Rastro de los enviados sin conexión (RN-04), solo de los movimientos devueltos.
+    offline: { id: string; usuarioId: string | null; enviadaPor: string | null }[];
+  }>
+> {
   const { data, error, count } = await supabase
     .from("caja_movimientos")
-    .select("id, tipo, monto, motivo, created_at", { count: "exact" })
+    .select("id, tipo, monto, motivo, created_at, origen, usuario_id, enviada_por", {
+      count: "exact",
+    })
     .eq("sesion_id", sesionId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
@@ -99,6 +108,9 @@ export async function listarMovimientos(
     ok: true,
     data: {
       total: count ?? data.length,
+      offline: data
+        .filter((m) => m.origen === "offline")
+        .map((m) => ({ id: m.id, usuarioId: m.usuario_id, enviadaPor: m.enviada_por })),
       movimientos: data.reverse().map((m) => ({
         id: m.id,
         tipo: m.tipo as TipoMovimiento,

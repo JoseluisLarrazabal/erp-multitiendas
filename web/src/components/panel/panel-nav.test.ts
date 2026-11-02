@@ -63,3 +63,10 @@ describe("itemDeRuta", () => {
     expect(itemDeRuta("/panel/otra")).toBeUndefined();
   });
 });
+
+describe("Reconciliación", () => {
+  it("solo con ver_reportes", () => {
+    expect(etiquetas(["ver_reportes"])).toContain("Reconciliación");
+    expect(etiquetas(["anular", "caja", "ajustar_inventario"])).not.toContain("Reconciliación");
+  });
+});
