@@ -164,23 +164,58 @@ export type OpcionesVaciado = {
   elegible: (fila: FilaCola) => boolean;
   // Ignora la espera de las filas que ya fallaron (volvió la red, o lo pidió el usuario).
   forzar?: boolean;
+  // El motor que registró la espera pudo detenerse (logout, cambio de cuenta o negocio): una repetición suya no corre.
+  activo?: () => boolean;
 };
 
 // Una sola pestaña vacía a la vez. Envía en orden; ante un fallo de red corta, porque las siguientes dependen de las
 // anteriores (la apertura de caja antes que sus ventas).
-export async function vaciar(o: OpcionesVaciado): Promise<void> {
+// Un disparo que encuentra el vaciado en curso (de este motor, de otro o de otra pestaña) no se pierde: queda UNA
+// repetición pendiente (forzada si alguno lo fue) que corre al soltarse el cerrojo. Devuelve false si solo la dejó
+// registrada (no vació nada ahora).
+let repetir: { forzar: boolean } | null = null;
+export async function vaciar(o: OpcionesVaciado): Promise<boolean> {
   if (typeof navigator !== "undefined" && navigator.locks) {
-    await navigator.locks.request(CERROJO, { ifAvailable: true }, (cerrojo) =>
-      cerrojo ? recorrer(o) : undefined,
+    const corrio = await navigator.locks.request(
+      CERROJO,
+      { ifAvailable: true },
+      async (cerrojo) => {
+        if (!cerrojo) return false;
+        await recorrer(o);
+        return true;
+      },
     );
-    return;
+    if (corrio) return true;
+    if (repetir) {
+      repetir.forzar ||= !!o.forzar;
+      return false;
+    }
+    const mia = (repetir = { forzar: !!o.forzar });
+    // Espera su turno una sola vez (otra pestaña puede tener el cerrojo): no es un bucle, un disparo más abre otra espera.
+    await navigator.locks.request(CERROJO, async () => {
+      repetir = null;
+      if (o.activo?.() === false) return;
+      await recorrer({ ...o, forzar: mia.forzar });
+    });
+    return true;
   }
-  if (enCurso) return;
+  if (enCurso) {
+    if (repetir) repetir.forzar ||= !!o.forzar;
+    else repetir = { forzar: !!o.forzar };
+    return false;
+  }
   enCurso = true;
   try {
-    await recorrer(o);
+    let actual = o;
+    for (;;) {
+      await recorrer(actual);
+      if (!repetir || o.activo?.() === false) return true;
+      actual = { ...o, forzar: repetir.forzar };
+      repetir = null;
+    }
   } finally {
     enCurso = false;
+    repetir = null;
   }
 }
 

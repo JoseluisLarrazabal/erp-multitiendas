@@ -187,9 +187,26 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     pgTAP 1293, Playwright 128/128. Intermitentes vistos en corridas paralelas, no diagnosticados: `auth.spec` login y
     logout, `pos-venta` "mañana sin internet" (comparte la caja C1), `inventario-flujo` entrada con lector; pasan
     aislados. No verificado: foco con lector de pantalla real, cursor ajeno sin E2E. Codex: no verificado (sin cuota).
-  - **Próximo:** fase 4, lavandería (`docs/roadmap.md`), incluidas las órdenes sin conexión. Pendiente de la fase 3: prueba
-    manual sin internet en producción con Claude in Chrome (reiniciar Claude Code a 2.1.316), SW en espera con dos builds
-    reales, y diagnosticar los E2E intermitentes en corridas paralelas.
+  - Cierre de pendientes (`fix/e2e-intermitentes`, 2026-11-02). Causas raíz de los intermitentes:
+    - `auth.spec`: era del test. El clic en "Cerrar sesión" llegaba antes de que la página hidratara; ahora usa
+      `esperarHidratacion`, acotado a `main` o al control.
+    - "Mañana sin internet": era del producto. Un `online` durante un vaciado se perdía por el cerrojo `ifAvailable` y la
+      cola esperaba todo el backoff, hasta 5 min. Ahora `vaciar` deja una repetición pendiente que corre al soltarse el
+      cerrojo, también entre motores y pestañas. La espera de un motor detenido no envía, y el motor reprograma siempre.
+    - "Entrada con lector": era del producto. `useAccion` pintaba el resultado antes de liberar `pendiente` y un Enter se
+      perdía; ahora usa `startTransition` y `enVuelo`.
+
+    SW con dos builds reales: los 5 puntos verificados con un script en el scratchpad, sin E2E en el repo. Encontró un bug:
+    "Actualizar ahora" no recargaba una pestaña abierta antes del SW. Arreglado con `alCambiarControlador`; si la pestaña
+    pidió la actualización, recarga también tras Shift+Recargar.
+
+    Límites:
+    - Un `online` que cae mientras la espera es de un motor ya detenido pierde el "forzado" y reintenta con backoff.
+    - `pos-sesion` "/pos abierto sin red pasa a lista" falló 1 vez en 6 corridas completas y 0 de 36 aislado, sin causa
+      confirmada. Hipótesis: la recarga sin red llega antes de que se guarde el contexto.
+    - El cerrojo real entre pestañas solo está probado con un stub.
+  - **Próximo:** fase 4, lavandería (`docs/roadmap.md`), incluidas las órdenes sin conexión. Queda de la fase 3 la prueba
+    manual sin internet en producción con Claude in Chrome: hay que reiniciar Claude Code en la versión 2.1.316.
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
   `PRUEBA-1` con stock. Producto, entrada, caja y venta `C1-000001` corrieron por las RPC con ese usuario simulado desde la
   CLI: stock 19, kardex 19, arqueo sin diferencia. **Venta en producción con usuario real: verificada.** El CTO entró en
