@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { rutaAuth } from "./helpers";
+import { enIndexedDb } from "./pos-helpers";
 
 test.use({ storageState: rutaAuth("dueno") });
 
@@ -41,6 +42,8 @@ test("/pos abierto sin red pasa a lista al volver la red, sin recargar", async (
   await expect
     .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
     .toBe(true);
+  // El contexto se guarda sin esperarlo (guardarDato): sin su fila, recargar sin red cae a la pantalla sin contexto.
+  await expect.poll(() => enIndexedDb(page, "datos", "sesion:")).toBe(1);
 
   await context.setOffline(true);
   await page.reload();
