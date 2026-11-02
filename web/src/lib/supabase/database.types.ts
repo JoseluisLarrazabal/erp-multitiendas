@@ -39,17 +39,23 @@ export type Database = {
                   ]
                 },"caja_movimientos": {
                   Row: {
-                    "created_at": string,"id": string,"monto": number,"motivo": string,"negocio_id": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at": string,"enviada_por": string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen": string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id": string,"monto": number,"motivo": string,"negocio_id": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at"?: string,"enviada_por"?: string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen"?: string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"monto"?: number,"motivo"?: string,"negocio_id"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
+                    "created_at"?: string,"enviada_por"?: string | null,"id"?: string,"monto"?: number,"motivo"?: string,"negocio_id"?: string,"origen"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "caja_movimientos_enviada_por_fkey"
+      columns: ["enviada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "caja_movimientos_negocio_id_fkey"
       columns: ["negocio_id"]
 isOneToOne: false
@@ -71,17 +77,23 @@ isOneToOne: false
                   ]
                 },"caja_sesiones": {
                   Row: {
-                    "abierta_en": string,"cerrada_en": string | null,"diferencia": number | null,"dispositivo_id": string,"id": string,"monto_contado": number | null,"monto_esperado": number | null,"monto_inicial": number,"negocio_id": string,"usuario_apertura": string,"usuario_cierre": string | null
+                    "abierta_en": string,"cerrada_en": string | null,"diferencia": number | null,"dispositivo_id": string,"enviada_por": string | null,"id": string,"monto_contado": number | null,"monto_esperado": number | null,"monto_inicial": number,"negocio_id": string,"origen": string,"usuario_apertura": string,"usuario_cierre": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id": string,"id": string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial": number,"negocio_id": string,"usuario_apertura": string,"usuario_cierre"?: string | null
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id": string,"enviada_por"?: string | null,"id": string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial": number,"negocio_id": string,"origen"?: string,"usuario_apertura": string,"usuario_cierre"?: string | null
                   }
                   Update: {
-                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id"?: string,"id"?: string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial"?: number,"negocio_id"?: string,"usuario_apertura"?: string,"usuario_cierre"?: string | null
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id"?: string,"enviada_por"?: string | null,"id"?: string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial"?: number,"negocio_id"?: string,"origen"?: string,"usuario_apertura"?: string,"usuario_cierre"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "caja_sesiones_enviada_por_fkey"
+      columns: ["enviada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "caja_sesiones_negocio_id_dispositivo_id_fkey"
       columns: ["negocio_id","dispositivo_id"]
 isOneToOne: false
@@ -591,14 +603,14 @@ isOneToOne: false
                   ]
                 },"venta_items": {
                   Row: {
-                    "cantidad": number,"costo_unitario": number | null,"descuento": number,"descuento_venta": number,"id": string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor": number,"precio_unitario": number,"producto_id": string,"serie_id": string | null,"total_linea": number,"venta_id": string
+                    "cantidad": number,"costo_unitario": number | null,"descuento": number,"descuento_venta": number,"id": string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor": number | null,"precio_unitario": number,"producto_id": string,"serie_id": string | null,"total_linea": number,"venta_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cantidad": number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor": number,"precio_unitario": number,"producto_id": string,"serie_id"?: string | null,"total_linea": number,"venta_id": string
+                    "cantidad": number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea": number,"lista": string,"negocio_id": string,"precio_lista_servidor"?: number | null,"precio_unitario": number,"producto_id": string,"serie_id"?: string | null,"total_linea": number,"venta_id": string
                   }
                   Update: {
-                    "cantidad"?: number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea"?: number,"lista"?: string,"negocio_id"?: string,"precio_lista_servidor"?: number,"precio_unitario"?: number,"producto_id"?: string,"serie_id"?: string | null,"total_linea"?: number,"venta_id"?: string
+                    "cantidad"?: number,"costo_unitario"?: number | null,"descuento"?: number,"descuento_venta"?: number,"id"?: string,"linea"?: number,"lista"?: string,"negocio_id"?: string,"precio_lista_servidor"?: number | null,"precio_unitario"?: number,"producto_id"?: string,"serie_id"?: string | null,"total_linea"?: number,"venta_id"?: string
                   }
                   Relationships: [
                     {
@@ -635,14 +647,14 @@ isOneToOne: false
                   ]
                 },"venta_pagos": {
                   Row: {
-                    "id": string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string
+                    "id": string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string,"verificado_en": string | null,"verificado_por": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string
+                    "id"?: string,"medio": string,"monto": number,"negocio_id": string,"venta_id": string,"verificacion": string,"verificado_en"?: string | null,"verificado_por"?: string | null
                   }
                   Update: {
-                    "id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"venta_id"?: string,"verificacion"?: string
+                    "id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"venta_id"?: string,"verificacion"?: string,"verificado_en"?: string | null,"verificado_por"?: string | null
                   }
                   Relationships: [
                     {
@@ -651,18 +663,24 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "ventas"
       referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "venta_pagos_verificado_por_fkey"
+      columns: ["verificado_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"ventas": {
                   Row: {
-                    "anulada_en": string | null,"anulada_por": string | null,"caja_sesion_id": string,"cliente_id": string | null,"condicion": string,"creada_en_cliente": string,"descuento": number,"dispositivo_id": string,"enviada_por": string,"estado": string,"huella": string,"id": string,"motivo_anulacion": string | null,"negocio_id": string,"numero": string,"origen": string,"recibida_en": string,"subtotal": number,"tipo_cambio": number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
+                    "anulada_en": string | null,"anulada_por": string | null,"caja_sesion_id": string,"cliente_id": string | null,"condicion": string,"creada_en_cliente": string,"descuento": number,"dispositivo_id": string,"enviada_por": string,"estado": string,"huella": string,"id": string,"motivo_anulacion": string | null,"motivos_revision": (string)[],"negocio_id": string,"numero": string,"origen": string,"recibida_en": string,"revisada_en": string | null,"revisada_por": string | null,"subtotal": number,"tipo_cambio": number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id": string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente": string,"descuento"?: number,"dispositivo_id": string,"enviada_por": string,"estado"?: string,"huella": string,"id": string,"motivo_anulacion"?: string | null,"negocio_id": string,"numero": string,"origen": string,"recibida_en"?: string,"subtotal": number,"tipo_cambio"?: number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
+                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id": string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente": string,"descuento"?: number,"dispositivo_id": string,"enviada_por": string,"estado"?: string,"huella": string,"id": string,"motivo_anulacion"?: string | null,"motivos_revision"?: (string)[],"negocio_id": string,"numero": string,"origen": string,"recibida_en"?: string,"revisada_en"?: string | null,"revisada_por"?: string | null,"subtotal": number,"tipo_cambio"?: number | null,"total": number,"ubicacion_id": string,"vendedor_id": string
                   }
                   Update: {
-                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id"?: string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente"?: string,"descuento"?: number,"dispositivo_id"?: string,"enviada_por"?: string,"estado"?: string,"huella"?: string,"id"?: string,"motivo_anulacion"?: string | null,"negocio_id"?: string,"numero"?: string,"origen"?: string,"recibida_en"?: string,"subtotal"?: number,"tipo_cambio"?: number | null,"total"?: number,"ubicacion_id"?: string,"vendedor_id"?: string
+                    "anulada_en"?: string | null,"anulada_por"?: string | null,"caja_sesion_id"?: string,"cliente_id"?: string | null,"condicion"?: string,"creada_en_cliente"?: string,"descuento"?: number,"dispositivo_id"?: string,"enviada_por"?: string,"estado"?: string,"huella"?: string,"id"?: string,"motivo_anulacion"?: string | null,"motivos_revision"?: (string)[],"negocio_id"?: string,"numero"?: string,"origen"?: string,"recibida_en"?: string,"revisada_en"?: string | null,"revisada_por"?: string | null,"subtotal"?: number,"tipo_cambio"?: number | null,"total"?: number,"ubicacion_id"?: string,"vendedor_id"?: string
                   }
                   Relationships: [
                     {
@@ -707,6 +725,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "ubicaciones"
       referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ventas_revisada_por_fkey"
+      columns: ["revisada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
     },{
       foreignKeyName: "ventas_vendedor_id_fkey"
       columns: ["vendedor_id"]
@@ -782,7 +806,7 @@ isOneToOne: false
           }
           Functions: {
             "abrir_caja":
-{ Args: { "p_dispositivo_id": string,"p_id": string,"p_monto_inicial": number,"p_negocio_id": string }; Returns: string
+{ Args: { "p_dispositivo_id": string,"p_id": string,"p_monto_inicial": number,"p_negocio_id": string,"p_offline"?: Json }; Returns: string
                            },
 "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
@@ -811,11 +835,13 @@ isOneToOne: false
 "cerrada_en": string | null,
 "diferencia": number | null,
 "dispositivo_id": string,
+"enviada_por": string | null,
 "id": string,
 "monto_contado": number | null,
 "monto_esperado": number | null,
 "monto_inicial": number,
 "negocio_id": string,
+"origen": string,
 "usuario_apertura": string,
 "usuario_cierre": string | null
             }[]
@@ -880,6 +906,11 @@ isOneToOne: false
 "negocio_de_ruta_foto":
 { Args: { "p_ruta": string }; Returns: string
                            },
+"offline_caja":
+{ Args: { "p_offline": Json }; Returns: {
+              "hora": string,"usuario_id": string
+            }[]
+                           },
 "payload_claves":
 { Args: { "p": Json,"p_claves": (string)[] }; Returns: undefined
                            },
@@ -915,6 +946,11 @@ isOneToOne: false
 "reclamar_operacion":
 { Args: { "p_huella": string,"p_id": string,"p_negocio_id": string }; Returns: boolean
                            },
+"reconciliacion_ventas":
+{ Args: { "p_desde_id"?: string,"p_limite"?: number,"p_negocio_id": string }; Returns: {
+              "creada_en_cliente": string,"enviada_por": string,"enviada_por_nombre": string,"id": string,"motivos_revision": (string)[],"numero": string,"pagos_pendientes": Json,"recibida_en": string,"total": number,"vendedor_id": string,"vendedor_nombre": string
+            }[]
+                           },
 "registrar_conteo":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number
                            },
@@ -925,7 +961,7 @@ isOneToOne: false
 { Args: { "p_cantidad": number,"p_costo_unitario": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
                            },
 "registrar_movimiento_caja":
-{ Args: { "p_id": string,"p_monto": number,"p_motivo": string,"p_sesion_id": string,"p_tipo": string }; Returns: string
+{ Args: { "p_id": string,"p_monto": number,"p_motivo": string,"p_offline"?: Json,"p_sesion_id": string,"p_tipo": string }; Returns: string
                            },
 "registrar_series":
 { Args: { "p_negocio_id": string,"p_producto_id": string,"p_series": (string)[],"p_ubicacion_id": string }; Returns: number
@@ -937,7 +973,7 @@ isOneToOne: false
 { Args: { "p_negocio_id": string,"p_valor": number }; Returns: string
                            },
 "registrar_venta":
-{ Args: { "p_venta": Json }; Returns: Json
+{ Args: { "p_offline"?: Json,"p_venta": Json }; Returns: Json
                            },
 "resolver_devolucion_existente":
 { Args: { "p_dev": Omit<Database["public"]['Tables']["devoluciones"]['Row'], Database["public"]['Tables']["devoluciones"]['ComputedFields']>,"p_huella": string,"p_negocio_id": string }; Returns: Json
@@ -948,6 +984,9 @@ isOneToOne: false
 "resumen_caja":
 { Args: { "p_sesion_id": string }; Returns: Json
                            },
+"revisar_venta":
+{ Args: { "p_venta_id": string }; Returns: Json
+                           },
 "stock_inconsistente":
 { Args: { "p_negocio_id": string }; Returns: {
               "cantidad_kardex": number,"cantidad_stock": number,"producto_id": string,"ubicacion_id": string
@@ -956,11 +995,17 @@ isOneToOne: false
 "tiene_permiso":
 { Args: { "p_negocio_id": string,"p_permiso": string }; Returns: boolean
                            },
+"tiene_permiso_de":
+{ Args: { "p_negocio_id": string,"p_permiso": string,"p_usuario_id": string }; Returns: boolean
+                           },
 "total_qr_sesion":
 { Args: { "p_sesion_id": string }; Returns: number
                            },
 "trasladar_stock":
 { Args: { "p_cantidad": number,"p_destino_id": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_origen_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[] }; Returns: string
+                           },
+"usuario_en_negocio":
+{ Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: boolean
                            },
 "validar_inventario":
 { Args: { "p_cantidad": number,"p_negocio_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: {
@@ -987,7 +1032,10 @@ isOneToOne: false
         to: "productos"
         isOneToOne: true
         isSetofReturn: false
-      } }
+      } },
+"verificar_pago_qr":
+{ Args: { "p_cobrado"?: boolean,"p_pago_id": string }; Returns: Json
+                           }
           }
           Enums: {
             [_ in never]: never

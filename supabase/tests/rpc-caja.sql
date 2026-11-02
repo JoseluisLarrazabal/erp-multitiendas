@@ -55,13 +55,13 @@ create function pg_temp.mov(p_m text, p_s text, p_tipo text, p_monto numeric, p_
 $$;
 
 -- Permisos de ejecución
-select ok(has_function_privilege('authenticated', 'public.abrir_caja(uuid, uuid, uuid, numeric)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.registrar_movimiento_caja(uuid, uuid, text, numeric, text)', 'EXECUTE')
+select ok(has_function_privilege('authenticated', 'public.abrir_caja(uuid, uuid, uuid, numeric, jsonb)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.registrar_movimiento_caja(uuid, uuid, text, numeric, text, jsonb)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.cerrar_caja(uuid, numeric)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.caja_sesion_abierta(uuid)', 'EXECUTE'), 'authenticated ejecuta las 4 RPC');
 select ok(not has_function_privilege('authenticated', 'public.efectivo_esperado(uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.efectivo_esperado(uuid)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.abrir_caja(uuid, uuid, uuid, numeric)', 'EXECUTE'), 'efectivo_esperado privada, anon sin acceso');
+  and not has_function_privilege('anon', 'public.abrir_caja(uuid, uuid, uuid, numeric, jsonb)', 'EXECUTE'), 'efectivo_esperado privada, anon sin acceso');
 
 -- abrir_caja: permisos e inválidos
 select pg_temp.como(pg_temp.i('c'));
