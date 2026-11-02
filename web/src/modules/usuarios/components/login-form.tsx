@@ -1,13 +1,14 @@
 "use client";
 
 import { navegarA } from "@/lib/navegar";
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/browser";
 import { ERROR_CONEXION, ERROR_CREDENCIALES, mensajeErrorLogin } from "../login";
+import { borrarContextoLocal } from "../contexto-local";
 import { loginSchema } from "../schemas";
 
 const sinSuscripcion = () => () => {};
@@ -19,6 +20,11 @@ export function LoginForm() {
     () => true,
     () => false,
   );
+  // Llegar a /login es haber salido (expulsión del proxy, del panel o sesión caducada): el contexto de la cuenta anterior
+  // no debe sobrevivir. La cola de ventas no se toca.
+  useEffect(() => {
+    void borrarContextoLocal();
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const invalido = error !== null;

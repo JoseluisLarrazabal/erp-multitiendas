@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import { formatearBs } from "@/lib/format/moneda";
 import { formatearHora } from "@/lib/format/fecha";
+import type { FilaCola } from "@/lib/offline/cola";
+import { avisarRed, useSinRed } from "@/lib/offline/red";
 import { createClient } from "@/lib/supabase/browser";
 import {
   ETIQUETA_MOVIMIENTO,
@@ -26,33 +28,59 @@ import {
   type Movimiento,
   type TipoMovimiento,
 } from "../domain";
+import {
+  encolarMovimiento,
+  hayAperturaEnCola,
+  movimientosDeSesion,
+  textoMontoCola,
+} from "../cola-caja";
 import { cerrarSesion, listarMovimientos, registrarMovimiento } from "../queries";
 import { movimientoSchema, type Cierre } from "../schemas";
 
+const MENSAJE_COLA =
+  "No se pudo guardar el movimiento en este equipo. Revisa el espacio y los permisos del navegador, o recarga la página.";
 const AYUDA_ARQUEO = "Cuenta el efectivo del cajón. El sistema compara con lo esperado al cerrar.";
 
 // Movimientos de caja (ingreso, gasto, retiro) y cierre con arqueo. Todo en el cliente, sin server actions.
 // Los UUID viven en refs: reintentar tras un corte reenvía el mismo id; otro dato es otra operación.
 export function PanelCaja({
+  negocioId,
+  dispositivoId,
+  usuarioId,
   nombreEquipo,
   sesionId,
+  filas,
   ventaPendiente,
   lecturaColaFallida,
+  alEncolar,
   alCerrar,
   alYaCerrada,
   alVolver,
 }: {
+  negocioId: string;
+  dispositivoId: string;
+  usuarioId: string;
   nombreEquipo: string;
   sesionId: string | null;
+  // Contenido de la cola (la suscripción es la del POS).
+  filas: readonly FilaCola[];
   ventaPendiente: boolean;
   // No se pudo leer la cola de ventas de este equipo: no se sabe si hay algo sin enviar.
   lecturaColaFallida: boolean;
+  // Tras encolar un movimiento: el motor lo envía sin esperar el temporizador.
+  alEncolar: () => void;
   // El servidor confirmó el cierre: el POS pasa a pedir la apertura.
   alCerrar: () => void;
   // ERP_CAJA_CERRADA al cerrar: la caja ya estaba cerrada. El POS la vuelve a consultar; devuelve un error o null.
   alYaCerrada: () => Promise<string | null>;
   alVolver: () => void;
 }) {
+  const sinRed = useSinRed();
+  // Movimientos hechos sin conexión que aún no llegaron: se ven aunque la lista del servidor no esté.
+  const enCola = useMemo(
+    () => (sesionId ? movimientosDeSesion(filas, sesionId) : []),
+    [filas, sesionId],
+  );
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [totalMovimientos, setTotalMovimientos] = useState(0);
   const [errorLista, setErrorLista] = useState<string | null>(null);
@@ -73,7 +101,7 @@ export function PanelCaja({
   // `version` sube tras registrar un movimiento para releer la lista.
   const [version, setVersion] = useState(0);
   useEffect(() => {
-    if (!sesionId) return;
+    if (!sesionId || sinRed) return;
     let cancelado = false;
     listarMovimientos(createClient(), sesionId).then((r) => {
       if (cancelado) return;
@@ -81,12 +109,15 @@ export function PanelCaja({
         setMovimientos(r.data.movimientos);
         setTotalMovimientos(r.data.total);
         setErrorLista(null);
-      } else setErrorLista(r.error);
+      } else {
+        if (r.red) avisarRed(false);
+        setErrorLista(r.error);
+      }
     });
     return () => {
       cancelado = true;
     };
-  }, [sesionId, version]);
+  }, [sesionId, version, sinRed, enCola.length]);
 
   async function registrar(e: React.FormEvent) {
     e.preventDefault();
@@ -107,22 +138,48 @@ export function PanelCaja({
       intentoMov.current = { clave, id: crypto.randomUUID() };
     setErrorMov(null);
     setRegistrando(true);
-    const r = await registrarMovimiento(createClient(), {
-      id: intentoMov.current.id,
-      sesionId,
-      ...v.data,
-    });
+    const id = intentoMov.current.id;
+    // Con la apertura de esta caja aún en la cola el servidor no la conoce: el movimiento va por la cola.
+    let enviadoSinRed = sinRed || (await hayAperturaEnCola(dispositivoId));
+    if (!enviadoSinRed) {
+      const r = await registrarMovimiento(createClient(), { id, sesionId, ...v.data });
+      if (!r.ok) {
+        if (!r.red) {
+          setRegistrando(false);
+          return setErrorMov(r.error);
+        }
+        avisarRed(false);
+        enviadoSinRed = true;
+      } else avisarRed(true);
+    }
+    if (enviadoSinRed) {
+      try {
+        await encolarMovimiento({
+          negocioId,
+          dispositivoId,
+          usuarioId,
+          id,
+          sesion_id: sesionId,
+          ...v.data,
+        });
+      } catch {
+        setRegistrando(false);
+        return setErrorMov(MENSAJE_COLA);
+      }
+      alEncolar();
+    }
     setRegistrando(false);
-    if (!r.ok) return setErrorMov(r.error);
     intentoMov.current = null;
     setMonto("");
     setMotivo("");
-    setAvisoMov(`${ETIQUETA_MOVIMIENTO[tipo]} registrado.`);
+    setAvisoMov(
+      `${ETIQUETA_MOVIMIENTO[tipo]} ${enviadoSinRed ? "guardado sin conexión; se enviará al volver la red" : "registrado"}.`,
+    );
     setVersion((n) => n + 1);
   }
 
   async function cerrar() {
-    if (!sesionId || cerrando) return;
+    if (!sesionId || cerrando || sinRed) return;
     const centavos = parsearMontoInicial(contado);
     if (centavos === null) return;
     setCerrando(true);
@@ -142,7 +199,7 @@ export function PanelCaja({
 
   function pedirCierre(e: React.FormEvent) {
     e.preventDefault();
-    if (ventaPendiente) return;
+    if (ventaPendiente || sinRed) return;
     if (contado.trim() === "" || parsearMontoInicial(contado) === null)
       return setErrorCierre("Escribe el efectivo contado, por ejemplo 350 o 350,50.");
     setErrorCierre(null);
@@ -223,7 +280,24 @@ export function PanelCaja({
             <p role="alert" className="text-destructive text-sm empty:hidden">
               {errorLista}
             </p>
-            {movimientos.length === 0 ? (
+            {sinRed && <p className="text-muted-foreground text-sm">Disponible con conexión.</p>}
+            {enCola.length > 0 && (
+              <ul aria-label="Movimientos sin enviar" className="divide-y text-sm">
+                {enCola.map((m) => (
+                  <li key={m.id} className="flex items-baseline gap-2 py-2">
+                    <span className="text-muted-foreground w-12 shrink-0 tabular-nums">
+                      {formatearHora(m.creadaEn)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium">{ETIQUETA_MOVIMIENTO[m.tipo]}</span>
+                      <span className="text-muted-foreground"> · {m.motivo} · sin enviar</span>
+                    </span>
+                    <span className="font-medium tabular-nums">{textoMontoCola(m)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {sinRed ? null : movimientos.length === 0 ? (
               <p className="text-muted-foreground text-sm">Sin movimientos en esta sesión.</p>
             ) : (
               <ul aria-label="Movimientos registrados" className="divide-y text-sm">
@@ -275,7 +349,12 @@ export function PanelCaja({
                 <p role="alert" className="text-destructive text-sm">
                   {lecturaColaFallida
                     ? "No se pudo leer la cola de ventas de este equipo, así que no se sabe si hay ventas sin enviar. Recarga la página antes de cerrar la caja."
-                    : "Hay ventas sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la caja."}
+                    : "Hay operaciones sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la caja."}
+                </p>
+              )}
+              {sinRed && (
+                <p role="status" className="text-muted-foreground text-sm">
+                  Cerrar la caja necesita conexión.
                 </p>
               )}
               <p role="alert" className="text-destructive text-sm empty:hidden">
@@ -284,7 +363,7 @@ export function PanelCaja({
               <Button
                 type="submit"
                 className="h-11 self-start"
-                disabled={ventaPendiente || cerrando}
+                disabled={ventaPendiente || cerrando || sinRed}
               >
                 {cerrando && <Loader2 className="animate-spin" aria-hidden />} Cerrar caja
               </Button>

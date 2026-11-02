@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { codigoErp, errorRpc } from "@/lib/erp-errores";
+import { codigoErp, errorRpc, esFalloDeRed, MENSAJE_RED } from "@/lib/erp-errores";
 import type { Resultado } from "@/modules/usuarios";
 import type { Movimiento, TipoMovimiento } from "./domain";
 import { cierreSchema, sesionCajaSchema, type Cierre, type SesionCaja } from "./schemas";
@@ -91,7 +91,10 @@ export async function listarMovimientos(
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limite);
-  if (error) return { ok: false, error: "No se pudieron leer los movimientos." };
+  if (error) {
+    const red = esFalloDeRed(error);
+    return { ok: false, red, error: red ? MENSAJE_RED : "No se pudieron leer los movimientos." };
+  }
   return {
     ok: true,
     data: {

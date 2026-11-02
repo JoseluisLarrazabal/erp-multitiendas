@@ -2,6 +2,7 @@
 
 import { Landmark, ScanBarcode, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSinRed } from "@/lib/offline/red";
 import type { Equipo } from "../queries";
 
 export type ModoPos = "vender" | "consulta" | "caja";
@@ -22,6 +23,7 @@ export function BarraEquipo({
   modo: ModoPos;
   alCambiarModo: (modo: ModoPos) => void;
 }) {
+  const sinRed = useSinRed();
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <p className="text-muted-foreground">
@@ -35,8 +37,14 @@ export function BarraEquipo({
         type="button"
         variant="ghost"
         className="h-10"
-        disabled={pendiente}
-        title={pendiente ? "Hay ventas sin enviar en este equipo" : undefined}
+        disabled={pendiente || sinRed}
+        title={
+          sinRed
+            ? "Cambiar de equipo necesita conexión"
+            : pendiente
+              ? "Hay operaciones sin enviar en este equipo"
+              : undefined
+        }
         onClick={alCambiarEquipo}
       >
         Cambiar equipo

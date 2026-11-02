@@ -72,7 +72,8 @@ export function leerCatalogo(json: unknown): Catalogo | null {
 }
 
 // Payload de registrar_venta. Mismas reglas que el servidor: claves exactas, números JSON con a lo sumo
-// 2 decimales (3 en cantidad), QR siempre verificado, crédito no existe.
+// 2 decimales (3 en cantidad), crédito no existe. QR `verificado: false` (pendiente) solo existe sin conexión y viaja con
+// `p_offline`: el servidor lo rechaza en una venta en línea.
 const dinero = z.number().refine((n) => n >= 0 && Math.round(n * 100) / 100 === n);
 const cantidad = z.number().refine((n) => n > 0 && Math.round(n * 1000) / 1000 === n);
 
@@ -90,7 +91,7 @@ export const pagoVentaSchema = z.discriminatedUnion("medio", [
   z.strictObject({
     medio: z.literal("qr"),
     monto: dinero.refine((n) => n > 0),
-    verificado: z.literal(true),
+    verificado: z.boolean(),
   }),
 ]);
 
@@ -121,3 +122,54 @@ export const respuestaVentaSchema = z.object({
   numero: z.string(),
   total: z.number(),
 });
+
+// Lo que /pos guarda en IndexedDB para abrir sin red. Sin costos ni clientes: catalogo_pos no los trae.
+const preciosGuardadosSchema = z.object({
+  contado: z.number().nullable(),
+  mayorista: z.number().nullable(),
+  minimo: z.number().nullable(),
+  normal: z.number().nullable(),
+  express: z.number().nullable(),
+});
+export const catalogoGuardadoSchema = z.object({
+  // Cuándo se bajó (ms). Con el stock descontado por ventas locales, la edad sigue siendo la de la bajada.
+  guardadoEn: z.number(),
+  marcas: z.array(z.tuple([z.string(), z.string()])),
+  catalogo: z.object({
+    version: z.string(),
+    tipoCambio: z.number().nullable(),
+    ubicaciones: z.array(z.object({ id: z.string(), nombre: z.string() })),
+    productos: z.array(
+      z.object({
+        id: z.string(),
+        codigo: z.string(),
+        codigoBarras: z.string().nullable(),
+        nombre: z.string(),
+        unidad: z.enum(["unidad", "kg"]),
+        tipo: z.string(),
+        controlaSerie: z.boolean(),
+        garantiaMeses: z.number().nullable(),
+        precios: preciosGuardadosSchema,
+        stockPorUbicacion: z.record(z.string(), z.number()),
+        stockTotal: z.number(),
+      }),
+    ),
+  }),
+});
+export type CatalogoGuardado = z.infer<typeof catalogoGuardadoSchema>;
+
+export const datosNegocioSchema = z.object({
+  nombre: z.string(),
+  nit: z.string().nullable(),
+  datosNota: z.string().nullable(),
+  topeDescuento: z.number(),
+});
+export const equiposGuardadosSchema = z.array(
+  z.object({
+    id: z.string(),
+    nombre: z.string(),
+    prefijo: z.string(),
+    ubicacionId: z.string(),
+    ultimoNumero: z.number(),
+  }),
+);

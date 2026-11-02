@@ -28,7 +28,7 @@ describe("ventaPayloadSchema", () => {
   it("acepta un payload válido, incluso con UUID de seed", () => {
     expect(ventaPayloadSchema.safeParse(base).success).toBe(true);
   });
-  it("rechaza crédito, QR sin verificar, número mal formado y claves extra", () => {
+  it("rechaza crédito, QR sin el campo verificado, número mal formado y claves extra", () => {
     const item = base.items[0]!;
     expect(
       ventaPayloadSchema.safeParse({ ...base, items: [{ ...item, lista: "credito" }] }).success,
@@ -40,6 +40,13 @@ describe("ventaPayloadSchema", () => {
       ventaPayloadSchema.safeParse({
         ...base,
         pagos: [{ medio: "qr", monto: 80, verificado: true }],
+      }).success,
+    ).toBe(true);
+    // Pendiente de verificar (sin conexión): el schema lo admite; solo viaja con p_offline.
+    expect(
+      ventaPayloadSchema.safeParse({
+        ...base,
+        pagos: [{ medio: "qr", monto: 80, verificado: false }],
       }).success,
     ).toBe(true);
     expect(ventaPayloadSchema.safeParse({ ...base, numero: "c1-1" }).success).toBe(false);

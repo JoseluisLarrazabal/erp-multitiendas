@@ -4,6 +4,7 @@ import { Loader2, Search, UserPlus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSinRed } from "@/lib/offline/red";
 import { createClient } from "@/lib/supabase/browser";
 import { normalizarDocumento, type ClienteElegido } from "../domain";
 import { buscarClientes, crearCliente } from "../queries";
@@ -29,6 +30,8 @@ export function SelectorCliente({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const entrada = useRef<HTMLInputElement>(null);
+  // Buscar y crear clientes necesita el servidor; sin red se vende a cliente general (RF-VEN-14).
+  const sinRed = useSinRed();
 
   useEffect(() => {
     if (!abierto || creando) return;
@@ -79,7 +82,7 @@ export function SelectorCliente({
 
   if (!abierto)
     return (
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground shrink-0">Cliente:</span>
         <span className="min-w-0 flex-1 truncate font-medium">
           {valor
@@ -104,6 +107,8 @@ export function SelectorCliente({
           type="button"
           variant={obligatorio && !valor ? "default" : "outline"}
           className="h-10"
+          disabled={sinRed}
+          title={sinRed ? "Buscar o crear clientes necesita conexión" : undefined}
           onClick={() => {
             setAbierto(true);
             setTimeout(() => entrada.current?.focus(), 0);
@@ -111,6 +116,11 @@ export function SelectorCliente({
         >
           {valor ? "Cambiar" : "Elegir"}
         </Button>
+        {sinRed && (
+          <span role="status" className="text-muted-foreground w-full text-xs">
+            Elegir cliente necesita conexión.
+          </span>
+        )}
       </div>
     );
 

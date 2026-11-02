@@ -17,3 +17,8 @@ export function esSinSesion(error: unknown): boolean {
 }
 
 export const ERROR_CONEXION = "No pudimos conectar. Intenta de nuevo.";
+
+// Auth no llegó al servidor (fetch roto o pasarela caída): no dice nada de la sesión, solo que no hay red.
+// Un 5xx (con status) sí llegó al servidor: eso es un error, no falta de red.
+export const esSinRedAuth = (error: unknown): boolean =>
+  isAuthRetryableFetchError(error) && !(error as ErrorAuth)?.status;

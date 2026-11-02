@@ -10,16 +10,32 @@ import {
   type LecturaCola,
 } from "@/lib/offline/cola";
 import { iniciarMotor, observarFilas, type Motor } from "@/lib/offline/motor";
+import {
+  describirOperacionCaja,
+  enviarAperturaDeCola,
+  enviarMovimientoDeCola,
+  TIPO_APERTURA,
+  TIPO_MOVIMIENTO,
+} from "@/modules/caja";
 import { createClient } from "@/lib/supabase/browser";
 import { enviarVentaDeCola, revisarDescarte, TIPO_VENTA, type Descarte } from "./cola-ventas";
 import { payloadColaVentaSchema } from "./schemas";
 
-export type VentaRechazada = { id: string; numero: string; total: number | null; error: string };
+// Lo rechazado al enviar, de cualquier tipo: la venta, la apertura o el movimiento de caja.
+export type OperacionRechazada = {
+  id: string;
+  tipo: string;
+  // Número de nota (ventas) o descripción corta (caja).
+  titulo: string;
+  total: number | null;
+  error: string;
+};
+export type Pendientes = { ventas: number; aperturas: number; movimientos: number };
 
 export type EstadoCola = {
-  // Ventas de los negocios de la cuenta activa que esperan enviarse.
-  pendientes: number;
-  rechazadas: VentaRechazada[];
+  // Operaciones de los negocios de la cuenta activa que esperan enviarse, por tipo.
+  pendientes: Pendientes;
+  rechazadas: OperacionRechazada[];
   // Filas de otros negocios: no se envían con esta cuenta, se cuentan aparte.
   ajenas: number;
   ilegibles: number;
@@ -43,20 +59,32 @@ export function resumirCola(
 ): EstadoCola {
   const { filas, ilegibles, ordenesIlegibles } = lectura && lectura !== "error" ? lectura : VACIA;
   const propias = filas.filter((f) => negociosIds.includes(f.negocioId));
+  const pendientesDe = (tipo: string) =>
+    propias.filter((f) => f.tipo === tipo && f.estado === "pendiente" && f.id !== enCursoId).length;
   return {
-    pendientes: propias.filter(
-      (f) => f.tipo === TIPO_VENTA && f.estado === "pendiente" && f.id !== enCursoId,
-    ).length,
+    pendientes: {
+      ventas: pendientesDe(TIPO_VENTA),
+      aperturas: pendientesDe(TIPO_APERTURA),
+      movimientos: pendientesDe(TIPO_MOVIMIENTO),
+    },
     rechazadas: propias
-      .filter((f) => f.tipo === TIPO_VENTA && f.estado === "rechazada")
-      .map((f) => {
-        const p = payloadColaVentaSchema.safeParse(f.payload);
-        return {
-          id: f.id,
-          numero: f.numeroImpreso ?? (p.success ? p.data.venta.numero : "sin número"),
-          total: p.success ? p.data.venta.total : null,
-          error: f.error ?? "La venta fue rechazada.",
-        };
+      .filter((f) => f.estado === "rechazada")
+      .flatMap((f): OperacionRechazada[] => {
+        const error = f.error ?? "La operación fue rechazada.";
+        if (f.tipo === TIPO_VENTA) {
+          const p = payloadColaVentaSchema.safeParse(f.payload);
+          return [
+            {
+              id: f.id,
+              tipo: f.tipo,
+              titulo: f.numeroImpreso ?? (p.success ? p.data.venta.numero : "sin número"),
+              total: p.success ? p.data.venta.total : null,
+              error,
+            },
+          ];
+        }
+        const d = describirOperacionCaja(f);
+        return d ? [{ id: f.id, tipo: f.tipo, ...d, error }] : [];
       }),
     ajenas: filas.length - propias.length,
     ilegibles,
@@ -72,6 +100,8 @@ export function resumirCola(
 
 export type ColaPos = {
   estado: EstadoCola;
+  // Contenido de la cola tal como se leyó (vacío mientras se lee o si falló).
+  filas: readonly FilaCola[];
   // El envío marca la venta cuyo primer intento está en curso (y la suelta con null).
   enCurso: (ventaId: string | null) => void;
   disparar: (forzar?: boolean) => void;
@@ -99,6 +129,8 @@ export function useColaPos(
     [lectura, negociosIds, equipoId, enCursoId],
   );
 
+  const filas = useMemo(() => (lectura && lectura !== "error" ? lectura.filas : []), [lectura]);
+
   const negocios = useRef(negociosIds);
   const sesion = useRef({ usuarioId, sesionCaducada });
   useEffect(() => {
@@ -111,6 +143,8 @@ export function useColaPos(
       enviadores: {
         [TIPO_VENTA]: async (fila) =>
           (await enviarVentaDeCola(fila, createClient(), false)).resultado,
+        [TIPO_APERTURA]: (fila) => enviarAperturaDeCola(fila, createClient()),
+        [TIPO_MOVIMIENTO]: (fila) => enviarMovimientoDeCola(fila, createClient()),
       },
       elegible: (fila) => negocios.current.includes(fila.negocioId),
     });
@@ -119,6 +153,13 @@ export function useColaPos(
       motor.current = null;
     };
   }, []);
+
+  // Al volver a entrar con la misma cuenta la cola retoma sin esperar el temporizador.
+  const estabaCaducada = useRef(sesionCaducada);
+  useEffect(() => {
+    if (estabaCaducada.current && !sesionCaducada) motor.current?.disparar(true);
+    estabaCaducada.current = sesionCaducada;
+  }, [sesionCaducada]);
 
   const disparar = useCallback((forzar?: boolean) => motor.current?.disparar(forzar), []);
   const reintentar = useCallback(async (id: string) => {
@@ -133,6 +174,7 @@ export function useColaPos(
 
   return {
     estado,
+    filas,
     enCurso: setEnCursoId,
     disparar,
     reintentar,

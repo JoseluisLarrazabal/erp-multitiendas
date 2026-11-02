@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { errorRpc, esFalloDeRed, MENSAJE_RED } from "@/lib/erp-errores";
+import { TIEMPO_ENVIO_MS } from "@/lib/supabase/sesion";
 import { falla, type Resultado } from "@/modules/usuarios";
 import { leerCatalogo, respuestaVentaSchema, type Catalogo, type VentaPayload } from "./schemas";
 
@@ -31,7 +32,11 @@ export async function cargarNegocio(
     .select("nombre, nit, datos_nota, tope_descuento")
     .eq("id", negocioId)
     .maybeSingle();
-  if (error || !data) return falla("No se pudieron leer los datos del negocio.");
+  if (error) {
+    const red = esFalloDeRed(error);
+    return falla(red ? MENSAJE_RED : "No se pudieron leer los datos del negocio.", red);
+  }
+  if (!data) return falla("No se pudieron leer los datos del negocio.");
   return {
     ok: true,
     data: {
@@ -53,7 +58,10 @@ export async function listarEquipos(
     .eq("negocio_id", negocioId)
     .order("nombre")
     .order("id");
-  if (error) return falla("No se pudieron leer los equipos.");
+  if (error) {
+    const red = esFalloDeRed(error);
+    return falla(red ? MENSAJE_RED : "No se pudieron leer los equipos.", red);
+  }
   return {
     ok: true,
     data: data.map((d) => ({
@@ -119,13 +127,17 @@ export async function seriesDisponibles(
   return { ok: true, data };
 }
 
-export async function nombreVendedor(supabase: Cliente, usuarioId: string): Promise<string> {
-  const { data } = await supabase
+export async function nombreVendedor(
+  supabase: Cliente,
+  usuarioId: string,
+): Promise<Resultado<string | null>> {
+  const { data, error } = await supabase
     .from("perfiles")
     .select("nombre")
     .eq("id", usuarioId)
     .maybeSingle();
-  return data?.nombre ?? "Vendedor";
+  if (error) return falla("No se pudo leer el nombre del vendedor.", esFalloDeRed(error));
+  return { ok: true, data: data?.nombre ?? null };
 }
 
 export type ErrorEnvio = { ok: false; codigo: string | null; red: boolean; error: string };
@@ -136,7 +148,6 @@ export type OfflineVenta = {
   tipo_cambio: number | null;
   numero_impreso: string | null;
 };
-export const TIEMPO_ENVIO_MS = 8_000;
 
 // El abort y el timeout llegan como error sin código de Postgres: cuentan como fallo de red (esFalloDeRed).
 export async function enviarVenta(
@@ -171,6 +182,9 @@ export async function existeVenta(supabase: Cliente, ventaId: string): Promise<R
     .eq("id", ventaId)
     .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS))
     .maybeSingle();
-  if (error) return falla(esFalloDeRed(error) ? MENSAJE_RED : "No se pudo comprobar la venta.");
+  if (error) {
+    const red = esFalloDeRed(error);
+    return falla(red ? MENSAJE_RED : "No se pudo comprobar la venta.", red);
+  }
   return { ok: true, data: data !== null };
 }

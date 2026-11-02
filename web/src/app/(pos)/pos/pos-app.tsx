@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AvisoActualizacion } from "@/components/aviso-actualizacion";
 import { pedirPersistencia } from "@/lib/offline/motor";
 import { ConfirmarDescarte, PosVenta, type GuardaVenta } from "@/modules/ventas";
 import { PosBarra, usePosSesion } from "@/modules/usuarios";
@@ -20,6 +21,8 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
   useEffect(() => {
     void pedirPersistencia();
   }, []);
+  // Edad del catálogo en uso, para la barra de sin conexión.
+  const [catalogoDesde, setCatalogoDesde] = useState<number | null>(null);
   const [cambio, setCambio] = useState<{
     id: string;
     resolver: (r: string | null | false) => void;
@@ -47,7 +50,9 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
         cambiarActivo={cambiarConGuarda}
         reintentar={reintentar}
         titulo={titulo}
+        catalogoDesde={catalogoDesde}
       />
+      <AvisoActualizacion lineasEnCurso={() => guarda.current.lineas()} />
       {sesion.fase === "lista" && activo && (
         <PosVenta
           key={sesion.activoId}
@@ -60,6 +65,7 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
           registrarGuarda={registrarGuarda}
           atajosBloqueados={cambio !== null}
           sesionCaducada={!!sesion.caducada}
+          alCambiarCatalogo={setCatalogoDesde}
         />
       )}
       <ConfirmarDescarte

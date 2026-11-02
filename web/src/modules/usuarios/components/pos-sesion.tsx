@@ -1,7 +1,10 @@
 "use client";
 
 import { Loader2, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatearHace } from "@/lib/format/fecha";
+import { useSinRed } from "@/lib/offline/red";
 import { BotonCerrarSesion } from "./boton-cerrar-sesion";
 import { SelectorNegocio } from "./selector-negocio";
 import { tieneAccesoPanel } from "../domain";
@@ -13,13 +16,17 @@ export function PosBarra({
   cambiarActivo,
   reintentar,
   titulo,
+  catalogoDesde,
 }: {
   sesion: SesionPos;
   cambiarActivo: (id: string) => Promise<string | null | false>;
   reintentar: () => void;
   titulo: React.ReactNode;
+  // Cuándo se bajó el catálogo que se está usando (ms), o null si todavía no hay.
+  catalogoDesde: number | null;
 }) {
-  const sinConexion = sesion.fase === "sin-conexion";
+  const sinRed = useSinRed();
+  const sinConexion = sesion.fase === "sin-conexion" || (sesion.fase === "lista" && sinRed);
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 print:hidden">
@@ -29,13 +36,14 @@ export function PosBarra({
           <Loader2 className="size-4 animate-spin" aria-hidden /> Verificando sesión…
         </p>
       )}
-      {sinConexion && (
+      {sesion.fase === "sin-conexion" && (
         <p role="status" className="bg-secondary flex items-center gap-2 rounded-lg p-3 text-sm">
           <WifiOff className="size-4 shrink-0" aria-hidden />
           Sin conexión. Puedes seguir trabajando; lo registrado se enviará al volver la red. Cerrar
           sesión necesita conexión.
         </p>
       )}
+      {sesion.fase === "lista" && sinRed && <AvisoSinRed catalogoDesde={catalogoDesde} />}
       {sesion.fase === "error" && (
         <div
           role="alert"
@@ -87,5 +95,26 @@ export function PosBarra({
         </div>
       )}
     </div>
+  );
+}
+
+// La edad del catálogo se refresca sola mientras la barra está a la vista.
+function AvisoSinRed({ catalogoDesde }: { catalogoDesde: number | null }) {
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <p role="status" className="bg-secondary flex items-center gap-2 rounded-lg p-3 text-sm">
+      <WifiOff className="size-4 shrink-0" aria-hidden />
+      <span>
+        Sin conexión.{" "}
+        {catalogoDesde === null
+          ? "Catálogo sin cargar."
+          : `Catálogo de ${formatearHace(catalogoDesde, ahora)}.`}{" "}
+        Lo registrado se enviará al volver la red. Cerrar sesión necesita conexión.
+      </span>
+    </p>
   );
 }

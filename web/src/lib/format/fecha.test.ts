@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatearFechaHora, formatearHora, limitesDelDia } from "./fecha";
+import { formatearFechaHora, formatearHace, formatearHora, limitesDelDia } from "./fecha";
 
 describe("fechas en hora de Bolivia", () => {
   it("convierte de UTC a UTC-4", () => {
@@ -16,5 +16,18 @@ describe("fechas en hora de Bolivia", () => {
     expect(limitesDelDia("2026-02-31")).toBeNull();
     expect(limitesDelDia("01/11/2026")).toBeNull();
     expect(limitesDelDia("")).toBeNull();
+  });
+});
+
+describe("formatearHace", () => {
+  const ahora = Date.parse("2026-11-01T12:00:00Z");
+  it.each([
+    [0, "hace un momento"],
+    [5 * 60_000, "hace 5 min"],
+    [3 * 3_600_000, "hace 3 h"],
+    [24 * 3_600_000, "hace 1 día"],
+    [50 * 3_600_000, "hace 2 días"],
+  ])("%d ms", (ms, texto) => {
+    expect(formatearHace(ahora - ms, ahora)).toBe(texto);
   });
 });

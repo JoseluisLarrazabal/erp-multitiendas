@@ -16,6 +16,7 @@ import {
   type FilaNueva,
 } from "./cola";
 import { baseOffline } from "./db";
+import { avisarRed, leerSinRed } from "./red";
 
 const uuid = (n: number) => `a0000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const nueva = (n: number, extra: Partial<FilaNueva> = {}): FilaNueva => ({
@@ -70,6 +71,35 @@ describe("vaciar", () => {
     expect(enviador).toHaveBeenCalledTimes(1);
     await vaciar({ ...todas(), forzar: true, enviadores: { venta: ok } });
     expect((await leerFilas()).filas).toHaveLength(0);
+  });
+
+  it("solo un red sin respuesta marca la app sin red; si el servidor contestó o el enviador lanzó, no", async () => {
+    vi.stubGlobal("navigator", { onLine: true });
+    await encolar(nueva(1));
+    await vaciar({
+      ...todas(),
+      forzar: true,
+      enviadores: { venta: async () => ({ t: "red", error: "x", respondio: true }) },
+    });
+    expect(leerSinRed()).toBe(false);
+    await vaciar({
+      ...todas(),
+      forzar: true,
+      enviadores: {
+        venta: async () => {
+          throw new Error("boom");
+        },
+      },
+    });
+    expect(leerSinRed()).toBe(false);
+    await vaciar({
+      ...todas(),
+      forzar: true,
+      enviadores: { venta: async () => ({ t: "red", error: "x" }) },
+    });
+    expect(leerSinRed()).toBe(true);
+    avisarRed(true);
+    vi.unstubAllGlobals();
   });
 
   it("el backoff crece de 5 s hasta 5 min", () => {

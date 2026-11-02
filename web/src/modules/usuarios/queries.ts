@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { esFalloDeRed, MENSAJE_RED } from "@/lib/erp-errores";
 import type { Database } from "@/lib/supabase/database.types";
-import type {
-  Dispositivo,
-  FilaUsuario,
-  NegocioUsuario,
-  PersonaExterna,
-  Resultado,
-  Ubicacion,
+import {
+  falla,
+  type Dispositivo,
+  type FilaUsuario,
+  type NegocioUsuario,
+  type PersonaExterna,
+  type Resultado,
+  type Ubicacion,
 } from "./domain";
 
 // Reciben el cliente: sirven igual al servidor (cookies) y al POS estático (navegador). Lee la RLS.
@@ -24,7 +26,10 @@ export async function listarMisNegocios(
     .eq("usuario_id", usuarioId)
     .order("created_at")
     .order("negocio_id");
-  if (error) return { ok: false, error: "No se pudieron leer tus negocios." };
+  if (error) {
+    const red = esFalloDeRed(error);
+    return falla(red ? MENSAJE_RED : "No se pudieron leer tus negocios.", red);
+  }
   return {
     ok: true,
     data: data.map((f) => ({
@@ -46,7 +51,10 @@ export async function permisosDeRol(
     .select("permiso")
     .eq("tipo_negocio", tipo)
     .eq("rol", rol);
-  if (error) return { ok: false, error: "No se pudieron leer tus permisos." };
+  if (error) {
+    const red = esFalloDeRed(error);
+    return falla(red ? MENSAJE_RED : "No se pudieron leer tus permisos.", red);
+  }
   return { ok: true, data: data.map((f) => f.permiso) };
 }
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/browser";
+import { borrarContextoLocal } from "../contexto-local";
 import { borrarNegocioGuardado } from "../negocio-cliente";
 
 // Navegación completa a /login (no soft): limpia el caché del router y suelta el service worker.
@@ -20,6 +21,9 @@ export function BotonCerrarSesion({ deshabilitado = false }: { deshabilitado?: b
       const { error } = await createClient().auth.signOut({ scope: "local" });
       if (error) throw error;
       borrarNegocioGuardado();
+      // El contexto offline se va con la sesión; la cola de ventas pendientes no se toca.
+      // Con tope: un IndexedDB lento no puede dejar la sesión a medias en pantalla.
+      await Promise.race([borrarContextoLocal(), new Promise((r) => setTimeout(r, 1500))]);
       navegarA("/login");
     } catch {
       setError("No se pudo cerrar la sesión. Revisa tu conexión.");

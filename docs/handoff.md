@@ -164,10 +164,26 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     2 rondas de revisión. Riesgo aceptado: si fallan a la vez `quitar` y `marcarRechazada` tras un rechazo en línea, la
     fila queda pendiente y el motor la reenvía. No verificado: Firefox, Safari, deshabilitar Reintentar y mensaje de
     `PanelCaja` sin test automático. Sin red el QR sigue bloqueado hasta el PR 3. Codex: no verificado (sin cuota).
+  - PR 3 `feat/offline-arranque`: contexto en IndexedDB por cuenta y negocio (cuenta, permisos, equipos, caja, catálogo
+    sin costos ni clientes). `/pos` abre sin red con el catálogo guardado (E2E-06). Cerrar sesión borra el contexto y nunca
+    la cola. Apertura y movimientos de caja entran a la cola con `p_offline`; mientras la apertura no llega, las ventas y
+    movimientos de esa caja van detrás de ella por la cola. QR sin red queda pendiente de verificar. Bloqueos RF-VEN-14:
+    cierre de caja, clientes (se puede cobrar con uno ya elegido), cambio de equipo, series y lavandería. Aviso de
+    actualización del service worker, solo con cola vacía. La marca "sin red" expira a los 20 s. Revisión: code-review,
+    ponytail y seguridad (sin hallazgos); 10 arreglos aplicados. El E2E "cerrar la pestaña en un primer intento colgado"
+    también fallaba 1 de 10 en `main`: la petición retenida a veces llega al servidor al cerrar la pestaña. Ahora verifica
+    que la cola no la reenvía. No verificado: SW en espera real con dos builds, flush del catálogo en `pagehide`, aviso de
+    actualización con dos pestañas, Firefox y Safari, primer arranque sin red con caja cerrada y sin catálogo previo.
+    Pendiente para el PR 4: mostrar `enviada_por` en reconciliación, porque quien tiene `caja` puede atribuir una apertura
+    sin red a otro miembro. Codex: no verificado (sin cuota).
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
   `PRUEBA-1` con stock. Producto, entrada, caja y venta `C1-000001` corrieron por las RPC con ese usuario simulado desde la
-  CLI: stock 19, kardex 19, arqueo sin diferencia. **No verificado:** esa venta desde el navegador; el login lo hace el
-  CTO.
+  CLI: stock 19, kardex 19, arqueo sin diferencia. **Venta en producción con usuario real: verificada.** El CTO entró en
+  `erpmultitiendas.vercel.app` y vendió `C1-000002` desde `/pos`: venta `online`, stock y kardex en 18, número 2.
+  Comprobado por SQL. Después, con RPC en staging como ese usuario: cierre sin diferencia, caja con gasto, QR anulado,
+  devolución parcial, venta sin red con QR pendiente enviada 2 veces (quedó 1), reconciliación 1 a 0, stock igual a
+  kardex. Todas las cajas cerradas. Sin probar en producción desde el navegador: venta sin conexión (falta conectar Claude
+  in Chrome; la sesión necesita reiniciarse en la versión 2.1.316).
 - **Fase 2 cerrada (2026-11-01):** 4 PRs, plan en `docs/plan-fase-2.md`. **Próximo:** fase 3, venta y órdenes sin
   conexión (`docs/roadmap.md`).
   - Corrida final sobre `main` `0cb5fe8`, build de producción y base recién reseteada, en local: POS con lector simulado,

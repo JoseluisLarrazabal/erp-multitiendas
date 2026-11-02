@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSinRed } from "@/lib/offline/red";
 import { bs, calcularCobro, parsearMonto, textoMonto } from "../domain";
 import type { EstadoEnvio } from "../use-envio";
 
@@ -24,19 +25,26 @@ export function Cobro({
 }: {
   total: number;
   estado: EstadoEnvio;
-  alConfirmar: (c: { efectivo: number; qr: number; recibido: number }) => void;
+  alConfirmar: (c: {
+    efectivo: number;
+    qr: number;
+    qrConfirmado: boolean;
+    recibido: number;
+  }) => void;
   alCerrar: () => void;
 }) {
   const [qrTexto, setQrTexto] = useState("");
   const [recibidoTexto, setRecibidoTexto] = useState(textoMonto(total));
   const [recibidoEditado, setRecibidoEditado] = useState(false);
   const [qrOk, setQrOk] = useState(false);
+  // Sin conexión el QR no se puede comprobar: se cobra como pendiente de verificar, sin casilla.
+  const sinRed = useSinRed();
   const primero = useRef<HTMLInputElement>(null);
 
   const qr = qrTexto.trim() === "" ? 0 : parsearMonto(qrTexto);
   const recibido = parsearMonto(recibidoTexto);
   const calculo =
-    qr === null || recibido === null ? null : calcularCobro(total, qr, recibido, qrOk);
+    qr === null || recibido === null ? null : calcularCobro(total, qr, recibido, qrOk || sinRed);
   const aplicado = qr === null ? total : Math.max(total - qr, 0);
   const ocupado = estado.t === "enviando";
 
@@ -65,7 +73,12 @@ export function Cobro({
           onSubmit={(e) => {
             e.preventDefault();
             if (calculo?.ok && !ocupado)
-              alConfirmar({ efectivo: calculo.efectivo, qr: calculo.qr, recibido: recibido ?? 0 });
+              alConfirmar({
+                efectivo: calculo.efectivo,
+                qr: calculo.qr,
+                qrConfirmado: qrOk && !sinRed,
+                recibido: recibido ?? 0,
+              });
           }}
         >
           <div className="flex items-baseline justify-between">
@@ -97,7 +110,13 @@ export function Cobro({
                   Todo QR
                 </Button>
               </div>
-              {qr !== null && qr > 0 && (
+              {qr !== null && qr > 0 && sinRed && (
+                <p className="bg-muted rounded-lg px-3 py-2 text-sm">
+                  QR pendiente de verificar: sin conexión no se puede confirmar. Queda marcado para
+                  que el encargado lo revise.
+                </p>
+              )}
+              {qr !== null && qr > 0 && !sinRed && (
                 <label className="flex items-start gap-2 text-sm">
                   <input
                     type="checkbox"
