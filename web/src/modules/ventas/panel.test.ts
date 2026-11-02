@@ -124,6 +124,7 @@ describe("reconciliación", () => {
       "otra_cuenta",
       "producto_inactivo",
       "renumerada",
+      "sin_cliente",
       "sin_precio",
       "sobre_tope",
     ]);

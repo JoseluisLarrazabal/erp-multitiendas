@@ -56,7 +56,8 @@ insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
   ('c0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000002', 'empleado');
 
 insert into public.dispositivos (negocio_id, ubicacion_id, nombre, prefijo) values
-  ('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Caja 1', 'C1');
+  ('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Caja 1', 'C1'),
+  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L1', 'L1');
 
 -- Catálogo de desarrollo: Tienda (2 productos en USD, 1 sin precio), Frial (cortes en kg), Lavandería (servicios).
 insert into public.categorias (id, negocio_id, nombre) values
@@ -114,6 +115,7 @@ from (values
   ('a0000000-0000-0000-0000-000000000003'::uuid, 'b0000000-0000-0000-0000-000000000004'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid, 18.5::numeric, 27::numeric)
 ) as p (negocio_id, ubicacion_id, producto_id, cantidad, costo);
 
--- Clientes de prueba (ficticios), uno por negocio de tienda.
+-- Clientes de prueba (ficticios): uno en la tienda y uno en la lavandería.
 insert into public.clientes (id, negocio_id, nombre, ci_nit, telefono, direccion) values
-  ('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Cliente Demo', '0000001', '70000001', 'Calle Ficticia 1');
+  ('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Cliente Demo', '0000001', '70000001', 'Calle Ficticia 1'),
+  ('f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'Cliente Lavandería Demo', '0000002', '70000002', 'Calle Ficticia 2');

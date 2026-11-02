@@ -143,11 +143,11 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 
 | Tabla | Campos clave | Notas |
 |---|---|---|
-| `ordenes` | **id (UUID del cliente)**, negocio_id, numero, cliente_id, estado, recibida_en, recibida_por, fecha_prometida, express, peso_kg, prendas, casillero, total, caja_sesion_id, nota, retirada_por, retiro_con (`boleta`\|`carnet`) | |
-| `orden_items` | orden_id, producto_id (servicio), cantidad (unidades o kg), precio, descripcion_prenda | |
-| `orden_pagos` | orden_id, medio, monto, verificacion | el cobro se hace al recibir |
-| `orden_eventos` | orden_id, estado, usuario_id, created_at | log append-only de estados |
+| `ordenes` | **id (= `ventas.id`)**, negocio_id, estado, estado_en, recibida_por, cliente_nombre, cliente_telefono, express, prendas, casillero, fecha_prometida, nota, retirada_por, retiro_con (`boleta`\|`carnet`), documento_retiro, entregada_por, entregada_en, motivo_anulacion, anulada_por, huella | ficha de la venta (fase 4) |
+| `orden_eventos` | orden_id, estado, usuario_id, motivo, created_at | log append-only de estados |
 
+- La orden es una venta más su ficha: ítems, pagos, caja y número son los de `ventas`, `venta_items` y `venta_pagos`.
+  `orden_items` y `orden_pagos` no existen (`docs/plan-fase-4.md`).
 - Estados: `recibida`, `en_lavado`, `lista`, `entregada`, `cancelada`.
 - Sin conexión solo se permite **crear** una orden (RPC idempotente). Los cambios de estado requieren conexión.
 - Ropa sin recoger: `estado = lista` y más de 30 días desde el evento `lista`.

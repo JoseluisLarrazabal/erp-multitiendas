@@ -14,6 +14,7 @@ export const ETIQUETA_MOTIVO: Record<string, string> = {
   sobre_tope: "Descuento sobre el tope",
   renumerada: "Número cambiado al enviarse",
   otra_cuenta: "Enviada desde otra cuenta",
+  sin_cliente: "Sin cliente registrado",
 };
 export const textoMotivo = (m: string) => ETIQUETA_MOTIVO[m] ?? m;
 
