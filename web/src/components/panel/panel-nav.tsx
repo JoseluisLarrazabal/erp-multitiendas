@@ -15,13 +15,20 @@ import {
   Receipt,
   ScanSearch,
   Users,
+  WashingMachine,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Lo incompleto no se muestra: solo rutas que existen. Cada módulo agrega la suya al entregarse.
-// `permisos`: basta tener uno.
-type Item = { href: string; etiqueta: string; icono: LucideIcon; permisos?: string[] };
+// `permisos`: basta tener uno. `tipos`: solo en negocios de esos tipos (sin él, en todos).
+type Item = {
+  href: string;
+  etiqueta: string;
+  icono: LucideIcon;
+  permisos?: string[];
+  tipos?: string[];
+};
 
 export const ITEMS: Item[] = [
   { href: "/panel", etiqueta: "Inicio", icono: LayoutDashboard },
@@ -76,6 +83,13 @@ export const ITEMS: Item[] = [
     permisos: ["vender", "editar_productos"],
   },
   { href: "/panel/descuento", etiqueta: "Descuento", icono: Percent, permisos: ["usuarios"] },
+  {
+    href: "/panel/ordenes",
+    etiqueta: "Órdenes",
+    icono: WashingMachine,
+    permisos: ["ver_reportes", "cambiar_estado_orden"],
+    tipos: ["lavanderia"],
+  },
 ];
 
 // Ruta de un ítem o de una pantalla suya (/panel/productos/nuevo cuenta como Productos). Inicio solo es exacto.
@@ -85,20 +99,26 @@ export const itemDeRuta = (ruta: string) =>
   ).sort((a, b) => b.href.length - a.href.length)[0];
 
 // Ocultar es comodidad: cada página vuelve a exigir el permiso en el servidor.
-export const itemsVisibles = (permisos: readonly string[]) =>
-  ITEMS.filter((i) => !i.permisos || i.permisos.some((p) => permisos.includes(p)));
+export const itemsVisibles = (permisos: readonly string[], tipo: string) =>
+  ITEMS.filter(
+    (i) =>
+      (!i.permisos || i.permisos.some((p) => permisos.includes(p))) &&
+      (!i.tipos || i.tipos.includes(tipo)),
+  );
 
 export function PanelNav({
   permisos,
+  tipo,
   alNavegar,
 }: {
   permisos: readonly string[];
+  tipo: string;
   alNavegar: () => void;
 }) {
   const ruta = usePathname();
   return (
     <nav aria-label="Principal" className="flex flex-col gap-0.5">
-      {itemsVisibles(permisos).map(({ href, etiqueta, icono: Icono }) => {
+      {itemsVisibles(permisos, tipo).map(({ href, etiqueta, icono: Icono }) => {
         const activo = itemDeRuta(ruta)?.href === href;
         return (
           <Link

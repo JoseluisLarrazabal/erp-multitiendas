@@ -7,6 +7,7 @@ import { codigoErp, mensajeErp } from "@/lib/erp-errores";
 import { createClient } from "@/lib/supabase/server";
 import { validar, type Resultado } from "@/modules/usuarios/panel";
 import { mensajeDeVentas, type AccionVentas } from "./domain-panel";
+import { anularOrdenSchema } from "./schemas-ordenes";
 import {
   anularSchema,
   devolverSchema,
@@ -26,6 +27,7 @@ function revalidar() {
   revalidatePath("/panel/ventas", "layout");
   revalidatePath("/panel/cajas", "layout");
   revalidatePath("/panel/reconciliacion");
+  revalidatePath("/panel/ordenes", "layout");
 }
 
 export async function anularVenta(entrada: unknown): Promise<Resultado<null>> {
@@ -34,6 +36,20 @@ export async function anularVenta(entrada: unknown): Promise<Resultado<null>> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("anular_venta", {
     p_venta_id: d.ventaId,
+    p_motivo: d.motivo,
+  });
+  if (error) return fallo("anular", error);
+  revalidar();
+  return { ok: true, data: null };
+}
+
+// El reembolso no se devuelve: el detalle lo deduce (venta anulada = efectivo devuelto a la caja).
+export async function anularOrden(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(anularOrdenSchema, entrada);
+  if (!d) return invalido("anular");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("anular_orden", {
+    p_orden_id: d.ordenId,
     p_motivo: d.motivo,
   });
   if (error) return fallo("anular", error);

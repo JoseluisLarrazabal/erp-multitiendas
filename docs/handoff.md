@@ -8,7 +8,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Contrato redactado**, pendiente de firma: `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
   (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
-- **Desarrollo:** fases 0 a 3 cerradas; fase 4 (lavandería) en curso, plan en `docs/plan-fase-4.md`. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+- **Desarrollo:** fases 0 a 4 cerradas (lavandería: `docs/plan-fase-4.md`). Próximo: fase 5 (frial, reportes, PWA). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
 - **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/relevamiento.gs`
   creó (cuenta Google del CTO):
   - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform
@@ -150,7 +150,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
-- **Fase 4 en curso (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
+- **Fase 4 cerrada (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.
   - PR 1 #53 `feat/lavanderia-datos` (mergeado): `ordenes`, `orden_eventos`, `crear_orden`, `cambiar_estado_orden`,
@@ -158,6 +158,24 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     con equipo `L1`. pgTAP 1390. Migración aplicada en staging. Producción sin sesión OK (1280 y 390 px, CSP, SW 200).
     Revisiones: code-review (6 de 10 aplicados), ponytail, security sin hallazgos. Codex: no verificado (sin cuota).
     Límite: `anular_orden` con caja abierta hereda `ERP_EFECTIVO_INSUFICIENTE` y la regla de 24 h de `anular_venta`.
+  - PR 2 #54 `feat/lavanderia-pos` (mergeado): POS de lavandería con pestañas Nueva orden y Órdenes; Express por lista;
+    ficha; cliente escrito sin red; boleta; avanzar, volver, entregar (boleta o carnet) y anular con aviso de reembolso. La
+    fila de la cola sigue siendo venta con `orden` en el payload. Hallazgo: lavandería no podía vender servicios (exigía
+    precio de contado); ahora usa normal o express. Vitest 309, Playwright 134. Code-review 9 de 9 y accesibilidad de
+    web-design-guidelines aplicados. Producción sin sesión OK.
+  - PR 3 `feat/lavanderia-panel`: `/panel/ordenes` (cursor, estado, sin recoger a 30 días, búsqueda por número o cliente)
+    y detalle con historial y anulación; menú por tipo de negocio (`Item.tipos`). Security sin hallazgos; code-review 9
+    de 10 aplicados (descartado: cursor por `estado_en` puede saltar una orden que cambia de estado entre páginas,
+    marcado `shortcut:`).
+    E2E: el spec del panel usa su propio equipo `L2` (seed local) porque compartir la caja L1 con `lavanderia.spec`
+    daba `ERP_CAJA_CERRADA` en paralelo. Intermitente de la fase 3 resuelto: "sesión caducada al reconectar" fallaba
+    ~1 de 8 porque `clearCookies()` no invalida el JWT en memoria y a veces la cola enviaba igual; ahora el test responde
+    401 `PGRST301` a `registrar_venta` hasta el nuevo login (15 de 15). pgTAP falla con la base sucia de E2E locales:
+    correr `pnpm db:reset` antes.
+  - **No verificado:** flujo con usuario en producción (cuenta del CTO), impresión real de la boleta, lector de pantalla
+    y axe, "sin recoger" con órdenes de más de 30 días (solo vacío), móvil real. Codex: no verificado (sin cuota).
+  - **Próximo:** fase 5 (`docs/roadmap.md`): frial por peso y paquetes, reportes (incluye RF-REP-02 de lavandería), Excel,
+    PWA y panel responsive.
 - **Fase 3 cerrada (2026-11-02):** plan en `docs/plan-fase-3.md`, 4 PRs. Órdenes sin conexión pasan a la fase 4: su RPC
   no existe aún. Productos con serie y lavandería piden conexión hasta entonces (0 series cargadas, P-01 abierta).
   - PR 1 `feat/offline-datos`: `p_offline` en `registrar_venta`, `abrir_caja` y `registrar_movimiento_caja`; marcas de

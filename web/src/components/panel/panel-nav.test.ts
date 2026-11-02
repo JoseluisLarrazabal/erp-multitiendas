@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { itemDeRuta, itemsVisibles } from "./panel-nav";
 
-const etiquetas = (permisos: string[]) => itemsVisibles(permisos).map((i) => i.etiqueta);
+const etiquetas = (permisos: string[], tipo = "tienda") =>
+  itemsVisibles(permisos, tipo).map((i) => i.etiqueta);
 
 describe("itemsVisibles", () => {
   it("un ítem con varios permisos se ve con cualquiera de ellos", () => {
@@ -68,5 +69,18 @@ describe("Reconciliación", () => {
   it("solo con ver_reportes", () => {
     expect(etiquetas(["ver_reportes"])).toContain("Reconciliación");
     expect(etiquetas(["anular", "caja", "ajustar_inventario"])).not.toContain("Reconciliación");
+  });
+});
+
+describe("Órdenes", () => {
+  it("solo en lavandería, con ver_reportes o cambiar_estado_orden", () => {
+    expect(etiquetas(["ver_reportes"], "lavanderia")).toContain("Órdenes");
+    expect(etiquetas(["cambiar_estado_orden"], "lavanderia")).toContain("Órdenes");
+    expect(etiquetas(["vender"], "lavanderia")).not.toContain("Órdenes");
+    expect(etiquetas(["ver_reportes"], "tienda")).not.toContain("Órdenes");
+    expect(etiquetas(["ver_reportes"], "frial")).not.toContain("Órdenes");
+  });
+  it("un ítem sin `tipos` se ve en cualquier negocio", () => {
+    expect(etiquetas(["ver_reportes"], "lavanderia")).toContain("Ventas");
   });
 });
