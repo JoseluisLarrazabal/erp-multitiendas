@@ -15,6 +15,7 @@ export default async function PanelLayout({ children }: Readonly<{ children: Rea
   return (
     <PanelShell
       permisos={permisos}
+      tipo={activo.tipo}
       negocio={<SelectorNegocio negocios={negocios} activoId={activo.negocioId} />}
       usuario={
         <div className="flex flex-col gap-3 border-t pt-4">
