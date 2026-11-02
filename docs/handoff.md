@@ -8,7 +8,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Contrato redactado**, pendiente de firma: `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
   (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
-- **Desarrollo:** fases 0 a 4 cerradas (lavandería: `docs/plan-fase-4.md`). Próximo: fase 5 (frial, reportes, PWA). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+- **Desarrollo:** fases 0 a 4 cerradas (lavandería: `docs/plan-fase-4.md`). En curso: fase 5 (frial, reportes, PWA), plan en `docs/plan-fase-5.md`. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
 - **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/relevamiento.gs`
   creó (cuenta Google del CTO):
   - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform

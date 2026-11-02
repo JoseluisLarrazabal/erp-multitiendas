@@ -58,7 +58,8 @@ insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
 insert into public.dispositivos (negocio_id, ubicacion_id, nombre, prefijo) values
   ('a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Caja 1', 'C1'),
   ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L1', 'L1'),
-  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L2', 'L2');
+  ('a0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000003', 'Caja L2', 'L2'),
+  ('a0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000004', 'Caja F1', 'F1');
 
 -- Catálogo de desarrollo: Tienda (2 productos en USD, 1 sin precio), Frial (cortes en kg), Lavandería (servicios).
 insert into public.categorias (id, negocio_id, nombre) values
@@ -79,6 +80,10 @@ insert into public.productos (id, negocio_id, codigo, codigo_barras, nombre, mar
   ('e0000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0000-000000000002', 'SRV-001', null, 'Lavado de prenda', null, 'd0000000-0000-0000-0000-000000000004', 'servicio', 'unidad'),
   ('e0000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-000000000002', 'SRV-002', null, 'Planchado', null, 'd0000000-0000-0000-0000-000000000004', 'servicio', 'unidad');
 
+-- Frial, peso fijo: paquete al vacío de 1 kg que se cobra por unidad.
+insert into public.productos (id, negocio_id, codigo, nombre, categoria_id, tipo, unidad, peso_paquete_kg) values
+  ('e0000000-0000-0000-0000-00000000000b', 'a0000000-0000-0000-0000-000000000003', 'COR-003', 'Paquete Demo 1 kg', 'd0000000-0000-0000-0000-000000000003', 'producto', 'unidad', 1.000);
+
 insert into public.producto_precios (negocio_id, producto_id, lista, monto, moneda)
 select p.negocio_id, p.producto_id, l.lista, round(p.base * l.factor, 2), p.moneda
 from (values
@@ -88,7 +93,8 @@ from (values
   ('a0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000004'::uuid, 80::numeric, 'BOB'),
   ('a0000000-0000-0000-0000-000000000001'::uuid, 'e0000000-0000-0000-0000-000000000005'::uuid, 25::numeric, 'BOB'),
   ('a0000000-0000-0000-0000-000000000003'::uuid, 'e0000000-0000-0000-0000-000000000007'::uuid, 60::numeric, 'BOB'),
-  ('a0000000-0000-0000-0000-000000000003'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid, 45::numeric, 'BOB')
+  ('a0000000-0000-0000-0000-000000000003'::uuid, 'e0000000-0000-0000-0000-000000000008'::uuid, 45::numeric, 'BOB'),
+  ('a0000000-0000-0000-0000-000000000003'::uuid, 'e0000000-0000-0000-0000-00000000000b'::uuid, 62::numeric, 'BOB')
 ) as p (negocio_id, producto_id, base, moneda)
 cross join (values ('contado', 1::numeric), ('credito', 1.1::numeric), ('mayorista', 0.9::numeric), ('minimo', 0.8::numeric)) as l (lista, factor);
 
@@ -120,3 +126,18 @@ from (values
 insert into public.clientes (id, negocio_id, nombre, ci_nit, telefono, direccion) values
   ('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Cliente Demo', '0000001', '70000001', 'Calle Ficticia 1'),
   ('f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'Cliente Lavandería Demo', '0000002', '70000002', 'Calle Ficticia 2');
+
+-- Lotes del frial (COR-003, paquetes de 1 kg): cada lote nace de una entrada del kardex. El stock es la suma (12), así
+-- que el saldo estimado de cada uno es completo. Fechas relativas a hoy en La Paz: uno vencido, uno por vencer, uno lejano.
+with entradas as (
+  insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, ref_tipo, motivo)
+  select 'a0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000004', 'e0000000-0000-0000-0000-00000000000b',
+    'entrada', l.cantidad, 40, 'seed', 'Lote ' || l.codigo
+  from (values ('LOT-VENCIDO', 3::numeric), ('LOT-PRONTO', 5::numeric), ('LOT-LEJANO', 4::numeric)) as l (codigo, cantidad)
+  returning id, motivo
+)
+insert into public.lotes (negocio_id, producto_id, ubicacion_id, codigo, vence, cantidad, movimiento_id)
+select 'a0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-000000000004',
+  l.codigo, (now() at time zone 'America/La_Paz')::date + l.dias, l.cantidad, e.id
+from (values ('LOT-VENCIDO', -2, 3::numeric), ('LOT-PRONTO', 3, 5::numeric), ('LOT-LEJANO', 60, 4::numeric)) as l (codigo, dias, cantidad)
+join entradas e on e.motivo = 'Lote ' || l.codigo;

@@ -48,7 +48,7 @@ export const salidaSchema = z
     ...operacion,
     productoId: id,
     ubicacionId: id,
-    tipo: z.enum(["ajuste", "danado", "cambio_garantia", "devolucion_proveedor"]),
+    tipo: z.enum(["ajuste", "danado", "merma", "cambio_garantia", "devolucion_proveedor"]),
     // Con signo solo en `ajuste`; en el resto es la cantidad que sale (positiva) y se envía negativa.
     cantidad: z.string(),
     motivo: z.string().trim().min(1).max(200),

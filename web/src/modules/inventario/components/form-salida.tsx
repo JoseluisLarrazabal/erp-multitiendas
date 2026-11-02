@@ -27,9 +27,11 @@ import { useOperacion } from "./use-operacion";
 
 export function FormSalida({
   negocioId,
+  esFrial,
   ubicaciones,
 }: {
   negocioId: string;
+  esFrial: boolean;
   ubicaciones: readonly Ubicacion[];
 }) {
   const formulario = useRef<HTMLFormElement>(null);
@@ -137,6 +139,7 @@ export function FormSalida({
       />
       <TipoUbicacionSalida
         ubicaciones={ubicaciones}
+        esFrial={esFrial}
         tipo={tipo}
         ubicacionId={ubicacionId}
         alCambiarTipo={(t) => {

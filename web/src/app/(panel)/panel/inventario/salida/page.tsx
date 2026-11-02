@@ -15,7 +15,13 @@ export default async function PaginaSalida() {
       descripcion="Descuenta stock por daño, garantía o devolución a proveedor, o corrige con un ajuste con signo. El motivo es obligatorio."
       ubicaciones={ubicaciones}
     >
-      {(u) => <FormSalida negocioId={activo.negocioId} ubicaciones={u} />}
+      {(u) => (
+        <FormSalida
+          negocioId={activo.negocioId}
+          esFrial={activo.tipo === "frial"}
+          ubicaciones={u}
+        />
+      )}
     </PaginaOperacion>
   );
 }
