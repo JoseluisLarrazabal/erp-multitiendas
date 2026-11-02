@@ -39,10 +39,13 @@ La plata ya se cobró en el mostrador. Lo que depende de datos que el equipo no 
 |---|---|---|
 | Producto inactivo | Acepta | `producto_inactivo` |
 | `ERP_PRODUCTO_SIN_PRECIO` | Acepta | `sin_precio` |
-| Bajo el piso sin `descontar` | Acepta | `bajo_piso` |
+| Descuento o precio bajo el piso sin `descontar`, evaluado sobre quien vendió | Acepta | `descuento_sin_permiso` |
 | `ERP_DESCUENTO_TOPE` | Acepta | `sobre_tope` |
 | `numero` distinto del impreso | Acepta | `renumerada` |
+| Quien envía no es quien vendió | Acepta | `otra_cuenta` |
 | QR con `verificado: true` obligatorio | Acepta `false`, guarda `pendiente` | Se ve por `verificacion` |
+
+`otra_cuenta` cierra el atajo de poner al dueño como `vendedor_id` para esquivar la marca de descuento.
 
 Siguen rechazando: forma del payload, aritmética, permiso `vender` de quien envía, equipo, caja cerrada, salto de
 numeración, producto de otro negocio, serie. RN-03: `venta_items` guarda el precio de lista para comparar; sin lista
@@ -57,7 +60,8 @@ el encargado; no pasa en silencio. Es el costo de no bloquear la venta.
 
 - `abrir_caja` y `registrar_movimiento_caja` reciben `p_offline jsonb default null` = `{ creada_en, usuario_id }`.
   Cierra lo diferido en la fase 2. `usuario_id` debe tener el negocio. Hora: `least(creada_en, now())`, para que un reloj
-  adelantado no deje una apertura en el futuro.
+  adelantado no deje una apertura en el futuro. Un movimiento nunca queda antes de la apertura.
+- `caja_sesiones` y `caja_movimientos` guardan `origen` y `enviada_por`: lo que manda el cliente deja rastro.
 - Movimiento con `p_offline`: no aplica `ERP_EFECTIVO_INSUFICIENTE`. El gasto ya ocurrió; la diferencia se ve en el
   arqueo.
 - `cerrar_caja` no cambia. Sigue solo con conexión. RN-07 se cumple en el cliente: el bloqueo cuenta la cola persistente
@@ -126,7 +130,8 @@ Aviso visible si el SW no quedó activo.
 
 - Lectura y marca con `ver_reportes`. Solo cambian marcas, no dinero; sin permiso nuevo.
 - `reconciliacion_ventas(p_negocio_id, ...)` pagina ventas con motivos sin revisar o QR pendiente.
-- `verificar_pago_qr(p_pago_id)`: `pendiente` pasa a `verificado`. Idempotente. Registra quién y cuándo.
+- `verificar_pago_qr(p_pago_id, p_cobrado)`: `pendiente` pasa a `verificado` o a `rechazado`, si el QR nunca llegó.
+  Idempotente. Registra quién y cuándo. `total_qr_sesion` no cuenta `rechazado`; `resumen_caja` muestra `qr_pendiente`.
 - `revisar_venta(p_venta_id)`: fija `revisada_por` y `revisada_en`. Idempotente.
 - Stock negativo: reusa `productos_stock_bajo`. DB-12 se completa con una venta que deja stock negativo y sale ahí.
 

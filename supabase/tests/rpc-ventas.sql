@@ -86,8 +86,8 @@ create function pg_temp.v1(p_id text, p_disp text, p_caja text, p_num text, p_n 
 $$;
 
 -- Permisos de ejecución
-select ok(has_function_privilege('authenticated', 'public.registrar_venta(jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.registrar_venta(jsonb)', 'EXECUTE')
+select ok(has_function_privilege('authenticated', 'public.registrar_venta(jsonb, jsonb)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.registrar_venta(jsonb, jsonb)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.efectivo_esperado(uuid)', 'EXECUTE'), 'registrar_venta: authenticated sí, anon no');
 
 -- Permisos y forma del payload
