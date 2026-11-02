@@ -207,6 +207,18 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       sin red antes. Ahora espera la fila `sesion:` en IndexedDB (`test/cerrojo-y-sesion`).
     - Cerrojo real entre pestañas probado en E2E: con A sosteniendo `erp:cola`, B queda en espera; al soltarse llega una
       sola venta en menos de 4 s, sin esperar el backoff. El E2E no distingue si la repetición la corre A o B.
+  - Pruebas manuales del plan (2026-11-02), en local con build de producción y Chromium real. Scripts y capturas
+    quedaron fuera del repo.
+    - Mañana sin internet: recarga sin red con catálogo y apertura sin red. Venta en efectivo, QR pendiente y un gasto.
+      Recarga con 4 filas en la cola y reconexión: la cola se vació sola en unos 1 s. En base quedó todo `offline` y una
+      fila por venta, y el arqueo cuadra.
+    - 20 reenvíos paralelos de la misma venta sin red: 20 respuestas 200, 1 venta, 1 pago, 1 movimiento de kardex, sin
+      5xx ni deadlocks.
+    - 2 pestañas con la misma cola: 3 ventas exactas y las dos colas en 0.
+    - Al final, stock contra kardex por ubicación: 0 diferencias en todo el sistema.
+    - Sin red y sin catálogo guardado no se puede vender. Es por diseño: el equipo tiene que abrir caja con red al menos una
+      vez.
+    - No verificado: instalación real de la PWA, dispositivo móvil real y red intermitente.
   - **Próximo:** fase 4, lavandería (`docs/roadmap.md`), incluidas las órdenes sin conexión. Queda de la fase 3 la prueba
     manual sin internet en producción con Claude in Chrome: hay que reiniciar Claude Code en la versión 2.1.316.
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
