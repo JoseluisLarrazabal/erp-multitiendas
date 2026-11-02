@@ -18,6 +18,8 @@ const MENSAJES: Record<string, string> = {
   ERP_CLIENTE_DUPLICADO: "Ya existe un cliente con ese documento. Búscalo y selecciónalo.",
   ERP_VENTA_ANULADA: "La venta está anulada.",
   ERP_VENTA_CON_DEVOLUCIONES: "La venta tiene devoluciones.",
+  ERP_ORDEN_ESTADO: "La orden no puede pasar a ese estado.",
+  ERP_ES_ORDEN: "Esa venta es una orden de lavandería: anúlala desde la orden.",
 };
 
 export function codigoErp(error: ErrorRpc): string | null {

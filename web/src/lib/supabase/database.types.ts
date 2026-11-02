@@ -373,6 +373,70 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"orden_eventos": {
+                  Row: {
+                    "created_at": string,"estado": string,"id": string,"motivo": string | null,"negocio_id": string,"orden_id": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"estado": string,"id"?: string,"motivo"?: string | null,"negocio_id": string,"orden_id": string,"usuario_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"estado"?: string,"id"?: string,"motivo"?: string | null,"negocio_id"?: string,"orden_id"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "orden_eventos_negocio_id_orden_id_fkey"
+      columns: ["negocio_id","orden_id"]
+isOneToOne: false
+      referencedRelation: "ordenes"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "orden_eventos_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ordenes": {
+                  Row: {
+                    "anulada_por": string | null,"casillero": string | null,"cliente_nombre": string,"cliente_telefono": string | null,"documento_retiro": string | null,"entregada_en": string | null,"entregada_por": string | null,"estado": string,"estado_en": string,"express": boolean,"fecha_prometida": string,"huella": string,"id": string,"motivo_anulacion": string | null,"negocio_id": string,"nota": string | null,"prendas": number,"recibida_por": string,"retirada_por": string | null,"retiro_con": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anulada_por"?: string | null,"casillero"?: string | null,"cliente_nombre": string,"cliente_telefono"?: string | null,"documento_retiro"?: string | null,"entregada_en"?: string | null,"entregada_por"?: string | null,"estado"?: string,"estado_en"?: string,"express": boolean,"fecha_prometida": string,"huella": string,"id": string,"motivo_anulacion"?: string | null,"negocio_id": string,"nota"?: string | null,"prendas": number,"recibida_por": string,"retirada_por"?: string | null,"retiro_con"?: string | null
+                  }
+                  Update: {
+                    "anulada_por"?: string | null,"casillero"?: string | null,"cliente_nombre"?: string,"cliente_telefono"?: string | null,"documento_retiro"?: string | null,"entregada_en"?: string | null,"entregada_por"?: string | null,"estado"?: string,"estado_en"?: string,"express"?: boolean,"fecha_prometida"?: string,"huella"?: string,"id"?: string,"motivo_anulacion"?: string | null,"negocio_id"?: string,"nota"?: string | null,"prendas"?: number,"recibida_por"?: string,"retirada_por"?: string | null,"retiro_con"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ordenes_anulada_por_fkey"
+      columns: ["anulada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ordenes_entregada_por_fkey"
+      columns: ["entregada_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "ordenes_negocio_id_id_fkey"
+      columns: ["negocio_id","id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "ordenes_recibida_por_fkey"
+      columns: ["recibida_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"perfiles": {
                   Row: {
                     "activo": boolean,"created_at": string,"id": string,"nombre": string
@@ -811,6 +875,9 @@ isOneToOne: false
 "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
+"anular_orden":
+{ Args: { "p_motivo": string,"p_orden_id": string }; Returns: Json
+                           },
 "anular_venta":
 { Args: { "p_motivo": string,"p_venta_id": string }; Returns: Json
                            },
@@ -851,6 +918,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"cambiar_estado_orden":
+{ Args: { "p_estado": string,"p_orden_id": string }; Returns: Json
+                           },
 "catalogo_pos":
 { Args: { "p_ubicacion_id": string }; Returns: Json
                            },
@@ -865,6 +935,9 @@ isOneToOne: false
               "costo_promedio": number,"producto_id": string,"ubicacion_id": string
             }[]
                            },
+"crear_orden":
+{ Args: { "p_offline"?: Json,"p_orden": Json,"p_venta": Json }; Returns: Json
+                           },
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
                            },
@@ -873,6 +946,9 @@ isOneToOne: false
                            },
 "efectivo_esperado":
 { Args: { "p_sesion_id": string }; Returns: number
+                           },
+"entregar_orden":
+{ Args: { "p_documento"?: string,"p_orden_id": string,"p_retirada_por": string,"p_retiro_con": string }; Returns: Json
                            },
 "es_dueno":
 { Args: { "p_negocio_id": string }; Returns: boolean
