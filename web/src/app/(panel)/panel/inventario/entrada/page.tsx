@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { hoyEnBolivia } from "@/lib/format/fecha";
 import { createClient } from "@/lib/supabase/server";
 import { FormEntrada, PaginaOperacion } from "@/modules/inventario/panel";
 import { exigirPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
@@ -20,6 +21,8 @@ export default async function PaginaEntrada() {
           negocioId={activo.negocioId}
           ubicaciones={u}
           verCostos={permisos.includes("ver_costos")}
+          esFrial={activo.tipo === "frial"}
+          hoy={hoyEnBolivia()}
         />
       )}
     </PaginaOperacion>

@@ -91,6 +91,9 @@ export const precioATexto = (n: number | null | undefined): string =>
 export const costoATexto = (n: number | null | undefined): string =>
   n == null ? "" : String(Number(n.toFixed(4))).replace(".", ",");
 
+// Peso del paquete (hasta 3 decimales) -> texto con coma y sin ceros de más (0.5 -> "0,5").
+export const pesoATexto = (n: number): string => String(Number(n.toFixed(3))).replace(".", ",");
+
 // Cualquier fila de la grilla compara por número, no por texto: "12,50" y "12,5" son lo mismo. Si alguno no
 // parsea ("abc", o "0" frente a una celda vacía) se compara el texto, para que no se pierda como "sin cambio".
 export const mismoMonto = (a: string, b: string): boolean => {
@@ -148,6 +151,8 @@ export type ProductoLista = {
   monedaPrincipal: Moneda | null;
   montoPrincipal: number | null;
   principalBs: number | null;
+  // Paquete de peso fijo (frial).
+  pesoPaqueteKg: number | null;
 };
 
 export type ProductoDetalle = {
@@ -163,6 +168,7 @@ export type ProductoDetalle = {
   controlaSerie: boolean;
   garantiaMeses: string;
   stockMinimo: string;
+  pesoPaqueteKg: string;
   fotoPath: string | null;
   activo: boolean;
 };

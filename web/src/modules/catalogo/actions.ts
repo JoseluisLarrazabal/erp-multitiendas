@@ -37,6 +37,7 @@ const datosDeProducto = (d: {
   controlaSerie: boolean;
   garantiaMeses: number | null;
   stockMinimo: number | null;
+  pesoPaqueteKg?: number | null;
 }) => ({
   id: d.id,
   codigo: d.codigo,
@@ -50,6 +51,8 @@ const datosDeProducto = (d: {
   controla_serie: d.controlaSerie,
   garantia_meses: d.garantiaMeses,
   stock_minimo: d.stockMinimo,
+  // Sin la clave la RPC conserva el peso actual.
+  ...(d.pesoPaqueteKg !== undefined && { peso_paquete_kg: d.pesoPaqueteKg }),
 });
 
 export async function guardarProducto(entrada: unknown): Promise<Resultado<{ id: string }>> {

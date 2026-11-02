@@ -28,6 +28,9 @@ const decimalOpcional = z
   .refine((t) => t === "" || /^\d{1,9}([.,]\d{1,3})?$/.test(t))
   .transform((t) => (t === "" ? null : Number(t.replace(",", "."))));
 
+// Peso del paquete: como decimalOpcional, pero mayor que 0 (check de la base).
+const pesoPaquete = decimalOpcional.refine((n) => n === null || n > 0);
+
 export const productoSchema = z.object({
   negocioId: id,
   id: id.nullable(),
@@ -42,6 +45,8 @@ export const productoSchema = z.object({
   controlaSerie: z.boolean(),
   garantiaMeses: enteroOpcional,
   stockMinimo: decimalOpcional,
+  // Sin clave = el formulario no muestra el campo y la base conserva el peso; null = borrarlo.
+  pesoPaqueteKg: pesoPaquete.optional(),
 });
 
 export const categoriaSchema = z.object({

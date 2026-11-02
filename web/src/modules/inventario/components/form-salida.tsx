@@ -38,7 +38,7 @@ export function FormSalida({
   const { operacionId, pendiente, error, enviar } = useOperacion();
   const [producto, setProducto] = useState<ProductoElegible | null>(null);
   const [ubicacionId, setUbicacionId] = useState(ubicaciones[0]?.id ?? "");
-  const [tipo, setTipo] = useState<TipoSalida>("danado");
+  const [tipo, setTipo] = useState<TipoSalida>(esFrial ? "merma" : "danado");
   const [cantidadTexto, setCantidadTexto] = useState("");
   const [motivoTexto, setMotivoTexto] = useState("");
   const [series, setSeries] = useState<string[]>([]);

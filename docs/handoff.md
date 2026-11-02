@@ -150,6 +150,19 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
+- **Fase 5 en curso (2026-11-02):** plan en `docs/plan-fase-5.md`, 5 PRs.
+  - PR 1 `feat/frial-datos` (#56): `productos.peso_paquete_kg`, tabla `lotes`, `registrar_entrada_lote`,
+    `lotes_por_vencer` y movimiento `merma` (solo frial). Migración aplicada en staging. Revisión: saldo de lote pasó a
+    FIFO por producto en el negocio (una entrada sin lote o un traslado lo rompían por ubicación); `guardar_producto`
+    conserva el peso si el form no lo manda. Descartado: limitar el select de `lotes` por permiso (código y
+    vencimiento no son sensibles). pgTAP 1467, E2E 141. Producción sin sesión OK. Codex: no verificado (sin cuota).
+  - PR 2 `feat/frial-ui`: entrada con lote y vencimiento (solo frial, sin series, fecha mínima hoy en La Paz),
+    `/panel/inventario/vencimientos` (7/15/30 días, "Entró en" porque el saldo es del negocio), peso del paquete en el
+    producto, merma por defecto en la salida del frial, E2E-10 y `frial.spec.ts` (11 casos). Migración
+    `20261102130000_frial_ajustes.sql`: lotes solo en frial y `unidad` en `lotes_por_vencer`. Descartado: rotar la
+    operación al editar lote tras un fallo (mismo comportamiento que el resto de formularios de inventario).
+    pgTAP 1469, Vitest 330, E2E 146. **No verificado:** pantalla en móvil real y lector de pantalla.
+  - **Próximo:** PR 3 `feat/reportes-datos`.
 - **Fase 4 cerrada (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.

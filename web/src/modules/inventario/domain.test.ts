@@ -6,6 +6,7 @@ import {
   formatearFechaHora,
   hrefStock,
   parsearCantidad,
+  textoDias,
   valorDeStock,
 } from "./domain";
 
@@ -96,5 +97,15 @@ describe("hrefStock", () => {
       "/panel/inventario?q=a+b&bajo=1&pagina=2",
     );
     expect(hrefStock({ pagina: 1 })).toBe("/panel/inventario");
+  });
+});
+
+describe("textoDias", () => {
+  it("vencido, hoy y por vencer, en singular y plural", () => {
+    expect(textoDias(-1)).toBe("Vencido hace 1\u00a0día");
+    expect(textoDias(-3)).toBe("Vencido hace 3\u00a0días");
+    expect(textoDias(0)).toBe("Vence hoy");
+    expect(textoDias(1)).toBe("En 1\u00a0día");
+    expect(textoDias(5)).toBe("En 5\u00a0días");
   });
 });

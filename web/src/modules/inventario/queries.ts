@@ -281,3 +281,56 @@ export async function paginaConteo(
     },
   };
 }
+
+export type LoteVencimiento = {
+  loteId: string;
+  codigo: string;
+  vence: string;
+  dias: number;
+  saldo: number;
+  productoNombre: string;
+  productoCodigo: string;
+  unidad: Unidad;
+  ubicacion: string;
+};
+
+type FilaLote = {
+  lote_id: string;
+  codigo: string;
+  vence: string;
+  dias_restantes: number;
+  saldo: number;
+  producto_id: string;
+  producto_codigo: string;
+  producto_nombre: string;
+  unidad: Unidad;
+  ubicacion_nombre: string;
+};
+
+// Lotes con saldo estimado que vencen en `dias` o antes (los vencidos incluidos).
+export async function leerLotesPorVencer(
+  supabase: Cliente,
+  negocioId: string,
+  dias: number,
+): Promise<Resultado<LoteVencimiento[]>> {
+  const { data, error } = await supabase.rpc("lotes_por_vencer", {
+    p_negocio_id: negocioId,
+    p_dias: dias,
+  });
+  if (error) return falla("No se pudieron leer los vencimientos.");
+  const filas = data as FilaLote[];
+  return {
+    ok: true,
+    data: filas.map((f) => ({
+      loteId: f.lote_id,
+      codigo: f.codigo,
+      vence: f.vence,
+      dias: f.dias_restantes,
+      saldo: f.saldo,
+      productoNombre: f.producto_nombre,
+      productoCodigo: f.producto_codigo,
+      unidad: f.unidad,
+      ubicacion: f.ubicacion_nombre,
+    })),
+  };
+}

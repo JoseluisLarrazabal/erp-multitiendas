@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeftRight, ClipboardCheck, PackageMinus, PackagePlus } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarClock,
+  ClipboardCheck,
+  PackageMinus,
+  PackagePlus,
+} from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador } from "@/modules/catalogo/panel";
@@ -40,20 +46,29 @@ export default async function PaginaInventario({
         titulo="Inventario"
         descripcion={`Stock de ${activo.nombre} por ubicación. Entra a un producto para ver su kardex.`}
         acciones={
-          puedeAjustar && (
+          (puedeAjustar || activo.tipo === "frial") && (
             <>
-              <Link href="/panel/inventario/entrada" className={enlace}>
-                <PackagePlus aria-hidden /> Entrada
-              </Link>
-              <Link href="/panel/inventario/salida" className={enlace}>
-                <PackageMinus aria-hidden /> Salida o ajuste
-              </Link>
-              <Link href="/panel/inventario/traslado" className={enlace}>
-                <ArrowLeftRight aria-hidden /> Traslado
-              </Link>
-              <Link href="/panel/inventario/conteo" className={enlace}>
-                <ClipboardCheck aria-hidden /> Conteo
-              </Link>
+              {activo.tipo === "frial" && (
+                <Link href="/panel/inventario/vencimientos" className={enlace}>
+                  <CalendarClock aria-hidden /> Vencimientos
+                </Link>
+              )}
+              {puedeAjustar && (
+                <>
+                  <Link href="/panel/inventario/entrada" className={enlace}>
+                    <PackagePlus aria-hidden /> Entrada
+                  </Link>
+                  <Link href="/panel/inventario/salida" className={enlace}>
+                    <PackageMinus aria-hidden /> Salida o ajuste
+                  </Link>
+                  <Link href="/panel/inventario/traslado" className={enlace}>
+                    <ArrowLeftRight aria-hidden /> Traslado
+                  </Link>
+                  <Link href="/panel/inventario/conteo" className={enlace}>
+                    <ClipboardCheck aria-hidden /> Conteo
+                  </Link>
+                </>
+              )}
             </>
           )
         }

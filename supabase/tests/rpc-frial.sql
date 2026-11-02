@@ -1,7 +1,7 @@
 -- Fase 5, PR 1: peso fijo del paquete, DB-11 en el frial, lotes (registrar_entrada_lote, lotes_por_vencer con saldo
 -- FIFO estimado) y merma.
 begin;
-select plan(77);
+select plan(79);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -111,6 +111,10 @@ select throws_ok($$select pg_temp.l('E1', 'PP', 5, 'L-001', 11)$$, 'P0001', 'ERP
 select lives_ok($$select public.registrar_entrada(pg_temp.i('E8'), pg_temp.i('F'), pg_temp.i('PP'), pg_temp.i('UF'), 1, 20, null)$$, 'lote: entrada sin lote previa');
 select throws_ok($$select pg_temp.l('E8', 'PP', 1, 'L-008', 10)$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'lote: la operación ya era una entrada sin lote');
 select throws_ok($$select pg_temp.l('E2', 'PS', 1, 'L-002', 10)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'lote: producto con series rechazado');
+select pg_temp.como(pg_temp.i('x'));
+select throws_ok($$select public.registrar_entrada_lote(pg_temp.i('E9'), pg_temp.i('O'), pg_temp.i('PO'), pg_temp.i('UO'), 1, null, null, 'L-009', current_date + 5)$$,
+  'P0001', 'ERP_DATOS_INVALIDOS', 'lote: negocio que no es frial rechazado');
+select pg_temp.como(pg_temp.i('d'));
 select throws_ok($$select pg_temp.l('E3', 'PP', 1, 'L-003', -1)$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'lote: vence ayer (La Paz) rechazado');
 select is((select count(*)::int from public.movimientos_inventario where ref_id in (pg_temp.i('E2'), pg_temp.i('E3'))), 0, 'lote: un rechazo no deja la entrada');
 select lives_ok($$select pg_temp.l('E4', 'PP', 1, 'L-004', 0)$$, 'lote: vence hoy es válido');
@@ -166,6 +170,7 @@ insert into public.lotes (negocio_id, producto_id, ubicacion_id, codigo, vence, 
 select pg_temp.i('F'), pg_temp.i('PV'), pg_temp.i('UF'), 'VENCIDO', (now() at time zone 'America/La_Paz')::date - 1, 4, e.id from e;
 select pg_temp.como(pg_temp.i('d'));
 select is(pg_temp.lv('PV'), 'VENCIDO=4', 'vencido con saldo aparece');
+select is((select e ->> 'unidad' from jsonb_array_elements(public.lotes_por_vencer(pg_temp.i('F'))) e where e ->> 'codigo' = 'VENCIDO'), 'unidad', 'lotes_por_vencer: incluye la unidad');
 select is((select (e ->> 'dias_restantes')::int from jsonb_array_elements(public.lotes_por_vencer(pg_temp.i('F'))) e where e ->> 'codigo' = 'VENCIDO'), -1, 'vencido: días restantes negativos');
 select lives_ok($$select pg_temp.l('L1', 'PL', 6, 'LEJANO', 30)$$, 'lote lejano');
 select lives_ok($$select public.trasladar_stock(pg_temp.i('T1'), pg_temp.i('F'), pg_temp.i('PL'), pg_temp.i('UF'), pg_temp.i('UF2'), 4, 'mover', null)$$, 'traslado de 4 del lote lejano');

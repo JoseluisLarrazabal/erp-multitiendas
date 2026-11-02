@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import { Campo, propsCampo, type Errores } from "@/components/panel/campo";
@@ -10,6 +11,7 @@ import {
 import { FotoCampo } from "./foto-campo";
 
 type Props = {
+  esFrial: boolean;
   tipos: readonly string[];
   categorias: readonly Categoria[];
   // Valores iniciales (sin producto = alta).
@@ -23,6 +25,7 @@ type Props = {
 
 // Los campos del formulario de producto, en orden de pantalla. Dentro de un grid de 2 columnas.
 export function CamposProducto({
+  esFrial,
   tipos,
   categorias,
   valores,
@@ -32,6 +35,7 @@ export function CamposProducto({
   fotoUrl,
   alElegirFoto,
 }: Props) {
+  const [unidad, setUnidad] = useState(valores?.unidad ?? "unidad");
   return (
     <>
       <Campo id="producto-codigo" etiqueta="Código" error={errores["producto-codigo"]}>
@@ -120,6 +124,7 @@ export function CamposProducto({
           id="producto-unidad"
           name="unidad"
           defaultValue={valores?.unidad ?? "unidad"}
+          onChange={(e) => setUnidad(e.target.value)}
           aria-describedby="producto-unidad-ayuda"
         >
           {Object.entries(ETIQUETA_UNIDAD).map(([k, t]) => (
@@ -129,6 +134,24 @@ export function CamposProducto({
           ))}
         </SelectNativo>
       </Campo>
+      {esFrial && unidad === "unidad" && (
+        <Campo
+          id="producto-peso"
+          etiqueta="Peso del paquete (kg)"
+          ayuda="Para paquetes de peso fijo. Si cambia el peso, crea otro producto."
+          error={errores["producto-peso"]}
+        >
+          <Input
+            id="producto-peso"
+            name="pesoPaqueteKg"
+            defaultValue={valores?.pesoPaqueteKg}
+            inputMode="decimal"
+            autoComplete="off"
+            className="h-10"
+            {...propsCampo("producto-peso", errores, true)}
+          />
+        </Campo>
+      )}
       <Campo id="producto-minimo" etiqueta="Stock mínimo" error={errores["producto-minimo"]}>
         <Input
           id="producto-minimo"

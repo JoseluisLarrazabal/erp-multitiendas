@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Package } from "lucide-react";
 import { formatearBs } from "@/lib/format/moneda";
 import { cn } from "@/lib/utils";
-import { ETIQUETA_LISTA, type Lista, type ProductoLista } from "../domain";
+import { ETIQUETA_LISTA, pesoATexto, type Lista, type ProductoLista } from "../domain";
 
 type Props = {
   productos: readonly ProductoLista[];
@@ -95,6 +95,11 @@ export function ListaProductos({ productos, fotos, puedeEditar, listaPrincipal }
                 </Link>
               ) : (
                 <span className="font-semibold">{p.nombre}</span>
+              )}
+              {p.pesoPaqueteKg !== null && (
+                <span className="text-muted-foreground ml-2 text-xs">
+                  Paquete de {pesoATexto(p.pesoPaqueteKg)} kg
+                </span>
               )}
               {!p.activo && <span className="text-muted-foreground ml-2 text-xs">Inactivo</span>}
             </span>
