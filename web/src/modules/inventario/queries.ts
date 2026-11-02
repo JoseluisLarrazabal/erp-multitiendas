@@ -17,7 +17,7 @@ export type Pagina<T> = { filas: T[]; total: number; pagina: number };
 // Siempre columnas explícitas: authenticated no tiene select sobre stock.costo_promedio ni
 // movimientos_inventario.costo_unitario, y un `select *` da 42501.
 const COLUMNAS_LISTA =
-  "id, codigo, codigo_barras, nombre, unidad, controla_serie, activo, stock_minimo, stock_total, stock_bajo";
+  "id, codigo, codigo_barras, nombre, unidad, controla_serie, activo, stock_minimo, stock_total, stock_bajo, stock_negativo";
 const COLUMNAS_ELEGIBLE = "id, codigo, codigo_barras, nombre, unidad, controla_serie";
 
 type FilaLista = Pick<
@@ -38,10 +38,11 @@ const filtroTexto = (q: string) =>
   ["codigo", "codigo_barras", "nombre", "marca"].map((c) => `${c}.ilike.*${q}*`).join(",");
 
 // Stock por producto de la página, paginado en el servidor (la vista inventario_lista agrega el total).
+// `negativo`: algún producto con una ubicación en negativo, aunque el total sume positivo.
 export async function listarStock(
   supabase: Cliente,
   negocioId: string,
-  f: { q: string; bajo: boolean; pagina: number; soloActivos?: boolean },
+  f: { q: string; bajo: boolean; pagina: number; soloActivos?: boolean; negativo?: boolean },
   porPagina: number,
   verCostos: boolean,
 ): Promise<Resultado<Pagina<FilaStock>>> {
@@ -53,6 +54,7 @@ export async function listarStock(
       .eq("negocio_id", negocioId);
     if (f.bajo) c = c.eq("stock_bajo", true);
     if (f.soloActivos) c = c.eq("activo", true);
+    if (f.negativo) c = c.eq("stock_negativo", true);
     if (q) c = c.or(filtroTexto(q));
     return c;
   };

@@ -4,6 +4,18 @@ import { parsearCantidad, type Unidad } from "./domain";
 
 export const PAGINA_VENTAS = 25;
 export const PLAZO_HORAS = 24;
+export const PAGINA_RECONCILIACION = 25;
+
+// Marcas de motivos_revision (registrar_venta con p_offline), en palabras del encargado.
+export const ETIQUETA_MOTIVO: Record<string, string> = {
+  producto_inactivo: "Producto inactivo al enviarse",
+  sin_precio: "Producto sin precio de lista",
+  descuento_sin_permiso: "Descuento sin permiso de quien vendió",
+  sobre_tope: "Descuento sobre el tope",
+  renumerada: "Número cambiado al enviarse",
+  otra_cuenta: "Enviada desde otra cuenta",
+};
+export const textoMotivo = (m: string) => ETIQUETA_MOTIVO[m] ?? m;
 
 export const ETIQUETA_ESTADO: Record<string, string> = {
   completada: "Completada",
@@ -20,7 +32,7 @@ export const fueraDePlazo = (recibidaEn: string, ahora: number) =>
 
 // Códigos de anular_venta, devolver_venta y fijar_tope_descuento, en palabras del panel y según la acción. Los que no
 // estén aquí caen en lib/erp-errores (única fuente de los demás, p. ej. ERP_CLIENTE_DUPLICADO de clientes).
-export type AccionVentas = "anular" | "devolver" | "tope";
+export type AccionVentas = "anular" | "devolver" | "tope" | "revisar" | "qr";
 
 const COMUNES: Record<string, string> = {
   ERP_SIN_PERMISO:
@@ -48,6 +60,15 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
   },
   tope: {
     ERP_DATOS_INVALIDOS: "El tope debe ser un porcentaje entre 0 y 100 con hasta 2 decimales",
+  },
+  revisar: {
+    ERP_DATOS_INVALIDOS: "Esta venta no tiene nada que revisar. Recarga la página.",
+    ERP_VENTA_ANULADA: "La venta está anulada: ya no hay nada que revisar.",
+  },
+  qr: {
+    ERP_DATOS_INVALIDOS: "Este pago no es un QR. Recarga la página.",
+    ERP_VENTA_ANULADA: "La venta está anulada: el cobro ya se revirtió.",
+    ERP_OPERACION_REPETIDA: "Este pago ya se resolvió de la otra forma. Recarga la página.",
   },
 };
 

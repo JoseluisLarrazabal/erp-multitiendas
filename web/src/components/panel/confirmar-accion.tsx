@@ -23,6 +23,8 @@ type Props = {
   confirmar: string;
   accion: () => Promise<Resultado<null>>;
   destructiva?: boolean;
+  // Solo con botón propio: deshabilita el disparador (p. ej. mientras corre otra acción de la misma fila).
+  deshabilitado?: boolean;
   // Tras una acción exitosa el foco va aquí (p. ej. al título cuando la fila desaparece); por defecto vuelve al botón.
   focoFinal?: () => HTMLElement | null;
 } &
@@ -41,6 +43,7 @@ export function ConfirmarAccion({
   confirmar,
   accion,
   destructiva = true,
+  deshabilitado,
   focoFinal,
   abierto,
   alCambiarAbierto,
@@ -70,6 +73,7 @@ export function ConfirmarAccion({
             <Button
               variant="outline"
               size="sm"
+              disabled={deshabilitado}
               className={cn("min-h-9 md:min-h-8", destructiva && "text-destructive")}
             />
           }

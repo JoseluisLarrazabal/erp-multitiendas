@@ -4,7 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { falla, type Resultado } from "@/modules/usuarios";
 import type { Unidad } from "./domain";
 import { fueraDePlazo } from "./domain-panel";
-import type { FiltrosVentas } from "./schemas-panel";
+import { parsearPagosPendientes, type FiltrosVentas } from "./schemas-panel";
 
 // Lecturas de /panel/ventas. Todo select lista columnas: venta_items sin costo_unitario y ventas sin huella (grant por
 // columnas; un select * falla).
@@ -263,5 +263,70 @@ export async function detalleVenta(
         montoEfectivo: Number(d.monto_efectivo),
       })),
     },
+  };
+}
+
+export type FilaReconciliacion = {
+  id: string;
+  numero: string;
+  creadaEn: string;
+  recibidaEn: string;
+  total: number;
+  vendedorId: string | null;
+  vendedor: string | null;
+  enviadaPor: string | null;
+  enviadaPorNombre: string | null;
+  motivos: string[];
+  // Los motivos ya se cerraron (revisar_venta); la venta sigue aquí solo por sus QR pendientes.
+  revisada: boolean;
+  pagosPendientes: { id: string; monto: number }[];
+};
+
+// Pide una de más para saber si hay otra página: la RPC pagina por cursor y no cuenta.
+export async function listarReconciliacion(
+  supabase: Cliente,
+  negocioId: string,
+  desdeId: string | null,
+  porPagina: number,
+): Promise<Resultado<{ filas: FilaReconciliacion[]; siguiente: string | null }>> {
+  const { data, error } = await supabase.rpc("reconciliacion_ventas", {
+    p_negocio_id: negocioId,
+    p_limite: porPagina + 1,
+    ...(desdeId ? { p_desde_id: desdeId } : {}),
+  });
+  if (error) return falla("No se pudieron leer las ventas por revisar.");
+  const pagina = data.slice(0, porPagina);
+  if (pagina.length === 0) return { ok: true, data: { filas: [], siguiente: null } };
+  const revisadas = await supabase
+    .from("ventas")
+    .select("id, revisada_por")
+    .in(
+      "id",
+      pagina.map((r) => r.id),
+    );
+  if (revisadas.error) return falla("No se pudieron leer las ventas por revisar.");
+  const yaRevisada = new Set(revisadas.data.filter((v) => v.revisada_por).map((v) => v.id));
+  const filas: FilaReconciliacion[] = [];
+  for (const r of pagina) {
+    const pagos = parsearPagosPendientes(r.pagos_pendientes);
+    if (!pagos.success) return falla("No se pudieron leer las ventas por revisar.");
+    filas.push({
+      id: r.id,
+      numero: r.numero,
+      creadaEn: r.creada_en_cliente,
+      recibidaEn: r.recibida_en,
+      total: Number(r.total),
+      vendedorId: r.vendedor_id,
+      vendedor: r.vendedor_nombre,
+      enviadaPor: r.enviada_por,
+      enviadaPorNombre: r.enviada_por_nombre,
+      motivos: r.motivos_revision,
+      revisada: yaRevisada.has(r.id),
+      pagosPendientes: pagos.data,
+    });
+  }
+  return {
+    ok: true,
+    data: { filas, siguiente: data.length > porPagina ? filas.at(-1)!.id : null },
   };
 }

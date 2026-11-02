@@ -5,14 +5,16 @@ export { DetalleVentaVista } from "./components/detalle-venta";
 export { FiltrosVentasForm } from "./components/filtros-ventas";
 export { FormDevolucion, type EquipoAbierto } from "./components/form-devolucion";
 export { FormTope } from "./components/form-tope";
+export { ListaReconciliacion } from "./components/lista-reconciliacion";
 export { ListaVentas } from "./components/lista-ventas";
-export { fueraDePlazo, PAGINA_VENTAS, PLAZO_HORAS } from "./domain-panel";
+export { fueraDePlazo, PAGINA_RECONCILIACION, PAGINA_VENTAS, PLAZO_HORAS } from "./domain-panel";
 export {
   detalleVenta,
   listarEquiposPanel,
+  listarReconciliacion,
   listarVentas,
   sesionesAbiertas,
   type DetalleVenta,
 } from "./lecturas-panel";
 export { cargarNegocio } from "./queries";
-export { hrefVentas, leerFiltrosVentas } from "./schemas-panel";
+export { hrefVentas, leerDesdeReconciliacion, leerFiltrosVentas } from "./schemas-panel";

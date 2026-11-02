@@ -744,7 +744,7 @@ isOneToOne: false
           Views: {
             "inventario_lista": {
                   Row: {
-                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_total": number | null,"unidad": string
+                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"unidad": string
                   }
                   ComputedFields: never
                   Relationships: [
