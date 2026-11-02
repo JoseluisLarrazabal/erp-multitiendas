@@ -270,7 +270,8 @@ export function PanelCaja({
               </div>
               {ventaPendiente && (
                 <p role="alert" className="text-destructive text-sm">
-                  Hay una venta pendiente de envío. Resuélvela antes de cerrar la caja.
+                  Hay ventas sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la
+                  caja.
                 </p>
               )}
               <p role="alert" className="text-destructive text-sm empty:hidden">

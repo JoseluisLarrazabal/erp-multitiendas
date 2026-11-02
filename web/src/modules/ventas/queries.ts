@@ -130,11 +130,26 @@ export async function nombreVendedor(supabase: Cliente, usuarioId: string): Prom
 
 export type ErrorEnvio = { ok: false; codigo: string | null; red: boolean; error: string };
 
+// Reenvío desde la cola: la venta ya se cobró, el servidor marca en vez de rechazar (docs/plan-fase-3.md).
+export type OfflineVenta = {
+  vendedor_id: string;
+  tipo_cambio: number | null;
+  numero_impreso: string | null;
+};
+export const TIEMPO_ENVIO_MS = 8_000;
+
+// El abort y el timeout llegan como error sin código de Postgres: cuentan como fallo de red (esFalloDeRed).
 export async function enviarVenta(
   supabase: Cliente,
   payload: VentaPayload,
+  offline?: OfflineVenta,
 ): Promise<{ ok: true; numero: string } | ErrorEnvio> {
-  const { data, error } = await supabase.rpc("registrar_venta", { p_venta: payload });
+  const { data, error } = await supabase
+    .rpc(
+      "registrar_venta",
+      offline ? { p_venta: payload, p_offline: offline } : { p_venta: payload },
+    )
+    .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS));
   if (error) return { ...errorRpc(error), red: esFalloDeRed(error) };
   const r = respuestaVentaSchema.safeParse(data);
   return r.success
@@ -154,6 +169,7 @@ export async function existeVenta(supabase: Cliente, ventaId: string): Promise<R
     .from("ventas")
     .select("id")
     .eq("id", ventaId)
+    .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS))
     .maybeSingle();
   if (error) return falla(esFalloDeRed(error) ? MENSAJE_RED : "No se pudo comprobar la venta.");
   return { ok: true, data: data !== null };

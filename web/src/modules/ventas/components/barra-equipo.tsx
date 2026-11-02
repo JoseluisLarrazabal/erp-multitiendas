@@ -36,7 +36,7 @@ export function BarraEquipo({
         variant="ghost"
         className="h-10"
         disabled={pendiente}
-        title={pendiente ? "Hay una venta pendiente de envío" : undefined}
+        title={pendiente ? "Hay ventas sin enviar en este equipo" : undefined}
         onClick={alCambiarEquipo}
       >
         Cambiar equipo

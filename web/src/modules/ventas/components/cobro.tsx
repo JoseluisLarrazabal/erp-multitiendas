@@ -15,28 +15,22 @@ import { bs, calcularCobro, parsearMonto, textoMonto } from "../domain";
 import type { EstadoEnvio } from "../use-envio";
 
 // Cobro (RF-VEN-02): efectivo y QR combinables. El pago enviado es el monto aplicado; el vuelto es solo de pantalla.
-// Es un AlertDialog (Escape, foco atrapado, aria-modal). Mientras envía o está en duda no se cierra.
+// Es un AlertDialog (Escape, foco atrapado, aria-modal). Mientras envía no se cierra.
 export function Cobro({
   total,
   estado,
   alConfirmar,
-  alReintentar,
-  alDescartar,
   alCerrar,
 }: {
   total: number;
   estado: EstadoEnvio;
   alConfirmar: (c: { efectivo: number; qr: number; recibido: number }) => void;
-  alReintentar: () => void;
-  alDescartar: () => Promise<string | null>;
   alCerrar: () => void;
 }) {
   const [qrTexto, setQrTexto] = useState("");
   const [recibidoTexto, setRecibidoTexto] = useState(textoMonto(total));
   const [recibidoEditado, setRecibidoEditado] = useState(false);
   const [qrOk, setQrOk] = useState(false);
-  const [descartando, setDescartando] = useState(false);
-  const [avisoDescarte, setAvisoDescarte] = useState<string | null>(null);
   const primero = useRef<HTMLInputElement>(null);
 
   const qr = qrTexto.trim() === "" ? 0 : parsearMonto(qrTexto);
@@ -45,7 +39,6 @@ export function Cobro({
     qr === null || recibido === null ? null : calcularCobro(total, qr, recibido, qrOk);
   const aplicado = qr === null ? total : Math.max(total - qr, 0);
   const ocupado = estado.t === "enviando";
-  const enDuda = estado.t === "red";
 
   // Otro monto de QR es otro pago: la confirmación de que llegó se pide de nuevo.
   function cambiarQr(v: string) {
@@ -55,17 +48,11 @@ export function Cobro({
     if (!recibidoEditado && n !== null) setRecibidoTexto(textoMonto(Math.max(total - n, 0)));
   }
 
-  async function descartar() {
-    setDescartando(true);
-    setAvisoDescarte(await alDescartar());
-    setDescartando(false);
-  }
-
   return (
     <AlertDialog
       open
       onOpenChange={(abierto) => {
-        if (!abierto && !ocupado && !enDuda && !descartando) alCerrar();
+        if (!abierto && !ocupado) alCerrar();
       }}
     >
       <AlertDialogContent
@@ -77,7 +64,7 @@ export function Cobro({
           className="flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (calculo?.ok && !ocupado && !enDuda)
+            if (calculo?.ok && !ocupado)
               alConfirmar({ efectivo: calculo.efectivo, qr: calculo.qr, recibido: recibido ?? 0 });
           }}
         >
@@ -86,7 +73,7 @@ export function Cobro({
             <p className="text-2xl font-bold tabular-nums">{bs(total)}</p>
           </div>
 
-          <fieldset disabled={ocupado || enDuda} className="flex flex-col gap-3">
+          <fieldset disabled={ocupado} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cobro-qr">
                 <QrCode className="size-4" aria-hidden /> Pago por QR (Bs)
@@ -160,58 +147,28 @@ export function Cobro({
           <p role="status" className="text-muted-foreground text-xs empty:hidden">
             {calculo && !calculo.ok ? calculo.error : null}
           </p>
-          {(estado.t === "red" || estado.t === "rechazada") && (
+          {estado.t === "rechazada" && (
             <p
               role="alert"
               className="border-destructive text-destructive rounded-lg border p-2.5 text-sm"
             >
               {estado.mensaje}
-              {estado.t === "red" && " La venta sigue pendiente: no se pierde."}
-            </p>
-          )}
-          {avisoDescarte && (
-            <p role="alert" className="text-destructive text-xs">
-              {avisoDescarte}
             </p>
           )}
 
           <div className="flex gap-2">
-            {enDuda ? (
-              <>
-                <Button
-                  type="button"
-                  className="h-12 flex-1"
-                  disabled={descartando}
-                  onClick={alReintentar}
-                >
-                  Reintentar envío
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12"
-                  disabled={descartando}
-                  onClick={() => void descartar()}
-                >
-                  {descartando && <Loader2 className="animate-spin" aria-hidden />} Descartar
-                </Button>
-              </>
-            ) : (
-              <>
-                <AlertDialogCancel className="h-12" disabled={ocupado}>
-                  Volver
-                </AlertDialogCancel>
-                {/* aria-disabled y no disabled: al enviar el foco no se pierde; la guarda real está en onSubmit. */}
-                <Button
-                  type="submit"
-                  className="h-12 flex-1 text-base aria-disabled:opacity-50"
-                  aria-disabled={!calculo?.ok || ocupado}
-                >
-                  {ocupado && <Loader2 className="animate-spin" aria-hidden />}{" "}
-                  {ocupado ? "Enviando…" : "Confirmar cobro"}
-                </Button>
-              </>
-            )}
+            <AlertDialogCancel className="h-12" disabled={ocupado}>
+              Volver
+            </AlertDialogCancel>
+            {/* aria-disabled y no disabled: al enviar el foco no se pierde; la guarda real está en onSubmit. */}
+            <Button
+              type="submit"
+              className="h-12 flex-1 text-base aria-disabled:opacity-50"
+              aria-disabled={!calculo?.ok || ocupado}
+            >
+              {ocupado && <Loader2 className="animate-spin" aria-hidden />}{" "}
+              {ocupado ? "Enviando…" : "Confirmar cobro"}
+            </Button>
           </div>
         </form>
       </AlertDialogContent>

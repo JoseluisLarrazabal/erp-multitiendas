@@ -29,3 +29,6 @@ export function leerContador(dispositivoId: string): number {
 }
 export const guardarContador = (dispositivoId: string, n: number) =>
   escribir(claveContador(dispositivoId), String(n));
+// Nunca baja: una venta de la cola puede llegar después de una más nueva.
+export const subirContador = (dispositivoId: string, n: number) =>
+  guardarContador(dispositivoId, Math.max(leerContador(dispositivoId), n));

@@ -132,6 +132,9 @@ export const formatearNumero = (prefijo: string, secuencia: number) =>
 export const MAX_SECUENCIA = 999_999;
 export const secuenciaAgotada = (secuencia: number) => secuencia > MAX_SECUENCIA;
 
+// Veces que una venta se renumera ante ERP_NUMERO_DUPLICADO antes de rechazarla.
+export const MAX_NUMERO_DUPLICADO = 25;
+
 // Siguiente número a probar: sobre el mayor contador visto (memoria, almacenamiento local, intento anterior), porque
 // otra pestaña del mismo equipo pudo avanzarlo.
 export const siguienteSecuencia = (...vistos: number[]) => Math.max(0, ...vistos) + 1;

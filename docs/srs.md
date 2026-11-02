@@ -25,7 +25,7 @@ El acta de entrega y el saldo se apoyan en la Entrega A. La Entrega B no los con
 ### Fuera de la versión 1
 
 Factura electrónica o integración con el SIN, recordatorios y promociones por WhatsApp, fotos de daños, integración con
-balanza, impresión ESC/POS y apertura electrónica del cajón, lotes y despiece, tienda online, contabilidad, panel
+balanza, impresión ESC/POS y apertura electrónica del cajón, despiece, tienda online, contabilidad, panel
 consolidado de los 3 negocios, y traspasos entre negocios.
 
 ## 2. Actores
@@ -145,6 +145,10 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RF-FRI-01 | Venta por peso y corte | Acepta kg con 3 decimales; el total redondea a 2 | CT |
 | RF-FRI-02 | Inventario y kardex por corte | Entradas y salidas en kg con decimales | CT |
 | RF-FRI-03 | Uso sin catálogo inicial | El negocio funciona vacío; el encargado carga cortes y precios | HO |
+| RF-FRI-04 | Paquete al vacío | Peso variable (se cobra lo que pesa), peso fijo o por unidad | HO |
+| RF-FRI-05 | Lotes con vencimiento | La entrada registra lote y fecha de vencimiento | HO |
+| RF-FRI-06 | Productos por vencer | Lista con lo que vence pronto, por lote | HO |
+| RF-FRI-07 | Mermas | Salida en kg con motivo y permiso, en el kardex | HO |
 
 ### 3.9 Reportes
 
@@ -280,9 +284,9 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 | ID | Decisión | Recomendación |
 |---|---|---|
 | D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión y precios en USD | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
-| D-02 | Entrega de frial sin catálogo | Acordarlo por escrito para que no trabe el acta |
-| D-03 | Aviso de que el arranque depende de que el cliente cargue sus precios | Escrito al cliente. Ya no frena el desarrollo ni la importación (CTO, 2026-11-01) |
-| D-04 | Firma del contrato | Confirmar la fecha. `docs/handoff.md` la da como pendiente |
+| D-02 | Entrega de frial sin catálogo | El sistema se entrega preparado para carnes al vacío (RF-FRI-01 a 07) y el cliente carga cortes y precios (CTO, 2026-11-01). Acordarlo por escrito para que no trabe el acta |
+| D-03 | Aviso de que el arranque depende de que el cliente cargue sus datos | Escrito al cliente. El cliente carga precios, servicios, series y tope de descuento desde el panel; no frena el desarrollo ni la importación (CTO, 2026-11-01) |
+| D-04 | Firma del contrato | Firmado (CTO, 2026-11-01). Falta la fecha exacta para contar el plazo |
 
 ## 8. Trazabilidad con el contrato
 
