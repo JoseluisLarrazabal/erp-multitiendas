@@ -5,11 +5,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { bs, ETIQUETA_MEDIO } from "../domain";
+import { fechaCorta } from "../ordenes-pos";
 import type { NotaVenta } from "../venta";
 
 type Papel = "80" | "a4";
 
-// Nota de venta (RF-VEN-05). Imprime con window.print(); el papel (80 mm o A4) lo fija la clase de página de
+// Nota de venta (RF-VEN-05); si lleva `orden` (lavandería) se imprime como boleta con la ficha de la orden. Imprime con window.print(); el papel (80 mm o A4) lo fija la clase de página de
 // globals.css. Fuera de .nota-venta todo lleva print:hidden: sale sin cromo de la app.
 export function NotaVentaVista({
   nota,
@@ -22,6 +23,8 @@ export function NotaVentaVista({
   alNueva: () => void;
 }) {
   const [papel, setPapel] = useState<Papel>("80");
+  const orden = nota.orden;
+  const cosa = orden ? "Orden" : "Venta";
   const fecha = new Date(nota.fechaIso).toLocaleString("es-BO", {
     dateStyle: "short",
     timeStyle: "short",
@@ -31,8 +34,8 @@ export function NotaVentaVista({
       <div className="flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
         <p role="status" className="mr-auto text-sm font-medium">
           {enCola
-            ? `Venta ${nota.numero} guardada en este equipo. Se enviará al volver la conexión.`
-            : `Venta ${nota.numero} registrada`}
+            ? `${cosa} ${nota.numero} guardada en este equipo. Se enviará al volver la conexión.`
+            : `${cosa} ${nota.numero} registrada`}
         </p>
         <fieldset className="flex gap-1" aria-label="Tamaño de papel">
           {(["80", "a4"] as const).map((p) => (
@@ -52,11 +55,11 @@ export function NotaVentaVista({
           <Printer /> Imprimir
         </Button>
         <Button type="button" variant="outline" className="h-10" onClick={alNueva} autoFocus>
-          <Plus /> Nueva venta
+          <Plus /> {orden ? "Nueva orden" : "Nueva venta"}
         </Button>
       </div>
       <article
-        aria-label={`Nota de venta ${nota.numero}`}
+        aria-label={`${orden ? "Boleta" : "Nota de venta"} ${nota.numero}`}
         className={cn(
           "nota-venta w-full rounded-lg border bg-white p-4 text-[13px] leading-snug text-black tabular-nums print:rounded-none print:border-0 print:p-0",
           papel === "80" ? "nota-80 max-w-[80mm] text-[12px]" : "nota-a4 max-w-[190mm]",
@@ -69,7 +72,9 @@ export function NotaVentaVista({
             <p className="whitespace-pre-line">{nota.negocio.datosNota}</p>
           )}
         </header>
-        <p className="mt-2 text-center font-semibold">NOTA DE VENTA {nota.numero}</p>
+        <p className="mt-2 text-center font-semibold">
+          {orden ? "BOLETA" : "NOTA DE VENTA"} {nota.numero}
+        </p>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2">
           <dt>Fecha:</dt>
           <dd>{fecha}</dd>
@@ -81,6 +86,34 @@ export function NotaVentaVista({
               ? `${nota.cliente.nombre}${nota.cliente.documento ? ` · ${nota.cliente.documento}` : ""}`
               : "General"}
           </dd>
+          {orden && (
+            <>
+              {orden.telefono && (
+                <>
+                  <dt>Teléfono:</dt>
+                  <dd>{orden.telefono}</dd>
+                </>
+              )}
+              <dt>Prendas:</dt>
+              <dd>{orden.prendas}</dd>
+              {orden.casillero && (
+                <>
+                  <dt>Casillero:</dt>
+                  <dd>{orden.casillero}</dd>
+                </>
+              )}
+              <dt>Express:</dt>
+              <dd>{orden.express ? "Sí" : "No"}</dd>
+              <dt>Entrega:</dt>
+              <dd>{fechaCorta(orden.fechaPrometida)}</dd>
+              {orden.nota && (
+                <>
+                  <dt>Nota:</dt>
+                  <dd className="break-words">{orden.nota}</dd>
+                </>
+              )}
+            </>
+          )}
         </dl>
         <table className="mt-2 w-full border-t border-dashed border-black">
           <thead>

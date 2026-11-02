@@ -17,7 +17,7 @@ import {
 import { formatearNumero } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import type { Equipo } from "./queries";
-import type { VentaPayload } from "./schemas";
+import type { OrdenPayload, VentaPayload } from "./schemas";
 import { equipoTieneCola, type ColaPos } from "./use-cola";
 import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from "./venta";
 
@@ -36,7 +36,9 @@ export type ContextoCobro = {
   // El cajero confirmó que el QR llegó. Sin conexión no se pide: el pago queda pendiente de verificar.
   qrConfirmado: boolean;
   recibido: number;
-  nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente">;
+  // Lavandería: la ficha viaja con la venta (crear_orden) y la nota se imprime como boleta.
+  orden?: OrdenPayload;
+  nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden">;
 };
 
 // Envío de la venta sobre la cola persistente (lib/offline). Toda venta entra primero a la cola, con su UUID, número
@@ -97,6 +99,8 @@ export function useEnvio(opts: {
           // Aunque el servidor responda (navigator.onLine miente), el primer intento se salta y va por la cola.
           const qrPendiente = c.qr > 0 && !c.qrConfirmado;
           if (qrPendiente) enLinea = false;
+          // Una orden sin cliente (nombre escrito sin red) tampoco viaja en línea: el servidor la rechaza sin p_offline.
+          if (c.orden && !c.clienteId) enLinea = false;
           const ventaId = crypto.randomUUID();
           const armada: { nota?: NotaVenta; items?: VentaPayload["items"] } = {};
           cola.enCurso(ventaId);
@@ -129,7 +133,11 @@ export function useEnvio(opts: {
                   negocioId,
                   dispositivoId: equipo.id,
                   usuarioId,
-                  payload: { venta: payload, tipo_cambio: tipoCambio },
+                  payload: {
+                    venta: payload,
+                    tipo_cambio: tipoCambio,
+                    ...(c.orden ? { orden: c.orden } : {}),
+                  },
                   nota,
                   numeroImpreso: payload.numero,
                 };

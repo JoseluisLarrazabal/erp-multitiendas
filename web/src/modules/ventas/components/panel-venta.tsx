@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
 import type { AccionCarrito, Permisos, ResumenCarrito } from "../carrito";
 import { bs } from "../domain";
+import type { FichaTexto } from "../orden";
 import { CarritoLineas } from "./carrito";
+import { ClienteEscrito, FichaOrden } from "./ficha-orden";
 
 // Panel lateral de la venta: cliente, líneas, descuento de la venta, total y cobrar.
 export function PanelVenta({
@@ -27,6 +29,8 @@ export function PanelVenta({
   puedeCobrar,
   abrirCobro,
   tituloRef,
+  orden,
+  sinRed,
 }: {
   consulta: boolean;
   resumen: ResumenCarrito;
@@ -45,6 +49,14 @@ export function PanelVenta({
   puedeCobrar: boolean;
   abrirCobro: () => void;
   tituloRef: React.RefObject<HTMLHeadingElement | null>;
+  // Lavandería: ficha de la orden. null en tienda y frial.
+  orden: {
+    ficha: FichaTexto;
+    alCambiarFicha: (f: FichaTexto) => void;
+    express: boolean;
+    alCambiarExpress: (v: boolean) => void;
+  } | null;
+  sinRed: boolean;
 }) {
   const totales = resumen.totales;
   const hayLineas = cantidadLineas > 0;
@@ -64,18 +76,36 @@ export function PanelVenta({
           ({cantidadLineas} {cantidadLineas === 1 ? "línea" : "líneas"})
         </span>
       </h2>
-      <SelectorCliente
-        negocioId={negocioId}
-        obligatorio={clienteObligatorio}
-        valor={cliente}
-        alCambiar={alCambiarCliente}
-      />
+      {orden && sinRed && !cliente ? (
+        <ClienteEscrito
+          ficha={orden.ficha}
+          alCambiar={orden.alCambiarFicha}
+          bloqueado={bloqueado}
+        />
+      ) : (
+        <SelectorCliente
+          negocioId={negocioId}
+          obligatorio={clienteObligatorio}
+          valor={cliente}
+          alCambiar={alCambiarCliente}
+        />
+      )}
+      {orden && (
+        <FichaOrden
+          ficha={orden.ficha}
+          alCambiar={orden.alCambiarFicha}
+          express={orden.express}
+          alCambiarExpress={orden.alCambiarExpress}
+          bloqueado={bloqueado}
+        />
+      )}
       <CarritoLineas
         lineas={resumen.lineas}
         permisos={permisos}
         ubicacionId={ubicacionId}
         despachar={despachar}
         bloqueado={bloqueado}
+        listaFija={orden !== null}
       />
       {hayLineas && !permisos.puedeDescontar && (
         <p className="text-muted-foreground text-xs">

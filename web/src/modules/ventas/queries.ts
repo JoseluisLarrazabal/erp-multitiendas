@@ -3,7 +3,13 @@ import type { Database } from "@/lib/supabase/database.types";
 import { errorRpc, esFalloDeRed, MENSAJE_RED } from "@/lib/erp-errores";
 import { TIEMPO_ENVIO_MS } from "@/lib/supabase/sesion";
 import { falla, type Resultado } from "@/modules/usuarios";
-import { leerCatalogo, respuestaVentaSchema, type Catalogo, type VentaPayload } from "./schemas";
+import {
+  leerCatalogo,
+  respuestaVentaSchema,
+  type Catalogo,
+  type OrdenPayload,
+  type VentaPayload,
+} from "./schemas";
 
 // Reciben el cliente del navegador: /pos es cliente. Todo select lista columnas; nunca costos.
 type Cliente = SupabaseClient<Database>;
@@ -150,17 +156,25 @@ export type OfflineVenta = {
 };
 
 // El abort y el timeout llegan como error sin código de Postgres: cuentan como fallo de red (esFalloDeRed).
+// Con `orden` (lavandería) la venta y su ficha van juntas por crear_orden.
 export async function enviarVenta(
   supabase: Cliente,
   payload: VentaPayload,
   offline?: OfflineVenta,
+  orden?: OrdenPayload,
 ): Promise<{ ok: true; numero: string } | ErrorEnvio> {
-  const { data, error } = await supabase
-    .rpc(
-      "registrar_venta",
-      offline ? { p_venta: payload, p_offline: offline } : { p_venta: payload },
-    )
-    .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS));
+  const { data, error } = await (
+    orden
+      ? supabase.rpc("crear_orden", {
+          p_venta: payload,
+          p_orden: orden,
+          ...(offline ? { p_offline: offline } : {}),
+        })
+      : supabase.rpc(
+          "registrar_venta",
+          offline ? { p_venta: payload, p_offline: offline } : { p_venta: payload },
+        )
+  ).abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS));
   if (error) return { ...errorRpc(error), red: esFalloDeRed(error) };
   const r = respuestaVentaSchema.safeParse(data);
   return r.success

@@ -54,6 +54,15 @@ export type NotaVenta = {
   negocio: { nombre: string; nit: string | null; datosNota: string | null };
   vendedor: string;
   cliente: { nombre: string; documento: string | null } | null;
+  // Orden de lavandería: la nota se imprime como boleta con la ficha.
+  orden?: {
+    telefono: string | null;
+    prendas: number;
+    casillero: string | null;
+    express: boolean;
+    fechaPrometida: string;
+    nota: string | null;
+  };
   lineas: {
     nombre: string;
     codigo: string;
@@ -79,7 +88,7 @@ export function construirNota(
     DatosEnvio,
     "numero" | "creadaEnCliente" | "efectivo" | "qr" | "descuentoVentaTexto" | "qrVerificado"
   >,
-  contexto: Pick<NotaVenta, "negocio" | "vendedor" | "cliente"> & { recibido: number },
+  contexto: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden"> & { recibido: number },
 ): NotaVenta | null {
   if (!resumen.totales) return null;
   const pagos: NotaVenta["pagos"] = [];

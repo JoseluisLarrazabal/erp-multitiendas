@@ -175,7 +175,16 @@ describe("motivoNoVendible", () => {
   const servicio = { ...prod("s", "SRV-1", "Lavado"), tipo: "servicio" };
   it("un servicio solo se vende en lavandería", () => {
     expect(motivoNoVendible(servicio, "tienda")).toMatch(/lavandería/);
-    expect(motivoNoVendible(servicio, "lavanderia")).toBeNull();
+    // La lavandería vende por lista normal o express, no a contado.
+    const lavado = { ...servicio, precios: { ...servicio.precios, normal: 15, express: null } };
+    expect(motivoNoVendible(lavado, "lavanderia")).toBeNull();
+    expect(motivoNoVendible(lavado, "lavanderia", "express")).toMatch(/exprés/);
+    expect(
+      motivoNoVendible({ ...lavado, precios: { ...lavado.precios, normal: null } }, "lavanderia"),
+    ).toMatch(/normal/);
+  });
+  it("en lavandería solo se venden servicios", () => {
+    expect(motivoNoVendible(prod("p", "P-1", "Cable"), "lavanderia")).toMatch(/servicios/);
   });
   it("un producto sin precio de contado no se vende en ningún negocio", () => {
     const sinPrecio = {

@@ -111,10 +111,25 @@ export const ventaPayloadSchema = z.strictObject({
 });
 export type VentaPayload = z.infer<typeof ventaPayloadSchema>;
 
+// Ficha de una orden de lavandería (p_orden de crear_orden). Mismas claves y largos que el servidor; los opcionales
+// vacíos no viajan. Con cliente elegido el nombre y el teléfono salen de la base: solo sin cliente (sin conexión) se envían.
+export const ordenPayloadSchema = z.strictObject({
+  cliente_nombre: z.string().min(1).max(200).optional(),
+  cliente_telefono: z.string().min(1).max(30).optional(),
+  express: z.boolean(),
+  prendas: z.number().int().min(1).max(999),
+  casillero: z.string().min(1).max(20).optional(),
+  fecha_prometida: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  nota: z.string().min(1).max(500).optional(),
+});
+export type OrdenPayload = z.infer<typeof ordenPayloadSchema>;
+
 // Lo que la cola guarda de una venta: el payload y el tipo de cambio que vio el vendedor (va en `p_offline`).
+// Con `orden` la fila sigue siendo una venta, pero se envía con crear_orden.
 export const payloadColaVentaSchema = z.object({
   venta: ventaPayloadSchema,
   tipo_cambio: z.number().positive().nullable(),
+  orden: ordenPayloadSchema.optional(),
 });
 
 export const respuestaVentaSchema = z.object({

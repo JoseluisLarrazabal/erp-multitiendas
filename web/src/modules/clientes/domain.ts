@@ -1,4 +1,10 @@
-export type ClienteElegido = { id: string; nombre: string; documento: string | null };
+// `telefono` solo viene de la búsqueda: la boleta de lavandería lo imprime si está.
+export type ClienteElegido = {
+  id: string;
+  nombre: string;
+  documento: string | null;
+  telefono?: string | null;
+};
 
 // Quita lo que rompería el filtro `or(...)` de PostgREST y los comodines de ilike.
 export const limpiarBusqueda = (q: string) =>

@@ -10,14 +10,17 @@ import {
   motivoBloqueo,
   reducirCarrito,
   resumirCarrito,
+  sinPrecioEn,
 } from "./carrito";
 import {
   buscar,
   formatearCantidad,
   motivoNoVendible,
+  type Lista,
   porCodigoExacto,
   type ProductoPos,
 } from "./domain";
+import { armarOrden, fichaInicial, hoyLaPaz, type FichaTexto } from "./orden";
 import type { DatosNegocio, Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
 import { useAtajos } from "./use-atajos";
@@ -73,6 +76,11 @@ export function useVenta(o: OpcionesVenta) {
   const [consulta, setConsulta] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [confirmandoEquipo, setConfirmandoEquipo] = useState(false);
+  // Lavandería: la venta es una orden, con su ficha y la lista normal o express en todas las líneas.
+  const esOrden = o.tipoNegocio === "lavanderia";
+  const [express, setExpress] = useState(false);
+  const [ficha, setFicha] = useState<FichaTexto>(() => fichaInicial());
+  const listaVenta: Lista = esOrden ? (express ? "express" : "normal") : "contado";
   const [nota, setNota] = useState<NotaVenta | null>(null);
   // La nota se entregó pero la venta aún no llegó al servidor (queda en la cola).
   const [notaEnCola, setNotaEnCola] = useState(false);
@@ -122,6 +130,8 @@ export function useVenta(o: OpcionesVenta) {
       despachar({ tipo: "vaciar" });
       setDescuentoVentaTexto("");
       setCliente(null);
+      setExpress(false);
+      setFicha(fichaInicial());
       setCobrando(false);
       setAviso(null);
       registrarVenta(items);
@@ -150,14 +160,14 @@ export function useVenta(o: OpcionesVenta) {
   const resultados = useMemo(() => (indice ? buscar(indice, busqueda) : []), [indice, busqueda]);
 
   function agregar(p: ProductoPos) {
-    const motivo = motivoNoVendible(p, o.tipoNegocio);
+    const motivo = motivoNoVendible(p, o.tipoNegocio, listaVenta);
     // Las series se eligen contra el servidor (RF-VEN-14).
     if (p.controlaSerie && leerSinRed())
       return setAviso(`Este producto necesita conexión: "${p.nombre}" lleva serie.`);
     if (motivo) return setAviso(`"${p.nombre}" no se puede vender: ${motivo.toLowerCase()}.`);
-    const igual = lineaIgual(carrito, p);
+    const igual = lineaIgual(carrito, p, listaVenta);
     siguienteId.current += 1;
-    despachar({ tipo: "agregar", producto: p, id: `l${siguienteId.current}` });
+    despachar({ tipo: "agregar", producto: p, id: `l${siguienteId.current}`, lista: listaVenta });
     // Con la cantidad, repetir el mismo producto cambia el texto y el lector lo vuelve a anunciar.
     setAnuncio(
       `Agregado: ${p.nombre}, ${formatearCantidad((igual?.cantidad ?? 0) + 1000)} en la venta`,
@@ -178,13 +188,27 @@ export function useVenta(o: OpcionesVenta) {
       );
   }
 
+  function cambiarExpress(valor: boolean) {
+    const lista: Lista = valor ? "express" : "normal";
+    const faltan = sinPrecioEn(carrito, lista);
+    if (faltan.length)
+      return setAviso(
+        `${faltan.join(", ")} no tiene precio ${lista === "express" ? "express" : "normal"}.`,
+      );
+    setExpress(valor);
+    despachar({ tipo: "listaTodas", lista });
+  }
+  const fichaValida = armarOrden(ficha, { express, conCliente: !!cliente, hoy: hoyLaPaz() });
+  // Sin red no se busca cliente: la orden lleva el nombre escrito en la ficha.
+  const clienteListo = esOrden
+    ? (!!cliente || sinRed) && fichaValida.ok
+    : !(sinRed && clienteObligatorio && !cliente) && (!clienteObligatorio || !!cliente);
   const puedeCobrar =
     !consulta &&
     !!cajaId &&
-    !(sinRed && clienteObligatorio && !cliente) &&
+    clienteListo &&
     !!resumen.totales &&
     !resumen.error &&
-    (!clienteObligatorio || !!cliente) &&
     estadoCatalogo.t === "listo";
   const abrirCobro = useCallback(() => {
     if (puedeCobrar) {
@@ -232,15 +256,28 @@ export function useVenta(o: OpcionesVenta) {
     alEnter,
     puedeCobrar,
     abrirCobro,
+    esOrden,
+    express,
+    cambiarExpress,
+    ficha,
+    setFicha,
+    fichaValida,
+    listaVenta,
     motivoBloqueo: consulta
       ? null
-      : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
-        ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
-        : motivoBloqueo(resumen, {
+      : esOrden
+        ? (motivoBloqueo(resumen, {
             cajaAbierta: !!cajaId,
-            clienteObligatorio,
+            clienteObligatorio: !sinRed,
             hayCliente: !!cliente,
-          }),
+          }) ?? (resumen.lineas.length > 0 && !fichaValida.ok ? fichaValida.motivo : null))
+        : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
+          ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
+          : motivoBloqueo(resumen, {
+              cajaAbierta: !!cajaId,
+              clienteObligatorio,
+              hayCliente: !!cliente,
+            }),
     sinRed,
     // El carrito no se edita mientras la venta viaja al servidor.
     bloqueado: envio.estado.t === "enviando",
