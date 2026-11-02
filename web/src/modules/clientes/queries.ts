@@ -17,13 +17,21 @@ export async function buscarClientes(
   if (q.length < 2) return { ok: true, data: [] };
   const { data, error } = await supabase
     .from("clientes")
-    .select("id, nombre, ci_nit")
+    .select("id, nombre, ci_nit, telefono")
     .eq("negocio_id", negocioId)
     .or(`nombre.ilike.%${q}%,ci_nit.ilike.%${normalizarDocumento(q)}%`)
     .order("nombre")
     .limit(8);
   if (error) return { ok: false, error: "No se pudo buscar clientes." };
-  return { ok: true, data: data.map((c) => ({ id: c.id, nombre: c.nombre, documento: c.ci_nit })) };
+  return {
+    ok: true,
+    data: data.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      documento: c.ci_nit,
+      telefono: c.telefono,
+    })),
+  };
 }
 
 export async function crearCliente(
@@ -44,6 +52,7 @@ export async function crearCliente(
       id: data,
       nombre: r.data.nombre,
       documento: r.data.ci_nit ? normalizarDocumento(r.data.ci_nit) : null,
+      telefono: r.data.telefono ?? null,
     },
   };
 }

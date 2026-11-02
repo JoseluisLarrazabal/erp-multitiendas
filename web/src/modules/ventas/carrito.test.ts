@@ -5,6 +5,7 @@ import {
   motivoBloqueo,
   reducirCarrito,
   resumirCarrito,
+  sinPrecioEn,
   type Linea,
 } from "./carrito";
 import type { ProductoPos } from "./domain";
@@ -125,6 +126,48 @@ describe("carrito", () => {
     const mapa = new Map([["p2", sinPrecio]]);
     expect(lineasNoVendibles(c, mapa)).toEqual(["Funda", "Cable"]);
     expect(reducirCarrito(c, { tipo: "reemplazar", productos: mapa })).toHaveLength(0);
+  });
+});
+
+describe("lavandería: lista normal o express", () => {
+  const servicio = producto({
+    id: "s1",
+    tipo: "servicio",
+    precios: { contado: null, mayorista: null, minimo: null, normal: 1500, express: 2500 },
+  });
+  const agregar = (lista: "normal" | "express") =>
+    reducirCarrito([], { tipo: "agregar", producto: servicio, id: "l1", lista });
+  it("agrega con el precio de la lista y suma solo líneas de la misma lista", () => {
+    let c = agregar("normal");
+    expect(c[0]).toMatchObject({ lista: "normal", precioTexto: "15,00" });
+    c = reducirCarrito(c, { tipo: "agregar", producto: servicio, id: "l2", lista: "normal" });
+    expect(c).toHaveLength(1);
+    expect(c[0]?.cantidadTexto).toBe("2");
+  });
+  it("listaTodas cambia lista y precio de todas las líneas", () => {
+    const c = reducirCarrito(agregar("normal"), { tipo: "listaTodas", lista: "express" });
+    expect(c[0]).toMatchObject({ lista: "express", precioTexto: "25,00" });
+    expect(resumirCarrito(c, "", sinPermiso).totales?.total).toBe(2500);
+  });
+  it("sinPrecioEn nombra los productos sin precio en la lista", () => {
+    const sinExpress = { ...servicio, precios: { ...servicio.precios, express: null } };
+    const c = reducirCarrito([], {
+      tipo: "agregar",
+      producto: sinExpress,
+      id: "l1",
+      lista: "normal",
+    });
+    expect(sinPrecioEn(c, "express")).toEqual([sinExpress.nombre]);
+    expect(sinPrecioEn(c, "normal")).toEqual([]);
+  });
+  it("el catálogo recargado no quita un servicio que solo tiene normal y express", () => {
+    const c = agregar("express");
+    expect(lineasNoVendibles(c, new Map([["s1", servicio]]))).toEqual([]);
+    expect(
+      reducirCarrito(c, { tipo: "reemplazar", productos: new Map([["s1", servicio]]) }),
+    ).toHaveLength(1);
+    const sinExpress = { ...servicio, precios: { ...servicio.precios, express: null } };
+    expect(lineasNoVendibles(c, new Map([["s1", sinExpress]]))).toEqual([servicio.nombre]);
   });
 });
 

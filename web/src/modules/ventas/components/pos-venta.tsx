@@ -9,6 +9,8 @@ import { usePosCaja } from "../use-pos-caja";
 import { useColaPos } from "../use-cola";
 import type { GuardaVenta } from "../use-venta";
 import { AvisoCola } from "./aviso-cola";
+import { OrdenesPos } from "./ordenes-pos";
+import { PestanasPos } from "./pestanas-pos";
 import { SelectorEquipo } from "./selector-equipo";
 import { VentaEnCurso } from "./venta-en-curso";
 
@@ -129,7 +131,8 @@ export function PosVenta({
           />
         );
       case "lista":
-        return negocio ? (
+        if (!negocio) return null;
+        const venta = (
           <>
             {fase.cajaId === null && (
               <AperturaCaja
@@ -163,7 +166,15 @@ export function PosVenta({
               alCambiarCatalogo={alCambiarCatalogo}
             />
           </>
-        ) : null;
+        );
+        return tipoNegocio === "lavanderia" ? (
+          <PestanasPos
+            nueva={venta}
+            ordenes={<OrdenesPos negocioId={negocioId} permisos={permisos} />}
+          />
+        ) : (
+          venta
+        );
     }
   }
 }

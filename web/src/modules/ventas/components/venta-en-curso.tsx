@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PanelCaja } from "@/modules/caja";
 import { bs } from "../domain";
+import { datosBoleta } from "../orden";
 import { useVenta, type OpcionesVenta } from "../use-venta";
 import { AvisosVenta } from "./avisos-venta";
 import { BarraEquipo } from "./barra-equipo";
@@ -83,6 +84,7 @@ export function VentaEnCurso({
           resultados={v.resultados}
           ubicacionId={equipo.ubicacionId}
           tipoNegocio={opciones.tipoNegocio}
+          lista={v.listaVenta}
           alAgregar={v.agregar}
         />
         <PanelVenta
@@ -103,6 +105,17 @@ export function VentaEnCurso({
           puedeCobrar={v.puedeCobrar}
           abrirCobro={v.abrirCobro}
           tituloRef={v.titulo}
+          sinRed={v.sinRed}
+          orden={
+            v.esOrden
+              ? {
+                  ficha: v.ficha,
+                  alCambiarFicha: v.setFicha,
+                  express: v.express,
+                  alCambiarExpress: v.cambiarExpress,
+                }
+              : null
+          }
         />
       </div>
 
@@ -128,9 +141,17 @@ export function VentaEnCurso({
             envio.limpiarRechazo();
             v.setCobrando(false);
           }}
-          alConfirmar={(c) =>
+          alConfirmar={(c) => {
+            // Una orden con ficha inválida no se degrada a venta común: se rechaza y se muestra el motivo.
+            if (v.esOrden && !v.fichaValida.ok) {
+              v.setCobrando(false);
+              return v.setAviso(v.fichaValida.motivo);
+            }
+            const orden = v.esOrden && v.fichaValida.ok ? v.fichaValida.orden : undefined;
+            const boleta = orden ? datosBoleta(orden, v.cliente) : null;
             void envio.confirmar(v.resumen, {
               clienteId: v.cliente?.id ?? null,
+              ...(orden ? { orden } : {}),
               descuentoVentaTexto: v.descuentoVentaTexto,
               efectivo: c.efectivo,
               qr: c.qr,
@@ -139,12 +160,15 @@ export function VentaEnCurso({
               nota: {
                 negocio: { nombre: negocio.nombre, nit: negocio.nit, datosNota: negocio.datosNota },
                 vendedor: v.vendedor,
-                cliente: v.cliente
-                  ? { nombre: v.cliente.nombre, documento: v.cliente.documento }
-                  : null,
+                cliente: boleta
+                  ? boleta.cliente
+                  : v.cliente
+                    ? { nombre: v.cliente.nombre, documento: v.cliente.documento }
+                    : null,
+                ...(boleta ? { orden: boleta.orden } : {}),
               },
-            })
-          }
+            });
+          }}
         />
       )}
       <ConfirmarDescarte

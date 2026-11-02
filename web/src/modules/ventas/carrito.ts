@@ -1,5 +1,6 @@
 import {
   brutoLinea,
+  listaBaseDe,
   calcularTotales,
   formatearCantidad,
   LISTAS,
@@ -27,7 +28,9 @@ export type Linea = {
 };
 
 export type AccionCarrito =
-  | { tipo: "agregar"; producto: ProductoPos; id: string }
+  | { tipo: "agregar"; producto: ProductoPos; id: string; lista?: Lista }
+  // Lavandería: todas las líneas pasan a normal o express, con el precio de esa lista.
+  | { tipo: "listaTodas"; lista: Lista }
   | { tipo: "quitar"; id: string }
   | { tipo: "cambiar"; id: string; cambios: Partial<Omit<Linea, "id" | "producto">> }
   | { tipo: "lista"; id: string; lista: Lista }
@@ -36,13 +39,13 @@ export type AccionCarrito =
 
 const precioDe = (p: ProductoPos, lista: Lista) => p.precios[lista];
 
-export function nuevaLinea(producto: ProductoPos, id: string): Linea {
+export function nuevaLinea(producto: ProductoPos, id: string, lista: Lista = "contado"): Linea {
   return {
     id,
     producto,
-    lista: "contado",
+    lista,
     cantidadTexto: "1",
-    precioTexto: textoMonto(producto.precios.contado ?? 0),
+    precioTexto: textoMonto(producto.precios[lista] ?? 0),
     descuentoTexto: "",
     serieId: null,
     serieTexto: null,
@@ -50,14 +53,18 @@ export function nuevaLinea(producto: ProductoPos, id: string): Linea {
 }
 
 // Línea que absorbe un producto agregado de nuevo (sin serie, a precio de lista, sin descuento) y su cantidad en milésimas.
-export function lineaIgual(estado: readonly Linea[], producto: ProductoPos) {
+export function lineaIgual(
+  estado: readonly Linea[],
+  producto: ProductoPos,
+  lista: Lista = "contado",
+) {
   const igual = estado.find(
     (l) =>
       l.producto.id === producto.id &&
       !l.producto.controlaSerie &&
-      l.lista === "contado" &&
+      l.lista === lista &&
       l.descuentoTexto === "" &&
-      l.precioTexto === textoMonto(producto.precios.contado ?? 0),
+      l.precioTexto === textoMonto(producto.precios[lista] ?? 0),
   );
   const cantidad = igual && parsearCantidad(igual.cantidadTexto, igual.producto.unidad);
   return igual && cantidad ? { linea: igual, cantidad } : null;
@@ -69,21 +76,30 @@ export const lineasNoVendibles = (
   productos: ReadonlyMap<string, ProductoPos>,
 ) =>
   estado
-    .filter((l) => !productoVendible(productos.get(l.producto.id)))
+    .filter((l) => !productoVendible(productos.get(l.producto.id), l.lista))
     .map((l) => l.producto.nombre);
 
-const productoVendible = (p: ProductoPos | undefined): p is ProductoPos => !!p && vendible(p);
+const productoVendible = (p: ProductoPos | undefined, lista: Lista): p is ProductoPos =>
+  !!p && vendible(p, listaBaseDe(lista));
 
 export function reducirCarrito(estado: readonly Linea[], accion: AccionCarrito): Linea[] {
   switch (accion.tipo) {
     case "agregar": {
-      const igual = lineaIgual(estado, accion.producto);
+      const lista = accion.lista ?? "contado";
+      const igual = lineaIgual(estado, accion.producto, lista);
       if (igual)
         return estado.map((l) =>
           l === igual.linea ? { ...l, cantidadTexto: formatearCantidad(igual.cantidad + 1000) } : l,
         );
-      return [...estado, nuevaLinea(accion.producto, accion.id)];
+      return [...estado, nuevaLinea(accion.producto, accion.id, lista)];
     }
+    case "listaTodas":
+      return estado.map((l) => ({
+        ...l,
+        lista: accion.lista,
+        precioTexto: textoMonto(precioDe(l.producto, accion.lista) ?? 0),
+        descuentoTexto: "",
+      }));
     case "quitar":
       return estado.filter((l) => l.id !== accion.id);
     case "cambiar":
@@ -105,7 +121,7 @@ export function reducirCarrito(estado: readonly Linea[], accion: AccionCarrito):
     case "reemplazar":
       return estado.flatMap((l) => {
         const producto = accion.productos.get(l.producto.id);
-        if (!productoVendible(producto)) return [];
+        if (!productoVendible(producto, l.lista)) return [];
         const lista = producto.precios[l.lista] === null ? "contado" : l.lista;
         const sinTocar =
           lista !== l.lista || l.precioTexto === textoMonto(l.producto.precios[l.lista] ?? 0);
@@ -123,6 +139,11 @@ export function reducirCarrito(estado: readonly Linea[], accion: AccionCarrito):
       return [];
   }
 }
+
+// Nombres de los productos sin precio en `lista`. El cambio de lista de toda la venta reinicia precios y descuentos
+// manuales (aceptable: las órdenes van a precio de lista).
+export const sinPrecioEn = (lineas: readonly Linea[], lista: Lista): string[] =>
+  lineas.filter((l) => precioDe(l.producto, lista) === null).map((l) => l.producto.nombre);
 
 export type LineaResuelta = {
   linea: Linea;

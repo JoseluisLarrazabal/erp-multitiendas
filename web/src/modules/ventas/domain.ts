@@ -198,14 +198,32 @@ export function porCodigoExacto(indice: Indice, consulta: string): ProductoPos |
   return i === undefined ? null : (indice.productos[i] ?? null);
 }
 
-export const vendible = (p: ProductoPos) => p.precios.contado !== null;
+// Lista con la que se vende por defecto: la tienda y el frial venden a contado; la lavandería, por orden, en normal o
+// express (sus servicios no llevan precio de contado).
+export const listaBase = (tipoNegocio: string): Lista =>
+  tipoNegocio === "lavanderia" ? "normal" : "contado";
+// Una línea de lista normal o express exige ese precio; cualquier otra, el de contado.
+export const listaBaseDe = (lista: Lista): Lista =>
+  lista === "normal" || lista === "express" ? lista : "contado";
+
+export const vendible = (p: ProductoPos, lista: Lista = "contado") => p.precios[lista] !== null;
 
 // Por qué un producto no se puede agregar a la venta (null = sí se puede). Los servicios solo se venden en
 // lavandería: fuera de ella el servidor los rechaza con un mensaje genérico, así que ni se ofrecen.
-export function motivoNoVendible(p: ProductoPos, tipoNegocio: string): string | null {
+export function motivoNoVendible(
+  p: ProductoPos,
+  tipoNegocio: string,
+  lista: Lista = listaBase(tipoNegocio),
+): string | null {
   if (p.tipo === "servicio" && tipoNegocio !== "lavanderia")
     return "Servicio: solo se vende en lavandería";
-  return vendible(p) ? null : "Sin precio de contado";
+  // crear_orden rechaza lo que no es servicio.
+  if (tipoNegocio === "lavanderia" && p.tipo !== "servicio")
+    return "En lavandería solo se venden servicios";
+  if (vendible(p, lista)) return null;
+  return lista === "contado"
+    ? "Sin precio de contado"
+    : `Sin precio ${ETIQUETA_LISTA[lista].toLowerCase()}`;
 }
 
 // Stock local tras una venta propia: resta por producto en la ubicación del equipo y rehace `stockTotal` (suma de
