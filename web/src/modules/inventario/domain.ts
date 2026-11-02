@@ -195,3 +195,9 @@ export const textoAviso = (
   unidad: Unidad | undefined,
 ) =>
   `${origen} tiene ${formatearCantidad(enOrigen, unidad)} y vas a trasladar ${formatearCantidad(cantidad, unidad)}. Se permite: el stock de ${origen} quedará en ${formatearCantidad(enOrigen - cantidad, unidad)}.`;
+
+export function textoDias(dias: number): string {
+  if (dias < 0) return `Vencido hace ${-dias}\u00a0${dias === -1 ? "día" : "días"}`;
+  if (dias === 0) return "Vence hoy";
+  return `En ${dias}\u00a0${dias === 1 ? "día" : "días"}`;
+}

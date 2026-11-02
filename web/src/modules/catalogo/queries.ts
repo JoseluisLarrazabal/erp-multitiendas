@@ -3,6 +3,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
   costoUnico,
+  pesoATexto,
   sanearBusqueda,
   type Categoria,
   type Filtros,
@@ -76,6 +77,7 @@ export async function listarProductos(
         monedaPrincipal: p.moneda_principal as Moneda | null,
         montoPrincipal: p.monto_principal,
         principalBs: p.principal_bs,
+        pesoPaqueteKg: p.peso_paquete_kg,
       })),
     },
   };
@@ -139,6 +141,7 @@ export async function obtenerProducto(
       controlaSerie: data.controla_serie,
       garantiaMeses: data.garantia_meses == null ? "" : String(data.garantia_meses),
       stockMinimo: data.stock_minimo == null ? "" : String(data.stock_minimo).replace(".", ","),
+      pesoPaqueteKg: data.peso_paquete_kg == null ? "" : pesoATexto(data.peso_paquete_kg),
       fotoPath: data.foto_path,
       activo: data.activo,
     },

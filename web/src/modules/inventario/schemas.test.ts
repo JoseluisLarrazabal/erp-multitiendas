@@ -3,6 +3,7 @@ import {
   conteoSchema,
   entradaSchema,
   filtrosStockSchema,
+  leerFiltrosVencimientos,
   salidaSchema,
   seriesSchema,
   trasladoSchema,
@@ -23,6 +24,47 @@ describe("entradaSchema", () => {
       expect(entradaSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, costo: "x" }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, operacionId: "no" }).success).toBe(false);
+  });
+});
+
+describe("entradaSchema: lote", () => {
+  const ok = { ...base, productoId: A, ubicacionId: B, cantidad: "2", costo: "", motivo: "" };
+  const campos = (r: ReturnType<typeof entradaSchema.safeParse>) =>
+    r.success ? [] : r.error.issues.map((i) => i.path[0]);
+  it("sin lote ni vence (o sin las claves) pasa con null", () => {
+    expect(entradaSchema.parse(ok)).toMatchObject({ lote: null, vence: null });
+    expect(entradaSchema.parse({ ...ok, lote: " ", vence: "" })).toMatchObject({
+      lote: null,
+      vence: null,
+    });
+  });
+  it("con los dos pasa y recorta el lote", () => {
+    expect(entradaSchema.parse({ ...ok, lote: " L-1 ", vence: "2026-12-31" })).toMatchObject({
+      lote: "L-1",
+      vence: "2026-12-31",
+    });
+  });
+  it("uno solo marca el campo que falta", () => {
+    expect(campos(entradaSchema.safeParse({ ...ok, lote: "L-1", vence: "" }))).toEqual(["vence"]);
+    expect(campos(entradaSchema.safeParse({ ...ok, lote: "", vence: "2026-12-31" }))).toEqual([
+      "lote",
+    ]);
+  });
+  it("rechaza fecha imposible o mal escrita y lote de más de 40 caracteres", () => {
+    for (const vence of ["2026-02-30", "31/12/2026", "2026-13-01", "mañana"])
+      expect(entradaSchema.safeParse({ ...ok, lote: "L", vence }).success, vence).toBe(false);
+    expect(
+      entradaSchema.safeParse({ ...ok, lote: "x".repeat(41), vence: "2026-12-31" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("leerFiltrosVencimientos", () => {
+  it("default 7; acepta 7, 15 y 30; lo demás vuelve a 7 y avisa", () => {
+    expect(leerFiltrosVencimientos({})).toEqual({ filtros: { dias: 7 }, invalido: false });
+    expect(leerFiltrosVencimientos({ dias: "30" }).filtros.dias).toBe(30);
+    for (const dias of ["10", "abc", "-7", "7.5"])
+      expect(leerFiltrosVencimientos({ dias })).toEqual({ filtros: { dias: 7 }, invalido: true });
   });
 });
 

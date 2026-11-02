@@ -43,7 +43,7 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
   const d = validar(entradaSchema, entrada);
   if (!d) return fallo("ERP_DATOS_INVALIDOS");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("registrar_entrada", {
+  const comunes = {
     p_operacion_id: d.operacionId,
     p_negocio_id: d.negocioId,
     p_producto_id: d.productoId,
@@ -52,7 +52,16 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
     // Los tipos generados marcan estos dos como no nulos, pero la RPC acepta null.
     p_costo_unitario: d.costo as number,
     p_motivo: d.motivo as string,
-  });
+  };
+  // El schema garantiza lote y vence juntos o ninguno.
+  const { error } =
+    d.lote && d.vence
+      ? await supabase.rpc("registrar_entrada_lote", {
+          ...comunes,
+          p_lote: d.lote,
+          p_vence: d.vence,
+        })
+      : await supabase.rpc("registrar_entrada", comunes);
   if (error) return fallo(codigoDeMensaje(error.message));
   return listo();
 }

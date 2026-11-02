@@ -71,6 +71,7 @@ export default async function PaginaProducto({ params }: { params: Promise<{ id:
             // Remonta al cambiar de producto o al guardar: los campos son no controlados.
             key={`${producto.data.id}-${producto.data.fotoPath}`}
             negocioId={activo.negocioId}
+            esFrial={activo.tipo === "frial"}
             tipos={tiposDeProducto(activo.tipo)}
             categorias={categorias.data}
             producto={producto.data}

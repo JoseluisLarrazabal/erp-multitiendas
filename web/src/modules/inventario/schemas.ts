@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { leerFiltros } from "@/lib/filtros";
 import { parsearMonto } from "@/modules/catalogo";
 import { MAX_ITEMS_CONTEO, MAX_SERIES } from "./domain";
 
@@ -28,18 +29,41 @@ const cantidad = (conSigno = false, admiteCero = false) =>
 
 const operacion = { operacionId: id, negocioId: id };
 
-export const entradaSchema = z.object({
-  ...operacion,
-  productoId: id,
-  ubicacionId: id,
-  cantidad: cantidad().refine((n) => n > 0),
-  costo: z
-    .string()
-    .trim()
-    .refine((t) => t === "" || parsearMonto(t, 4, true) !== null)
-    .transform((t) => (t === "" ? null : parsearMonto(t, 4, true))),
-  motivo: textoOpcional(200),
-});
+const fechaDia = z
+  .string()
+  .trim()
+  .refine((t) => {
+    if (t === "") return true;
+    const d = new Date(`${t}T00:00:00Z`);
+    return (
+      /^\d{4}-\d{2}-\d{2}$/.test(t) && !Number.isNaN(d.getTime()) && d.toISOString().startsWith(t)
+    );
+  })
+  .transform((t) => (t === "" ? null : t));
+
+export const entradaSchema = z
+  .object({
+    ...operacion,
+    productoId: id,
+    ubicacionId: id,
+    cantidad: cantidad().refine((n) => n > 0),
+    costo: z
+      .string()
+      .trim()
+      .refine((t) => t === "" || parsearMonto(t, 4, true) !== null)
+      .transform((t) => (t === "" ? null : parsearMonto(t, 4, true))),
+    motivo: textoOpcional(200),
+    // Solo el frial manda lote; un negocio sin lotes omite ambos (undefined -> null).
+    lote: textoOpcional(40)
+      .nullish()
+      .transform((v) => v ?? null),
+    vence: fechaDia.nullish().transform((v) => v ?? null),
+  })
+  // Lote y vencimiento van juntos: uno solo no sirve.
+  .superRefine((d, ctx) => {
+    if (d.lote && !d.vence) ctx.addIssue({ code: "custom", path: ["vence"] });
+    if (d.vence && !d.lote) ctx.addIssue({ code: "custom", path: ["lote"] });
+  });
 
 const serieIds = z.array(id).max(MAX_SERIES);
 
@@ -147,3 +171,11 @@ export const filtrosKardexSchema = z.object({
   ubicacion: z.union([id, z.literal("")]).catch(""),
   desde: z.union([id, z.literal("")]).catch(""),
 });
+
+// Parámetros de /panel/inventario/vencimientos.
+export const DIAS_VENCIMIENTO = [7, 15, 30] as const;
+const camposVencimientos = {
+  dias: z.enum(DIAS_VENCIMIENTO.map(String) as [string, ...string[]]).transform(Number),
+};
+export const leerFiltrosVencimientos = (crudo: Parameters<typeof leerFiltros>[2]) =>
+  leerFiltros(camposVencimientos, { dias: 7 }, crudo);

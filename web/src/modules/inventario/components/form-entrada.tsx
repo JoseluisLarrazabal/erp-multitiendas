@@ -35,16 +35,23 @@ const CAMPOS: Campos = {
     mensaje: "Escribe un costo de 0 o más, con hasta 4 decimales. Ej.: 12,5.",
   },
   motivo: { id: "ent-motivo", mensaje: "El motivo es demasiado largo." },
+  lote: { id: "ent-lote", mensaje: "Escribe el lote (hasta 40 caracteres) junto con su fecha." },
+  vence: { id: "ent-vence", mensaje: "Indica la fecha de vencimiento del lote." },
 };
 
 export function FormEntrada({
   negocioId,
   ubicaciones,
   verCostos,
+  esFrial,
+  hoy,
 }: {
   negocioId: string;
   ubicaciones: readonly Ubicacion[];
   verCostos: boolean;
+  esFrial: boolean;
+  // "aaaa-mm-dd" en Bolivia, calculado en el servidor.
+  hoy: string;
 }) {
   const { operacionId, pendiente, error, enviar } = useOperacion();
   const [producto, setProducto] = useState<ProductoElegible | null>(null);
@@ -53,9 +60,13 @@ export function FormEntrada({
   const [cantidadTexto, setCantidadTexto] = useState("");
   const [costoTexto, setCostoTexto] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [lote, setLote] = useState("");
+  const [vence, setVence] = useState("");
   const [errores, setErrores] = useState<Errores>({});
   const [general, setGeneral] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  // Un producto con series no lleva lote.
+  const conLote = esFrial && !producto?.controlaSerie;
   const stock = useCarga(producto && `${negocioId}|${producto.id}`, () =>
     stockProductoAccion({ negocioId, productoId: producto!.id }),
   );
@@ -69,6 +80,8 @@ export function FormEntrada({
     if (!producto) nuevos["ent-producto"] = "Elige un producto.";
     else if (parsearCantidad(cantidad, producto.unidad) === null)
       nuevos["ent-cantidad"] = mensajeCantidad(producto.unidad);
+    if (conLote && vence && vence < hoy)
+      nuevos["ent-vence"] = "La fecha de vencimiento no puede ser pasada.";
     if (Object.keys(nuevos).length) {
       setErrores(nuevos);
       return e.currentTarget.querySelector<HTMLElement>(`#${Object.keys(nuevos)[0]}`)?.focus();
@@ -84,6 +97,7 @@ export function FormEntrada({
         cantidad,
         costo,
         motivo,
+        ...(conLote && { lote, vence }),
       },
       CAMPOS,
     );
@@ -105,12 +119,15 @@ export function FormEntrada({
           cantidad,
           costo,
           motivo,
+          ...(conLote && { lote, vence }),
         }),
       () => {
         setProducto(null);
         setCantidadTexto("");
         setCostoTexto("");
         setMotivo("");
+        setLote("");
+        setVence("");
         setExito(
           `Entrada registrada: ${formatearCantidad(cantidadNum, entrante.unidad)} de ${entrante.nombre}.`,
         );
@@ -178,6 +195,39 @@ export function FormEntrada({
             {...propsCampo("ent-costo", errores, true)}
           />
         </Campo>
+      )}
+      {conLote && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Campo
+            id="ent-lote"
+            etiqueta="Lote (opcional)"
+            ayuda="Si lo llenas, también la fecha de vencimiento."
+            error={errores["ent-lote"]}
+          >
+            <Input
+              id="ent-lote"
+              value={lote}
+              onChange={(e) => setLote(e.target.value)}
+              maxLength={40}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="h-10"
+              {...propsCampo("ent-lote", errores, true)}
+            />
+          </Campo>
+          <Campo id="ent-vence" etiqueta="Vence (opcional)" error={errores["ent-vence"]}>
+            <Input
+              id="ent-vence"
+              type="date"
+              value={vence}
+              onChange={(e) => setVence(e.target.value)}
+              min={hoy}
+              className="h-10 sm:max-w-48"
+              {...propsCampo("ent-vence", errores)}
+            />
+          </Campo>
+        </div>
       )}
       <CampoMotivo
         id="ent-motivo"

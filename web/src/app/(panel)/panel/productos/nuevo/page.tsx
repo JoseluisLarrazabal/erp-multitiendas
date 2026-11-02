@@ -30,6 +30,7 @@ export default async function PaginaProductoNuevo() {
         <div className="bg-card max-w-3xl rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] md:p-6">
           <FormProducto
             negocioId={activo.negocioId}
+            esFrial={activo.tipo === "frial"}
             tipos={tiposDeProducto(activo.tipo)}
             categorias={categorias.data}
           />

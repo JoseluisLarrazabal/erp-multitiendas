@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatearFechaHora, formatearHace, formatearHora, limitesDelDia } from "./fecha";
+import {
+  formatearDia,
+  formatearFechaHora,
+  formatearHace,
+  formatearHora,
+  hoyEnBolivia,
+  limitesDelDia,
+} from "./fecha";
 
 describe("fechas en hora de Bolivia", () => {
   it("convierte de UTC a UTC-4", () => {
@@ -29,5 +36,14 @@ describe("formatearHace", () => {
     [50 * 3_600_000, "hace 2 días"],
   ])("%d ms", (ms, texto) => {
     expect(formatearHace(ahora - ms, ahora)).toBe(texto);
+  });
+});
+
+describe("fecha de calendario", () => {
+  it("formatearDia da dd/mm/aaaa sin pasar por Date", () => {
+    expect(formatearDia("2026-11-07")).toBe("07/11/2026");
+  });
+  it("hoyEnBolivia tiene forma aaaa-mm-dd", () => {
+    expect(hoyEnBolivia()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });

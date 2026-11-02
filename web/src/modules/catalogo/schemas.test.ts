@@ -44,6 +44,21 @@ describe("productoSchema", () => {
   });
 });
 
+describe("productoSchema: peso del paquete", () => {
+  it("sin la clave queda undefined (la base conserva); vacío es null (borra)", () => {
+    expect(productoSchema.parse(producto).pesoPaqueteKg).toBeUndefined();
+    expect(productoSchema.parse({ ...producto, pesoPaqueteKg: " " }).pesoPaqueteKg).toBeNull();
+  });
+  it("acepta coma o punto con 3 decimales y rechaza 0, negativos y más decimales", () => {
+    expect(productoSchema.parse({ ...producto, pesoPaqueteKg: "0,500" }).pesoPaqueteKg).toBe(0.5);
+    expect(productoSchema.parse({ ...producto, pesoPaqueteKg: "1" }).pesoPaqueteKg).toBe(1);
+    for (const pesoPaqueteKg of ["0", "0,000", "-1", "1,2345", "abc"])
+      expect(productoSchema.safeParse({ ...producto, pesoPaqueteKg }).success, pesoPaqueteKg).toBe(
+        false,
+      );
+  });
+});
+
 describe("categoriaSchema y tipoCambioSchema", () => {
   it("categoría: nombre obligatorio", () => {
     expect(categoriaSchema.safeParse({ negocioId: NEG, id: null, nombre: "  " }).success).toBe(

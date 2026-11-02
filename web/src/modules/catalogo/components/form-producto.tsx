@@ -19,6 +19,7 @@ type Props = {
   // Sin producto = alta.
   producto?: ProductoDetalle;
   fotoUrl?: string | null;
+  esFrial?: boolean;
 };
 
 const CAMPOS: Campos = {
@@ -30,9 +31,20 @@ const CAMPOS: Campos = {
   },
   garantiaMeses: { id: "producto-garantia", mensaje: "Usa un número entero de meses." },
   stockMinimo: { id: "producto-minimo", mensaje: "Usa un número, con hasta 3 decimales." },
+  pesoPaqueteKg: {
+    id: "producto-peso",
+    mensaje: "Usa un peso mayor que 0, con hasta 3 decimales. Ej.: 1 o 0,5.",
+  },
 };
 
-export function FormProducto({ negocioId, tipos, categorias, producto, fotoUrl = null }: Props) {
+export function FormProducto({
+  negocioId,
+  tipos,
+  categorias,
+  producto,
+  fotoUrl = null,
+  esFrial = false,
+}: Props) {
   const router = useRouter();
   const { pendiente, error, ejecutar } = useAccion();
   const [errores, setErrores] = useState<Errores>({});
@@ -64,6 +76,8 @@ export function FormProducto({ negocioId, tipos, categorias, producto, fotoUrl =
       controlaSerie: f.get("controlaSerie") === "on",
       garantiaMeses: texto("garantiaMeses"),
       stockMinimo: texto("stockMinimo"),
+      // Solo si el campo está en pantalla: sin la clave, la base conserva el peso.
+      ...(f.has("pesoPaqueteKg") && { pesoPaqueteKg: texto("pesoPaqueteKg") }),
     };
     const v = validarCampos(e.currentTarget, productoSchema, entrada, CAMPOS);
     if ("errores" in v) {
@@ -116,6 +130,7 @@ export function FormProducto({ negocioId, tipos, categorias, producto, fotoUrl =
         tipos={tipos}
         categorias={categorias}
         valores={valores}
+        esFrial={esFrial}
         errores={errores}
         nombre={nombre}
         alCambiarNombre={setNombre}

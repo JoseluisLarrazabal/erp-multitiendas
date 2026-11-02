@@ -50,3 +50,10 @@ export function formatearHace(desdeMs: number, ahoraMs: number = Date.now()): st
   const dias = Math.floor(horas / 24);
   return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
 }
+
+// "2026-11-07" -> "07/11/2026". Una fecha de calendario (date de Postgres): sin zona, sin pasar por Date.
+export const formatearDia = (iso: string) => iso.split("-").reverse().join("/");
+
+// Hoy en Bolivia como "aaaa-mm-dd" (la fecha de calendario que ve el negocio, no la del servidor).
+export const hoyEnBolivia = (): string =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz" }).format(new Date());
