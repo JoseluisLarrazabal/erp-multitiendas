@@ -148,6 +148,12 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     filtro inválido solo en Vitest, sin E2E. Codex: no verificado (sin cuota).
 - **Fase 2 cerrada (2026-11-01):** 4 PRs, plan en `docs/plan-fase-2.md`. **Próximo:** fase 3, venta y órdenes sin
   conexión (`docs/roadmap.md`).
+  - Corrida final sobre `main` `0cb5fe8`, build de producción y base recién reseteada, en local: POS con lector simulado,
+    cobro y nota a 1280 y 390 px, sin desborde horizontal ni errores de consola. 20 `registrar_venta` en paralelo con el
+    mismo UUID: 20 respuestas 200, 1 venta, stock baja una vez y `ultimo_numero` sube uno. Anulación y devolución parcial
+    devuelven el stock. Stock contra kardex: 0 filas distintas, también tras `pos-venta.spec.ts` (33 pruebas en verde con
+    las 6 de sesión, incluidas E2E-04 y E2E-08; búsqueda con 2.028 productos, máximo 33,4 ms).
+  - **No verificado:** venta en producción con usuario real.
 - **Staging (2026-11-01):** Supabase `yfdhiuaeinfkvcegeqfy` (São Paulo, plan Free, nombre por defecto "JoseluisLarrazabal's
   Project"), enlazado con `supabase link`. Migraciones aplicadas con `db push`, sin seed. Auth igual a local con
   `config push` (registro cerrado, comprobado); `site_url` sigue en localhost hasta que ande Vercel. Función
