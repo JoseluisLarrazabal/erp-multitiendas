@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 import { apiComo, CUENTAS, iniciarSesionUI, NEGOCIOS, rutaAuth } from "./helpers";
 import { corrida } from "./inventario-helpers";
 import {
   abrirCajaApi,
   cerrarCaja,
   crearProductoConPrecio,
+  enIndexedDb,
   equipoC1,
   estadoDeSerie,
   fijarEquipo,
@@ -251,29 +252,6 @@ async function pagosDe(ventaId: string) {
     `venta_pagos?select=medio,monto,verificacion&venta_id=eq.${ventaId}&order=medio`,
   );
   return r.json as { medio: string; monto: number; verificacion: string }[];
-}
-
-// Filas de la base local del POS (IndexedDB): cuántas hay en una tabla y cuántas claves de `datos` empiezan por un prefijo.
-async function enIndexedDb(page: Page, tabla: "cola" | "datos", prefijo = ""): Promise<number> {
-  return page.evaluate(
-    ([t, p]) =>
-      new Promise<number>((ok, no) => {
-        const req = indexedDB.open("erp-pos");
-        req.onerror = () => no(req.error);
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(t!)) return ok(0);
-          const todo = db.transaction(t!).objectStore(t!).getAll();
-          todo.onsuccess = () => {
-            db.close();
-            const filas = todo.result as { clave?: string }[];
-            ok(filas.filter((f) => t === "cola" || (f.clave ?? "").startsWith(p!)).length);
-          };
-          todo.onerror = () => no(todo.error);
-        };
-      }),
-    [tabla, prefijo],
-  );
 }
 
 // Vuelve la conexión: el motor de la cola reenvía lo pendiente sin esperar la espera del reintento.
@@ -805,6 +783,62 @@ test("dos pestañas con la misma cola: una sola venta en la base", async ({ page
   await Promise.all([volverLaRed(page), volverLaRed(otra)]);
   await expect(sinEnviar(page, 1)).toHaveCount(0);
   expect(envios).toBe(1);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
+  expect(await stockEn(a.id)).toBe(2);
+});
+
+test("dos pestañas, cerrojo real: B espera mientras A tiene un envío colgado y luego repite sin esperar el backoff", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 21, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  const otra = await context.newPage();
+  await fijarEquipo(otra, equipoId);
+  await otra.goto("/pos");
+  await expect(otra.getByRole("searchbox", { name: "Buscar producto" })).toBeVisible();
+
+  // Sin cambiar la red del contexto (su evento `online` llegaría a las dos pestañas a la vez): el primer envío falla y
+  // la venta queda en la cola; el segundo, el vaciado de A, queda retenido; los demás pasan.
+  const retenidos: Route[] = [];
+  let envios = 0;
+  await context.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    envios += 1;
+    if (envios === 1) return route.abort("failed");
+    if (envios === 2) {
+      retenidos.push(route);
+      return;
+    }
+    return route.continue();
+  });
+  await agregarPorCodigo(page, a.codigo);
+  await confirmarVenta(page);
+  await expect(sinEnviar(page, 1)).toBeVisible();
+
+  // A toma el cerrojo real y su envío queda colgado.
+  await volverLaRed(page);
+  await expect.poll(() => retenidos.length).toBe(1);
+
+  // B fuerza un vaciado: no obtiene el cerrojo y queda en espera, sin enviar nada. A también deja su propia repetición.
+  await volverLaRed(otra);
+  await expect
+    .poll(() =>
+      otra.evaluate(async () => {
+        const { held, pending } = await navigator.locks.query();
+        const de = (l: LockInfo[] | undefined) => l?.filter((x) => x.name === "erp:cola") ?? [];
+        return [de(held).length, new Set(de(pending).map((x) => x.clientId)).size];
+      }),
+    )
+    .toEqual([1, 2]);
+  expect(envios).toBe(2);
+
+  // A suelta el cerrojo con un fallo de red (la fila queda con 10 s de espera): B repite forzado, sin esa espera.
+  const suelta = Date.now();
+  await retenidos[0]!.abort("failed");
+  await expect.poll(() => ventasDeLaCaja(equipoId), { timeout: 4_000 }).toHaveLength(1);
+  expect(Date.now() - suelta).toBeLessThan(4_000);
+  await expect(sinEnviar(page, 1)).toHaveCount(0);
+  expect(envios).toBe(3);
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(1);
   expect(await stockEn(a.id)).toBe(2);
 });

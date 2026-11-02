@@ -227,3 +227,30 @@ export async function venderApi(opts: {
   expect(r.status).toBeLessThan(300);
   return { id, numero };
 }
+
+// Filas de la base local del POS (IndexedDB): cuántas hay en una tabla y cuántas claves de `datos` empiezan por un prefijo.
+export async function enIndexedDb(
+  page: Page,
+  tabla: "cola" | "datos",
+  prefijo = "",
+): Promise<number> {
+  return page.evaluate(
+    ([t, p]) =>
+      new Promise<number>((ok, no) => {
+        const req = indexedDB.open("erp-pos");
+        req.onerror = () => no(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(t!)) return ok(0);
+          const todo = db.transaction(t!).objectStore(t!).getAll();
+          todo.onsuccess = () => {
+            db.close();
+            const filas = todo.result as { clave?: string }[];
+            ok(filas.filter((f) => t === "cola" || (f.clave ?? "").startsWith(p!)).length);
+          };
+          todo.onerror = () => no(todo.error);
+        };
+      }),
+    [tabla, prefijo],
+  );
+}

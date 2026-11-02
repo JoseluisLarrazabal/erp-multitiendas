@@ -202,9 +202,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 
     Límites:
     - Un `online` que cae mientras la espera es de un motor ya detenido pierde el "forzado" y reintenta con backoff.
-    - `pos-sesion` "/pos abierto sin red pasa a lista" falló 1 vez en 6 corridas completas y 0 de 36 aislado, sin causa
-      confirmada. Hipótesis: la recarga sin red llega antes de que se guarde el contexto.
-    - El cerrojo real entre pestañas solo está probado con un stub.
+    - `pos-sesion` "/pos abierto sin red pasa a lista" falló 1 vez en 6 corridas completas y no volvió a fallar en 30
+      repeticiones ni en 3 suites. Causa probable, no demostrada: `guardarDato` no espera la escritura y el test recargaba
+      sin red antes. Ahora espera la fila `sesion:` en IndexedDB (`test/cerrojo-y-sesion`).
+    - Cerrojo real entre pestañas probado en E2E: con A sosteniendo `erp:cola`, B queda en espera; al soltarse llega una
+      sola venta en menos de 4 s, sin esperar el backoff. El E2E no distingue si la repetición la corre A o B.
   - **Próximo:** fase 4, lavandería (`docs/roadmap.md`), incluidas las órdenes sin conexión. Queda de la fase 3 la prueba
     manual sin internet en producción con Claude in Chrome: hay que reiniciar Claude Code en la versión 2.1.316.
 - **Staging con datos de prueba (2026-11-01):** usuario del CTO como dueño de "Tienda Prueba", equipo `C1`, producto
