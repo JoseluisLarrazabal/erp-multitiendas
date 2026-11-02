@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  conCerrojo,
   conFila,
   encolar,
   esperaReintento,
@@ -8,6 +9,7 @@ import {
   marcarRechazada,
   marcarRed,
   quitarIlegibles,
+  quitarSiRechazada,
   reabrir,
   vaciar,
   type Enviador,
@@ -211,5 +213,92 @@ describe("vaciar", () => {
   it("la misma operación no entra dos veces", async () => {
     await encolar(nueva(1));
     await expect(encolar(nueva(1))).rejects.toThrow();
+  });
+});
+
+describe("primer intento interrumpido", () => {
+  it("una fila no entregada con el cerrojo libre se rechaza sin enviarla y sigue con la próxima", async () => {
+    await encolar(nueva(1, { entregada: false }));
+    await encolar(nueva(2));
+    const enviador = vi.fn<Enviador>(ok);
+    await vaciar({ ...todas(), forzar: true, enviadores: { venta: enviador } });
+    expect(enviador).toHaveBeenCalledTimes(1);
+    const { filas } = await leerFilas();
+    expect(filas).toHaveLength(1);
+    expect(filas[0]).toMatchObject({ id: uuid(1), estado: "rechazada" });
+    expect(filas[0]?.error).toContain("El cobro se interrumpió antes de la nota");
+  });
+
+  it("con el cerrojo tomado (primer intento vivo) no se toca", async () => {
+    await encolar(nueva(1, { entregada: false }));
+    let soltar!: () => void;
+    const tomada = conFila(uuid(1), () => new Promise<void>((r) => (soltar = r)));
+    await vaciar({ ...todas(), forzar: true, enviadores: { venta: ok } });
+    expect((await leerFilas()).filas[0]).toMatchObject({ estado: "pendiente", entregada: false });
+    soltar();
+    await tomada;
+  });
+
+  it("Reintentar la deja entregada y se envía; una fila guardada sin el campo cuenta como entregada", async () => {
+    await encolar(nueva(1, { entregada: false }));
+    await vaciar({ ...todas(), enviadores: { venta: ok } });
+    await reabrir(uuid(1));
+    expect((await leerFilas()).filas[0]).toMatchObject({ entregada: true });
+    await vaciar({ ...todas(), enviadores: { venta: ok } });
+    expect((await leerFilas()).filas).toHaveLength(0);
+
+    await baseOffline().cola.clear();
+    const { entregada, ...vieja } = {
+      ...nueva(3),
+      estado: "pendiente",
+      intentos: 0,
+      proximoIntento: 0,
+      error: null,
+      entregada: true,
+    };
+    expect(entregada).toBe(true);
+    await baseOffline().cola.add(vieja as never);
+    expect((await leerFilas()).filas[0]).toMatchObject({ entregada: true });
+    const enviador = vi.fn<Enviador>(ok);
+    await vaciar({ ...todas(), enviadores: { venta: enviador } });
+    expect(enviador).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("quitarSiRechazada y conCerrojo", () => {
+  it("solo borra una fila rechazada: si se reabrió, la deja", async () => {
+    await encolar(nueva(1));
+    await marcarRechazada(uuid(1), "no");
+    await reabrir(uuid(1));
+    expect(await quitarSiRechazada(uuid(1))).toBe(false);
+    expect((await leerFilas()).filas).toHaveLength(1);
+    await marcarRechazada(uuid(1), "no");
+    expect(await quitarSiRechazada(uuid(1))).toBe(true);
+    expect((await leerFilas()).filas).toHaveLength(0);
+    expect(await quitarSiRechazada(uuid(1))).toBe(false);
+  });
+
+  it("no borra una fila que otro está enviando", async () => {
+    await encolar(nueva(1));
+    await marcarRechazada(uuid(1), "no");
+    let soltar!: () => void;
+    const tomada = conFila(uuid(1), () => new Promise<void>((r) => (soltar = r)));
+    expect(await quitarSiRechazada(uuid(1))).toBe(false);
+    soltar();
+    await tomada;
+  });
+
+  it("conCerrojo serializa las secciones del mismo nombre y sigue tras un fallo", async () => {
+    const orden: string[] = [];
+    const seccion = (n: string, falla = false) =>
+      conCerrojo("x", async () => {
+        orden.push(`${n}+`);
+        await new Promise((r) => setTimeout(r, 10));
+        orden.push(`${n}-`);
+        if (falla) throw new Error(n);
+      });
+    const r = await Promise.allSettled([seccion("a", true), seccion("b"), seccion("c")]);
+    expect(orden).toEqual(["a+", "a-", "b+", "b-", "c+", "c-"]);
+    expect(r.map((x) => x.status)).toEqual(["rejected", "fulfilled", "fulfilled"]);
   });
 });

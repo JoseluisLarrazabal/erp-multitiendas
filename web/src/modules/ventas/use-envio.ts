@@ -6,13 +6,13 @@ import type { ResumenCarrito } from "./carrito";
 import {
   cobrarEnCola,
   comprobarCuenta,
-  mayorSecuenciaEnCola,
   MENSAJE_AGOTADA,
   MENSAJE_CUENTA,
+  protegerCobro,
   secuenciaDe,
   TIPO_VENTA,
 } from "./cola-ventas";
-import { formatearNumero, secuenciaAgotada, siguienteSecuencia } from "./domain";
+import { formatearNumero } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import type { Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
@@ -37,8 +37,8 @@ export type ContextoCobro = {
   nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente">;
 };
 
-// Envío de la venta sobre la cola persistente (lib/offline). Toda venta entra primero a la cola, con su UUID, número y
-// fecha fijados al confirmar el cobro. El primer intento va en línea (sin p_offline) con el cartel "Enviando":
+// Envío de la venta sobre la cola persistente (lib/offline). Toda venta entra primero a la cola, con su UUID, número
+// (asignado bajo el cerrojo del equipo) y fecha fijados al confirmar el cobro. El primer intento va en línea (sin p_offline) con el cartel "Enviando":
 //  - éxito: sale de la cola y se muestra la nota;
 //  - rechazo con código: sale de la cola y vuelve al carrito con el error (la base no guardó nada);
 //  - red o 8 s sin respuesta: la venta ya se entregó al cliente, queda en la cola, se muestra la nota y el motor la
@@ -53,7 +53,7 @@ export function useEnvio(opts: {
   tipoCambio: number | null;
   alErrorPrecios: () => Promise<void>;
   alCajaCerrada: () => Promise<void>;
-  alExito: (nota: NotaVenta, items: VentaPayload["items"]) => void;
+  alExito: (nota: NotaVenta, items: VentaPayload["items"], enviada: boolean) => void;
   usuarioId: string;
   sesionCaducada: boolean;
 }) {
@@ -76,75 +76,87 @@ export function useEnvio(opts: {
       if (ocupado.current || !cajaId) return;
       ocupado.current = true;
       try {
-        setEstado({ t: "enviando" });
-        // Con red, la cuenta se comprueba antes de cobrar: una sesión caducada o de otra cuenta no cobra ni encola. Si
-        // no se puede saber, cuenta como sin red y la venta entra a la cola.
-        let enLinea = navigator.onLine;
-        if (enLinea) {
-          const cuenta = caducada.current
-            ? "rechazar"
-            : await comprobarCuenta(createClient(), usuarioId);
-          if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
-          if (cuenta === "red") enLinea = false;
-        }
-        // El QR se verifica contra el banco; sin conexión se ofrece como "pendiente" (fase 3, PR 3).
-        if (c.qr > 0 && !enLinea) {
-          return setEstado({ t: "rechazada", mensaje: MENSAJE_QR_SIN_RED });
-        }
-        let enCola: number;
-        try {
-          enCola = await mayorSecuenciaEnCola(equipo.id);
-        } catch {
-          return setEstado({ t: "rechazada", mensaje: MENSAJE_COLA });
-        }
-        // Otra pestaña del equipo pudo avanzar el contador local desde el montaje.
-        const seq = siguienteSecuencia(contador.current, leerContador(equipo.id), enCola);
-        if (secuenciaAgotada(seq)) return setEstado({ t: "rechazada", mensaje: MENSAJE_AGOTADA });
-        const datos: DatosEnvio = {
-          ventaId: crypto.randomUUID(),
-          dispositivoId: equipo.id,
-          cajaId,
-          numero: formatearNumero(equipo.prefijo, seq),
-          clienteId: c.clienteId,
-          creadaEnCliente: new Date().toISOString(),
-          descuentoVentaTexto: c.descuentoVentaTexto,
-          efectivo: c.efectivo,
-          qr: c.qr,
-        };
-        const payload = construirPayload(resumen, datos);
-        const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
-        if (!payload || !nota) {
-          // Sin detalle: el carrito tiene precios y nombres del negocio y datos del cliente.
-          console.error("confirmar: no se pudo armar la venta");
-          return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
-        }
-        cola.enCurso(datos.ventaId);
-        const salida = await cobrarEnCola(
-          {
-            id: datos.ventaId,
-            tipo: TIPO_VENTA,
-            negocioId,
-            dispositivoId: equipo.id,
-            usuarioId,
-            payload: { venta: payload, tipo_cambio: tipoCambio },
-            nota,
-            numeroImpreso: payload.numero,
-          },
-          createClient(),
-          enLinea,
-        );
-        if (salida.t === "no-guardada") return setEstado({ t: "rechazada", mensaje: MENSAJE_COLA });
-        if (salida.t === "rechazada") {
-          setEstado({ t: "rechazada", mensaje: salida.error });
-          if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
-          else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
-          return;
-        }
-        contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
-        subirContador(equipo.id, secuenciaDe(salida.numero));
-        setEstado({ t: "libre" });
-        alExito({ ...nota, numero: salida.numero }, payload.items);
-        cola.disparar();
+        const fallo = await protegerCobro(async () => {
+          setEstado({ t: "enviando" });
+          // Con red, la cuenta se comprueba antes de cobrar: una sesión caducada o de otra cuenta no cobra ni encola.
+          // Si no se puede saber, cuenta como sin red y la venta entra a la cola.
+          let enLinea = navigator.onLine;
+          if (enLinea) {
+            const cuenta = caducada.current
+              ? "rechazar"
+              : await comprobarCuenta(createClient(), usuarioId);
+            if (cuenta === "rechazar")
+              return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
+            if (cuenta === "red") enLinea = false;
+          }
+          // El QR se verifica contra el banco; sin conexión se ofrece como "pendiente" (fase 3, PR 3).
+          if (c.qr > 0 && !enLinea) {
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_QR_SIN_RED });
+          }
+          const ventaId = crypto.randomUUID();
+          const armada: { nota?: NotaVenta; items?: VentaPayload["items"] } = {};
+          cola.enCurso(ventaId);
+          const salida = await cobrarEnCola(
+            {
+              id: ventaId,
+              dispositivoId: equipo.id,
+              ultimo: contador.current,
+              armar: (seq) => {
+                const datos: DatosEnvio = {
+                  ventaId,
+                  dispositivoId: equipo.id,
+                  cajaId,
+                  numero: formatearNumero(equipo.prefijo, seq),
+                  clienteId: c.clienteId,
+                  creadaEnCliente: new Date().toISOString(),
+                  descuentoVentaTexto: c.descuentoVentaTexto,
+                  efectivo: c.efectivo,
+                  qr: c.qr,
+                };
+                const payload = construirPayload(resumen, datos);
+                const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
+                if (!payload || !nota) return null;
+                armada.nota = nota;
+                armada.items = payload.items;
+                return {
+                  id: ventaId,
+                  tipo: TIPO_VENTA,
+                  negocioId,
+                  dispositivoId: equipo.id,
+                  usuarioId,
+                  payload: { venta: payload, tipo_cambio: tipoCambio },
+                  nota,
+                  numeroImpreso: payload.numero,
+                };
+              },
+            },
+            createClient(),
+            enLinea,
+          );
+          if (salida.t === "agotada")
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_AGOTADA });
+          if (salida.t === "no-armada") {
+            // Sin detalle: el carrito tiene precios y nombres del negocio y datos del cliente.
+            console.error("confirmar: no se pudo armar la venta");
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
+          }
+          if (salida.t === "no-guardada")
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_COLA });
+          if (salida.t === "rechazada") {
+            setEstado({ t: "rechazada", mensaje: salida.error });
+            if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
+            else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo))
+              await alErrorPrecios();
+            return;
+          }
+          contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
+          subirContador(equipo.id, secuenciaDe(salida.numero));
+          setEstado({ t: "libre" });
+          if (armada.nota && armada.items)
+            alExito({ ...armada.nota, numero: salida.numero }, armada.items, salida.enviada);
+          cola.disparar();
+        });
+        if (fallo) setEstado({ t: "rechazada", mensaje: fallo });
       } finally {
         cola.enCurso(null);
         ocupado.current = false;

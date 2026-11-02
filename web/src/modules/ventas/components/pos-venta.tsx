@@ -47,6 +47,8 @@ export function PosVenta({
   const cola = useColaPos(
     negociosIds,
     fase.t === "abrir" || fase.t === "lista" ? fase.equipo.id : "",
+    usuarioId,
+    sesionCaducada,
   );
 
   const aviso = (

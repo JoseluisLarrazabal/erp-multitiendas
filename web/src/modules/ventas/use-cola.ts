@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   leerFilas,
-  quitar,
   quitarIlegibles,
+  quitarSiRechazada,
   reabrir,
   type FilaCola,
   type LecturaCola,
@@ -24,19 +24,24 @@ export type EstadoCola = {
   ajenas: number;
   ilegibles: number;
   ordenesIlegibles: number[];
-  // El equipo tiene algo en la cola: no se cierra su caja ni se cambia de negocio (RN-07).
+  // El equipo tiene algo en la cola, o no se sabe: no se cierra su caja ni se cambia de negocio (RN-07).
   bloqueaEquipo: boolean;
+  // IndexedDB no respondió al leer la cola (distinto de la espera de la primera lectura).
+  lecturaFallida: boolean;
 };
 
+// null: aún no se leyó. "error": la lectura falló. En ambos casos el equipo queda bloqueado.
+export type EstadoLectura = LecturaCola | "error" | null;
 const VACIA: LecturaCola = { filas: [], ilegibles: 0, ordenesIlegibles: [] };
 
 // `enCursoId`: la venta cuyo primer intento sigue en curso todavía no es "sin enviar".
 export function resumirCola(
-  { filas, ilegibles, ordenesIlegibles }: LecturaCola,
+  lectura: EstadoLectura,
   negociosIds: readonly string[],
   equipoId: string,
   enCursoId: string | null = null,
 ): EstadoCola {
+  const { filas, ilegibles, ordenesIlegibles } = lectura && lectura !== "error" ? lectura : VACIA;
   const propias = filas.filter((f) => negociosIds.includes(f.negocioId));
   return {
     pendientes: propias.filter(
@@ -56,7 +61,12 @@ export function resumirCola(
     ajenas: filas.length - propias.length,
     ilegibles,
     ordenesIlegibles,
-    bloqueaEquipo: ilegibles > 0 || filas.some((f) => f.dispositivoId === equipoId),
+    bloqueaEquipo:
+      !lectura ||
+      lectura === "error" ||
+      ilegibles > 0 ||
+      filas.some((f) => f.dispositivoId === equipoId),
+    lecturaFallida: lectura === "error",
   };
 }
 
@@ -67,26 +77,34 @@ export type ColaPos = {
   disparar: (forzar?: boolean) => void;
   reintentar: (id: string) => Promise<void>;
   revisarDescarte: (id: string) => Promise<Descarte>;
-  descartar: (id: string) => Promise<void>;
+  // false: la venta ya no estaba rechazada y no se borró.
+  descartar: (id: string) => Promise<boolean>;
   descartarIlegibles: (ordenes: readonly number[]) => Promise<void>;
 };
 
 // Motor de envío y estado de la cola, montados una sola vez para todas las fases de /pos: el aviso y el envío no
 // dependen de que el equipo ya esté elegido (RF-VEN-10). La cola es la verdad del equipo: sobrevive a recargas y la
 // comparten las pestañas.
-export function useColaPos(negociosIds: readonly string[], equipoId: string): ColaPos {
-  const [lectura, setLectura] = useState<LecturaCola>(VACIA);
+export function useColaPos(
+  negociosIds: readonly string[],
+  equipoId: string,
+  usuarioId: string,
+  sesionCaducada: boolean,
+): ColaPos {
+  const [lectura, setLectura] = useState<EstadoLectura>(null);
   const [enCursoId, setEnCursoId] = useState<string | null>(null);
-  useEffect(() => observarFilas(setLectura), []);
+  useEffect(() => observarFilas(setLectura, () => setLectura("error")), []);
   const estado = useMemo(
     () => resumirCola(lectura, negociosIds, equipoId, enCursoId),
     [lectura, negociosIds, equipoId, enCursoId],
   );
 
   const negocios = useRef(negociosIds);
+  const sesion = useRef({ usuarioId, sesionCaducada });
   useEffect(() => {
     negocios.current = negociosIds;
-  }, [negociosIds]);
+    sesion.current = { usuarioId, sesionCaducada };
+  }, [negociosIds, usuarioId, sesionCaducada]);
   const motor = useRef<Motor | null>(null);
   useEffect(() => {
     motor.current = iniciarMotor({
@@ -107,8 +125,11 @@ export function useColaPos(negociosIds: readonly string[], equipoId: string): Co
     await reabrir(id);
     motor.current?.disparar(true);
   }, []);
-  const descartar = useCallback(async (id: string) => void (await quitar(id)), []);
-  const revisar = useCallback((id: string) => revisarDescarte(createClient(), id), []);
+  const revisar = useCallback(
+    (id: string) =>
+      revisarDescarte(createClient(), id, sesion.current.usuarioId, sesion.current.sesionCaducada),
+    [],
+  );
 
   return {
     estado,
@@ -116,13 +137,13 @@ export function useColaPos(negociosIds: readonly string[], equipoId: string): Co
     disparar,
     reintentar,
     revisarDescarte: revisar,
-    descartar,
+    descartar: quitarSiRechazada,
     descartarIlegibles: quitarIlegibles,
   };
 }
 
 // Lectura puntual para decidir (cambio de negocio): no se fía de un estado de pantalla que pudo quedar atrás.
-// Si IndexedDB no responde no hay cola que consultar y tampoco se pudo encolar nada.
+// Si IndexedDB no responde no se puede saber qué hay en la cola: bloquea, igual que el estado de pantalla.
 export async function equipoTieneCola(equipoId: string): Promise<boolean> {
   try {
     const l = await leerFilas();
@@ -132,6 +153,6 @@ export async function equipoTieneCola(equipoId: string): Promise<boolean> {
       equipoId,
     ).bloqueaEquipo;
   } catch {
-    return false;
+    return true;
   }
 }

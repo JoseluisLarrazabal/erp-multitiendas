@@ -1,12 +1,22 @@
 import "fake-indexeddb/auto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { AuthApiError, AuthRetryableFetchError, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encolar, leerFilas, vaciar, type Enviador, type FilaCola } from "@/lib/offline/cola";
+import {
+  encolar,
+  leerFilas,
+  marcarRechazada,
+  reabrir,
+  vaciar,
+  type Enviador,
+  type FilaCola,
+} from "@/lib/offline/cola";
 import { baseOffline } from "@/lib/offline/db";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   cobrarEnCola,
   comprobarCuenta,
+  MENSAJE_COBRO_FALLIDO,
+  protegerCobro,
   enviarVentaDeCola,
   leerSesion,
   revisarDescarte,
@@ -51,8 +61,8 @@ const duplicado = { message: "ERP_NUMERO_DUPLICADO", code: "P0001" };
 type Respuesta = { data: unknown; error: { message: string; code: string } | null };
 type OpcionesCliente = {
   respuestas: Respuesta[];
-  // false: sin sesión. "error": getSession devuelve error. "cuelga": no responde.
-  sesion?: boolean | "error" | "cuelga";
+  // false: sin sesión. "error": error de red de Auth. "invalida": Auth la rechaza. "cuelga": no responde.
+  sesion?: boolean | "error" | "invalida" | "cuelga";
   existe?: boolean;
   // Si no existe la comprobación, falla con este error.
   falloExiste?: boolean;
@@ -60,7 +70,10 @@ type OpcionesCliente = {
 };
 const getSession = (sesion: OpcionesCliente["sesion"]) => async () => {
   if (sesion === "cuelga") return new Promise<never>(() => undefined);
-  if (sesion === "error") return { data: { session: null }, error: { message: "fetch failed" } };
+  if (sesion === "error")
+    return { data: { session: null }, error: new AuthRetryableFetchError("fetch failed", 0) };
+  if (sesion === "invalida")
+    return { data: { session: null }, error: new AuthApiError("bad", 401, "bad_jwt") };
   return { data: { session: sesion === false ? null : { user: { id: uuid(5) } } }, error: null };
 };
 function cliente(opts: OpcionesCliente) {
@@ -187,6 +200,33 @@ describe("errores sin código ERP_ y ERP_OPERACION_REPETIDA", () => {
     },
   );
 
+  it("un error sin código tras 5 intentos pasa a rechazo con mensaje claro; sin respuesta nunca", async () => {
+    const roto = { data: null, error: { message: "boom", code: "PGRST000" } };
+    const c = cliente({ respuestas: [roto] });
+    expect((await enviarVentaDeCola(fila({ intentos: 4 }), c.supabase, false)).resultado.t).toBe(
+      "red",
+    );
+    const r = await enviarVentaDeCola(
+      fila({ intentos: 5 }),
+      cliente({ respuestas: [roto], existe: false }).supabase,
+      false,
+    );
+    expect(r.resultado).toMatchObject({ t: "rechazo", codigo: null });
+    expect(r.resultado.t === "rechazo" && r.resultado.error).toContain("error inesperado");
+    // Si la venta ya está en el servidor sigue siendo éxito.
+    const existe = cliente({ respuestas: [roto], existe: true });
+    expect(
+      (await enviarVentaDeCola(fila({ intentos: 9 }), existe.supabase, false)).resultado.t,
+    ).toBe("ok");
+    // Sin respuesta (red real): siempre red.
+    const sinRespuesta = cliente({
+      respuestas: [{ data: null, error: { message: "AbortError", code: "" } }],
+    });
+    expect(
+      (await enviarVentaDeCola(fila({ intentos: 50 }), sinRespuesta.supabase, false)).resultado.t,
+    ).toBe("red");
+  });
+
   it("ERP_OPERACION_REPETIDA con la venta ya en el servidor es éxito, aunque no esté en duda", async () => {
     const repetida = { data: null, error: { message: "ERP_OPERACION_REPETIDA", code: "P0001" } };
     const c = cliente({ respuestas: [repetida], existe: true });
@@ -217,6 +257,13 @@ describe("sesión", () => {
     ).toBe("red");
   });
 
+  it("un error definitivo de Auth es sin sesión, no red", async () => {
+    expect(await leerSesion(cliente({ respuestas: [], sesion: "invalida" }).supabase)).toBe(
+      "ninguna",
+    );
+    expect(await leerSesion(cliente({ respuestas: [], sesion: "error" }).supabase)).toBe("red");
+  });
+
   it("getSession que lanza o que no responde en 8 s es red", async () => {
     const lanza = cliente({ respuestas: [] }).supabase;
     lanza.auth.getSession = () => Promise.reject(new Error("x"));
@@ -228,17 +275,40 @@ describe("sesión", () => {
     expect(await cuelga).toBe("red");
   });
 
-  it("un reenvío con error de sesión es red y sin sesión es pausa; ninguno llama al servidor", async () => {
-    const e = cliente({ respuestas: [exito], sesion: "error" });
-    expect((await enviarVentaDeCola(fila(), e.supabase, false)).resultado.t).toBe("red");
-    const n = cliente({ respuestas: [exito], sesion: false });
-    expect((await enviarVentaDeCola(fila(), n.supabase, false)).resultado.t).toBe("pausa");
-    expect(e.llamadas.length + n.llamadas.length).toBe(0);
+  it("un reenvío sin poder leer la sesión o sin sesión es pausa sin sumar intentos ni llamar al servidor", async () => {
+    const llamadas: number[] = [];
+    for (const sesion of ["error", false, "invalida"] as const) {
+      const c = cliente({ respuestas: [exito], sesion });
+      expect((await enviarVentaDeCola(fila(), c.supabase, false)).resultado).toEqual({
+        t: "pausa",
+      });
+      llamadas.push(c.llamadas.length);
+    }
+    expect(llamadas).toEqual([0, 0, 0]);
+    // Pasa por el vaciado: la fila queda igual, sin intentos ni espera.
+    const c = cliente({ respuestas: [exito], sesion: "error" });
+    await vaciar({
+      elegible: () => true,
+      forzar: true,
+      enviadores: { venta: async (f) => (await enviarVentaDeCola(f, c.supabase, false)).resultado },
+    });
+    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 0, proximoIntento: 0 });
   });
 });
 
 describe("cobrarEnCola", () => {
-  const cobro = { ...nuevaFila, numeroImpreso: "C1-000007" };
+  const fijo = { ...nuevaFila, numeroImpreso: "C1-000007" };
+  // La fila ya armada, con el número que sea; `seq` solo importa en las pruebas de numeración.
+  const cobro = { id: venta.id, dispositivoId: uuid(2), ultimo: 6, armar: () => fijo };
+  const conNumero = (n: number, seq: number) => {
+    const numero = `C1-${String(seq).padStart(6, "0")}`;
+    return {
+      ...nuevaFila,
+      id: uuid(100 + n),
+      payload: { venta: { ...venta, id: uuid(100 + n), numero }, tipo_cambio: 6.96 },
+      numeroImpreso: numero,
+    };
+  };
   beforeEach(async () => {
     await baseOffline().cola.clear();
   });
@@ -265,7 +335,7 @@ describe("cobrarEnCola", () => {
     expect(enviador).not.toHaveBeenCalled();
 
     liberar();
-    expect(await cobrando).toEqual({ t: "entregada", numero: "C1-000008" });
+    expect(await cobrando).toEqual({ t: "entregada", numero: "C1-000008", enviada: true });
     expect((await leerFilas()).filas).toHaveLength(0);
   });
 
@@ -274,15 +344,24 @@ describe("cobrarEnCola", () => {
     expect(await cobrarEnCola(cobro, c.supabase, false)).toEqual({
       t: "entregada",
       numero: "C1-000007",
+      enviada: false,
     });
     expect(c.llamadas).toHaveLength(0);
-    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 0, proximoIntento: 0 });
+    expect((await leerFilas()).filas[0]).toMatchObject({
+      intentos: 0,
+      proximoIntento: 0,
+      entregada: true,
+    });
   });
 
   it("falla de red con red: queda con un intento y su espera; un rechazo se quita y se informa", async () => {
     const red = cliente({ respuestas: [{ data: null, error: { message: "x", code: "" } }] });
-    expect((await cobrarEnCola(cobro, red.supabase, true)).t).toBe("entregada");
-    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 1 });
+    expect(await cobrarEnCola(cobro, red.supabase, true)).toMatchObject({
+      t: "entregada",
+      enviada: false,
+    });
+    // La nota se entregó: ya no es un primer intento interrumpido.
+    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 1, entregada: true });
 
     await baseOffline().cola.clear();
     const no = cliente({
@@ -319,18 +398,85 @@ describe("cobrarEnCola", () => {
     expect(r.t === "rechazada" && r.error).toContain("Recarga la página");
     expect((await leerFilas()).filas[0]).toMatchObject({ estado: "rechazada" });
   });
+  it("durante el primer intento la fila no está entregada; una pestaña muerta la deja así", async () => {
+    let liberar!: () => void;
+    const lenta = new Promise<void>((r) => (liberar = r));
+    const c = cliente({
+      respuestas: [exito],
+      respuesta: async () => {
+        await lenta;
+        return exito;
+      },
+    });
+    const cobrando = cobrarEnCola(cobro, c.supabase, true);
+    await vi.waitFor(async () =>
+      expect((await leerFilas()).filas[0]).toMatchObject({ entregada: false }),
+    );
+    liberar();
+    await cobrando;
+  });
+
+  it("si el primer intento lanza tras renumerar, la nota lleva el número vigente", async () => {
+    let n = 0;
+    const c = cliente({
+      respuestas: [exito],
+      respuesta: async () => {
+        n += 1;
+        if (n === 1) return { data: null, error: duplicado };
+        throw new Error("se cortó");
+      },
+    });
+    expect(await cobrarEnCola(cobro, c.supabase, true)).toEqual({
+      t: "entregada",
+      numero: "C1-000008",
+      enviada: false,
+    });
+  });
+
+  it("dos confirmaciones simultáneas del mismo equipo reciben números distintos", async () => {
+    const hechos = await Promise.all(
+      [1, 2].map((n) =>
+        cobrarEnCola(
+          {
+            id: uuid(100 + n),
+            dispositivoId: uuid(2),
+            ultimo: 6,
+            armar: (seq) => conNumero(n, seq),
+          },
+          cliente({ respuestas: [exito] }).supabase,
+          false,
+        ),
+      ),
+    );
+    const numeros = hechos.map((h) => (h.t === "entregada" ? h.numero : h.t));
+    expect(new Set(numeros)).toEqual(new Set(["C1-000007", "C1-000008"]));
+  });
+
+  it("sin poder armar la venta no encola nada", async () => {
+    const r = await cobrarEnCola(
+      { ...cobro, armar: () => null },
+      cliente({ respuestas: [] }).supabase,
+      true,
+    );
+    expect(r).toEqual({ t: "no-armada" });
+    expect((await leerFilas()).filas).toHaveLength(0);
+  });
 });
 
 describe("revisarDescarte", () => {
+  const revisar = (c: ReturnType<typeof cliente>, usuario = uuid(5), caducada = false) =>
+    revisarDescarte(c.supabase, venta.id, usuario, caducada);
+  beforeEach(async () => {
+    await marcarRechazada(venta.id, "no");
+  });
+
   it("si la venta ya está en el servidor la quita sin pedir más", async () => {
-    const c = cliente({ respuestas: [], existe: true });
-    expect(await revisarDescarte(c.supabase, venta.id)).toEqual({ t: "quitada" });
+    expect(await revisar(cliente({ respuestas: [], existe: true }))).toEqual({ t: "quitada" });
     expect((await leerFilas()).filas).toHaveLength(0);
   });
 
   it("si no está, pide la confirmación escrita y no toca la fila", async () => {
-    const c = cliente({ respuestas: [] });
-    expect(await revisarDescarte(c.supabase, venta.id)).toEqual({ t: "confirmar" });
+    expect(await revisar(cliente({ respuestas: [] }))).toEqual({ t: "confirmar" });
     expect((await leerFilas()).filas).toHaveLength(1);
   });
 
@@ -340,7 +486,35 @@ describe("revisarDescarte", () => {
       cliente({ respuestas: [], sesion: "error" }),
       cliente({ respuestas: [], sesion: false }),
     ])
-      expect((await revisarDescarte(c.supabase, venta.id)).t).toBe("error");
+      expect((await revisar(c)).t).toBe("error");
     expect((await leerFilas()).filas).toHaveLength(1);
+  });
+
+  it("con otra cuenta o la sesión caducada pide volver a entrar y nunca confirma, aunque la venta no exista", async () => {
+    const otra = await revisar(cliente({ respuestas: [] }), uuid(6));
+    const caducada = await revisar(cliente({ respuestas: [] }), uuid(5), true);
+    for (const r of [otra, caducada])
+      expect(r).toEqual({
+        t: "error",
+        mensaje: expect.stringContaining("Vuelve a entrar con tu cuenta para comprobarla"),
+      });
+  });
+
+  it("si la fila se reabrió mientras se comprobaba, no la borra", async () => {
+    await reabrir(venta.id);
+    expect((await revisar(cliente({ respuestas: [], existe: true }))).t).toBe("error");
+    expect((await leerFilas()).filas).toHaveLength(1);
+  });
+});
+
+describe("protegerCobro", () => {
+  it("una excepción inesperada devuelve el mensaje de cobro fallido; sin excepción, null", async () => {
+    expect(await protegerCobro(async () => undefined)).toBeNull();
+    expect(
+      await protegerCobro(async () => {
+        throw new Error("x");
+      }),
+    ).toBe(MENSAJE_COBRO_FALLIDO);
+    expect(MENSAJE_COBRO_FALLIDO).toContain("Revisa la lista de ventas antes de cobrar de nuevo");
   });
 });

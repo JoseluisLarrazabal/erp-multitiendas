@@ -24,7 +24,8 @@ export function VentaEnCurso({
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
 
-  if (v.nota) return <NotaVentaVista nota={v.nota} alNueva={() => v.setNota(null)} />;
+  if (v.nota)
+    return <NotaVentaVista nota={v.nota} enCola={v.notaEnCola} alNueva={() => v.setNota(null)} />;
 
   const totales = v.resumen.totales;
   return (
@@ -57,6 +58,7 @@ export function VentaEnCurso({
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
           ventaPendiente={v.colaBloquea}
+          lecturaColaFallida={opciones.cola.estado.lecturaFallida}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}
           alYaCerrada={() => opciones.verificarCaja(equipo.id)}
           alVolver={() => setVerCaja(false)}

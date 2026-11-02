@@ -37,6 +37,7 @@ export function PanelCaja({
   nombreEquipo,
   sesionId,
   ventaPendiente,
+  lecturaColaFallida,
   alCerrar,
   alYaCerrada,
   alVolver,
@@ -44,6 +45,8 @@ export function PanelCaja({
   nombreEquipo: string;
   sesionId: string | null;
   ventaPendiente: boolean;
+  // No se pudo leer la cola de ventas de este equipo: no se sabe si hay algo sin enviar.
+  lecturaColaFallida: boolean;
   // El servidor confirmó el cierre: el POS pasa a pedir la apertura.
   alCerrar: () => void;
   // ERP_CAJA_CERRADA al cerrar: la caja ya estaba cerrada. El POS la vuelve a consultar; devuelve un error o null.
@@ -270,8 +273,9 @@ export function PanelCaja({
               </div>
               {ventaPendiente && (
                 <p role="alert" className="text-destructive text-sm">
-                  Hay ventas sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la
-                  caja.
+                  {lecturaColaFallida
+                    ? "No se pudo leer la cola de ventas de este equipo, así que no se sabe si hay ventas sin enviar. Recarga la página antes de cerrar la caja."
+                    : "Hay ventas sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la caja."}
                 </p>
               )}
               <p role="alert" className="text-destructive text-sm empty:hidden">

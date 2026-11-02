@@ -8,6 +8,7 @@ import type { ColaPos, VentaRechazada } from "../use-cola";
 import { DescartarVenta } from "./descartar-venta";
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+const MENSAJE_CAMBIO = "La venta ya no estaba rechazada, así que no se descartó. Revisa la lista.";
 const MENSAJE_FALLO = "No se pudo completar la acción en este equipo. Recarga la página.";
 
 type Descarte = { t: "venta"; venta: VentaRechazada } | { t: "ilegibles" };
@@ -120,6 +121,10 @@ export function AvisoCola({
                   type="button"
                   variant="outline"
                   className="h-10"
+                  disabled={
+                    revisando !== null ||
+                    (descartando?.t === "venta" && descartando.venta.id === v.id)
+                  }
                   aria-label={`Reintentar la venta ${v.numero}`}
                   onClick={() => void intentar(() => cola.reintentar(v.id))}
                 >
@@ -159,11 +164,10 @@ export function AvisoCola({
           alConfirmar={() => {
             const d = descartando;
             setDescartando(null);
-            void intentar(() =>
-              d.t === "venta"
-                ? cola.descartar(d.venta.id)
-                : cola.descartarIlegibles(estado.ordenesIlegibles),
-            );
+            void intentar(async () => {
+              if (d.t === "ilegibles") return cola.descartarIlegibles(estado.ordenesIlegibles);
+              if (!(await cola.descartar(d.venta.id))) setMensaje(MENSAJE_CAMBIO);
+            });
           }}
         />
       )}

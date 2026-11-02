@@ -43,6 +43,8 @@ export function DescartarVenta({
           <Input
             id="descartar-palabra"
             autoComplete="off"
+            spellCheck={false}
+            autoCapitalize="characters"
             className="h-11"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}

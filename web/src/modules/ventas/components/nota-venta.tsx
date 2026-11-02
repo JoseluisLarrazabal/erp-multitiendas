@@ -11,7 +11,16 @@ type Papel = "80" | "a4";
 
 // Nota de venta (RF-VEN-05). Imprime con window.print(); el papel (80 mm o A4) lo fija la clase de página de
 // globals.css. Fuera de .nota-venta todo lleva print:hidden: sale sin cromo de la app.
-export function NotaVentaVista({ nota, alNueva }: { nota: NotaVenta; alNueva: () => void }) {
+export function NotaVentaVista({
+  nota,
+  enCola,
+  alNueva,
+}: {
+  nota: NotaVenta;
+  // La venta aún no llegó al servidor: no se dice "registrada".
+  enCola: boolean;
+  alNueva: () => void;
+}) {
   const [papel, setPapel] = useState<Papel>("80");
   const fecha = new Date(nota.fechaIso).toLocaleString("es-BO", {
     dateStyle: "short",
@@ -21,7 +30,9 @@ export function NotaVentaVista({ nota, alNueva }: { nota: NotaVenta; alNueva: ()
     <div className="flex flex-col items-center gap-3 print:block">
       <div className="flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
         <p role="status" className="mr-auto text-sm font-medium">
-          Venta {nota.numero} registrada
+          {enCola
+            ? `Venta ${nota.numero} guardada en este equipo. Se enviará al volver la conexión.`
+            : `Venta ${nota.numero} registrada`}
         </p>
         <fieldset className="flex gap-1" aria-label="Tamaño de papel">
           {(["80", "a4"] as const).map((p) => (

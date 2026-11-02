@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encolar } from "./cola";
 import { baseOffline } from "./db";
-import { iniciarMotor } from "./motor";
+import { iniciarMotor, observarFilas } from "./motor";
 
 beforeEach(async () => {
   await baseOffline().cola.clear();
@@ -46,5 +46,19 @@ describe("iniciarMotor", () => {
     for (const [h] of clear.mock.calls) puestos.delete(h);
     expect(puestos.size).toBe(1);
     motor.detener();
+  });
+});
+
+describe("observarFilas", () => {
+  it("si la lectura falla avisa con alFallar en vez de callar", async () => {
+    vi.spyOn(baseOffline().cola, "orderBy").mockImplementation(() => {
+      throw new Error("IndexedDB");
+    });
+    const alCambiar = vi.fn();
+    const alFallar = vi.fn();
+    const baja = observarFilas(alCambiar, alFallar);
+    await vi.waitFor(() => expect(alFallar).toHaveBeenCalled());
+    expect(alCambiar).not.toHaveBeenCalled();
+    baja();
   });
 });

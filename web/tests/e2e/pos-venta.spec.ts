@@ -90,6 +90,10 @@ test("E2E-04: venta con conexión, pago mixto, nota y stock en base", async ({ p
 
   const nota = page.getByRole("article", { name: /Nota de venta C1-\d{6}/ });
   await expect(nota).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: /Venta C1-\d{6} registrada/ }),
+  ).toBeVisible();
+  await expect(page.getByText("guardada en este equipo")).toHaveCount(0);
   await expect(nota.getByText("Garantía: 6 meses")).toBeVisible();
   await expect(nota.getByText("TOTAL")).toBeVisible();
   await expect(nota.getByText("Bs 130,00").first()).toBeVisible();
@@ -151,6 +155,7 @@ test("una falla de red deja la venta en la cola con su nota y el reenvío manda 
   await confirmarVenta(page);
   // La venta ya se entregó al cliente: nota y aviso, sin diálogo de reintento ni de descarte.
   await expect(notaVisible(page)).toBeVisible();
+  await expect(notaEnCola(page)).toBeVisible();
   await expect(sinEnviar(page, 1)).toBeVisible();
   expect(await stockEn(a.id)).toBe(3);
   await volverLaRed(page);
@@ -247,6 +252,11 @@ async function volverLaRed(page: Page) {
 const sinEnviar = (page: Page, n: number) =>
   page.getByText(n === 1 ? "1 venta sin enviar" : `${n} ventas sin enviar`);
 const notaVisible = (page: Page) => page.getByRole("article", { name: /Nota de venta/ });
+// Con la venta en la cola, la nota no dice "registrada": aún no llegó al servidor.
+const notaEnCola = (page: Page) =>
+  page.getByRole("status").filter({
+    hasText: /Venta C1-\d{6} guardada en este equipo\. Se enviará al volver la conexión\./,
+  });
 
 async function confirmarVenta(page: Page) {
   const cobro = await abrirCobro(page);
@@ -532,6 +542,8 @@ test("E2E-05: venta sin conexión, nota y aviso; al volver la red se envía una 
 
   await confirmarVenta(page);
   await expect(notaVisible(page)).toBeVisible();
+  await expect(notaEnCola(page)).toBeVisible();
+  await expect(page.getByText(/registrada$/)).toHaveCount(0);
   await expect(sinEnviar(page, 1)).toBeVisible();
   expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
   expect(await stockEn(a.id)).toBe(4);
@@ -568,6 +580,47 @@ test("primer intento colgado: a los 8 s la venta queda en la cola y el reenvío 
   const ventas = await ventasDeLaCaja(equipoId);
   expect(ventas).toHaveLength(1);
   expect(await stockEn(a.id)).toBe(2);
+});
+
+test("cerrar la pestaña en un primer intento colgado: al reabrir la venta sale en la lista y no se envió sola", async ({
+  page,
+  context,
+}) => {
+  const a = await crearProductoConPrecio({ contado: 17, stock: 3 });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  // La petición nunca sale: la pestaña muere con el primer intento en curso.
+  await page.route("**/rest/v1/rpc/registrar_venta", () => new Promise<void>(() => undefined));
+  await confirmarVenta(page);
+  await expect(page.getByRole("button", { name: "Enviando…" })).toBeVisible();
+  // Cerrar antes de que la fila llegue a IndexedDB no probaría nada.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const abrir = indexedDB.open("erp-pos");
+            abrir.onerror = () => reject(abrir.error);
+            abrir.onsuccess = () => {
+              const contar = abrir.result.transaction("cola").objectStore("cola").count();
+              contar.onsuccess = () => resolve(contar.result);
+              contar.onerror = () => reject(contar.error);
+            };
+          }),
+      ),
+    )
+    .toBe(1);
+  await page.close();
+
+  const nueva = await context.newPage();
+  await fijarEquipo(nueva, equipoId);
+  await nueva.goto("/pos");
+  const lista = nueva.getByRole("region", { name: "Ventas rechazadas" });
+  await expect(lista).toContainText("El cobro se interrumpió antes de la nota");
+  await expect(lista).toContainText("Bs 17,00");
+  await nueva.waitForTimeout(1500); // el motor ya corrió al montar: no la reenvía
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(0);
+  expect(await stockEn(a.id)).toBe(3);
 });
 
 test("respuesta perdida con la venta ya guardada: el reenvío no duplica y conserva origen online", async ({

@@ -47,9 +47,13 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
   };
 }
 
-// Suscripción al contenido de la cola (también ve los cambios de otras pestañas).
-export function observarFilas(alCambiar: (e: LecturaCola) => void): () => void {
-  const s = liveQuery(leerFilas).subscribe({ next: alCambiar, error: () => undefined });
+// Suscripción al contenido de la cola (también ve los cambios de otras pestañas). Si la lectura falla avisa con
+// `alFallar` y la suscripción termina: el llamador no puede dar la cola por vacía.
+export function observarFilas(
+  alCambiar: (e: LecturaCola) => void,
+  alFallar: () => void,
+): () => void {
+  const s = liveQuery(leerFilas).subscribe({ next: alCambiar, error: alFallar });
   return () => s.unsubscribe();
 }
 

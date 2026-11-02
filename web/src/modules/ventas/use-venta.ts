@@ -64,6 +64,8 @@ export function useVenta(o: OpcionesVenta) {
   const [cobrando, setCobrando] = useState(false);
   const [confirmandoEquipo, setConfirmandoEquipo] = useState(false);
   const [nota, setNota] = useState<NotaVenta | null>(null);
+  // La nota se entregó pero la venta aún no llegó al servidor (queda en la cola).
+  const [notaEnCola, setNotaEnCola] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [anuncio, setAnuncio] = useState("");
   const vendedor = useVendedor(o.usuarioId);
@@ -104,8 +106,9 @@ export function useVenta(o: OpcionesVenta) {
     setCobrando(false);
   }, [verificarCaja, equipo.id]);
   const alExito = useCallback(
-    (n: NotaVenta, items: VentaPayload["items"]) => {
+    (n: NotaVenta, items: VentaPayload["items"], enviada: boolean) => {
       setNota(n);
+      setNotaEnCola(!enviada);
       despachar({ tipo: "vaciar" });
       setDescuentoVentaTexto("");
       setCliente(null);
@@ -203,6 +206,7 @@ export function useVenta(o: OpcionesVenta) {
     confirmandoEquipo,
     setConfirmandoEquipo,
     nota,
+    notaEnCola,
     setNota,
     aviso,
     setAviso,

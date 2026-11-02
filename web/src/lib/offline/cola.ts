@@ -16,15 +16,20 @@ export const filaColaSchema = z.object({
   proximoIntento: z.number(),
   error: z.string().nullable(),
   numeroImpreso: z.string().nullable(),
+  // false: el primer intento sigue en curso o murió antes de entregar la nota al cliente. Las filas guardadas antes de
+  // este campo ya se habían entregado.
+  entregada: z.boolean().default(true),
 });
 export type FilaCola = z.infer<typeof filaColaSchema>;
 export type FilaNueva = Pick<
   FilaCola,
   "id" | "tipo" | "negocioId" | "dispositivoId" | "usuarioId" | "payload" | "nota" | "numeroImpreso"
->;
+> &
+  Partial<Pick<FilaCola, "entregada">>;
 
 // red: la base pudo no enterarse (corta el vaciado y reintenta con backoff). rechazo: la base respondió que no
-// (queda `rechazada`, nunca se borra sola). pausa: no se puede enviar ahora, sin contar como fallo (sesión caducada).
+// (queda `rechazada`, nunca se borra sola). pausa: no se puede enviar ahora, sin contar como fallo (no salió ninguna
+// petición: sin sesión o sin poder comprobarla).
 export type ResultadoEnvio =
   | { t: "ok" }
   | { t: "red"; error: string }
@@ -66,9 +71,13 @@ export async function encolar(nueva: FilaNueva): Promise<void> {
 
 const porId = (id: string) => baseOffline().cola.where("id").equals(id);
 export const quitar = (id: string) => porId(id).delete();
+export async function leerFila(id: string): Promise<FilaCola | null> {
+  const r = filaColaSchema.safeParse(await porId(id).first());
+  return r.success ? r.data : null;
+}
 export const actualizarFila = (
   id: string,
-  cambios: Partial<Pick<FilaCola, "payload" | "nota" | "numeroImpreso">>,
+  cambios: Partial<Pick<FilaCola, "payload" | "nota" | "numeroImpreso" | "entregada">>,
 ) => porId(id).modify(cambios);
 export const marcarRed = (id: string, error: string) =>
   porId(id).modify((f) => {
@@ -78,9 +87,21 @@ export const marcarRed = (id: string, error: string) =>
   });
 export const marcarRechazada = (id: string, error: string) =>
   porId(id).modify({ estado: "rechazada", error });
-// Conserva `intentos`: una venta en duda sigue en duda y se comprueba antes de reenviarla.
+// Conserva `intentos`: una venta en duda sigue en duda y se comprueba antes de reenviarla. Quien reabre ya decidió
+// reenviarla: deja de ser un primer intento interrumpido.
 export const reabrir = (id: string) =>
-  porId(id).modify({ estado: "pendiente", error: null, proximoIntento: 0 });
+  porId(id).modify({ estado: "pendiente", error: null, proximoIntento: 0, entregada: true });
+
+// Descartar solo borra lo que sigue rechazado: entre pulsar el botón y confirmar, Reintentar pudo reabrirla. Va bajo el
+// cerrojo de la fila para no borrar una que el motor está enviando. false: no se borró.
+export async function quitarSiRechazada(id: string): Promise<boolean> {
+  const r = await conFila(id, async () => {
+    if ((await leerFila(id))?.estado !== "rechazada") return false;
+    await quitar(id);
+    return true;
+  });
+  return r?.valor ?? false;
+}
 
 // Solo borra lo que sigue siendo ilegible: una fila que otra pestaña dejó legible no se toca.
 export async function quitarIlegibles(ordenes: readonly number[]): Promise<void> {
@@ -114,6 +135,24 @@ export async function conFila<T>(id: string, fn: () => Promise<T>): Promise<{ va
   }
 }
 
+// Como conFila pero espera su turno: para secciones cortas que serializan a todas las pestañas (sin red dentro).
+const colasEnMemoria = new Map<string, Promise<unknown>>();
+export async function conCerrojo<T>(nombre: string, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== "undefined" && navigator.locks)
+    return navigator.locks.request(nombre, fn);
+  const anterior = colasEnMemoria.get(nombre) ?? Promise.resolve();
+  const actual = anterior.then(fn);
+  const cola = actual.catch(() => undefined);
+  colasEnMemoria.set(nombre, cola);
+  try {
+    return await actual;
+  } finally {
+    if (colasEnMemoria.get(nombre) === cola) colasEnMemoria.delete(nombre);
+  }
+}
+
+const MENSAJE_INTERRUMPIDA =
+  "El cobro se interrumpió antes de la nota. Comprueba si el cliente pagó: reintenta o descarta.";
 const CERROJO = "erp:cola";
 let enCurso = false; // sin navigator.locks (Vitest, navegadores viejos) basta la guarda de esta pestaña
 
@@ -167,6 +206,12 @@ async function enviarFila(
   const leida = filaColaSchema.safeParse(cruda);
   if (!leida.success || leida.data.estado !== "pendiente") return "seguir";
   const fila = leida.data;
+  // Con el cerrojo libre y sin nota entregada, el primer intento murió antes de la nota: la base pudo haber guardado la
+  // venta. Nunca se envía sola.
+  if (!fila.entregada) {
+    await marcarRechazada(fila.id, MENSAJE_INTERRUMPIDA);
+    return "seguir";
+  }
   if (fila.proximoIntento > Date.now() && !o.forzar) return "cortar";
   let r: ResultadoEnvio;
   try {

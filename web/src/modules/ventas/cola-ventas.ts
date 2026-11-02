@@ -1,12 +1,15 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, type SupabaseClient } from "@supabase/supabase-js";
 import {
   actualizarFila,
+  conCerrojo,
   conFila,
   encolar,
+  leerFila,
   leerFilas,
   marcarRechazada,
   marcarRed,
   quitar,
+  quitarSiRechazada,
   type FilaCola,
   type FilaNueva,
   type ResultadoEnvio,
@@ -30,8 +33,19 @@ const MENSAJE_DUPLICADOS =
 const MENSAJE_ILEGIBLE = "La venta guardada no se pudo leer. Avisa al encargado.";
 export const MENSAJE_CUENTA =
   "La sesión caducó o es de otra cuenta. Vuelve a entrar con la misma cuenta que hizo esta venta; no la cobres de nuevo hasta comprobarla.";
+const MENSAJE_INESPERADO =
+  "El servidor devolvió un error inesperado varias veces seguidas. Avisa al encargado antes de reintentar.";
+export const MENSAJE_COBRO_FALLIDO =
+  "No se pudo completar el cobro. Revisa la lista de ventas antes de cobrar de nuevo.";
+export const MENSAJE_CAMBIO =
+  "La venta cambió mientras se comprobaba y ya no está rechazada. Revisa la lista.";
+const MENSAJE_VOLVER_A_ENTRAR = "Vuelve a entrar con tu cuenta para comprobarla.";
 const MENSAJE_LIMPIEZA =
   "La venta no se pudo limpiar de este equipo. Recarga la página antes de cobrarla de nuevo.";
+
+// Errores del servidor sin código ERP_ (PGRST, 40P01, 5xx) pueden ser transitorios: se reintentan este número de veces
+// y después la fila pasa a rechazada, para que una fila envenenada no corte la cola para siempre.
+const MAX_INTENTOS_INESPERADOS = 5;
 
 export type EntradaVenta = Pick<
   FilaCola,
@@ -55,7 +69,7 @@ export async function mayorSecuenciaEnCola(dispositivoId: string): Promise<numbe
   return mayor;
 }
 
-// "red": no se pudo saber (sin red, error de Auth o más de 8 s). "ninguna": no hay sesión definitiva.
+// "red": no se pudo saber (sin red o más de 8 s). "ninguna": no hay sesión, o Auth respondió que no vale.
 export type SesionLeida = "red" | "ninguna" | { usuarioId: string };
 
 export async function leerSesion(supabase: SupabaseClient<Database>): Promise<SesionLeida> {
@@ -65,7 +79,7 @@ export async function leerSesion(supabase: SupabaseClient<Database>): Promise<Se
       reloj = setTimeout(() => no(new Error("sin respuesta")), TIEMPO_ENVIO_MS);
     });
     const { data, error } = await Promise.race([supabase.auth.getSession(), limite]);
-    if (error) return "red";
+    if (error) return isAuthRetryableFetchError(error) ? "red" : "ninguna";
     return data.session ? { usuarioId: data.session.user.id } : "ninguna";
   } catch {
     return "red";
@@ -104,9 +118,9 @@ export async function enviarVentaDeCola(
   // marca `otra_cuenta` y la venta conserva a quien vendió.
   if (!primerIntento) {
     const sesion = await leerSesion(supabase);
-    if (sesion === "red")
-      return { resultado: { t: "red", error: MENSAJE_RED }, numero: venta.numero };
-    if (sesion === "ninguna") return { resultado: { t: "pausa" }, numero: venta.numero };
+    // Sin petición no hubo intento: pausa, no un fallo que suba `intentos` y la ponga en duda.
+    if (sesion === "red" || sesion === "ninguna")
+      return { resultado: { t: "pausa" }, numero: venta.numero };
   }
 
   const ok = (): SalidaVenta => {
@@ -129,8 +143,10 @@ export async function enviarVentaDeCola(
     const r = await enviarVenta(supabase, venta, offline);
     if (r.ok) return ok();
     // Solo un código ERP_ es una respuesta definitiva de la base; cualquier otro fallo (PGRST, 40P01, 5xx) puede
-    // ser transitorio y la venta ya se cobró.
-    if (r.red || !r.codigo)
+    // ser transitorio y la venta ya se cobró: se reintenta hasta MAX_INTENTOS_INESPERADOS. Sin respuesta (r.red)
+    // siempre se reintenta.
+    const inesperado = !r.codigo && fila.intentos >= MAX_INTENTOS_INESPERADOS;
+    if (r.red || (!r.codigo && !inesperado))
       return { resultado: { t: "red", error: r.error }, numero: venta.numero };
     if (enDuda || r.codigo === "ERP_OPERACION_REPETIDA") {
       const existe = await existeVenta(supabase, venta.id);
@@ -138,7 +154,8 @@ export async function enviarVentaDeCola(
       if (existe.data) return ok();
       enDuda = false; // no existe: los duplicados siguientes son de números que esta venta nunca guardó
     }
-    if (r.codigo !== "ERP_NUMERO_DUPLICADO") return rechazo(r.error, r.codigo);
+    if (r.codigo !== "ERP_NUMERO_DUPLICADO")
+      return rechazo(inesperado ? MENSAJE_INESPERADO : r.error, r.codigo);
     if (duplicados >= MAX_NUMERO_DUPLICADO) return rechazo(MENSAJE_DUPLICADOS, r.codigo);
 
     subirContador(fila.dispositivoId, secuenciaDe(venta.numero)); // ese número ya es de otra venta
@@ -170,23 +187,51 @@ export async function enviarVentaDeCola(
 
 export type FilaCobro = FilaNueva & { numeroImpreso: string };
 export type SalidaCobro =
-  | { t: "entregada"; numero: string } // ok, o la venta queda en la cola: ya se le entregó al cliente
+  // La venta ya se le entregó al cliente. `enviada`: llegó al servidor; si no, queda en la cola.
+  | { t: "entregada"; numero: string; enviada: boolean }
   | { t: "rechazada"; error: string; codigo: string | null }
+  | { t: "agotada" }
+  | { t: "no-armada" }
   | { t: "no-guardada" }; // IndexedDB falló (o la fila está ocupada): no se cobra
 
+export type PedidoCobro = {
+  id: string;
+  dispositivoId: string;
+  // Último número que conoce esta pestaña; los de la cola y el contador local se leen bajo el cerrojo.
+  ultimo: number;
+  // Arma la fila con el número asignado. null: la venta no se pudo armar.
+  armar: (seq: number) => FilaCobro | null;
+};
+
 // Primer intento de una venta, con el cerrojo de su fila de principio a fin (encolar, enviar, marcas): ningún vaciado
-// de otra pestaña ni del motor la toca mientras tanto. `enLinea` falso: sin primer intento, la fila queda lista.
+// de otra pestaña ni del motor la toca mientras tanto. El número se asigna y se encola bajo el cerrojo del equipo, que
+// se suelta antes de la red. `enLinea` falso: sin primer intento, la fila queda lista.
 export async function cobrarEnCola(
-  fila: FilaCobro,
+  pedido: PedidoCobro,
   supabase: SupabaseClient<Database>,
   enLinea: boolean,
 ): Promise<SalidaCobro> {
-  const r = await conFila(fila.id, async (): Promise<SalidaCobro> => {
-    try {
-      await encolar(fila);
-    } catch {
-      return { t: "no-guardada" };
-    }
+  const r = await conFila(pedido.id, async (): Promise<SalidaCobro> => {
+    const preparada = await conCerrojo(
+      `erp:numero:${pedido.dispositivoId}`,
+      async (): Promise<SalidaCobro | { t: "lista"; fila: FilaCobro }> => {
+        try {
+          const enCola = await mayorSecuenciaEnCola(pedido.dispositivoId);
+          const seq = siguienteSecuencia(pedido.ultimo, leerContador(pedido.dispositivoId), enCola);
+          if (secuenciaAgotada(seq)) return { t: "agotada" };
+          const armada = pedido.armar(seq);
+          if (!armada) return { t: "no-armada" };
+          // Sin red no habrá primer intento: la nota se entrega ya. Con red, hasta que termine el intento no.
+          await encolar({ ...armada, entregada: !enLinea });
+          subirContador(pedido.dispositivoId, seq);
+          return { t: "lista", fila: armada };
+        } catch {
+          return { t: "no-guardada" };
+        }
+      },
+    );
+    if (preparada.t !== "lista") return preparada;
+    const fila = preparada.fila;
     let salida: SalidaVenta;
     if (!enLinea)
       salida = { resultado: { t: "red", error: MENSAJE_RED }, numero: fila.numeroImpreso };
@@ -194,7 +239,12 @@ export async function cobrarEnCola(
       try {
         salida = await enviarVentaDeCola({ ...fila, intentos: 0 }, supabase, true);
       } catch {
-        salida = { resultado: { t: "red", error: MENSAJE_RED }, numero: fila.numeroImpreso };
+        // El primer intento pudo renumerar la fila: el número vigente es el de la fila, no el original.
+        const vigente = await leerFila(fila.id).catch(() => null);
+        salida = {
+          resultado: { t: "red", error: MENSAJE_RED },
+          numero: vigente?.numeroImpreso ?? fila.numeroImpreso,
+        };
       }
     }
     const res = salida.resultado;
@@ -208,34 +258,58 @@ export async function cobrarEnCola(
       }
       return { t: "rechazada", error: res.error, codigo: res.codigo ?? null };
     }
-    if (res.t === "ok") await quitar(fila.id).catch(() => undefined);
-    // Sin red al confirmar no hubo intento, y no se cuenta como fallo.
-    else if (res.t === "red" && enLinea) await marcarRed(fila.id, res.error).catch(() => undefined);
-    return { t: "entregada", numero: salida.numero ?? fila.numeroImpreso };
+    // Desde aquí la nota se entrega: la fila que quede en la cola ya no es un primer intento interrumpido.
+    const marcarEntregada = () =>
+      actualizarFila(fila.id, { entregada: true }).catch(() => undefined);
+    if (res.t === "ok") await quitar(fila.id).catch(marcarEntregada);
+    else if (enLinea) {
+      await marcarEntregada();
+      // Sin red al confirmar no hubo intento, y no se cuenta como fallo.
+      if (res.t === "red") await marcarRed(fila.id, res.error).catch(() => undefined);
+    }
+    return {
+      t: "entregada",
+      numero: salida.numero ?? fila.numeroImpreso,
+      enviada: res.t === "ok",
+    };
   });
   return r?.valor ?? { t: "no-guardada" };
 }
 
+// Envuelve el cobro entero: cualquier excepción inesperada (ya con la venta quizá encolada o enviada) no deja el
+// cartel de "Enviando". Devuelve el mensaje de error, o null si todo fue bien.
+export async function protegerCobro(fn: () => Promise<void>): Promise<string | null> {
+  try {
+    await fn();
+    return null;
+  } catch {
+    return MENSAJE_COBRO_FALLIDO;
+  }
+}
+
 export type Descarte = { t: "quitada" } | { t: "confirmar" } | { t: "error"; mensaje: string };
 
-// Antes de descartar una venta rechazada se comprueba, con la cuenta activa, que no esté ya en el servidor: si está,
-// solo se quita de la lista. Si no se puede comprobar, no se descarta.
+// Antes de descartar una venta rechazada se comprueba, con la cuenta de la página, que no esté ya en el servidor: si
+// está, solo se quita de la lista. Con otra cuenta o la sesión caducada la RLS ocultaría la venta y no se puede
+// comprobar: nunca se pide confirmar. Si no se puede comprobar, no se descarta.
 export async function revisarDescarte(
   supabase: SupabaseClient<Database>,
   id: string,
+  usuarioId: string,
+  sesionCaducada: boolean,
 ): Promise<Descarte> {
-  const sesion = await leerSesion(supabase);
-  if (sesion === "red")
+  const volver = { t: "error", mensaje: MENSAJE_VOLVER_A_ENTRAR } as const;
+  if (sesionCaducada) return volver;
+  const cuenta = await comprobarCuenta(supabase, usuarioId);
+  if (cuenta === "red")
     return {
       t: "error",
       mensaje:
         "No se pudo comprobar si la venta ya llegó al servidor. Revisa la conexión e intenta de nuevo.",
     };
-  if (sesion === "ninguna")
-    return { t: "error", mensaje: "Inicia sesión para comprobar la venta antes de descartarla." };
+  if (cuenta === "rechazar") return volver;
   const existe = await existeVenta(supabase, id);
   if (!existe.ok) return { t: "error", mensaje: existe.error };
   if (!existe.data) return { t: "confirmar" };
-  await quitar(id);
-  return { t: "quitada" };
+  return (await quitarSiRechazada(id)) ? { t: "quitada" } : { t: "error", mensaje: MENSAJE_CAMBIO };
 }
