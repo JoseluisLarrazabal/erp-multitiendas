@@ -59,10 +59,18 @@ export async function leerProductos(ruta: string): Promise<FilaCruda[]> {
   });
   const filas: FilaCruda[] = [];
   let columnas: Record<Campo, number> | null = null;
+  let encontrada = false;
 
+  // Hay que recorrer TODAS las hojas hasta el final, y consumir las ajenas: exceljs bufferea cada hoja en un archivo
+  // temporal y lo borra al pasar a la siguiente; una hoja sin consumir (o un `return` antes de tiempo) deja que el
+  // borrado gane a la apertura diferida del stream y estalla como ENOENT no capturado.
   for await (const hoja of lector) {
     // Los tipos de exceljs no declaran `name` en WorksheetReader, pero existe (verificado con 4.4.0).
-    if ((hoja as unknown as { name: string }).name !== HOJA_PRODUCTOS) continue;
+    if ((hoja as unknown as { name: string }).name !== HOJA_PRODUCTOS) {
+      for await (const _ of hoja);
+      continue;
+    }
+    encontrada = true;
     for await (const fila of hoja) {
       if (fila.number === 1) {
         const faltan: string[] = [];
@@ -93,7 +101,7 @@ export async function leerProductos(ruta: string): Promise<FilaCruda[]> {
       ) as Record<Campo, Celda>;
       filas.push({ fila: fila.number, celdas, valores });
     }
-    return filas;
   }
-  throw new Error(`No existe la hoja ${HOJA_PRODUCTOS}`);
+  if (!encontrada) throw new Error(`No existe la hoja ${HOJA_PRODUCTOS}`);
+  return filas;
 }
