@@ -151,6 +151,25 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
+- **Fase 6 en curso (2026-11-03):** plan en `docs/plan-fase-6.md`. Dominio fuera hasta el final (CTO): RF-TR-10 abierto.
+  - #61 `feat/backup-diario`: `.github/workflows/backup.yml` diario (03:00 La Paz), restauración como `postgres` en una
+    Supabase efímera del runner con auth y storage, verificación contra los conteos del dump (sin carrera con la base
+    viva) y stock = kardex, cifrado `age`, artifact de 30 días. CI corre el mismo ciclo (paso 10): `VERIFICACION OK`
+    con 36 tablas. Detalle en `docs/backup.md`. Clave privada en `~/.config/erp-multitiendas/backup-age.key` (el CTO
+    debe copiarla offline). **No verificado:** corrida real (falta producción y el secreto `SUPABASE_DB_URL`) y
+    restaurar un dump de un proyecto hosted.
+  - #62 `feat/importacion-fotos`: la importación sube las 292 fotos ancladas de la planilla a `productos/<negocio>/
+    <producto>.<ext>` y las asigna con `asignar_fotos_importacion` (solo `service_role`, ruta = el propio producto, no
+    pisa fotos). Seco con la planilla real: 292 anclas, 292 asociadas. Arreglo de paso: `leerProductos` saltaba hojas
+    sin consumirlas y exceljs tiraba un ENOENT no capturado por su archivo temporal (intermitente, ya estaba en main).
+    Migración aplicada en staging. Sin redimensionar: máximo 341 KB, promedio 128 KB.
+  - #63 `fix/inicio-panel`: el Inicio muestra los accesos del menú en vez de "Todavía no hay módulos activos".
+    Verificado en producción a 390 px.
+  - #64 `docs/salida`: `docs/capacitacion.md`, `docs/paralelo.md`, `docs/acta-entrega.md` (borrador).
+  - En rama, sin PR: `scripts/alta/` (alta de los 3 negocios y el primer dueño con `supabase db query --linked`, sin
+    contraseña; idempotente, con lock) en `feat/despliegue-produccion`. Espera el ref del proyecto de producción para el
+    bloque `[remotes.produccion]` de `config.toml` y `docs/despliegue.md`.
+  - Codex: no verificado (sin cuota) en los 4 PRs.
 - **Fase 5 cerrada (2026-11-03):** plan en `docs/plan-fase-5.md`, 5 PRs (#56 a #60).
   - PR 1 `feat/frial-datos` (#56): `productos.peso_paquete_kg`, tabla `lotes`, `registrar_entrada_lote`,
     `lotes_por_vencer` y movimiento `merma` (solo frial). Migración aplicada en staging. Revisión: saldo de lote pasó a
