@@ -157,6 +157,24 @@ jobs:
           ../scripts/backup/restaurar.sh "$RUNNER_TEMP/dump" "$destino"
           ../scripts/backup/verificar.sh "$RUNNER_TEMP/dump" "$destino"
 
+      # Alta de producción: dos corridas dejan el mismo reporte (idempotente) y un email inexistente aborta.
+      - name: 11. Alta de producción, idempotencia
+        env:
+          ALTA_DUENO_EMAIL: dueno@erp.test
+          ALTA_NEGOCIO_TIENDA: Alta CI Tienda
+          ALTA_NEGOCIO_LAVANDERIA: Alta CI Lavanderia
+          ALTA_NEGOCIO_FRIAL: Alta CI Frial
+        run: |
+          ../scripts/alta/alta-produccion.sh --local > "$RUNNER_TEMP/alta1.txt"
+          ../scripts/alta/alta-produccion.sh --local > "$RUNNER_TEMP/alta2.txt"
+          filtrar() { grep -E '"(negocio_id|tipo|ubicaciones|duenos)"' "$1"; }
+          [ "$(filtrar "$RUNNER_TEMP/alta1.txt" | grep -c negocio_id)" = "3" ]
+          diff <(filtrar "$RUNNER_TEMP/alta1.txt") <(filtrar "$RUNNER_TEMP/alta2.txt")
+          if ALTA_DUENO_EMAIL=nadie@erp.test ../scripts/alta/alta-produccion.sh --local > "$RUNNER_TEMP/alta3.txt" 2>&1; then
+            echo "El alta debía abortar con un email inexistente"; exit 1
+          fi
+          grep -q 'no existe en auth.users' "$RUNNER_TEMP/alta3.txt" || { cat "$RUNNER_TEMP/alta3.txt"; exit 1; }
+
       - name: Log de functions serve
         if: failure()
         run: cat "$RUNNER_TEMP/functions.log" || true

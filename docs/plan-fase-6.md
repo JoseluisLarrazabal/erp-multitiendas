@@ -23,7 +23,7 @@ no se firma sin él (cláusula octava).
 |---|---|---|---|
 | 1 | `feat/backup-diario` | Workflow diario: dump de roles, esquema y datos; restauración en un Supabase efímero del runner; verificación (conteos iguales al origen, `stock` = kardex, usuarios de auth); cifrado `age` con clave pública del repo; artifact de 30 días. Scripts para restaurar a mano y cronometrar | RNF-08, RNF-09 |
 | 2 | `feat/despliegue-produccion` | `docs/despliegue.md` (proyecto de cero hasta Vercel), bloque `[remotes.produccion]` en `config.toml` (la CLI lo mezcla sobre la base cuando el ref coincide; local sigue en localhost), `scripts/alta/alta-produccion.sql` corrido como `postgres` (negocios, ubicaciones, primer dueño). Se ensaya creando producción con ese documento | RNF-12 |
-| 3 | `feat/importacion-fotos` | El script de importación extrae las fotos del xlsx (anclas de `xl/drawings/drawing2.xml` a fila), las reduce y las sube al bucket por producto. Idempotente | RF-MIG-01 |
+| 3 | `feat/importacion-fotos` | El script de importación extrae las fotos del xlsx (anclas de la hoja "Productos" a fila) y las sube al bucket por producto, sin redimensionar (máximo 341 KB). Idempotente | RF-MIG-01 |
 | 4 | `docs/salida` | `docs/capacitacion.md` por rol, `docs/paralelo.md` (control diario contra el cuaderno), `docs/acta-entrega.md` (borrador) | Entrega A |
 
 Después de los PRs 1 a 3: carga real en producción (productos, stock y fotos), conciliación, primer backup real y
