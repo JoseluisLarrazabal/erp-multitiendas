@@ -137,7 +137,7 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
 
-      # Último a propósito: el test crea sus propios negocios y no debe tocar el estado de Playwright.
+      # Va después del 8 a propósito: el test crea sus propios negocios y no debe tocar el estado de Playwright.
       - name: 9. Importación, integración contra Supabase local
         run: |
           salida=$(pnpm exec supabase status -o env --workdir .. 2>/dev/null | grep -E '^(API_URL|SERVICE_ROLE_KEY)=')
@@ -147,6 +147,15 @@ jobs:
           cd ../scripts/importacion
           pnpm install --frozen-lockfile
           pnpm test:integracion
+
+      # La base local tiene el seed de Playwright (paso 8) más los negocios que dejó el paso 9. Origen: esa base; destino: otra Supabase solo-DB.
+      - name: 10. Backup, restauración y verificación
+        run: |
+          origen=$(pnpm exec supabase status -o env --workdir .. 2>/dev/null | grep -E '^DB_URL=' | cut -d= -f2- | tr -d '"')
+          ../scripts/backup/respaldar.sh "$origen" "$RUNNER_TEMP/dump"
+          destino=$(../scripts/backup/destino-efimero.sh "$RUNNER_TEMP/destino" erp-restauracion 54521)
+          ../scripts/backup/restaurar.sh "$RUNNER_TEMP/dump" "$destino"
+          ../scripts/backup/verificar.sh "$RUNNER_TEMP/dump" "$destino"
 
       - name: Log de functions serve
         if: failure()
