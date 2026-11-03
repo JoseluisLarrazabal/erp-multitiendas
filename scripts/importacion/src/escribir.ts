@@ -10,7 +10,7 @@ const PAGINA = 1000;
 
 type Respuesta = { data: unknown; error: { message: string } | null };
 
-async function leerTodo<T>(
+export async function leerTodo<T>(
   consulta: (desde: number, hasta: number) => PromiseLike<Respuesta>,
   esquema: z.ZodType<T>,
 ): Promise<T[]> {
@@ -202,6 +202,8 @@ export type EstadoBase = {
   /** De los productos de esta corrida. */
   productosAuditados: number;
   auditadosConUsuario: number;
+  /** De los `codigosConFoto` pedidos: cuántos productos tienen foto_path. */
+  fotosAsignadas: number;
 };
 
 // Milésimas enteras: la suma no arrastra error de coma flotante (numeric(12,3) en la base).
@@ -212,6 +214,7 @@ export async function leerEstado(
   cliente: Cliente,
   negocioId: string,
   codigos: string[],
+  codigosConFoto: string[] = [],
 ): Promise<EstadoBase> {
   const nombres = new Map(
     (
@@ -228,22 +231,19 @@ export async function leerEstado(
     ).map((u) => [u.id, u.nombre]),
   );
   const delArchivo = new Set(codigos);
-  const idsArchivo = new Set(
-    (
-      await leerTodo(
-        (d, h) =>
-          cliente
-            .from("productos")
-            .select("id, codigo, codigo_barras")
-            .eq("negocio_id", negocioId)
-            .order("id")
-            .range(d, h),
-        ProductoDb,
-      )
-    )
-      .filter((p) => delArchivo.has(p.codigo))
-      .map((p) => p.id),
+  const productosBase = await leerTodo(
+    (d, h) =>
+      cliente
+        .from("productos")
+        .select("id, codigo, codigo_barras, foto_path")
+        .eq("negocio_id", negocioId)
+        .order("id")
+        .range(d, h),
+    ProductoDb.extend({ foto_path: z.string().nullable() }),
   );
+  const idsArchivo = new Set(productosBase.filter((p) => delArchivo.has(p.codigo)).map((p) => p.id));
+  const conFoto = new Set(codigosConFoto);
+  const fotosAsignadas = productosBase.filter((p) => conFoto.has(p.codigo) && p.foto_path !== null).length;
   const movimientos = await leerTodo(
     (d, h) =>
       cliente
@@ -307,5 +307,6 @@ export async function leerEstado(
     diferenciasKardex,
     productosAuditados: propias.length,
     auditadosConUsuario: propias.filter((a) => a.usuario_id !== null).length,
+    fotosAsignadas,
   };
 }

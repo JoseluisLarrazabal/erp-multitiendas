@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { importar } from "../../src/main.ts";
-import { crearXlsx, filaProducto } from "../xlsx.ts";
+import { crearXlsx, filaProducto, JPEG, PNG } from "../xlsx.ts";
 
 const URL_API = process.env.SUPABASE_URL ?? "";
 const CLAVE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -218,6 +218,63 @@ describe("importación contra Supabase local", () => {
     const b = await importar({ archivo: f2, negocioId: id, cliente, rutaReporte: join(dir, "b.json") });
     expect(b.escritura).toMatchObject({ stockInicialCreado: 0, stockInicialYaExistia: 1 });
     expect(await contar("movimientos_inventario", { negocio_id: id })).toBe(1);
+  });
+
+  it("sube las fotos al bucket, las asigna y la segunda corrida no sube nada", async () => {
+    const id = randomUUID();
+    await crearNegocio(id, ["Tienda", "Depósito"]);
+    const f = join(dir, "fotos.xlsx");
+    await crearXlsx(
+      f,
+      [
+        ["x"],
+        ["x"],
+        filaProducto({ codigo: "F1", nombre: "Uno", stock: 1 }), // 4
+        filaProducto({ codigo: "F2", nombre: "Dos", stock: 1 }), // 5
+        filaProducto({ codigo: "F3", nombre: "Tres", stock: 1 }), // 6
+        filaProducto({ codigo: "F4", nombre: "Cuatro", stock: 1 }), // 7: ancla de tipo inválido
+      ],
+      [
+        { fila: 4, columna: 1, datos: JPEG },
+        { fila: 5, columna: 1, datos: JPEG }, // misma imagen en otra fila
+        { fila: 6, columna: 1, datos: PNG },
+        { fila: 7, columna: 1, datos: Buffer.from("no es imagen") },
+        { fila: 3, columna: 1, datos: PNG }, // fila de ejemplo
+      ],
+    );
+    const primera = await importar({ archivo: f, negocioId: id, cliente, rutaReporte: join(dir, "f1.json") });
+    expect(primera.fotos).toMatchObject({
+      anclas: 5,
+      asociadas: 3,
+      avisosPorTipo: { foto_fila_excluida: 1 },
+      rechazadasPorMotivo: { foto_tipo_invalido: 1 },
+      escritura: { subidas: 3, asignadas: 3, yaExistian: 0 },
+    });
+    expect(primera.conciliacion.filter((c) => !c.ok)).toEqual([]);
+    expect(primera.conciliacion.some((c) => c.control.startsWith("Fotos asociadas"))).toBe(true);
+
+    const productos = await cliente
+      .from("productos")
+      .select("id, codigo, foto_path")
+      .eq("negocio_id", id)
+      .order("codigo");
+    const rutas = productos.data?.map((p) => p.foto_path);
+    expect(rutas).toEqual([
+      `${id}/${productos.data?.[0]?.id}.jpg`,
+      `${id}/${productos.data?.[1]?.id}.jpg`,
+      `${id}/${productos.data?.[2]?.id}.png`,
+      null,
+    ]);
+    const bajada = await cliente.storage.from("productos").download(rutas?.[0] as string);
+    expect(bajada.error).toBeNull();
+    expect(Buffer.from(await (bajada.data as Blob).arrayBuffer()).equals(JPEG)).toBe(true);
+
+    const segunda = await importar({ archivo: f, negocioId: id, cliente, rutaReporte: join(dir, "f2.json") });
+    expect(segunda.fotos?.escritura).toEqual({ subidas: 0, asignadas: 0, yaExistian: 3 });
+    expect(segunda.conciliacion.filter((c) => !c.ok)).toEqual([]);
+
+    const sec = await importar({ archivo: f, negocioId: id, cliente: null, rutaReporte: join(dir, "f3.json") });
+    expect(sec.fotos).toMatchObject({ asociadas: 3, escritura: null });
   });
 
   it("service_role no inserta en el kardex directamente", async () => {

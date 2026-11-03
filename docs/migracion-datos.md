@@ -29,7 +29,7 @@ Las cifras son de la corrida local del 2026-11-01 sobre la planilla real.
 | Categorías | 53 en uso | Solo las usadas, con `trim`, unidas por nombre sin distinguir mayúsculas. Sin mapa de parecidas: el reporte avisa los pares (2) |
 | Sin ubicación | 26 filas, 86 unidades | "Tienda", con aviso `sin_ubicacion`. Una ubicación que no es tienda ni depósito también va a "Tienda", con aviso `ubicacion_desconocida` |
 | Stock | | Número >= 0 sin decimales (todo producto importado es `unidad`). Vacío es 0. Decimal o texto: se rechaza la fila (`stock_decimal`, `stock_invalido`). Con separador de miles (`1.000`, `2,000`: ¿mil o uno?) también se rechaza, con `stock_ambiguo`: el cliente lo corrige en la planilla |
-| Fotos | 292 en filas 5 a 296 | **Pendiente**: fuera de la importación. El xlsx las trae embebidas; hay que extraerlas y subirlas a Storage en otro PR |
+| Fotos | 292 en filas 5 a 296 | Se importan: ancla de la hoja "Productos" → fila → producto aceptado. Ruta `<negocio>/<producto_id>.<ext>` (la del panel), tipo por magic bytes (JPEG, PNG, WebP), hasta 5 MB. Un producto que ya tiene foto no se toca. Avisos: `foto_fila_excluida`, `foto_fila_rechazada`, `foto_fila_sin_producto`, `foto_varias_en_fila`; rechazos: `foto_sin_datos`, `foto_tipo_invalido`, `foto_muy_grande`. Asigna con la RPC `asignar_fotos_importacion` (solo `service_role`, migración `20261102150000`) |
 
 ### Código de barras
 
@@ -120,7 +120,7 @@ mueven el resultado. El control `stock` = kardex sí es del negocio entero. Con 
 | Stock tienda y depósito | 934 y 1.613, más las 86 unidades sin ubicación | Tienda 1.020 (934 + 86 por defecto), Depósito 1.613 |
 | `stock` = suma de movimientos | Sin diferencias | 0 diferencias |
 | Productos auditados con usuario | 0 (no hay sesión) | 0 |
-| Fotos | 292 asociadas | Pendiente (fuera de este PR) |
+| Fotos | 292 anclas = asociadas + rechazadas + avisos (también en `--seco`); en la base, asociadas = las del plan | 292 = 292 en seco (2026-11-03) |
 
 ## Arranque
 

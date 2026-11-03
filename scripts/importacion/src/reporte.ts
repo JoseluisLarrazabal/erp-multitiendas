@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { EstadoBase, ResultadoEscritura } from "./escribir.ts";
+import type { PlanFotos, ResultadoFotos } from "./fotos.ts";
 import type { Evento, Plan } from "./plan.ts";
 
 export type Control = {
@@ -30,6 +31,7 @@ export function conciliar(
   plan: Plan,
   estado: EstadoBase | null,
   esperadas?: number,
+  fotos?: PlanFotos,
 ): Control[] {
   const { stock } = plan;
   const controles = [
@@ -48,7 +50,21 @@ export function conciliar(
       ),
     );
   }
+  if (fotos) {
+    controles.push(
+      control(
+        "Anclas de fotos = asociadas + rechazadas + avisos",
+        fotos.anclas,
+        fotos.asociadas.length + fotos.rechazadas.length + fotos.avisos.length,
+      ),
+    );
+  }
   if (!estado) return controles;
+  if (fotos) {
+    controles.push(
+      control("Fotos asociadas en la base = asociadas por el plan", fotos.asociadas.length, estado.fotosAsignadas),
+    );
+  }
   controles.push(
     control(
       "Stock inicial de este archivo en la base = stock aceptado",
@@ -69,6 +85,16 @@ export function conciliar(
   return controles;
 }
 
+export type ReporteFotos = {
+  anclas: number;
+  asociadas: number;
+  avisosPorTipo: Record<string, number>;
+  rechazadasPorMotivo: Record<string, number>;
+  escritura: ResultadoFotos | null;
+  /** Solo número de fila y regla. */
+  detalle: { avisos: Evento[]; rechazadas: Evento[] };
+};
+
 export type Reporte = {
   generado: string;
   modo: "seco" | "real";
@@ -82,6 +108,7 @@ export type Reporte = {
   categoriasParecidas: [string, string][];
   posiblesDuplicados: number[][];
   escritura: ResultadoEscritura | null;
+  fotos: ReporteFotos | null;
   conciliacion: Control[];
   /** Detalle por fila (número de fila de la planilla y regla), sin valores del cliente. */
   detalle: { excluidas: Evento[]; rechazadas: Evento[]; avisos: Evento[] };
@@ -93,6 +120,7 @@ export function armarReporte(
   escritura: ResultadoEscritura | null,
   estado: EstadoBase | null,
   esperadas?: number,
+  fotos?: { plan: PlanFotos; escritura: ResultadoFotos | null },
 ): Reporte {
   return {
     generado: new Date().toISOString(),
@@ -112,7 +140,17 @@ export function armarReporte(
     categoriasParecidas: plan.categoriasParecidas,
     posiblesDuplicados: plan.posiblesDuplicados,
     escritura,
-    conciliacion: conciliar(plan, estado, esperadas),
+    fotos: fotos
+      ? {
+          anclas: fotos.plan.anclas,
+          asociadas: fotos.plan.asociadas.length,
+          avisosPorTipo: contarPorRegla(fotos.plan.avisos),
+          rechazadasPorMotivo: contarPorRegla(fotos.plan.rechazadas),
+          escritura: fotos.escritura,
+          detalle: { avisos: fotos.plan.avisos, rechazadas: fotos.plan.rechazadas },
+        }
+      : null,
+    conciliacion: conciliar(plan, estado, esperadas, fotos?.plan),
     detalle: { excluidas: plan.excluidas, rechazadas: plan.rechazadas, avisos: plan.avisos },
   };
 }
@@ -146,6 +184,12 @@ export function resumenConsola(r: Reporte): string[] {
     `Stock: fuente ${r.stock.fuente}, aceptado ${r.stock.aceptado}, rechazado ${r.stock.rechazado} (Tienda ${r.stock.porUbicacion.Tienda}, Depósito ${r.stock.porUbicacion.Depósito}, por defecto a Tienda ${r.stock.porDefecto})`,
   ];
   if (r.escritura) lineas.push(`Escritura: ${JSON.stringify(r.escritura)}`);
+  if (r.fotos) {
+    lineas.push(
+      `Fotos: anclas ${r.fotos.anclas}, asociadas ${r.fotos.asociadas}; avisos ${JSON.stringify(r.fotos.avisosPorTipo)}; rechazadas ${JSON.stringify(r.fotos.rechazadasPorMotivo)}`,
+    );
+    if (r.fotos.escritura) lineas.push(`Escritura de fotos: ${JSON.stringify(r.fotos.escritura)}`);
+  }
   for (const c of r.conciliacion) {
     lineas.push(
       `${c.ok ? "OK " : "DIF"} ${c.control}: esperado ${c.esperado}, real ${c.real}${c.nota ? ` (${c.nota})` : ""}`,

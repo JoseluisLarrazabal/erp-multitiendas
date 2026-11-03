@@ -10,6 +10,7 @@ import {
   type EstadoBase,
   type ResultadoEscritura,
 } from "./escribir.ts";
+import { escribirFotos, leerFotos, planificarFotos, type ResultadoFotos } from "./fotos.ts";
 import { leerProductos } from "./leer.ts";
 import { construirPlan } from "./plan.ts";
 import {
@@ -38,17 +39,25 @@ export async function importar({
   esperadas,
 }: Opciones): Promise<Reporte> {
   const plan = construirPlan(await leerProductos(archivo));
+  const leidas = await leerFotos(archivo);
+  const planFotos = planificarFotos(plan, leidas);
   let escritura: ResultadoEscritura | null = null;
+  let escrituraFotos: ResultadoFotos | null = null;
   let estado: EstadoBase | null = null;
   if (cliente) {
     escritura = await escribir(cliente, negocioId, plan);
+    escrituraFotos = await escribirFotos(cliente, negocioId, planFotos, leidas.imagenes);
     estado = await leerEstado(
       cliente,
       negocioId,
       plan.aceptadas.map((p) => p.codigo),
+      planFotos.asociadas.map((a) => a.codigo),
     );
   }
-  const reporte = armarReporte(plan, cliente ? "real" : "seco", escritura, estado, esperadas);
+  const reporte = armarReporte(plan, cliente ? "real" : "seco", escritura, estado, esperadas, {
+    plan: planFotos,
+    escritura: escrituraFotos,
+  });
   escribirReporte(rutaReporte, reporte);
   return reporte;
 }

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import fs, { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -33,5 +33,27 @@ describe("leerProductos", () => {
     const ruta = join(dir, "b.xlsx");
     await libro.xlsx.writeFile(ruta);
     await expect(leerProductos(ruta)).rejects.toThrow(/Faltan columnas/);
+  });
+
+  // exceljs bufferea cada hoja en un tmp y lo borra al pasar a la siguiente; si la hoja ajena no se consume, el borrado
+  // le gana a la apertura diferida del stream (aquí forzada con un retraso) y salta un ENOENT no capturado.
+  it("no deja un archivo temporal huérfano ni un ENOENT no capturado al saltar la hoja ajena", async () => {
+    const ruta = join(dir, "c.xlsx");
+    await crearXlsx(ruta, [filaProducto({ codigo: "1", nombre: "Uno", stock: 1 })]);
+    const abrir = fs.open;
+    const errores: unknown[] = [];
+    const capturar = (e: unknown) => errores.push(e);
+    process.on("uncaughtException", capturar);
+    // @ts-expect-error retrasa solo la apertura de lectura de los tmp de exceljs
+    fs.open = (p: unknown, f: unknown, ...a: unknown[]) =>
+      String(p).includes("/tmp-") && f === "r" ? void setTimeout(() => abrir(p as never, f as never, ...(a as [])), 50) : abrir(p as never, f as never, ...(a as []));
+    try {
+      expect(await leerProductos(ruta)).toHaveLength(1);
+      await new Promise((r) => setTimeout(r, 200));
+    } finally {
+      fs.open = abrir;
+      process.off("uncaughtException", capturar);
+    }
+    expect(errores).toEqual([]);
   });
 });

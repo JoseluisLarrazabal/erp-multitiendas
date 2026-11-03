@@ -922,6 +922,9 @@ isOneToOne: false
 "asignar_foto_producto":
 { Args: { "p_foto_path": string,"p_producto_id": string }; Returns: undefined
                            },
+"asignar_fotos_importacion":
+{ Args: { "p_items": Json,"p_negocio_id": string }; Returns: Json
+                           },
 "asignar_usuario":
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
                            },
