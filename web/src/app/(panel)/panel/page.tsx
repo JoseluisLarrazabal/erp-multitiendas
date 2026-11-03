@@ -1,31 +1,40 @@
 import type { Metadata } from "next";
-import { Boxes } from "lucide-react";
+import Link from "next/link";
+import { itemsVisibles } from "@/components/panel/panel-items";
+import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import { etiquetaRol } from "@/modules/usuarios";
 import { exigirPanel } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Inicio · ERP Multitiendas" };
 
 export default async function PanelInicio() {
-  const { activo } = await exigirPanel();
+  const { activo, permisos } = await exigirPanel();
+  // Los mismos accesos que el menú; "Inicio" es esta página.
+  const accesos = itemsVisibles(permisos, activo.tipo).filter((i) => i.href !== "/panel");
 
   return (
     <>
-      <div className="mb-7">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight">Inicio</h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          {activo.nombre} · {etiquetaRol(activo.rol)}
-        </p>
-      </div>
-      <section className="bg-card flex flex-col items-start gap-3 rounded-xl border p-6 shadow-[0_2px_5px_#34345a0d]">
-        <span className="bg-secondary text-secondary-foreground grid size-9 place-items-center rounded-lg">
-          <Boxes className="size-[18px]" aria-hidden />
-        </span>
-        <h2 className="text-[15px] font-semibold tracking-tight">Todavía no hay módulos activos</h2>
-        <p className="text-muted-foreground max-w-prose text-sm">
-          Aquí aparecerán los resúmenes del negocio cuando se habiliten los módulos de ventas,
-          inventario y reportes. Por ahora puedes cambiar de negocio y abrir el punto de venta.
-        </p>
-      </section>
+      <EncabezadoPagina
+        titulo="Inicio"
+        descripcion={`${activo.nombre} · ${etiquetaRol(activo.rol)}`}
+      />
+      <nav aria-label="Accesos">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {accesos.map(({ href, etiqueta, icono: Icono }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className="bg-card hover:bg-muted focus-visible:ring-ring flex min-h-14 items-center gap-3 rounded-xl border p-4 text-sm font-semibold shadow-[0_2px_5px_#34345a0d] outline-none focus-visible:ring-3"
+              >
+                <span className="bg-secondary text-secondary-foreground grid size-9 place-items-center rounded-lg">
+                  <Icono className="size-[18px]" aria-hidden />
+                </span>
+                {etiqueta}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </>
   );
 }
