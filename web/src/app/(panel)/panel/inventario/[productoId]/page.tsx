@@ -18,6 +18,9 @@ import {
   ResumenStock,
   stockPorUbicacion,
 } from "@/modules/inventario/panel";
+import { hoyEnBolivia } from "@/lib/format/fecha";
+import { nombreArchivo } from "@/modules/reportes";
+import { BotonKardexExcel } from "@/modules/reportes/panel";
 import { exigirAlgunPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Kardex · ERP Multitiendas" };
@@ -132,11 +135,20 @@ export default async function PaginaKardex({
           </p>
         )}
         {kardex?.ok && p && ubicaciones.ok && kardex.data.filas.length > 0 && (
-          <ListaKardex
-            movimientos={kardex.data.filas}
-            ubicaciones={ubicaciones.data}
-            unidad={p.unidad}
-          />
+          <>
+            <div className="flex justify-end">
+              <BotonKardexExcel
+                productoId={p.id}
+                ubicacionId={filtros.ubicacion}
+                archivo={nombreArchivo("kardex", p.codigo, activo.nombre, hoyEnBolivia())}
+              />
+            </div>
+            <ListaKardex
+              movimientos={kardex.data.filas}
+              ubicaciones={ubicaciones.data}
+              unidad={p.unidad}
+            />
+          </>
         )}
         {kardex?.ok && (filtros.desde || kardex.data.siguiente) && (
           <nav

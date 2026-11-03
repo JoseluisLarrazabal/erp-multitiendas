@@ -162,13 +162,23 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     `20261102130000_frial_ajustes.sql`: lotes solo en frial y `unidad` en `lotes_por_vencer`. Descartado: rotar la
     operación al editar lote tras un fallo (mismo comportamiento que el resto de formularios de inventario).
     pgTAP 1469, Vitest 330, E2E 146. **No verificado:** pantalla en móvil real y lector de pantalla.
-  - PR 3 `feat/reportes-datos`: RPC `reporte_ventas` (día, vendedor, producto, categoría, marca; ganancia con foto del
+  - PR 3 `feat/reportes-datos` (#58): RPC `reporte_ventas` (día, vendedor, producto, categoría, marca; ganancia con foto del
     costo), `reporte_stock` (valor, stock bajo, sin movimiento por última salida del kardex) y `reporte_caja` (una fila
     por sesión vía `resumen_caja`). Fecha de venta = `recibida_en` en La Paz (una venta sin conexión cuenta el día que
     llegó). Devoluciones restan en su fecha. Servicios con costo 0; productos sin costo quedan fuera de la ganancia y se
     cuentan. Totales de caja suman esperado/contado/diferencia solo de sesiones cerradas. Límite aceptado: más de 5.000
     productos activos da `ERP_LOTE_GRANDE` en stock (Lider tiene 597). pgTAP 1541.
-  - **Próximo:** PR 4 `feat/reportes-panel`.
+  - PR 4 `feat/reportes-panel`: `/panel/reportes` por tipo de negocio (tienda: ventas, más vendidos, stock, caja;
+    lavandería: ingresos con kilos, caja; frial: ventas con kg, stock, caja y enlace a vencimientos), filtros en la URL,
+    Excel en el navegador con `write-excel-file` 4.1.1 (MIT) y kardex completo a Excel (hasta 5.000). Respuestas de RPC
+    validadas con Zod. **Decisiones:** sin apóstrofo anti-fórmula (los textos del xlsx son shared strings, nunca se
+    evalúan; el apóstrofo alteraba datos); CSP `worker-src 'self' blob:` aprobada por el CTO (fflate comprime hojas de
+    más de 160 KB en un worker desde Blob; E2E con 900 productos lo prueba y falla sin `blob:`). El total del valor con
+    filtro sale vacío: no se suma dinero en JS. Aceptado: la página manda las filas dos veces (tabla y Excel).
+    E2E-11 lee el Excel y lo compara con la pantalla. pgTAP 1541, Vitest 365, E2E 159. **No verificado:** abrir el
+    archivo en Excel o LibreOffice; usuario con `ver_reportes` sin `ver_costos` (no existe en la matriz, cubierto por
+    tests unitarios). Local: `supabase functions serve` se había caído y daba 3 fallos en `usuarios.spec`; levantarlo antes de E2E.
+  - **Próximo:** PR 5 `feat/pwa-responsive`.
 - **Fase 4 cerrada (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Banknote,
   Boxes,
+  ChartColumn,
   CircleDollarSign,
   Contact,
   Landmark,
@@ -76,6 +77,7 @@ export const ITEMS: Item[] = [
     permisos: ["ver_reportes"],
   },
   { href: "/panel/cajas", etiqueta: "Cajas", icono: Landmark, permisos: ["caja", "ver_reportes"] },
+  { href: "/panel/reportes", etiqueta: "Reportes", icono: ChartColumn, permisos: ["ver_reportes"] },
   {
     href: "/panel/clientes",
     etiqueta: "Clientes",

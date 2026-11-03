@@ -48,6 +48,14 @@ describe("ítems de la fase 2", () => {
   });
 });
 
+describe("Reportes (fase 5)", () => {
+  it("se ve con ver_reportes y no sin él", () => {
+    expect(etiquetas(["ver_reportes"])).toContain("Reportes");
+    expect(etiquetas(["vender", "caja"])).not.toContain("Reportes");
+    expect(itemDeRuta("/panel/reportes")?.etiqueta).toBe("Reportes");
+  });
+});
+
 describe("itemDeRuta", () => {
   it("una pantalla hija cuenta como su ítem; Inicio solo es exacto", () => {
     expect(itemDeRuta("/panel/productos/nuevo")?.etiqueta).toBe("Productos");
