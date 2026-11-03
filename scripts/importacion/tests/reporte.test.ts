@@ -27,6 +27,7 @@ const estado = (importadoTotal: number): EstadoBase => ({
   diferenciasKardex: 0,
   productosAuditados: 1,
   auditadosConUsuario: 0,
+  fotosAsignadas: 0,
 });
 
 describe("conciliar", () => {
@@ -40,6 +41,14 @@ describe("conciliar", () => {
     expect(conciliar(plan, estado(7)).filter((c) => !c.ok).map((c) => c.control)).toContain(
       "Stock inicial de este archivo en la base = stock aceptado",
     );
+  });
+  it("concilia las fotos: anclas contra su desenlace y asociadas contra la base", () => {
+    const asociada = { fila: 4, codigo: "5", imagen: 1, tipo: { mime: "image/jpeg", ext: "jpg" } } as const;
+    const fotos = { anclas: 2, asociadas: [asociada], avisos: [{ fila: 9, regla: "foto_fila_excluida" }], rechazadas: [] };
+    expect(conciliar(plan, null, undefined, fotos).every((c) => c.ok)).toBe(true);
+    expect(conciliar(plan, null, undefined, { ...fotos, anclas: 3 }).filter((c) => !c.ok)).toHaveLength(1);
+    expect(conciliar(plan, { ...estado(5), fotosAsignadas: 1 }, undefined, fotos).every((c) => c.ok)).toBe(true);
+    expect(conciliar(plan, { ...estado(5), fotosAsignadas: 0 }, undefined, fotos).filter((c) => !c.ok)).toHaveLength(1);
   });
   it("el reporte lista excluidas y rechazadas con número de fila y motivo", () => {
     expect(armarReporte(plan, "seco", null, null).detalle.rechazadas).toEqual([
