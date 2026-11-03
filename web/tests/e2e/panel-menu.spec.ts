@@ -15,7 +15,9 @@ test("menú móvil: Enter abre, Tab recorre, Escape cierra y devuelve el foco", 
   await expect(cerrar).toBeFocused();
   await expect(page.locator("div[inert]")).toHaveCount(1);
 
-  const enlace = page.getByRole("link", { name: "Inicio" });
+  const enlace = page
+    .getByRole("navigation", { name: "Principal" })
+    .getByRole("link", { name: "Inicio" });
   for (let i = 0; i < 6 && !(await enlace.evaluate((el) => el === document.activeElement)); i++) {
     await page.keyboard.press("Tab");
   }

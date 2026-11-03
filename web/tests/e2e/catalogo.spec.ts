@@ -386,8 +386,9 @@ test.describe("encargado de tienda", () => {
 
   test("ve Productos, Precios y Tipo de cambio en el menú", async ({ page }) => {
     await ir(page, "/panel");
+    const menu = page.getByRole("navigation", { name: "Principal" });
     for (const n of ["Productos", "Precios", "Tipo de cambio"]) {
-      await expect(page.getByRole("link", { name: n, exact: true })).toBeVisible();
+      await expect(menu.getByRole("link", { name: n, exact: true })).toBeVisible();
     }
   });
 });
