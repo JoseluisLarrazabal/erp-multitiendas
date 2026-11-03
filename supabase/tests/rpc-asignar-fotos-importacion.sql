@@ -1,6 +1,6 @@
 -- asignar_fotos_importacion: solo service_role; asigna si no hay foto; ruta del negocio; todo o nada.
 begin;
-select plan(11);
+select plan(12);
 
 insert into public.negocios (id, nombre, tipo) values
   ('aaaaaaaa-9100-0000-0000-000000000001', 'T', 'tienda'),
@@ -9,7 +9,7 @@ insert into public.productos (id, negocio_id, codigo, nombre, tipo, foto_path) v
   ('eeeeeeee-9100-0000-0000-000000000001', 'aaaaaaaa-9100-0000-0000-000000000001', 'P1', 'P1', 'producto', null),
   ('eeeeeeee-9100-0000-0000-000000000002', 'aaaaaaaa-9100-0000-0000-000000000001', 'P2', 'P2', 'producto',
     'aaaaaaaa-9100-0000-0000-000000000001/11111111-2222-3333-4444-555555555555.png'),
-  ('eeeeeeee-9100-0000-0000-000000000003', 'aaaaaaaa-9100-0000-0000-000000000002', 'P3', 'P3', 'producto', null);
+  ('eeeeeeee-9100-0000-0000-000000000003', 'aaaaaaaa-9100-0000-0000-000000000001', 'P3', 'P3', 'producto', null);
 
 select ok(not has_function_privilege('authenticated', 'public.asignar_fotos_importacion(uuid, jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.asignar_fotos_importacion(uuid, jsonb)', 'EXECUTE'),
@@ -50,8 +50,10 @@ select throws_ok($$select public.asignar_fotos_importacion('aaaaaaaa-9100-0000-0
   'P0001', 'ERP_DATOS_INVALIDOS', 'ruta con el uuid de otro producto');
 select throws_ok($$select public.asignar_fotos_importacion('aaaaaaaa-9100-0000-0000-000000000001', jsonb_build_array(
   jsonb_build_object('producto_id', 'eeeeeeee-9100-0000-0000-000000000003',
-    'foto_path', 'aaaaaaaa-9100-0000-0000-000000000001/eeeeeeee-9100-0000-0000-000000000003.jpg')))$$,
-  'P0001', 'ERP_DATOS_INVALIDOS', 'producto del negocio B con ruta del negocio A');
+    'foto_path', 'aaaaaaaa-9100-0000-0000-000000000001/eeeeeeee-9100-0000-0000-000000000001.jpg')))$$,
+  'P0001', 'ERP_DATOS_INVALIDOS', 'mismo negocio: el producto sin foto no acepta la ruta de otro producto');
+select is((select foto_path from public.productos where id = 'eeeeeeee-9100-0000-0000-000000000003'),
+  null, 'tras el rechazo el producto sigue sin foto');
 
 select * from finish();
 rollback;
