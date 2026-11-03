@@ -16,7 +16,7 @@ const csp = [
   `img-src 'self' data: blob: ${supabaseOrigen}`.trim(),
   "font-src 'self'",
   `connect-src 'self' ${supabaseOrigen}${esProduccion ? "" : " ws://localhost:* ws://127.0.0.1:*"}`.trim(),
-  "worker-src 'self'",
+  "worker-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

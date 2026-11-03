@@ -100,8 +100,13 @@ fechas en hora de La Paz y ambos días incluidos.
   está congelada en 0.18.5 con avisos conocidos. Si `write-excel-file` no pasa, se usa `exceljs`, y se deja escrito el
   motivo en `docs/stack.md`.
 - Montos con formato `#,##0.00`, kilos con `0.000` y fechas como fecha, no como texto.
-- **Inyección de fórmulas:** todo texto que empieza con `=`, `+`, `-`, `@`, tabulación o retorno de carro lleva un
-  apóstrofo delante. Hay una sola función con su test.
+- **Inyección de fórmulas (cambio del PR 4):** no se antepone apóstrofo. `write-excel-file` escribe cada texto como
+  shared string (`t="s"`), y Excel y LibreOffice nunca lo evalúan como fórmula. El apóstrofo quedaría visible y
+  alteraría datos legítimos ("-3 rotos"). Un test verifica que `=1+1` sale como celda de texto. El riesgo que queda es
+  que alguien vuelva a guardar el archivo como CSV y lo abra en otro programa: no se cubre.
+- **CSP:** `worker-src 'self' blob:` (CTO, 2026-11-02). `fflate` comprime las hojas de más de 160 KB en un worker creado
+  desde un Blob; sin `blob:`, el Excel del stock de Lider fallaría.
+- **Kardex:** se exporta completo, hasta 5.000 movimientos, no solo la página visible.
 - Nombre del archivo: `<reporte>-<negocio>-<desde>-<hasta>.xlsx`, sin acentos ni espacios.
 - Menú: Reportes con `ver_reportes`. Ganancia y valor del stock no aparecen sin `ver_costos`.
 
