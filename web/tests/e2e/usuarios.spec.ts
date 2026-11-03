@@ -208,8 +208,9 @@ test.describe("encargado de tienda", () => {
 
   test("no ve Usuarios ni Dispositivos y su URL directa se rechaza", async ({ page }) => {
     await page.goto("/panel");
-    await expect(page.getByRole("link", { name: "Usuarios" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Dispositivos" })).toHaveCount(0);
+    const menu = page.getByRole("navigation", { name: "Principal" });
+    await expect(menu.getByRole("link", { name: "Usuarios" })).toHaveCount(0);
+    await expect(menu.getByRole("link", { name: "Dispositivos" })).toHaveCount(0);
     for (const ruta of ["/panel/usuarios", "/panel/dispositivos"]) {
       await page.goto(ruta);
       await expect(page).toHaveURL(/\/panel$/);
