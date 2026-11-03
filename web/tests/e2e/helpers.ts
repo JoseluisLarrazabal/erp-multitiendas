@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test";
 
 // Cuentas del seed (supabase/seed.sql). Contraseña común de desarrollo local.
 export const CLAVE = "Prueba-ERP-2026";
@@ -19,6 +19,7 @@ export const CUENTA_DESACTIVABLE = "baneable@erp.test";
 export const NEGOCIOS = {
   tienda: { id: "a0000000-0000-0000-0000-000000000001", nombre: "Tienda Demo" },
   lavanderia: { id: "a0000000-0000-0000-0000-000000000002", nombre: "Lavandería Demo" },
+  frial: { id: "a0000000-0000-0000-0000-000000000003", nombre: "Frial Demo" },
 } as const;
 
 export const rutaAuth = (cuenta: keyof typeof CUENTAS) => `tests/e2e/.auth/${cuenta}.json`;
@@ -140,3 +141,63 @@ export async function ir(page: Page, url: string) {
   await page.goto(url);
   await esperarHidratacion(page);
 }
+
+export type Equipo = { id: string; prefijo: string; ultimo_numero: number };
+
+// Equipo (dispositivo) propio de un spec, para no compartir caja con otros. Si ya existe de una corrida anterior,
+// la RPC falla y se ignora.
+export async function equipoPropio(
+  negocio: string,
+  ubicacion: string,
+  prefijo: string,
+  nombre = `Caja de prueba ${prefijo}`,
+): Promise<Equipo> {
+  await apiComo("dueno", "rpc/registrar_dispositivo", {
+    metodo: "POST",
+    cuerpo: {
+      p_negocio_id: negocio,
+      p_ubicacion_id: ubicacion,
+      p_nombre: nombre,
+      p_prefijo: prefijo,
+    },
+  });
+  const r = await apiComo(
+    "dueno",
+    `dispositivos?select=id,prefijo,ultimo_numero&negocio_id=eq.${negocio}&prefijo=eq.${prefijo}`,
+  );
+  const e = (r.json as Equipo[])[0];
+  if (!e) throw new Error(`No se pudo crear el equipo ${prefijo}.`);
+  return e;
+}
+
+export async function cerrarCaja(sesion: string) {
+  await apiComo("dueno", "rpc/cerrar_caja", {
+    metodo: "POST",
+    cuerpo: { p_sesion_id: sesion, p_monto_contado: 0 },
+  });
+}
+
+// Abre una caja nueva en el equipo (cierra la que hubiera abierta) y devuelve el id de la sesión.
+export async function abrirCaja(negocio: string, equipo: Equipo): Promise<string> {
+  const abierta = await apiComo("dueno", "rpc/caja_sesion_abierta", {
+    metodo: "POST",
+    cuerpo: { p_dispositivo_id: equipo.id },
+  });
+  const previa = (abierta.json as { id: string }[])[0]?.id;
+  if (previa) await cerrarCaja(previa);
+  const sesion = crypto.randomUUID();
+  const r = await apiComo("dueno", "rpc/abrir_caja", {
+    metodo: "POST",
+    cuerpo: {
+      p_id: sesion,
+      p_negocio_id: negocio,
+      p_dispositivo_id: equipo.id,
+      p_monto_inicial: 100,
+    },
+  });
+  expect(r.status, JSON.stringify(r.json)).toBeLessThan(300);
+  return sesion;
+}
+
+export const elegirNegocio = (context: BrowserContext, negocio: string) =>
+  context.addCookies([{ name: "negocio_activo", value: negocio, domain: "localhost", path: "/" }]);

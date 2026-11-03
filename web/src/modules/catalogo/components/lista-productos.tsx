@@ -89,12 +89,14 @@ export function ListaProductos({ productos, fotos, puedeEditar, listaPrincipal }
               {puedeEditar ? (
                 <Link
                   href={`/panel/productos/${p.id}`}
-                  className="focus-visible:ring-ring truncate rounded font-semibold outline-none hover:underline focus-visible:ring-3"
+                  className="focus-visible:ring-ring inline-block max-w-full truncate rounded align-bottom font-semibold outline-none hover:underline focus-visible:ring-3"
                 >
                   {p.nombre}
                 </Link>
               ) : (
-                <span className="font-semibold">{p.nombre}</span>
+                <span className="inline-block max-w-full truncate align-bottom font-semibold">
+                  {p.nombre}
+                </span>
               )}
               {p.pesoPaqueteKg !== null && (
                 <span className="text-muted-foreground ml-2 text-xs">

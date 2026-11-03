@@ -1,14 +1,14 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-02.
+Última actualización: 2026-11-03.
 
 ## Estado actual
 
 - **Contrato redactado**, pendiente de firma: `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
   (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
-- **Desarrollo:** fases 0 a 4 cerradas (lavandería: `docs/plan-fase-4.md`). En curso: fase 5 (frial, reportes, PWA), plan en `docs/plan-fase-5.md`. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+- **Desarrollo:** fases 0 a 5 cerradas (frial, reportes y PWA: `docs/plan-fase-5.md`). Próximo: fase 6 (salida). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
 - **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/relevamiento.gs`
   creó (cuenta Google del CTO):
   - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform
@@ -150,7 +150,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
-- **Fase 5 en curso (2026-11-02):** plan en `docs/plan-fase-5.md`, 5 PRs.
+- **Fase 5 cerrada (2026-11-03):** plan en `docs/plan-fase-5.md`, 5 PRs (#56 a #60).
   - PR 1 `feat/frial-datos` (#56): `productos.peso_paquete_kg`, tabla `lotes`, `registrar_entrada_lote`,
     `lotes_por_vencer` y movimiento `merma` (solo frial). Migración aplicada en staging. Revisión: saldo de lote pasó a
     FIFO por producto en el negocio (una entrada sin lote o un traslado lo rompían por ubicación); `guardar_producto`
@@ -168,7 +168,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     llegó). Devoluciones restan en su fecha. Servicios con costo 0; productos sin costo quedan fuera de la ganancia y se
     cuentan. Totales de caja suman esperado/contado/diferencia solo de sesiones cerradas. Límite aceptado: más de 5.000
     productos activos da `ERP_LOTE_GRANDE` en stock (Lider tiene 597). pgTAP 1541.
-  - PR 4 `feat/reportes-panel`: `/panel/reportes` por tipo de negocio (tienda: ventas, más vendidos, stock, caja;
+  - PR 4 `feat/reportes-panel` (#59): `/panel/reportes` por tipo de negocio (tienda: ventas, más vendidos, stock, caja;
     lavandería: ingresos con kilos, caja; frial: ventas con kg, stock, caja y enlace a vencimientos), filtros en la URL,
     Excel en el navegador con `write-excel-file` 4.1.1 (MIT) y kardex completo a Excel (hasta 5.000). Respuestas de RPC
     validadas con Zod. **Decisiones:** sin apóstrofo anti-fórmula (los textos del xlsx son shared strings, nunca se
@@ -178,7 +178,17 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     E2E-11 lee el Excel y lo compara con la pantalla. pgTAP 1541, Vitest 365, E2E 159. **No verificado:** abrir el
     archivo en Excel o LibreOffice; usuario con `ver_reportes` sin `ver_costos` (no existe en la matriz, cubierto por
     tests unitarios). Local: `supabase functions serve` se había caído y daba 3 fallos en `usuarios.spec`; levantarlo antes de E2E.
-  - **Próximo:** PR 5 `feat/pwa-responsive`.
+  - PR 5 `feat/pwa-responsive`: íconos (monograma "E" sobre el primario, script `web/scripts/generar-iconos.sh` con
+    rsvg-convert e ImageMagick), manifiestos `pos.webmanifest` y `panel.webmanifest` en la raíz de `public/`, enlazados
+    por layout; el proxy no pasa por sesión los estáticos públicos. `Page.getInstallabilityErrors` de Chrome da `[]`
+    para `/pos` y `/panel`: el panel se instala sin service worker, se mantiene la decisión del 2026-10-26.
+    `responsive.spec.ts` recorre las 26 rutas del panel a 390 px con datos propios; único desborde real arreglado:
+    nombre largo en `/panel/productos`. Helpers de E2E unificados en `helpers.ts`. E2E 196.
+    **No verificado:** instalación en Android real, Safari y Firefox; móvil táctil real; lector de pantalla.
+  - **Pendiente de la fase:** Codex sobre las fases 3, 4 y 5 cuando vuelva la cuota (2026-11-16). `catalogo.spec.ts:195`
+    falló una vez en una corrida completa y pasó en las siguientes: posible intermitencia, sin investigar.
+  - **Próximo:** fase 6 (`docs/roadmap.md`): backups con restauración probada, dominio, carga real, capacitación,
+    paralelo y acta.
 - **Fase 4 cerrada (2026-11-02):** plan en `docs/plan-fase-4.md`, 3 PRs. Decisión central: la orden es una venta más
   su ficha (`ordenes.id = ventas.id`), así caja, pagos, QR pendiente, numeración, cola y reconciliación se reutilizan.
   Sin conexión el cliente se escribe a mano y la venta queda marcada `sin_cliente`.

@@ -1,10 +1,10 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { apiComo, ir, rutaAuth } from "./helpers";
+import { expect, test, type Page } from "@playwright/test";
+import { apiComo, elegirNegocio, ir, NEGOCIOS, rutaAuth } from "./helpers";
 import { corrida } from "./inventario-helpers";
 
 // Fase 5, PR 2: frial (venta por peso, lote con vencimiento, merma). El dueño opera la caja del equipo F1, propio del
 // frial: no comparte caja con ningún otro spec. Serial: una sola caja.
-const FRIAL = "a0000000-0000-0000-0000-000000000003";
+const FRIAL = NEGOCIOS.frial.id;
 const COR_001 = "e0000000-0000-0000-0000-000000000007";
 const COR_002 = "e0000000-0000-0000-0000-000000000008";
 
@@ -32,14 +32,11 @@ test.describe("frial", () => {
     expect(r.status).toBeLessThan(300);
   }
 
-  const elegirFrial = (context: BrowserContext) =>
-    context.addCookies([{ name: "negocio_activo", value: FRIAL, domain: "localhost", path: "/" }]);
-
   test.beforeEach(async ({ page, context }) => {
     const r = await apiComo("dueno", `dispositivos?select=id&negocio_id=eq.${FRIAL}&prefijo=eq.F1`);
     equipoId = (r.json as { id: string }[])[0]!.id;
     await cerrarCajaF1();
-    await elegirFrial(context);
+    await elegirNegocio(context, FRIAL);
     await page.addInitScript(
       ([clave, id]) => localStorage.setItem(clave!, id!),
       [`erp:pos:equipo:${FRIAL}`, equipoId],

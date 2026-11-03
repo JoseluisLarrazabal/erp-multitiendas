@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { SerwistProvider } from "@serwist/turbopack/react";
+
+export const metadata: Metadata = { manifest: "/pos.webmanifest" };
 
 // El service worker se registra solo desde /pos. Con reloadOnOnline el paquete recarga la página
 // al volver la red; en un POS con venta a medias eso pierde el formulario, así que va apagado.
