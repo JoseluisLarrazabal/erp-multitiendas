@@ -119,9 +119,9 @@ fechas en hora de La Paz y ambos días incluidos.
   panel. Un solo manifiesto con scope `/` obligaría a elegir un solo `start_url`.
 - Íconos de 192, 512 y 512 maskable, `apple-touch-icon` de 180 y favicon. Un monograma simple con los colores del tema,
   hecho en SVG y convertido a PNG por un script. Sin marca del cliente: no hay logo.
-- El panel sigue sin service worker (decisión del 2026-10-26). **No verificado:** si Chrome instala sin service worker
-  en Android y escritorio. Se comprueba en el PR 5 con DevTools (Application, Manifest, Installability). Si exige uno,
-  se vuelve al CTO antes de agregarlo, porque cambia esa decisión.
+- El panel sigue sin service worker (decisión del 2026-10-26). **Verificado en el PR 5:** `Page.getInstallabilityErrors`
+  de Chrome devuelve `[]` para `/pos` y `/panel`, así que Chrome de escritorio los instala sin service worker en el
+  panel. **No verificado:** Android real, Safari y Firefox.
 - `proxy.ts` debe dejar pasar los manifiestos y los íconos sin sesión. Si no, la instalación pide login y falla.
 - `display: standalone`, `theme_color` y `background_color` del tema, `lang: es-BO`.
 
@@ -146,8 +146,9 @@ fechas en hora de La Paz y ambos días incluidos.
 - Seed solo local, nunca en staging: equipo `F1` del frial, un producto de peso fijo y lotes con fechas relativas a hoy.
 - Los specs E2E del frial usan su propio equipo, para no chocar con la caja de la tienda (aprendido en la fase 4).
 - La descarga del E2E-11 se lee con `read-excel-file` como dependencia solo de desarrollo.
-- Un archivo bajo `/pos` en `public/` caería bajo el scope del service worker. Los manifiestos van en la raíz de
-  `public/`.
+- El scope del service worker es un prefijo de texto: `/pos.webmanifest` también entra en `/pos`, y toda petición de una
+  página controlada pasa por el SW sea cual sea su ruta. Los manifiestos e íconos no se precachean; si algún día el SW
+  suma caché en tiempo de ejecución, revisar que no los atrape.
 
 ## Fuera de esta fase
 

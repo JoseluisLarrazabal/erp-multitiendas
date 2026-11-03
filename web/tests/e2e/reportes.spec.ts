@@ -1,6 +1,18 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readSheet } from "read-excel-file/node";
-import { apiComo, crearProductosEnLote, ir, NEGOCIOS, rutaAuth, vigilarCsp } from "./helpers";
+import {
+  abrirCaja as abrirCajaDe,
+  apiComo,
+  cerrarCaja,
+  crearProductosEnLote,
+  elegirNegocio,
+  equipoPropio as equipoDe,
+  ir,
+  NEGOCIOS,
+  rutaAuth,
+  vigilarCsp,
+  type Equipo,
+} from "./helpers";
 import { entradaApi, ubicaciones } from "./inventario-helpers";
 import { CLIENTE_LAVANDERIA, crearProductoConPrecio, SERVICIO_LAVADO } from "./pos-helpers";
 
@@ -10,62 +22,19 @@ test.describe.configure({ mode: "serial" });
 
 const TIENDA = NEGOCIOS.tienda.id;
 const LAVANDERIA = NEGOCIOS.lavanderia.id;
-const FRIAL = "a0000000-0000-0000-0000-000000000003";
 const UBICACION_LAVANDERIA = "b0000000-0000-0000-0000-000000000003";
 const UBICACION_FRIAL = "b0000000-0000-0000-0000-000000000004";
 const CORTE_A = "e0000000-0000-0000-0000-000000000007"; // COR-001, kg, Bs 60
 const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/La_Paz" }).format(new Date());
 
-type Equipo = { id: string; prefijo: string; ultimo_numero: number };
+const equipoPropio = (negocio: string, ubicacion: string, prefijo: string) =>
+  equipoDe(negocio, ubicacion, prefijo, `Caja reportes ${prefijo}`);
 const cajas: { negocio: string; sesion: string }[] = [];
 
-async function equipoPropio(negocio: string, ubicacion: string, prefijo: string): Promise<Equipo> {
-  // Si ya existe de una corrida anterior, la RPC falla y se ignora.
-  await apiComo("dueno", "rpc/registrar_dispositivo", {
-    metodo: "POST",
-    cuerpo: {
-      p_negocio_id: negocio,
-      p_ubicacion_id: ubicacion,
-      p_nombre: `Caja reportes ${prefijo}`,
-      p_prefijo: prefijo,
-    },
-  });
-  const r = await apiComo(
-    "dueno",
-    `dispositivos?select=id,prefijo,ultimo_numero&negocio_id=eq.${negocio}&prefijo=eq.${prefijo}`,
-  );
-  const e = (r.json as Equipo[])[0];
-  if (!e) throw new Error(`No se pudo crear el equipo ${prefijo}.`);
-  return e;
-}
-
 async function abrirCaja(negocio: string, equipo: Equipo): Promise<string> {
-  const abierta = await apiComo("dueno", "rpc/caja_sesion_abierta", {
-    metodo: "POST",
-    cuerpo: { p_dispositivo_id: equipo.id },
-  });
-  const previa = (abierta.json as { id: string }[])[0]?.id;
-  if (previa) await cerrarCaja(previa);
-  const sesion = crypto.randomUUID();
-  const r = await apiComo("dueno", "rpc/abrir_caja", {
-    metodo: "POST",
-    cuerpo: {
-      p_id: sesion,
-      p_negocio_id: negocio,
-      p_dispositivo_id: equipo.id,
-      p_monto_inicial: 100,
-    },
-  });
-  expect(r.status, JSON.stringify(r.json)).toBeLessThan(300);
+  const sesion = await abrirCajaDe(negocio, equipo);
   cajas.push({ negocio, sesion });
   return sesion;
-}
-
-async function cerrarCaja(sesion: string) {
-  await apiComo("dueno", "rpc/cerrar_caja", {
-    metodo: "POST",
-    cuerpo: { p_sesion_id: sesion, p_monto_contado: 0 },
-  });
 }
 
 const numeroSiguiente = (e: Equipo) =>
@@ -106,9 +75,6 @@ async function vender(
   equipo.ultimo_numero += 1;
 }
 
-const elegirNegocio = (context: BrowserContext, negocio: string) =>
-  context.addCookies([{ name: "negocio_activo", value: negocio, domain: "localhost", path: "/" }]);
-
 // "Bs 1.234,56" -> 1234.56
 const bs = (t: string) => Number(t.replace(/[^\d,-]/g, "").replace(",", "."));
 
@@ -126,8 +92,8 @@ test.beforeAll(async () => {
     precio: 30,
   });
 
-  const frial = await equipoPropio(FRIAL, UBICACION_FRIAL, "Q2");
-  await vender(FRIAL, frial, await abrirCaja(FRIAL, frial), {
+  const frial = await equipoPropio(NEGOCIOS.frial.id, UBICACION_FRIAL, "Q2");
+  await vender(NEGOCIOS.frial.id, frial, await abrirCaja(NEGOCIOS.frial.id, frial), {
     producto: CORTE_A,
     cantidad: 1.255,
     precio: 60,
@@ -313,7 +279,7 @@ test.describe("lavandería", () => {
 
 test.describe("frial", () => {
   test.use({ storageState: rutaAuth("dueno") });
-  test.beforeEach(({ context }) => elegirNegocio(context, FRIAL));
+  test.beforeEach(({ context }) => elegirNegocio(context, NEGOCIOS.frial.id));
 
   test("muestra Ventas con kg por corte y el enlace a Vencimientos", async ({ page }) => {
     await ir(page, "/panel/reportes?agrupar=producto");
@@ -334,7 +300,7 @@ test.describe("frial", () => {
 
 test.describe("Excel grande", () => {
   test.use({ storageState: rutaAuth("dueno") });
-  test.beforeEach(({ context }) => elegirNegocio(context, FRIAL));
+  test.beforeEach(({ context }) => elegirNegocio(context, NEGOCIOS.frial.id));
 
   // write-excel-file comprime en un worker creado desde un Blob cuando una hoja pasa ~160 KB (~700 filas de stock):
   // sin worker-src blob: en la CSP real del build, la descarga fallaría en silencio. Se usa el frial para no mezclar
@@ -346,11 +312,11 @@ test.describe("Excel grande", () => {
     page,
   }) => {
     test.setTimeout(300_000);
-    await crearProductosEnLote("dueno", FRIAL, PREFIJO, CANTIDAD);
+    await crearProductosEnLote("dueno", NEGOCIOS.frial.id, PREFIJO, CANTIDAD);
     try {
       const esperado = await apiComo("dueno", "rpc/reporte_stock", {
         metodo: "POST",
-        cuerpo: { p_negocio_id: FRIAL, p_dias_sin_movimiento: 30 },
+        cuerpo: { p_negocio_id: NEGOCIOS.frial.id, p_dias_sin_movimiento: 30 },
       });
       const productos = (esperado.json as { filas: unknown[] }).filas.length;
       expect(productos).toBeGreaterThanOrEqual(CANTIDAD);
@@ -372,7 +338,7 @@ test.describe("Excel grande", () => {
     } finally {
       const lista = await apiComo(
         "dueno",
-        `productos?select=id&negocio_id=eq.${FRIAL}&codigo=like.${PREFIJO}-*`,
+        `productos?select=id&negocio_id=eq.${NEGOCIOS.frial.id}&codigo=like.${PREFIJO}-*`,
       );
       const ids = (lista.json as { id: string }[]).map((p) => p.id);
       for (let i = 0; i < ids.length; i += 10)

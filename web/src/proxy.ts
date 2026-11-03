@@ -13,7 +13,10 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// Fuera: el service worker (un redirect lo rompe), estáticos, imágenes y favicon.
+// Fuera: el service worker (un redirect lo rompe) y los archivos estáticos públicos (manifiestos, íconos, imágenes,
+// favicon), para no hacer el round-trip de sesión de Supabase por cada uno.
 export const config = {
-  matcher: ["/((?!sw-pos/|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!sw-pos/|icons/|pos\\.webmanifest|panel\\.webmanifest|_next/static|_next/image|favicon.ico).*)",
+  ],
 };
