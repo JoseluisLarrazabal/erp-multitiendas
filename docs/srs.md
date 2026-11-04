@@ -74,6 +74,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RF-CAT-09 | Desactivar en vez de borrar | Un producto con movimientos no se borra | HO |
 | RF-CAT-10 | Variantes como productos separados | Cada color tiene su código y su stock | RL |
 | RF-CAT-11 | Carga masiva de precios en el panel | El encargado edita listas y moneda en una grilla, filtra los productos sin precio y guarda solo lo cambiado | HO |
+| RF-CAT-12 | Referencia del dólar paralelo | El panel y el punto de venta muestran la mediana de paralelo.bo con la fuente y la hora. No cambia el tipo de cambio vigente: quien tiene `editar_productos` puede usarla para llenar el formulario manual. Si la fuente falla, dice "sin datos" | HO |
 
 ### 3.3 Inventario y kardex
 
@@ -283,7 +284,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 
 | ID | Decisión | Recomendación |
 |---|---|---|
-| D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión y precios en USD | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
+| D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión, precios en USD y referencia del dólar paralelo (RF-CAT-12) | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
 | D-02 | Entrega de frial sin catálogo | El sistema se entrega preparado para carnes al vacío (RF-FRI-01 a 07) y el cliente carga cortes y precios (CTO, 2026-11-01). Acordarlo por escrito para que no trabe el acta |
 | D-03 | Aviso de que el arranque depende de que el cliente cargue sus datos | Escrito al cliente. El cliente carga precios, servicios, series y tope de descuento desde el panel; no frena el desarrollo ni la importación (CTO, 2026-11-01) |
 | D-04 | Firma del contrato | Firmado (CTO, 2026-11-01). Falta la fecha exacta para contar el plazo |

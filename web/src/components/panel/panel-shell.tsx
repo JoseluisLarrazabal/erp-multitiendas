@@ -5,6 +5,7 @@ import { Menu, ShoppingCart, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import { DolarParalelo } from "@/modules/catalogo";
 import { itemDeRuta, PanelNav } from "./panel-nav";
 
 type Props = {
@@ -122,9 +123,12 @@ export function PanelShell({ negocio, usuario, permisos, tipo, children }: Props
           >
             <Menu aria-hidden />
           </Button>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground min-w-0 truncate text-xs">
             ERP Multitiendas / <strong className="text-foreground font-semibold">{titulo}</strong>
           </p>
+          <div className="ml-auto shrink-0">
+            <DolarParalelo />
+          </div>
         </header>
         <main className="mx-auto max-w-[1370px] px-4 pt-6 pb-10 md:px-10 md:pt-9">{children}</main>
       </div>

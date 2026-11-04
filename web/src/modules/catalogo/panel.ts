@@ -19,3 +19,4 @@ export {
   tipoCambioVigente,
   urlsDeFotos,
 } from "./queries";
+export { obtenerParalelo } from "./dolar-paralelo";

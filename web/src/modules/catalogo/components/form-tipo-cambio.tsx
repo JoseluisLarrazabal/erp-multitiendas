@@ -16,6 +16,7 @@ import { useAccion } from "@/components/panel/use-accion";
 import { registrarTipoCambio } from "../actions";
 import { cambioBruscoDeTipoCambio, formatearTipoCambio, MENSAJE_DATOS } from "../domain";
 import { tipoCambioSchema } from "../schemas";
+import { useDolarParalelo } from "./dolar-paralelo";
 
 const CAMPOS: Campos = {
   valor: {
@@ -32,6 +33,8 @@ export function FormTipoCambio({
   vigente: number | null;
 }) {
   const formulario = useRef<HTMLFormElement>(null);
+  const campoValor = useRef<HTMLInputElement>(null);
+  const paralelo = useDolarParalelo();
   const { pendiente, error, ejecutar } = useAccion();
   const [errores, setErrores] = useState<Errores>({});
   const [general, setGeneral] = useState<string | null>(null);
@@ -83,6 +86,7 @@ export function FormTipoCambio({
             <Input
               id="tc-valor"
               name="valor"
+              ref={campoValor}
               required
               inputMode="decimal"
               autoComplete="off"
@@ -107,6 +111,27 @@ export function FormTipoCambio({
           )}
         </p>
       </div>
+      {paralelo && (
+        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+          Paralelo: Bs {formatearTipoCambio(Number(paralelo.valor.toFixed(2)))}
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10"
+            onClick={() => {
+              // Solo llena el campo: guardar sigue el flujo de siempre (confirmación >20 % y RPC).
+              if (campoValor.current)
+                campoValor.current.value = paralelo.valor.toFixed(2).replace(".", ",");
+              setErrores({});
+              setGeneral(null);
+              setHecho(false);
+              campoValor.current?.focus();
+            }}
+          >
+            Usar este valor
+          </Button>
+        </div>
+      )}
       <p role="alert" className="text-destructive text-sm empty:hidden">
         {mensaje}
       </p>
