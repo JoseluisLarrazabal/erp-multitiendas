@@ -18,14 +18,24 @@ Cumple RNF-08 (backup diario fuera de Supabase) y RNF-09 (restauración probada)
    restaurada (todas las tablas con filas, de `public`, `auth` y `storage`); exige que `auth.users` esté en el dump; y
    `stock` igual a la suma del kardex. Compara contra el dump y no contra producción en vivo, así una venta que entra
    durante el backup no da un falso fallo. Si algo no cuadra, el workflow falla.
-5. Cifra el dump con `age` y la clave pública `scripts/backup/destinatario-age.txt`. Sube solo el `.age` como artifact
+5. `scripts/backup/respaldar-fotos.sh`: baja todos los archivos del bucket privado `productos` (fotos de productos) con la
+   API REST de Storage y la clave `service_role` a `fotos/<negocio_id>/<producto_id>.<ext>`, dentro del mismo directorio
+   del dump (va en el mismo `.age`). Corre antes del paso 4; rechaza nombres de objeto con `..` o `//`; cualquier error de
+   descarga falla el workflow. **Si faltan los secretos `SUPABASE_URL` o `SUPABASE_SERVICE_ROLE_KEY`, el backup de la base
+   sigue y este paso se omite con un `::warning::`** (la corrida queda verde pero con anotación amarilla: revisar).
+   `scripts/backup/verificar-fotos.sh` (dentro del paso 4) exige que el número de archivos en `fotos/` sea igual al de
+   filas de `storage.objects` del bucket `productos` en `data.sql`; si no, el workflow falla. Los logs muestran solo
+   cantidades, nunca nombres.
+6. Cifra el dump con `age` y la clave pública `scripts/backup/destinatario-age.txt`. Sube solo el `.age` como artifact
    `erp-backup-AAAA-MM-DD`, que GitHub guarda 30 días.
 
 El dump en claro solo existe dentro del runner. Los logs muestran nombres de tabla y números, nunca filas.
 
 Un backup que no restaura no cuenta: el paso 4 corre en cada backup, no solo en el simulacro.
 
-CI corre el mismo ciclo contra la base local con seed (paso 10 de `ci.yml`), así que un cambio que rompa la restauración
+CI corre el mismo ciclo contra la base local con seed (paso 10 de `ci.yml`), subiendo antes un objeto de prueba al bucket
+para ejercitar también el respaldo de fotos (la restauración de fotos no corre en CI: el destino efímero no levanta la API
+de Storage), así que un cambio que rompa la restauración
 falla en el PR.
 
 ## Requisitos
@@ -33,6 +43,10 @@ falla en el PR.
 - Secreto `SUPABASE_DB_URL` en el repo (`gh secret set SUPABASE_DB_URL`). Debe ser la cadena **Session pooler** del
   proyecto de producción (panel de Supabase, "Connect"). La conexión directa `db.<ref>.supabase.co` es solo IPv6 y los
   runners de GitHub son IPv4.
+- Secretos `SUPABASE_URL` (`https://<ref>.supabase.co`) y `SUPABASE_SERVICE_ROLE_KEY` (panel de Supabase, Settings >
+  API; `gh secret set SUPABASE_URL`, `gh secret set SUPABASE_SERVICE_ROLE_KEY`) para respaldar las fotos. Opcionales para
+  que el backup de la base corra, pero sin ellos las fotos no se respaldan. La `service_role` solo se usa en el workflow y
+  en `scripts/backup/`, vía variable de entorno; nunca en `web/`.
 - La clave privada `age` vive fuera del repo, en la máquina del CTO (`~/.config/erp-multitiendas/backup-age.key`) y en
   una copia offline. **Si se pierde, ningún backup se puede leer.**
 
@@ -59,6 +73,10 @@ scripts/backup/verificar.sh ~/restauracion "$destino"
 #     restaurar con su cadena de conexión y apuntar Vercel a él.
 scripts/backup/restaurar.sh ~/restauracion "<url del proyecto nuevo>"
 
+# 3c. Fotos: con el proyecto ya restaurado, subir los archivos al bucket `productos` (upsert). El bucket lo crean las
+#     migraciones; la clave va por entorno, no por argumento.
+SUPABASE_SERVICE_ROLE_KEY=<service_role del proyecto> scripts/backup/restaurar-fotos.sh ~/restauracion https://<ref>.supabase.co
+
 # 4. Borrar el dump en claro.
 rm -rf ~/restauracion
 ```
@@ -67,9 +85,7 @@ La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca
 
 ## Qué no cubre
 
-- **Archivos de Storage** (fotos de productos): el dump trae `storage.objects` (los metadatos) pero no los archivos. Hoy
-  las fotos se pueden volver a importar desde la planilla. Cuando el cliente suba fotos nuevas desde el panel, hace
-  falta respaldarlas aparte.
+- **Otros buckets de Storage**: solo se respalda `productos`. Si se crea otro bucket con archivos, hay que sumarlo.
 - **Configuración del proyecto** (auth, Edge Functions): se recrea con `docs/despliegue.md`.
 
 ## Tiempos
@@ -81,3 +97,4 @@ La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca
 | Restauración | menos de 1 s | local |
 | Paso 10 de CI completo | 38 s | local, simulado |
 | Simulacro con datos reales de producción (backup cifrado de 1,6 MB) | 50 s: descarga 4 s, descifrado menos de 1 s, destino 44 s, restauración 1 s, verificación 1 s | local, 2026-11-04 |
+| Respaldo de fotos (2 archivos de prueba, base local) | menos de 1 s; con 292 fotos (máx. ~341 KB c/u) se estima de segundos a pocos minutos, sin medir | local |
