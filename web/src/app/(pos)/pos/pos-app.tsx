@@ -53,7 +53,7 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
         titulo={titulo}
         catalogoDesde={catalogoDesde}
       />
-      <div className="flex justify-end">
+      <div className="flex justify-end print:hidden">
         <DolarParalelo />
       </div>
       <AvisoActualizacion lineasEnCurso={() => guarda.current.lineas()} />
