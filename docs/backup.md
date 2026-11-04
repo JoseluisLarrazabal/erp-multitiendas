@@ -80,4 +80,4 @@ La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca
 | Levantar el destino efímero | 30 s | local |
 | Restauración | menos de 1 s | local |
 | Paso 10 de CI completo | 38 s | local, simulado |
-| Simulacro con datos reales de producción | no medido | pendiente tras la carga real |
+| Simulacro con datos reales de producción (backup cifrado de 1,6 MB) | 50 s: descarga 4 s, descifrado menos de 1 s, destino 44 s, restauración 1 s, verificación 1 s | local, 2026-11-04 |

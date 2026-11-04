@@ -13,3 +13,7 @@ Antes de implementar, leer lo que aplique:
 Reglas no negociables: toda escritura contable va por RPC, toda tabla lleva RLS, el kardex es append-only.
 `service_role` nunca entra en `web/`. Datos reales del cliente nunca entran al repo.
 `sistema-de-gestion-multinacional/` es solo referencia visual: no se desarrolla ahí.
+
+QA y pruebas manuales (checklists de `docs/despliegue.md`, verificación en producción, configuración en el panel): las
+hace Claude con el MCP de Playwright, no el CTO. El CTO solo escribe contraseñas y da los datos del negocio que Claude no
+puede inventar (correos del personal, topes, tipo de cambio).

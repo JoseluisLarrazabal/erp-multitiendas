@@ -183,10 +183,34 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       `c8b43bb2-d2b0-4948-a37e-86ac2172c781`) y Frial Lider (provisorio, `2a924026-628a-4f92-9d8f-01ac84a0a652`).
     - Deploy de #68 READY. Playwright sin sesión: `/panel` y `/pos` llevan a `/login`, sin errores de consola, y la
       CSP tiene el origen correcto.
-  - **Pendiente CTO: `SUPABASE_DB_URL`.** Cargado con `!` quedó vacío: el backup manual del 2026-11-04 falló en
-    "Exigir el secreto". Hay que cargarlo desde una terminal propia. **La contraseña de la base se pegó en el chat el
-    2026-11-04: hay que resetearla antes.**
-  - Próximo: importación de Lider en producción (seco, real, segunda corrida), primer backup en verde y simulacro.
+  - **Importación de Lider en producción (2026-11-04): hecha.** El CTO la corrió 2 veces desde su terminal; la segunda
+    dio 0 creados y 0 fotos subidas. Claude la corrió una tercera vez en paralelo: 0 creados, 292 fotos resubidas a las
+    mismas rutas. Por SQL: 597 productos, 53 categorías, 597 movimientos con 2.633 unidades (Tienda 1.020, Depósito
+    1.613), 292 fotos en el bucket, stock = kardex. La planilla y los reportes quedaron en el scratchpad de la sesión,
+    fuera del repo; borrar `lider.xlsx` cuando no haga falta.
+  - `SUPABASE_DB_URL` cargado el 2026-11-04, con la contraseña expuesta en el chat (decisión del CTO).
+  - **Credenciales expuestas, rotar EN LA ENTREGA (decisión del CTO, 2026-11-04).** El 2026-11-04 se pegaron en el chat
+    la contraseña de la base de producción y la `service_role` (JWT viejo). Al entregar:
+    1. Resetear la contraseña de la base y volver a cargar `SUPABASE_DB_URL` (`gh secret set`, desde una terminal propia).
+    2. Rotar las claves: JWT secret, o claves nuevas `sb_secret_`/`sb_publishable_` con las viejas apagadas. Invalida la
+       anon key y las sesiones. Hay que actualizar `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Vercel (Production), redesplegar
+       y probar login y `admin-usuarios`.
+    3. Correr el backup y comprobar `VERIFICACION OK`.
+  - **Primer backup real (2026-11-04): verde.** Corrida 41886090588: 17 tablas con filas iguales, `VERIFICACION OK`,
+    artifact `erp-backup-2026-11-04` (1,6 MB cifrado).
+  - **Simulacro de restauración (2026-11-04): OK, 50 s.** Artifact bajado, descifrado con la clave local, restaurado en
+    una Supabase efímera y verificado: 1 usuario de auth, 597 productos, 3 negocios, 292 objetos de storage, stock =
+    kardex. Tiempos en `docs/backup.md`. El dump en claro se borró.
+  - **Checklist de producción (2026-11-04, Claude con Playwright, sesión del dueño):** el selector muestra los 3
+    negocios; una foto importada carga en la ficha del producto, sin errores de CSP; sin sesión, `/`, `/panel` y `/pos`
+    llevan a `/login`. Cajas registradas (CTO: una por negocio): C1 en Tienda (Multitienda Lider), L1 en Lider Clean y
+    F1 en Frial Lider, todas "Caja 1". Verificado por SQL.
+  - Tope de descuento: queda en 0 %, lo carga el cliente (D-03). Usuarios del personal: faltan correos y roles.
+  - Tipo de cambio: el CTO pidió una tarjeta con el dólar paralelo de paralelo.bo, siempre visible, sin quitar la carga
+    manual. Funcionalidad nueva fuera del SRS: en investigación.
+  - Falta del §7: vendedor entra directo al POS (no hay vendedores aún) y abrir, vender y cerrar caja en un equipo real
+    (los productos no tienen precio).
+  - Regla nueva en `CLAUDE.md`: el QA y las pruebas manuales los hace Claude con Playwright.
   - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
     en CI, sin skip. DB-04 con RPC reales en `rpc-devoluciones.sql:320`. No se corrieron las suites en esa auditoría.
 - **Fase 5 cerrada (2026-11-03):** plan en `docs/plan-fase-5.md`, 5 PRs (#56 a #60).
