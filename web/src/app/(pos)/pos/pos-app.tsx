@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AvisoActualizacion } from "@/components/aviso-actualizacion";
+import { DolarParalelo } from "@/modules/catalogo";
 import { pedirPersistencia } from "@/lib/offline/motor";
 import { ConfirmarDescarte, PosVenta, type GuardaVenta } from "@/modules/ventas";
 import { PosBarra, usePosSesion } from "@/modules/usuarios";
@@ -52,6 +53,9 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
         titulo={titulo}
         catalogoDesde={catalogoDesde}
       />
+      <div className="flex justify-end print:hidden">
+        <DolarParalelo />
+      </div>
       <AvisoActualizacion lineasEnCurso={() => guarda.current.lineas()} />
       {sesion.fase === "lista" && activo && (
         <PosVenta

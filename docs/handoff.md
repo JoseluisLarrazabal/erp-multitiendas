@@ -206,10 +206,22 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     llevan a `/login`. Cajas registradas (CTO: una por negocio): C1 en Tienda (Multitienda Lider), L1 en Lider Clean y
     F1 en Frial Lider, todas "Caja 1". Verificado por SQL.
   - Tope de descuento: queda en 0 %, lo carga el cliente (D-03). Usuarios del personal: faltan correos y roles.
-  - Tipo de cambio: el CTO pidió una tarjeta con el dólar paralelo de paralelo.bo, siempre visible, sin quitar la carga
-    manual. Funcionalidad nueva fuera del SRS: en investigación.
-  - Falta del §7: vendedor entra directo al POS (no hay vendedores aún) y abrir, vender y cerrar caja en un equipo real
-    (los productos no tienen precio).
+  - **Dólar paralelo (RF-CAT-12, 2026-11-04):** tarjeta con la mediana de paralelo.bo en el header del panel y en el
+    POS, más "Usar este valor" en tipo de cambio (llena el campo, no guarda). Plan en `docs/plan-dolar-paralelo.md`.
+    Fuera del contrato: sumado a D-01. Verificado en local con Playwright (dato real, 360 px sin overflow). Revisión:
+    `/code-review` (3 fixes aplicados, 7 descartados por costo), `/security-review` sin hallazgos. Codex: no
+    verificado (sin cuota hasta 2026-11-16).
+  - **§7 en local (2026-11-04, Playwright, base local con seed):** el vendedor entra directo a `/pos`; abrir caja con
+    Bs 100, vender (venta `C1-000001`, kardex -1) y cerrar con Bs 140 da esperado 140 y diferencia 0. En producción no
+    se hizo: una venta de prueba deja registros que el kardex no deja borrar. Falta la prueba en el equipo real con
+    lector.
+  - Bug menor visto en la prueba: después de "Nueva venta", el aviso "Agregado: <producto>…" sigue visible con el
+    carrito vacío.
+  - **Limpieza antes del paralelo (pedido del CTO):** si la capacitación hace ventas en producción, un script único como
+    `postgres` borra ventas, pagos, cajas, clientes y órdenes, deja el kardex de importación y de conteo, recalcula stock
+    y reinicia la numeración. Se ensaya antes sobre un backup restaurado en local. Se escribe cuando haya fecha de
+    capacitación. Nunca después del paralelo: esas ventas son reales.
+  - Usuarios del personal: se cargan al final (CTO).
   - Regla nueva en `CLAUDE.md`: el QA y las pruebas manuales los hace Claude con Playwright.
   - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
     en CI, sin skip. DB-04 con RPC reales en `rpc-devoluciones.sql:320`. No se corrieron las suites en esa auditoría.
