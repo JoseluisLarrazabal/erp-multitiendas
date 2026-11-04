@@ -152,10 +152,21 @@ jobs:
       - name: 10. Backup, restauración y verificación
         run: |
           origen=$(pnpm exec supabase status -o env --workdir .. 2>/dev/null | grep -E '^DB_URL=' | cut -d= -f2- | tr -d '"')
+          # Sube un objeto de prueba al bucket para ejercitar también el respaldo de fotos (el seed no trae ninguno).
+          export SUPABASE_URL=http://127.0.0.1:54420
+          SUPABASE_SERVICE_ROLE_KEY=$(pnpm exec supabase status -o env --workdir .. 2>/dev/null | grep -E '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '"')
+          echo "::add-mask::$SUPABASE_SERVICE_ROLE_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY
+          printf 'foto-ci' > "$RUNNER_TEMP/foto-ci.png"
+          curl --fail -sS -X POST -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H 'Content-Type: image/png' \
+            --data-binary "@$RUNNER_TEMP/foto-ci.png" "$SUPABASE_URL/storage/v1/object/productos/ci/foto-ci.png" > /dev/null
           ../scripts/backup/respaldar.sh "$origen" "$RUNNER_TEMP/dump"
+          ../scripts/backup/respaldar-fotos.sh "$RUNNER_TEMP/dump"
+          [ "$(find "$RUNNER_TEMP/dump/fotos" -type f | wc -l)" -ge 1 ]
           destino=$(../scripts/backup/destino-efimero.sh "$RUNNER_TEMP/destino" erp-restauracion 54521)
           ../scripts/backup/restaurar.sh "$RUNNER_TEMP/dump" "$destino"
           ../scripts/backup/verificar.sh "$RUNNER_TEMP/dump" "$destino"
+          ../scripts/backup/verificar-fotos.sh "$RUNNER_TEMP/dump"
 
       # Alta de producción: dos corridas dejan el mismo reporte (idempotente) y un email inexistente aborta.
       - name: 11. Alta de producción, idempotencia

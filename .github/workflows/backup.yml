@@ -50,11 +50,24 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: scripts/backup/respaldar.sh "$SUPABASE_DB_URL" "$RUNNER_TEMP/dump"
 
+      # Sin SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY el backup de la base sigue y las fotos se omiten con un aviso.
+      - name: Respaldar fotos (bucket productos)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::Fotos NO respaldadas: faltan los secretos SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY (docs/backup.md, Requisitos)"
+            exit 0
+          fi
+          scripts/backup/respaldar-fotos.sh "$RUNNER_TEMP/dump"
+
       - name: Restaurar en una base efímera y verificar
         run: |
           destino=$(scripts/backup/destino-efimero.sh "$RUNNER_TEMP/destino" erp-restauracion 54521)
           scripts/backup/restaurar.sh "$RUNNER_TEMP/dump" "$destino"
           scripts/backup/verificar.sh "$RUNNER_TEMP/dump" "$destino"
+          scripts/backup/verificar-fotos.sh "$RUNNER_TEMP/dump"
 
       - name: Cifrar con age
         id: cifrar
