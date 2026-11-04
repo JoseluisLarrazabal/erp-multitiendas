@@ -9,6 +9,12 @@ terminal; no van a un chat ni al repo. Antes de cada comando con `--linked`, con
 
 ## 1. Proyecto Supabase (CTO)
 
+**Producción actual (2026-11-04):** `yfdhiuaeinfkvcegeqfy`, el ex staging, vaciado con
+`pnpm exec supabase --workdir .. db reset --linked --no-seed --yes`. Ese comando borra toda la base, incluido
+`auth.users`, y reaplica las migraciones: solo vale antes de cargar datos reales. Con producción en uso, nunca.
+
+Proyecto nuevo de cero:
+
 ```bash
 pnpm exec supabase projects create erp-produccion --org-id mvrgvtvszaovqvjvuwfq --region sa-east-1 \
   --db-password "$(read -rsp 'Contraseña: ' p; echo "$p")"
@@ -57,7 +63,7 @@ En el proyecto `erp_multitiendas`, Settings > Environment Variables, **solo en P
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key del proyecto nuevo (Settings > API) |
 
-Preview queda apuntando a staging. Redesplegar producción (Deployments > el último de `main` > Redeploy): la CSP toma el
+Sin staging no hay previews: `web/vercel.json` salta todo build que no sea de producción. Redesplegar producción (Deployments > el último de `main` > Redeploy): la CSP toma el
 origen de Supabase al construir, así que sin redespliegue el navegador bloquea las llamadas al proyecto nuevo.
 
 ## 5. Datos del cliente
