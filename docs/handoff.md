@@ -171,7 +171,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Codex: no verificado (sin cuota) en los PRs #61 a #66.
   - **Producción = ex staging `yfdhiuaeinfkvcegeqfy` (CTO, 2026-11-04)**, reemplaza "proyecto nuevo". Vaciado con
     `db reset --linked --no-seed`: 32 migraciones, 0 usuarios, 0 negocios, 0 ventas, 0 kardex; bucket y 106 permisos.
-    Ya no hay staging: Vercel con variables solo en Production y previews saltadas (`ignoreCommand`). Las migraciones
+    Ya no hay staging: Vercel con variables solo en Production y sin deploys fuera de `main` (`git.deploymentEnabled`; un `ignoreCommand` con `VERCEL_ENV` canceló también producción, PR #67). Las migraciones
     nuevas se prueban en local y CI antes del `db push`.
   - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
     en CI, sin skip. DB-04 con RPC reales en `rpc-devoluciones.sql:320`. No se corrieron las suites en esa auditoría.
