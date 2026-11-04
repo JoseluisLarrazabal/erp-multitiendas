@@ -134,6 +134,8 @@ export function useVenta(o: OpcionesVenta) {
       setFicha(fichaInicial());
       setCobrando(false);
       setAviso(null);
+      // El carrito queda vacío: un "Agregado: ..." viejo sería un anuncio engañoso al volver a la venta.
+      setAnuncio("");
       registrarVenta(items);
     },
     [registrarVenta],

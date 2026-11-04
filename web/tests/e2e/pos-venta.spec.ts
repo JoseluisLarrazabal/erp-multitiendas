@@ -133,6 +133,8 @@ test("E2E-04: venta con conexión, pago mixto, nota y stock en base", async ({ p
   // Nueva venta: carrito limpio.
   await page.getByRole("button", { name: "Nueva venta" }).click();
   await expect(page.getByText("El carrito está vacío.")).toBeVisible();
+  // El anuncio de lectores de pantalla no queda con el "Agregado: ..." de la venta anterior.
+  await expect(page.getByRole("status").filter({ hasText: /Agregado:/ })).toHaveCount(0);
 });
 
 test("una falla de red deja la venta en la cola con su nota y el reenvío manda la misma venta con p_offline", async ({
