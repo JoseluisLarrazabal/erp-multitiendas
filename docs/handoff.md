@@ -171,8 +171,22 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Codex: no verificado (sin cuota) en los PRs #61 a #66.
   - **Producción = ex staging `yfdhiuaeinfkvcegeqfy` (CTO, 2026-11-04)**, reemplaza "proyecto nuevo". Vaciado con
     `db reset --linked --no-seed`: 32 migraciones, 0 usuarios, 0 negocios, 0 ventas, 0 kardex; bucket y 106 permisos.
-    Ya no hay staging: Vercel con variables solo en Production y sin deploys fuera de `main` (`git.deploymentEnabled`; un `ignoreCommand` con `VERCEL_ENV` canceló también producción, PR #67). Las migraciones
-    nuevas se prueban en local y CI antes del `db push`.
+    Ya no hay staging. Vercel tiene las variables solo en Production y no despliega fuera de `main`
+    (`git.deploymentEnabled` con `"!main": false`, PR #68). El `ignoreCommand` con `VERCEL_ENV` del PR #67 canceló
+    también producción. Las migraciones nuevas se prueban en local y CI antes del `db push`.
+  - Hecho en producción el 2026-11-04:
+    - `config push`: `site_url` y redirects quedan en `erpmultitiendas.vercel.app`. El pooler y el vector conservan
+      los valores del proyecto Free. `config diff` da 0.
+    - `admin-usuarios` redesplegada.
+    - Alta con `jencarlosmoral2@gmail.com` como dueño (cuenta del CTO; la del cliente se crea desde "Usuarios"):
+      Multitienda Lider (tienda, 2 ubicaciones, `4c7345fc-038d-46fa-8197-ef2cbc6c9d25`), Lider Clean (lavandería,
+      `c8b43bb2-d2b0-4948-a37e-86ac2172c781`) y Frial Lider (provisorio, `2a924026-628a-4f92-9d8f-01ac84a0a652`).
+    - Deploy de #68 READY. Playwright sin sesión: `/panel` y `/pos` llevan a `/login`, sin errores de consola, y la
+      CSP tiene el origen correcto.
+  - **Pendiente CTO: `SUPABASE_DB_URL`.** Cargado con `!` quedó vacío: el backup manual del 2026-11-04 falló en
+    "Exigir el secreto". Hay que cargarlo desde una terminal propia. **La contraseña de la base se pegó en el chat el
+    2026-11-04: hay que resetearla antes.**
+  - Próximo: importación de Lider en producción (seco, real, segunda corrida), primer backup en verde y simulacro.
   - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
     en CI, sin skip. DB-04 con RPC reales en `rpc-devoluciones.sql:320`. No se corrieron las suites en esa auditoría.
 - **Fase 5 cerrada (2026-11-03):** plan en `docs/plan-fase-5.md`, 5 PRs (#56 a #60).
