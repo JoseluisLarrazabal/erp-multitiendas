@@ -63,7 +63,7 @@ En el proyecto `erp_multitiendas`, Settings > Environment Variables, **solo en P
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key del proyecto nuevo (Settings > API) |
 
-Sin staging no hay previews: `web/vercel.json` salta todo build que no sea de producción. Redesplegar producción (Deployments > el último de `main` > Redeploy): la CSP toma el
+Sin staging no hay previews: `web/vercel.json` apaga los deploys de toda rama que no sea `main` (`git.deploymentEnabled`). Redesplegar producción (Deployments > el último de `main` > Redeploy): la CSP toma el
 origen de Supabase al construir, así que sin redespliegue el navegador bloquea las llamadas al proyecto nuevo.
 
 ## 5. Datos del cliente
