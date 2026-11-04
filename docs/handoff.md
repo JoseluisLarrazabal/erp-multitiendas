@@ -215,8 +215,22 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     Bs 100, vender (venta `C1-000001`, kardex -1) y cerrar con Bs 140 da esperado 140 y diferencia 0. En producción no
     se hizo: una venta de prueba deja registros que el kardex no deja borrar. Falta la prueba en el equipo real con
     lector.
-  - Bug menor visto en la prueba: después de "Nueva venta", el aviso "Agregado: <producto>…" sigue visible con el
-    carrito vacío.
+  - **PRs del 2026-11-04 (tarde), mergeados:**
+    - #71 dólar paralelo. El primer CI falló en `pos-venta.spec.ts:293`: el PDF de la nota salía en Carta porque el
+      contenedor de la tarjeta en el POS no llevaba `print:hidden` (las named pages toman la página del primer
+      elemento impreso). Arreglado en la misma rama. Verificado en producción con Playwright: el header del panel y el
+      POS muestran "Paralelo Bs 12,02 · paralelo.bo", la API responde `disponible: true` y no hay errores de consola.
+    - #72: el aviso "Agregado: …" ya no queda tras "Nueva venta" (`setAnuncio("")` en `alExito`, assert en E2E-04).
+    - #73 backup de fotos: `respaldar-fotos.sh`, `verificar-fotos.sh` y `restaurar-fotos.sh`. El bucket `productos` va
+      dentro del mismo `.age` y la cantidad de archivos se compara con `storage.objects`. **Pendiente CTO: los secretos
+      `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.** Sin ellos la corrida diaria sale verde con un warning y sin fotos.
+      Claude no pudo cargarlos: el clasificador de permisos bloquea las escrituras en el almacén de secretos.
+    - #74, intermitente de `catalogo.spec.ts:195`. Causa: dos workers tomaban el mismo `Date.now()` en `unico()` y
+      chocaban en código y barras. Ahora el índice del worker entra en `corrida` y `marca`. Pasó 90/90 con 8 workers.
+      `usuarios.spec.ts:5` tiene el mismo patrón y no se tocó.
+    - `pos-venta.spec.ts:790` ("dos pestañas, cerrojo real") falló una vez en local, con otros agentes usando la misma
+      base. Pasó al repetirlo, con y sin el cambio. Posible intermitente, sin investigar.
+    - Codex: no verificado (sin cuota hasta 2026-11-16).
   - **Limpieza antes del paralelo (pedido del CTO):** si la capacitación hace ventas en producción, un script único como
     `postgres` borra ventas, pagos, cajas, clientes y órdenes, deja el kardex de importación y de conteo, recalcula stock
     y reinicia la numeración. Se ensaya antes sobre un backup restaurado en local. Se escribe cuando haya fecha de
