@@ -8,9 +8,12 @@ no se firma sin él (cláusula octava).
 
 ## Decisiones (CTO, 2026-11-03)
 
-- **Producción en un proyecto nuevo y limpio**: el segundo proyecto Free de la org `mvrgvtvszaovqvjvuwfq`, en
-  `sa-east-1`. Staging (`yfdhiuaeinfkvcegeqfy`) queda para pruebas y previews. Motivo: staging tiene ventas de prueba y el
-  kardex es append-only.
+- ~~Producción en un proyecto nuevo y limpio~~. **Reemplazado (CTO, 2026-11-04): producción es el ex staging
+  `yfdhiuaeinfkvcegeqfy`, vaciado.** El 2026-11-04 se corrió `db reset --linked --no-seed`: 32 de 32 migraciones,
+  0 usuarios de auth, 0 negocios, 0 ventas, 0 kardex, bucket `productos` y 106 permisos. Ya no hay staging: las
+  migraciones se prueban solo en local y CI, Vercel tiene las variables solo en Production y `web/vercel.json` salta
+  los builds de preview (`ignoreCommand`). Motivo probable (no verificado): el plan Free admite 2 proyectos activos y
+  ya hay 2 (este y el de EleganceDominio).
 - **El CTO crea el proyecto y su contraseña en su terminal.** Claude no ingresa contraseñas ni las ve. El CTO también
   carga el secreto `SUPABASE_DB_URL` (cadena "Session pooler", IPv4) con `gh secret set`.
 - **Fotos en Supabase Storage**, el bucket privado `productos` que ya existe. El CTO preguntó por S3 o Cloudinary;

@@ -419,3 +419,19 @@ enabled = true
 # Solo la llaman server actions con la sesión del usuario; verifica además tiene_permiso.
 [functions.admin-usuarios]
 verify_jwt = true
+
+# Producción. El dominio propio se agrega aquí al comprarlo (RF-TR-10).
+[remotes.produccion]
+project_id = "yfdhiuaeinfkvcegeqfy"
+
+[remotes.produccion.auth]
+site_url = "https://erpmultitiendas.vercel.app"
+additional_redirect_urls = ["https://erpmultitiendas.vercel.app/**"]
+
+# El proyecto hosted es Free: se conservan sus valores, no los locales.
+[remotes.produccion.db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[remotes.produccion.storage.vector]
+enabled = false

@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-03.
+Última actualización: 2026-11-04.
 
 ## Estado actual
 
@@ -166,10 +166,15 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - #63 `fix/inicio-panel`: el Inicio muestra los accesos del menú en vez de "Todavía no hay módulos activos".
     Verificado en producción a 390 px.
   - #64 `docs/salida`: `docs/capacitacion.md`, `docs/paralelo.md`, `docs/acta-entrega.md` (borrador).
-  - En rama, sin PR: `scripts/alta/` (alta de los 3 negocios y el primer dueño con `supabase db query --linked`, sin
-    contraseña; idempotente, con lock) en `feat/despliegue-produccion`. Espera el ref del proyecto de producción para el
-    bloque `[remotes.produccion]` de `config.toml` y `docs/despliegue.md`.
-  - Codex: no verificado (sin cuota) en los 4 PRs.
+  - #65 `feat/despliegue-produccion`: `scripts/alta/` (alta de los 3 negocios y el primer dueño con
+    `supabase db query --linked`, sin contraseña; idempotente, con lock). #66 `docs/despliegue`: `docs/despliegue.md`.
+  - Codex: no verificado (sin cuota) en los PRs #61 a #66.
+  - **Producción = ex staging `yfdhiuaeinfkvcegeqfy` (CTO, 2026-11-04)**, reemplaza "proyecto nuevo". Vaciado con
+    `db reset --linked --no-seed`: 32 migraciones, 0 usuarios, 0 negocios, 0 ventas, 0 kardex; bucket y 106 permisos.
+    Ya no hay staging: Vercel con variables solo en Production y previews saltadas (`ignoreCommand`). Las migraciones
+    nuevas se prueban en local y CI antes del `db push`.
+  - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
+    en CI, sin skip. DB-04 con RPC reales en `rpc-devoluciones.sql:320`. No se corrieron las suites en esa auditoría.
 - **Fase 5 cerrada (2026-11-03):** plan en `docs/plan-fase-5.md`, 5 PRs (#56 a #60).
   - PR 1 `feat/frial-datos` (#56): `productos.peso_paquete_kg`, tabla `lotes`, `registrar_entrada_lote`,
     `lotes_por_vencer` y movimiento `merma` (solo frial). Migración aplicada en staging. Revisión: saldo de lote pasó a
