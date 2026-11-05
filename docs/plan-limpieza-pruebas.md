@@ -25,3 +25,19 @@ después de la capacitación y antes del paralelo. Nunca después del paralelo: 
   >= desde, stock = kardex, numeración reiniciada, productos y precios intactos).
 - Antes de producción: el mismo ensayo sobre el último backup restaurado en local (`docs/backup.md`), y un backup
   manual en verde justo antes de aplicar.
+
+## Excepción autorizada
+
+Este script es una excepción **única**, autorizada por el CTO, a dos reglas del proyecto: "el kardex es append-only" y
+"toda escritura contable va por RPC". Vale solo para `scripts/limpieza/limpiar-pruebas.sql`, una vez, antes del paralelo.
+No sirve de precedente para borrar datos después.
+
+## Reglas de abortar (corren también en seco)
+
+El script aborta, sin cambiar nada, si: hay stock inicial (`inicial`) dentro del corte (`--desde` es anterior a la
+importación); una venta previa a `--desde` fue anulada o revisada después, o un pago previo fue verificado después; una
+caja previa se cerró después o recibió movimientos; una venta previa cuelga de una caja que se borra; una orden previa
+tiene eventos después; hay una devolución sobre una venta previa; o un producto con series tuvo traslado, baja, ajuste o
+daño dentro del corte (el kardex no lleva `serie_id`, así que no se puede reconstruir el estado de la serie). En todos los
+casos se elige otro `--desde`. Las cajas se borran también si tienen alguna venta del corte (la caja offline usa la hora
+del cliente).

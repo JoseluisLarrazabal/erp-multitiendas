@@ -1,6 +1,7 @@
 -- Borra lo transaccional con fecha >= :desde y deja el resto intacto (docs/plan-limpieza-pruebas.md).
 -- Uso (lo corre limpiar-pruebas.sh): psql -v desde='<ISO>' -v aplicar=true|false -f limpiar-pruebas.sql
--- Una transacción: en seco (aplicar=false) termina en ROLLBACK e imprime solo conteos. Cualquier aserción que falle aborta todo.
+-- Una transacción: en seco (aplicar=false) termina en ROLLBACK e imprime solo conteos. Cualquier verificación que falle aborta todo.
+-- Excepción única y autorizada al kardex append-only y a "toda escritura por RPC": solo este script, antes del paralelo.
 \set ON_ERROR_STOP 1
 \pset footer off
 begin;
@@ -10,8 +11,13 @@ set local session_replication_role = replica;
 select set_config('limpieza.desde', :'desde'::timestamptz::text, true) as _ \gset
 
 create temp table _resumen (orden serial, tabla text, filas bigint) on commit drop;
+-- Ventas del corte por la hora del servidor; las cajas por abierta_en o por tener una de esas ventas
+-- (la caja offline usa la hora del cliente, que puede ir desfasada).
 create temp table _ventas on commit drop as
   select id from public.ventas where recibida_en >= current_setting('limpieza.desde')::timestamptz;
+create temp table _sesiones on commit drop as
+  select id from public.caja_sesiones where abierta_en >= current_setting('limpieza.desde')::timestamptz
+  union select caja_sesion_id from public.ventas where id in (select id from _ventas);
 create temp table _stock_afectado on commit drop as
   select distinct producto_id, ubicacion_id from public.movimientos_inventario
   where created_at >= current_setting('limpieza.desde')::timestamptz;
@@ -30,9 +36,49 @@ begin
     raise exception 'desde (%) está en el futuro', v_desde;
   end if;
 
-  -- Aviso: el stock inicial de la importación también cae si es posterior a desde.
+  -- Verificaciones previas: lo anterior a desde no se toca. Si algo previo cambió después del corte, se aborta
+  -- (también en seco) y hay que elegir otro --desde. Solo se nombran ids, nunca datos.
   select count(*) into n from public.movimientos_inventario where tipo = 'inicial' and created_at >= v_desde;
-  insert into _resumen (tabla, filas) values ('AVISO movimientos tipo inicial dentro del corte (deberían ser 0)', n);
+  if n > 0 then
+    raise exception 'ABORTA: --desde es anterior a la importación (% movimientos de stock inicial dentro del corte)', n;
+  end if;
+  for m in select id from public.ventas
+           where id not in (select id from _ventas) and (anulada_en >= v_desde or revisada_en >= v_desde) limit 1 loop
+    raise exception 'ABORTA: la venta previa % fue anulada o revisada después de --desde; elegí otro --desde', m.id;
+  end loop;
+  for m in select p.id from public.venta_pagos p
+           where p.venta_id not in (select id from _ventas) and p.verificado_en >= v_desde limit 1 loop
+    raise exception 'ABORTA: el pago previo % fue verificado después de --desde; elegí otro --desde', m.id;
+  end loop;
+  for m in select id from public.caja_sesiones
+           where id not in (select id from _sesiones) and cerrada_en >= v_desde limit 1 loop
+    raise exception 'ABORTA: la caja previa % se cerró después de --desde; elegí otro --desde', m.id;
+  end loop;
+  for m in select id from public.caja_movimientos
+           where sesion_id not in (select id from _sesiones) and created_at >= v_desde limit 1 loop
+    raise exception 'ABORTA: el movimiento de caja % entró en una caja previa después de --desde; elegí otro --desde', m.id;
+  end loop;
+  for m in select id from public.ventas
+           where id not in (select id from _ventas) and caja_sesion_id in (select id from _sesiones) limit 1 loop
+    raise exception 'ABORTA: la venta previa % está en una caja que se borra; elegí otro --desde', m.id;
+  end loop;
+  for m in select distinct e.orden_id from public.orden_eventos e
+           where e.orden_id not in (select id from _ventas) and e.created_at >= v_desde limit 1 loop
+    raise exception 'ABORTA: la orden previa % tiene eventos después de --desde; elegí otro --desde', m.orden_id;
+  end loop;
+  for m in select d.id from public.devoluciones d
+           where d.venta_id not in (select id from _ventas) and d.created_at >= v_desde limit 1 loop
+    raise exception 'ABORTA: la devolución % es sobre una venta previa a --desde; elegí otro --desde', m.id;
+  end loop;
+  -- movimientos_inventario no lleva serie_id: el kardex no dice qué serie tocó cada movimiento. Si el producto de una
+  -- serie previa tuvo traslado, baja, ajuste o daño dentro del corte, no se puede saber a qué estado o ubicación volver.
+  for m in select s.producto_id from public.series s
+           join public.movimientos_inventario k on k.producto_id = s.producto_id
+           where s.created_at < v_desde and k.created_at >= v_desde
+             and k.tipo in ('traslado_salida', 'traslado_entrada', 'ajuste', 'danado', 'cambio_garantia',
+                            'devolucion_proveedor', 'consumo') limit 1 loop
+    raise exception 'ABORTA: el producto con series % tuvo traslado, baja o ajuste dentro del corte; las series no se pueden reconstruir', m.producto_id;
+  end loop;
 
   -- Hijos primero.
   with d as (delete from public.devolucion_items di
@@ -54,9 +100,9 @@ begin
     insert into _resumen (tabla, filas) select 'venta_items', count(*) from d;
   with d as (delete from public.ventas where id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'ventas', count(*) from d;
-  with d as (delete from public.caja_movimientos where created_at >= v_desde returning 1)
+  with d as (delete from public.caja_movimientos where sesion_id in (select id from _sesiones) or created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'caja_movimientos', count(*) from d;
-  with d as (delete from public.caja_sesiones where abierta_en >= v_desde returning 1)
+  with d as (delete from public.caja_sesiones where id in (select id from _sesiones) returning 1)
     insert into _resumen (tabla, filas) select 'caja_sesiones', count(*) from d;
   with d as (delete from public.clientes where created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'clientes', count(*) from d;
@@ -74,23 +120,10 @@ begin
   with d as (delete from public.series where created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'series', count(*) from d;
 
-  -- Filas anteriores a desde que se modificaron después: se devuelven a su estado previo (no se borran).
+  -- Series previas vendidas en ventas que se borraron: vuelven a disponible.
   with d as (update public.series set estado = 'disponible'
              where id in (select id from _series_a_revertir) and estado in ('vendida', 'devuelta') returning 1)
-    insert into _resumen (tabla, filas) select 'revertidas: series a disponible', count(*) from d;
-  with d as (update public.ventas set estado = 'completada', anulada_en = null, anulada_por = null, motivo_anulacion = null
-             where anulada_en >= v_desde returning 1)
-    insert into _resumen (tabla, filas) select 'revertidas: ventas previas anuladas', count(*) from d;
-  with d as (update public.ventas set revisada_por = null, revisada_en = null
-             where revisada_en >= v_desde returning 1)
-    insert into _resumen (tabla, filas) select 'revertidas: ventas previas revisadas', count(*) from d;
-  with d as (update public.venta_pagos set verificacion = 'pendiente', verificado_por = null, verificado_en = null
-             where verificado_en >= v_desde returning 1)
-    insert into _resumen (tabla, filas) select 'revertidas: pagos previos verificados', count(*) from d;
-  with d as (update public.caja_sesiones set cerrada_en = null, usuario_cierre = null, monto_contado = null,
-               monto_esperado = null, diferencia = null
-             where cerrada_en >= v_desde returning 1)
-    insert into _resumen (tabla, filas) select 'revertidas: cajas previas cerradas', count(*) from d;
+    insert into _resumen (tabla, filas) select 'series revertidas a disponible', count(*) from d;
 
   -- Stock: se rehace (mismo cálculo que aplicar_movimiento_a_stock) solo donde se borró kardex, en el orden del kardex.
   delete from public.stock s using _stock_afectado a
@@ -117,12 +150,13 @@ begin
   select count(*) into n from _stock_afectado;
   insert into _resumen (tabla, filas) values ('stock recalculado (pares producto-ubicación)', n);
 
-  -- Numeración: cada equipo queda en el mayor número que sobrevive (0 sin ventas).
-  with d as (update public.dispositivos dv set ultimo_numero = coalesce(
-               (select max(right(v.numero, 6)::integer) from public.ventas v where v.dispositivo_id = dv.id), 0)
-             where ultimo_numero is distinct from coalesce(
-               (select max(right(v.numero, 6)::integer) from public.ventas v where v.dispositivo_id = dv.id), 0)
-             returning 1)
+  -- Numeración: cada equipo queda en el mayor número que sobrevive (0 sin ventas). Se calcula una sola vez.
+  create temp table _numero on commit drop as
+    select dv.id as dispositivo_id, coalesce(max(right(v.numero, 6)::integer), 0) as maximo
+    from public.dispositivos dv left join public.ventas v on v.dispositivo_id = dv.id
+    group by dv.id;
+  with d as (update public.dispositivos dv set ultimo_numero = x.maximo
+             from _numero x where x.dispositivo_id = dv.id and dv.ultimo_numero <> x.maximo returning 1)
     insert into _resumen (tabla, filas) select 'dispositivos con numeración reiniciada', count(*) from d;
 
   -- Aserciones: si una falla, todo se deshace.
@@ -134,13 +168,15 @@ begin
     raise exception 'ABORTA: stock distinto de la suma del kardex';
   end if;
   select (select count(*) from public.ventas where recibida_en >= v_desde or anulada_en >= v_desde or revisada_en >= v_desde)
+       + (select count(*) from public.ventas where caja_sesion_id not in (select id from public.caja_sesiones))
        + (select count(*) from public.venta_items where venta_id not in (select id from public.ventas))
        + (select count(*) from public.venta_pagos where venta_id not in (select id from public.ventas) or verificado_en >= v_desde)
-       + (select count(*) from public.devoluciones where created_at >= v_desde)
+       + (select count(*) from public.devoluciones where created_at >= v_desde or caja_sesion_id not in (select id from public.caja_sesiones))
        + (select count(*) from public.devolucion_items where devolucion_id not in (select id from public.devoluciones))
        + (select count(*) from public.ordenes where id not in (select id from public.ventas))
        + (select count(*) from public.orden_eventos where created_at >= v_desde or orden_id not in (select id from public.ordenes))
-       + (select count(*) from public.caja_sesiones where abierta_en >= v_desde or cerrada_en >= v_desde)
+       + (select count(*) from public.caja_sesiones where abierta_en >= v_desde or cerrada_en >= v_desde
+            or id in (select id from _sesiones))
        + (select count(*) from public.caja_movimientos where created_at >= v_desde or sesion_id not in (select id from public.caja_sesiones))
        + (select count(*) from public.clientes where created_at >= v_desde)
        + (select count(*) from public.conteos where fecha >= v_desde)
@@ -148,14 +184,12 @@ begin
        + (select count(*) from public.lotes where created_at >= v_desde)
        + (select count(*) from public.movimientos_inventario where created_at >= v_desde)
        + (select count(*) from public.operaciones_inventario where created_at >= v_desde)
-       + (select count(*) from public.series where created_at >= v_desde)
+       + (select count(*) from public.series where created_at >= v_desde
+            or (estado = 'vendida' and id not in (select serie_id from public.venta_items where serie_id is not null)))
+       + (select count(*) from _numero x join public.dispositivos dv on dv.id = x.dispositivo_id where dv.ultimo_numero <> x.maximo)
     into n;
   if n <> 0 then
-    raise exception 'ABORTA: quedan % filas transaccionales >= desde o huérfanas', n;
-  end if;
-  if exists (select 1 from public.dispositivos dv where ultimo_numero <> coalesce(
-               (select max(right(v.numero, 6)::integer) from public.ventas v where v.dispositivo_id = dv.id), 0)) then
-    raise exception 'ABORTA: numeración de dispositivos inconsistente';
+    raise exception 'ABORTA: % filas transaccionales >= desde, huérfanas o inconsistentes', n;
   end if;
 end;
 $$;
