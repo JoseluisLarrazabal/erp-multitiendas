@@ -11,6 +11,7 @@ import {
   NEGOCIOS,
   rutaAuth,
   vigilarCsp,
+  worker,
   type Equipo,
 } from "./helpers";
 import { entradaApi, ubicaciones } from "./inventario-helpers";
@@ -305,7 +306,7 @@ test.describe("Excel grande", () => {
   // write-excel-file comprime en un worker creado desde un Blob cuando una hoja pasa ~160 KB (~700 filas de stock):
   // sin worker-src blob: en la CSP real del build, la descarga fallaría en silencio. Se usa el frial para no mezclar
   // estos productos con los de la tienda mientras corren los demás specs; al final se desactivan.
-  const PREFIJO = `XLS${Date.now().toString(36).toUpperCase()}`;
+  const PREFIJO = `XLS${Date.now().toString(36).toUpperCase()}${worker}`;
   const CANTIDAD = 900;
 
   test("el stock de más de 160 KB se descarga y se lee completo, sin violar la CSP", async ({

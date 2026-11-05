@@ -201,3 +201,6 @@ export async function abrirCaja(negocio: string, equipo: Equipo): Promise<string
 
 export const elegirNegocio = (context: BrowserContext, negocio: string) =>
   context.addCookies([{ name: "negocio_activo", value: negocio, domain: "localhost", path: "/" }]);
+
+/** Último dígito del índice del worker (hay menos de 10): separa los datos únicos de workers que cargan a la vez. */
+export const worker = (process.env.TEST_PARALLEL_INDEX ?? "0").slice(-1);
