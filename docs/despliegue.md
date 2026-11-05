@@ -85,6 +85,41 @@ node src/main.ts ... --produccion ...   # segunda corrida: 0 creados, 0 fotos su
 
 Los precios los carga el cliente en "Precios".
 
+## Limpieza de pruebas antes del paralelo
+
+Se corre una sola vez, después de la capacitación y antes del paralelo (`docs/plan-limpieza-pruebas.md`). Borra todo lo
+transaccional con fecha >= `--desde` (ventas, cajas, órdenes, clientes, kardex, conteos) y recalcula `stock` y la
+numeración; conserva usuarios, productos, precios, fotos y auditoría. `--desde` es el inicio de la capacitación, con zona
+horaria (`2026-11-10T08:00:00-04:00`). Si el stock inicial de la importación es posterior a ese corte, también se borra:
+el script aborta (también en seco): elegí un `--desde` posterior a la importación.
+
+```bash
+# 1. Backup manual en verde justo antes (sección 6). Sin backup en verde no se sigue.
+# 2. Seco: cuenta qué borraría y deshace. Revisar los conteos.
+SUPABASE_DB_PASSWORD=... scripts/limpieza/limpiar-pruebas.sh --desde <ISO con zona> --linked
+# 3. Real: exige el ref del proyecto (supabase/.temp/project-ref)
+CONFIRMAR=<ref> SUPABASE_DB_PASSWORD=... scripts/limpieza/limpiar-pruebas.sh --desde <ISO con zona> --aplicar --linked
+```
+
+`--linked` lee `supabase/.temp/pooler-url` (`supabase link`); alternativa: `--db-url <session pooler>` o `--local`. Si una
+aserción final falla (stock distinto del kardex, filas >= `--desde`), la transacción se deshace entera.
+
+**Qué hacer en cada equipo (PWA).** El servidor no sabe qué navegador tiene qué contador: la app usa
+`max(contador local, dispositivos.ultimo_numero)` (`use-envio.ts`, `cola-ventas.ts`), así que un contador viejo en el
+navegador devolvería los números de prueba aunque el servidor quede en 0.
+- Antes de limpiar: en cada equipo, caja cerrada, sin aviso de cola y todo sincronizado. Lo que quede en la cola
+  (IndexedDB `erp-pos`, tabla `cola`) se envía después de limpiar y reaparece como venta.
+- Después de limpiar, en cada equipo, una de dos:
+  1. Borrar solo el contador: consola del navegador, `localStorage.removeItem('erp:pos:contador:<id del dispositivo>')`
+     y recargar. Conserva la sesión y el equipo elegido.
+  2. Borrar los datos del sitio (DevTools > Application > Clear site data). Cierra la sesión y borra la cola y el
+     snapshot offline (`erp-pos`); se vuelve a entrar con la cuenta y se elige otra vez el equipo en el POS (la
+     elección es `erp:pos:equipo:<negocio>` en localStorage). El equipo es una fila de `dispositivos` en el servidor:
+     no se pierde ni se desregistra. El contador se repone desde `ultimo_numero` (0).
+- Comprobar: la primera venta real del equipo debe ser `<prefijo>-000001` (o el siguiente al último previo que quede).
+
+**Regla:** backup en verde justo antes, y nunca después de empezar el paralelo: esas ventas son reales.
+
 ## 6. Backup
 
 ```bash
