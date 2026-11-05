@@ -248,8 +248,17 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       - En cada equipo hay que dejar la cola vacía antes. Después hay que borrar `erp:pos:contador:<id>` o los datos
         del sitio, porque el POS numera con `max(local, servidor)`.
       - Ensayado en una base local descartable: seco, real, segunda corrida en 0 y dos aborts.
-      - **No verificado:** `--linked` contra producción, el ensayo sobre un backup restaurado y los demás aborts con
-        datos.
+      - **Ensayo sobre el backup real restaurado (2026-11-05, run 41961859964, destino efímero):** sin bugs.
+        - Seco con corte reciente: 0 en todo. Con corte anterior a la importación: aborta (597 `inicial`).
+        - Capacitación simulada por RPC (3 ventas C1-000001 a 000003, gasto, cliente, entrada): seco, real y segunda
+          corrida en 0. Después, productos, categorías, stock, kardex, dispositivos en 0 y 292 fotos quedan iguales a
+          la foto previa.
+        - Los 7 aborts restantes, probados con fixtures: cada uno deja todo sin cambios.
+        - Producción no tiene precios cargados: `registrar_venta` da `ERP_PRODUCTO_SIN_PRECIO`. La capacitación necesita
+          los precios del cliente antes.
+        - La auditoría guarda los movimientos de la capacitación: queda así a propósito.
+      - **No verificado:** `--linked` contra producción (falta `SUPABASE_DB_PASSWORD`, la escribe el CTO). Del abort de
+        series solo se probó el tipo `ajuste`.
       - Revisión: `/code-review` medium (7 hallazgos aplicados, 2 por diseño) y low (3, todos descartados contra el
         esquema).
     - Codex: no verificado (sin cuota hasta 2026-11-16).
