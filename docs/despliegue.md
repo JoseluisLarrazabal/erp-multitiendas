@@ -85,6 +85,27 @@ node src/main.ts ... --produccion ...   # segunda corrida: 0 creados, 0 fotos su
 
 Los precios los carga el cliente en "Precios".
 
+## Limpieza de pruebas antes del paralelo
+
+Se corre una sola vez, después de la capacitación y antes del paralelo (`docs/plan-limpieza-pruebas.md`). Borra todo lo
+transaccional con fecha >= `--desde` (ventas, cajas, órdenes, clientes, kardex, conteos) y recalcula `stock` y la
+numeración; conserva usuarios, productos, precios, fotos y auditoría. `--desde` es el inicio de la capacitación, con zona
+horaria (`2026-11-10T08:00:00-04:00`). Si el stock inicial de la importación es posterior a ese corte, también se borra:
+la corrida en seco lo avisa en la primera fila.
+
+```bash
+# 1. Backup manual en verde justo antes (sección 6). Sin backup en verde no se sigue.
+# 2. Seco: cuenta qué borraría y deshace. Revisar los conteos.
+SUPABASE_DB_PASSWORD=... scripts/limpieza/limpiar-pruebas.sh --desde <ISO con zona> --linked
+# 3. Real: exige el ref del proyecto (supabase/.temp/project-ref)
+CONFIRMAR=<ref> SUPABASE_DB_PASSWORD=... scripts/limpieza/limpiar-pruebas.sh --desde <ISO con zona> --aplicar --linked
+```
+
+`--linked` lee `supabase/.temp/pooler-url` (`supabase link`); alternativa: `--db-url <session pooler>` o `--local`. Si una
+aserción final falla (stock distinto del kardex, filas >= `--desde`), la transacción se deshace entera.
+
+**Regla:** backup en verde justo antes, y nunca después de empezar el paralelo: esas ventas son reales.
+
 ## 6. Backup
 
 ```bash
