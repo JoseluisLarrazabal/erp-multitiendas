@@ -1,8 +1,10 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { CLAVE, CUENTAS, iniciarSesionUI, rutaAuth } from "./helpers";
+import { apiComo, CLAVE, CUENTAS, iniciarSesionUI, rutaAuth, worker } from "./helpers";
 
 // RF-TR-04, RF-TR-05, RF-TR-08. Cada corrida crea sus propios datos (correo y prefijo únicos).
-const corrida = Date.now().toString(36);
+// Con solo la hora (ms), dos workers que cargan el archivo a la vez compartían corrida y chocaban en correo y nombre;
+// el índice del worker los separa.
+const corrida = `${Date.now().toString(36)}${worker}`;
 
 async function intentarLogin(browser: Browser, correo: string, clave: string) {
   const contexto = await browser.newContext({ storageState: { cookies: [], origins: [] } });
@@ -182,7 +184,17 @@ test.describe("dueño administra usuarios", () => {
   });
 
   test("registra un dispositivo y rechaza el prefijo repetido", async ({ page }) => {
-    const prefijo = `Y${(Date.now() % 90) + 10}`;
+    // Los dispositivos no se borran y el prefijo es único por negocio: un número al azar acabaría repitiendo uno de
+    // corridas anteriores. Se toma el primero libre de Y10..P99.
+    const usados = new Set(
+      ((await apiComo("dueno", "dispositivos?select=prefijo")).json as { prefijo: string }[]).map(
+        (d) => d.prefijo,
+      ),
+    );
+    const prefijo = [..."YXWVUTSRQP"]
+      .flatMap((l) => Array.from({ length: 90 }, (_, i) => `${l}${i + 10}`))
+      .find((p) => !usados.has(p));
+    if (!prefijo) throw new Error("No quedan prefijos libres para el dispositivo de prueba.");
     const nombre = `Caja ${corrida}`;
     await page.goto("/panel/dispositivos");
     const registrar = async () => {

@@ -1,11 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { crearProductosEnLote, ir, NEGOCIOS, rutaAuth, vigilarCsp } from "./helpers";
+import { crearProductosEnLote, ir, NEGOCIOS, rutaAuth, vigilarCsp, worker } from "./helpers";
 
 // RF-CAT-01, 03, 04, 11, 12. Cada prueba crea sus propios productos (código y barras únicos por corrida):
 // no depende del orden ni de lo que dejó otra. Reutilizan las sesiones de auth.setup, sin logins nuevos.
 // Los workers arrancan a la vez: con solo la hora (ms) dos podían compartir corrida y chocar en código y barras
-// ("Ya hay un producto con ese código"). El índice del worker los separa (siempre un dígito: hay menos de 10).
-const worker = (process.env.TEST_PARALLEL_INDEX ?? "0").slice(-1);
+// ("Ya hay un producto con ese código"). El índice del worker los separa.
 const corrida = `${Date.now().toString(36).toUpperCase()}${worker}`;
 const marca = `${String(Date.now() % 1e7).padStart(7, "0")}${worker}`;
 let contador = 0;
