@@ -97,4 +97,5 @@ La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca
 | Restauración | menos de 1 s | local |
 | Paso 10 de CI completo | 38 s | local, simulado |
 | Simulacro con datos reales de producción (backup cifrado de 1,6 MB) | 50 s: descarga 4 s, descifrado menos de 1 s, destino 44 s, restauración 1 s, verificación 1 s | local, 2026-11-04 |
-| Respaldo de fotos (2 archivos de prueba, base local) | menos de 1 s; con 292 fotos (máx. ~341 KB c/u) se estima de segundos a pocos minutos, sin medir | local |
+| Respaldo de fotos (2 archivos de prueba, base local) | menos de 1 s | local |
+| Corrida diaria real con fotos (292 fotos, 37 MB; artifact cifrado 37 MB) | 602 s: dump 88 s, fotos 398 s (descarga de a una), restauración y verificación 77 s, cifrado 1 s, subida 2 s | GitHub Actions, run 41961859964, 2026-11-05 |
