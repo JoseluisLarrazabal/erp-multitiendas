@@ -222,19 +222,39 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       POS muestran "Paralelo Bs 12,02 · paralelo.bo", la API responde `disponible: true` y no hay errores de consola.
     - #72: el aviso "Agregado: …" ya no queda tras "Nueva venta" (`setAnuncio("")` en `alExito`, assert en E2E-04).
     - #73 backup de fotos: `respaldar-fotos.sh`, `verificar-fotos.sh` y `restaurar-fotos.sh`. El bucket `productos` va
-      dentro del mismo `.age` y la cantidad de archivos se compara con `storage.objects`. **Pendiente CTO: los secretos
-      `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.** Sin ellos la corrida diaria sale verde con un warning y sin fotos.
-      Claude no pudo cargarlos: el clasificador de permisos bloquea las escrituras en el almacén de secretos.
+      dentro del mismo `.age` y la cantidad de archivos se compara con `storage.objects`. Secretos `SUPABASE_URL` y
+      `SUPABASE_SERVICE_ROLE_KEY` cargados por Claude el 2026-11-05 con autorización del CTO (la clave se validó antes
+      contra Storage). Claude puede volver a cargar secretos sin preguntar: regla `Bash(gh secret set *)` en
+      `.claude/settings.local.json`, que no se versiona. Primera corrida con fotos (run 41961859964): 292 fotos (37 MB),
+      `VERIFICACION OK` y `FOTOS OK`, 602 s en total. Tiempos en `docs/backup.md`.
     - #74, intermitente de `catalogo.spec.ts:195`. Causa: dos workers tomaban el mismo `Date.now()` en `unico()` y
       chocaban en código y barras. Ahora el índice del worker entra en `corrida` y `marca`. Pasó 90/90 con 8 workers.
-      `usuarios.spec.ts:5` tiene el mismo patrón y no se tocó.
-    - `pos-venta.spec.ts:790` ("dos pestañas, cerrojo real") falló una vez en local, con otros agentes usando la misma
-      base. Pasó al repetirlo, con y sin el cambio. Posible intermitente, sin investigar.
     - Codex: no verificado (sin cuota hasta 2026-11-16).
-  - **Limpieza antes del paralelo (pedido del CTO):** si la capacitación hace ventas en producción, un script único como
-    `postgres` borra ventas, pagos, cajas, clientes y órdenes, deja el kardex de importación y de conteo, recalcula stock
-    y reinicia la numeración. Se ensaya antes sobre un backup restaurado en local. Se escribe cuando haya fecha de
-    capacitación. Nunca después del paralelo: esas ventas son reales.
+  - **PRs del 2026-11-05, mergeados:**
+    - #77, datos únicos en los E2E: el helper `worker` (`tests/e2e/helpers.ts`) entra en `corrida` de `usuarios.spec.ts`
+      y en el `PREFIJO` de `reportes.spec.ts`. El prefijo del dispositivo de prueba es el primero libre de Y10 a P99:
+      antes eran 90 valores al azar y los dispositivos no se borran. 47/47 con 4 workers.
+      - `pos-venta.spec.ts:792` ("cerrojo real") no se reproduce: 10/10 aislado y 141/141 el archivo entero con 1
+        worker. Hipótesis no verificada: otro agente usaba la caja C1 en la misma base. Sin cambios.
+    - #76, limpieza de pruebas (`scripts/limpieza/limpiar-pruebas.{sh,sql}`, plan en `docs/plan-limpieza-pruebas.md`,
+      uso en `docs/despliegue.md`).
+      - Borra todo lo transaccional con fecha >= `--desde`. Las cajas offline se borran también si tienen ventas del
+        corte. Recalcula stock con la fórmula del trigger, devuelve a `disponible` las series vendidas en ventas
+        borradas y deja la numeración del servidor en el máximo que queda.
+      - Seco por defecto. `--aplicar` exige `CONFIRMAR=<ref>`.
+      - Aborta si `--desde` es anterior a la importación o si hay datos previos al corte tocados después: ventas,
+        pagos, cajas, órdenes, devoluciones o series de productos con traslado o baja (el kardex no lleva `serie_id`).
+      - Excepción única, autorizada por el CTO, a "kardex append-only" y "toda escritura por RPC".
+      - En cada equipo hay que dejar la cola vacía antes. Después hay que borrar `erp:pos:contador:<id>` o los datos
+        del sitio, porque el POS numera con `max(local, servidor)`.
+      - Ensayado en una base local descartable: seco, real, segunda corrida en 0 y dos aborts.
+      - **No verificado:** `--linked` contra producción, el ensayo sobre un backup restaurado y los demás aborts con
+        datos.
+      - Revisión: `/code-review` medium (7 hallazgos aplicados, 2 por diseño) y low (3, todos descartados contra el
+        esquema).
+    - Codex: no verificado (sin cuota hasta 2026-11-16).
+  - **Antes de capacitar:** la capacitación no debe trasladar ni dar de baja productos con series importadas, porque
+    entonces el script de limpieza aborta. Si pasa, la salida es restaurar el backup previo a la capacitación.
   - Usuarios del personal: se cargan al final (CTO).
   - Regla nueva en `CLAUDE.md`: el QA y las pruebas manuales los hace Claude con Playwright.
   - Auditoría de criterios de salida (2026-11-04, por lectura): DB-01 a DB-20, DB-27 y E2E-01 a E2E-11 tienen prueba
