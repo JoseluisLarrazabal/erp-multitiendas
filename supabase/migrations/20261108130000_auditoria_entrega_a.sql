@@ -5,7 +5,9 @@
 --      y queda marcado 'caja_cerrada' solo si abierta_en <= hora <= cerrada_en y el cierre es de hace menos de 30 días
 --      (una hora inventada no entra); si no, ERP_CAJA_CERRADA. La sesión cerrada no se muta. En línea sigue rechazando.
 --      Reversa: anular_venta deja anular una venta 'caja_cerrada' de sesión cerrada a quien tiene `anular` y
---      `ver_reportes`: devuelve el stock y no toca efectivo (la sesión ya cerró con otro esperado).
+--      `ver_reportes`, sin límite de 24 h (RN-08: es una corrección de revisión). Devuelve el stock y la venta pasa a
+--      anulada, así que baja el efectivo_esperado y el total_qr EN VIVO de la sesión cerrada (resumen_caja); lo congelado
+--      al cerrar (monto_esperado, diferencia) no cambia, y no se mueve efectivo real ni se reabre la sesión.
 --  M3  el vendedor y el empleado pierden `anular` (P-11). Efecto: tampoco devuelven dentro de las 24 h (devolver_venta
 --      usa `anular`) ni anulan órdenes.
 --  M4  resumen_caja sin `ver_reportes` devuelve en null ventas_efectivo, ingresos, gastos, retiros, devoluciones_efectivo,
@@ -13,15 +15,15 @@
 --      movimientos y devoluciones (el POS las necesita), así que el arqueo ciego no es hermético en la base.
 --  M5  abrir_caja y registrar_movimiento_caja con p_offline pasan por validar_offline_caja: un no miembro es
 --      ERP_SIN_PERMISO; un miembro que ya no tiene `caja` (o está desactivado) o con hora de hace más de 30 días se ACEPTA
---      (dato perdido = dinero sin registro), con la hora limitada a hoy - 30 días, y queda marcado 'usuario_sin_permiso' /
---      'fecha_fuera_de_rango' en motivos_revision (caja_sesiones y caja_movimientos). Gasto o retiro offline sobre el
+--      (dato perdido = dinero sin registro), con la hora original del cliente (sin limitarla), y queda marcado
+--      'usuario_sin_permiso' / 'fecha_fuera_de_rango' (hora de hace más de 30 días) en motivos_revision (caja_sesiones y caja_movimientos). Gasto o retiro offline sobre el
 --      efectivo esperado: 'efectivo_insuficiente'. cerrar_caja no tiene p_offline: nada que acotar.
 --      Revisión: caja_revisiones (append-only, una fila por ítem), revisar_caja(tipo, id) y reconciliacion_caja(negocio),
 --      con `ver_reportes`. Tabla aparte porque caja_movimientos y las sesiones cerradas son inmutables por trigger.
 --  Bajos: permiso antes del lock en las 3 RPC de órdenes; bloqueos por uuid en registrar_venta, guardar_precios,
 --  registrar_conteo y fijar_costos (el mismo orden de bloquear_stock); devolver_venta no reparte sobre un QR rechazado
 --  (nunca entró; efectivo_esperado y total_qr_sesion ya lo ignoran): si lo pedido supera efectivo + QR no rechazado,
---  ERP_QR_RECHAZADO; guardar_producto rechaza controla_serie false a true con stock distinto de cero
+--  ERP_QR_RECHAZADO (solo si la venta tiene un QR rechazado; si no, ERP_DATOS_INVALIDOS); guardar_producto rechaza controla_serie false a true con stock distinto de cero
 --  (ERP_SERIE_CON_STOCK); anular_venta rechaza una orden entregada (ERP_ORDEN_ENTREGADA, después del retorno idempotente
 --  de "ya anulada"); stock con trigger de TRUNCATE; dos dueños no pueden desactivarse a la vez (el trigger de baneo
 --  bloquea el negocio, igual que asignar_usuario y quitar_usuario, y exige otro dueño activo).
@@ -64,8 +66,9 @@ create policy caja_revisiones_select on public.caja_revisiones for select to aut
 revoke all on public.caja_revisiones from anon, authenticated, public;
 grant select on public.caja_revisiones to authenticated;
 
--- Privado. Validación común de lo enviado sin conexión a la caja: un no miembro se rechaza; a un miembro (aunque ya no
--- tenga `caja`) se le acepta lo hecho y se marca; la hora vieja se limita a hoy - 30 días y se marca.
+-- Invoker, privado (sin grant). Validación común de lo enviado sin conexión a la caja: un no miembro se rechaza; a un
+-- miembro (aunque ya no tenga `caja`) se le acepta lo hecho y se marca; la hora del cliente se conserva y, si es de hace
+-- más de 30 días, solo se marca.
 create function public.validar_offline_caja(p_hora timestamptz, p_usuario uuid, p_negocio_id uuid)
 returns table (hora_ajustada timestamptz, marcas text[])
 language plpgsql
@@ -82,7 +85,6 @@ begin
     marcas := marcas || 'usuario_sin_permiso'::text;
   end if;
   if p_hora < now() - interval '30 days' then
-    hora_ajustada := now() - interval '30 days';
     marcas := marcas || 'fecha_fuera_de_rango'::text;
   end if;
   return next;
@@ -91,6 +93,7 @@ $$;
 revoke all on function public.validar_offline_caja(timestamptz, uuid, uuid) from public, anon, authenticated;
 
 -- Aperturas y movimientos enviados sin conexión con marcas sin revisar. Exige `ver_reportes`. Más reciente primero.
+-- Devuelve hasta p_limite + 1 filas (la de más avisa que hay más).
 create function public.reconciliacion_caja(p_negocio_id uuid, p_limite integer default 100)
 returns table (
   tipo text, id uuid, sesion_id uuid, hora timestamptz, usuario_id uuid, usuario_nombre text, enviada_por uuid,
@@ -128,7 +131,7 @@ begin
         and not exists (select 1 from public.caja_revisiones r where r.tipo = 'movimiento' and r.ref_id = m.id)
     ) q
     order by 4 desc, 2
-    limit p_limite;
+    limit p_limite + 1; -- una de más: quien llama sabe si hay más que p_limite
 end;
 $$;
 
@@ -565,6 +568,7 @@ declare
   v_sesion public.caja_sesiones;
   v_motivo text := btrim(p_motivo);
   v_stock_ids uuid[];
+  v_correccion boolean;
 begin
   select * into v_venta from public.ventas where id = p_venta_id;
   if not found or not public.tiene_permiso(v_venta.negocio_id, 'anular') then
@@ -588,12 +592,14 @@ begin
   if exists (select 1 from public.ordenes where id = p_venta_id and estado = 'entregada') then
     raise exception 'ERP_ORDEN_ENTREGADA'; -- la ropa ya salió: se devuelve, no se anula
   end if;
-  if now() - v_venta.recibida_en > interval '24 hours'
+  -- Corrección de revisión (A2): venta caja_cerrada de sesión cerrada, por quien tiene `ver_reportes`; sin plazo de 24 h.
+  v_correccion := v_sesion.cerrada_en is not null and 'caja_cerrada' = any (v_venta.motivos_revision)
+    and public.tiene_permiso(v_venta.negocio_id, 'ver_reportes');
+  if now() - v_venta.recibida_en > interval '24 hours' and not v_correccion
      and not public.tiene_permiso(v_venta.negocio_id, 'devolver_fuera_plazo') then -- RN-08
     raise exception 'ERP_SIN_PERMISO';
   end if;
-  if v_sesion.cerrada_en is not null
-     and not ('caja_cerrada' = any (v_venta.motivos_revision) and public.tiene_permiso(v_venta.negocio_id, 'ver_reportes')) then
+  if v_sesion.cerrada_en is not null and not v_correccion then
     raise exception 'ERP_CAJA_CERRADA';
   end if;
   if exists (select 1 from public.devoluciones where venta_id = p_venta_id) then
@@ -765,7 +771,10 @@ begin
   -- Un QR rechazado nunca entró (efectivo_esperado y total_qr_sesion no lo cuentan): no se devuelve a ese pago.
   v_rest_qr := greatest(v_rest_qr, 0);
   if v_total > v_rest_ef + v_rest_qr then
-    raise exception 'ERP_QR_RECHAZADO';
+    if exists (select 1 from public.venta_pagos where venta_id = v_venta_id and medio = 'qr' and verificacion = 'rechazado') then
+      raise exception 'ERP_QR_RECHAZADO';
+    end if;
+    raise exception 'ERP_DATOS_INVALIDOS';
   end if;
   v_ef := case v_medio when 'efectivo' then least(v_total, v_rest_ef) else v_total - least(v_total, v_rest_qr) end;
   if v_ef > public.efectivo_esperado(v_sesion.id) then

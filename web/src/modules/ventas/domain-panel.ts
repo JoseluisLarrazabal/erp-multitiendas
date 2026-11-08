@@ -7,14 +7,22 @@ export const PLAZO_HORAS = 24;
 export const PAGINA_RECONCILIACION = 25;
 
 // Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página de ventas se cuenta "25+".
-// La caja por revisar no se pagina (reconciliacion_caja devuelve todo), así que su cuenta es exacta.
-export function textoPorRevisar(ventas: number, hayMasVentas: boolean, caja = 0): string | null {
+// La caja por revisar trae hasta 100: con más, "100+".
+export function textoPorRevisar(
+  ventas: number,
+  hayMasVentas: boolean,
+  caja = 0,
+  hayMasCaja = false,
+): string | null {
   const partes: string[] = [];
   if (ventas > 0) {
     const n = hayMasVentas ? `${ventas}+` : String(ventas);
     partes.push(ventas === 1 && !hayMasVentas ? "1 venta" : `${n} ventas`);
   }
-  if (caja > 0) partes.push(caja === 1 ? "1 movimiento de caja" : `${caja} movimientos de caja`);
+  if (caja > 0) {
+    const n = hayMasCaja ? `${caja}+` : String(caja);
+    partes.push(caja === 1 && !hayMasCaja ? "1 movimiento de caja" : `${n} movimientos de caja`);
+  }
   return partes.length ? `${partes.join(" y ")} por revisar` : null;
 }
 

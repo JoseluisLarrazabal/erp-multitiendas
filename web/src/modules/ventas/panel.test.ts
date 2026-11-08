@@ -165,6 +165,8 @@ describe("textoPorRevisar", () => {
     expect(textoPorRevisar(1, false)).toBe("1 venta por revisar");
     expect(textoPorRevisar(3, false)).toBe("3 ventas por revisar");
     expect(textoPorRevisar(25, true)).toBe("25+ ventas por revisar");
+    expect(textoPorRevisar(0, false, 100, true)).toBe("100+ movimientos de caja por revisar");
+    expect(textoPorRevisar(2, false, 1)).toBe("2 ventas y 1 movimiento de caja por revisar");
   });
 
   it("solo caja, ventas y caja juntas, y nada", () => {

@@ -108,7 +108,7 @@ export default async function PaginaReconciliacion({
               {caja.error}
             </p>
           ) : (
-            <ListaCajaPorRevisar filas={caja.data} />
+            <ListaCajaPorRevisar filas={caja.data.filas} hayMas={caja.data.hayMas} />
           )}
         </Seccion>
 

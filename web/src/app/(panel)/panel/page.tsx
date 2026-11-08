@@ -63,7 +63,8 @@ async function AvisoPorRevisar({ negocioId }: { negocioId: string }) {
   const aviso = textoPorRevisar(
     ventas.ok ? ventas.data.filas.filter((f) => !f.revisada).length : 0,
     ventas.ok && ventas.data.siguiente !== null,
-    caja.ok ? caja.data.length : 0,
+    caja.ok ? caja.data.filas.length : 0,
+    caja.ok && caja.data.hayMas,
   );
   if (!aviso) return null;
   return (

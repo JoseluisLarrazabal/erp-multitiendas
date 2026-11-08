@@ -56,7 +56,13 @@ function Fila({ f, alResolver }: { f: FilaCajaRevision; alResolver: (t: string) 
   );
 }
 
-export function ListaCajaPorRevisar({ filas }: { filas: readonly FilaCajaRevision[] }) {
+export function ListaCajaPorRevisar({
+  filas,
+  hayMas = false,
+}: {
+  filas: readonly FilaCajaRevision[];
+  hayMas?: boolean;
+}) {
   const [aviso, setAviso] = useState("");
   const estado = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -81,6 +87,11 @@ export function ListaCajaPorRevisar({ filas }: { filas: readonly FilaCajaRevisio
             <Fila key={f.tipo + f.id} f={f} alResolver={setAviso} />
           ))}
         </ul>
+      )}
+      {hayMas && (
+        <p className="text-muted-foreground text-xs">
+          Hay más de {filas.length}: al marcar estos aparecerán los siguientes.
+        </p>
       )}
     </>
   );

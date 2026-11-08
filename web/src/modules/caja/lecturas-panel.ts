@@ -196,6 +196,8 @@ export async function detalleSesion(
   };
 }
 
+export const LIMITE_CAJA_REVISION = 100;
+
 export type FilaCajaRevision = {
   tipo: "apertura" | "movimiento";
   id: string;
@@ -212,21 +214,27 @@ export type FilaCajaRevision = {
 export async function listarCajaPorRevisar(
   supabase: Cliente,
   negocioId: string,
-): Promise<Resultado<FilaCajaRevision[]>> {
-  const { data, error } = await supabase.rpc("reconciliacion_caja", { p_negocio_id: negocioId });
+): Promise<Resultado<{ filas: FilaCajaRevision[]; hayMas: boolean }>> {
+  const { data, error } = await supabase.rpc("reconciliacion_caja", {
+    p_negocio_id: negocioId,
+    p_limite: LIMITE_CAJA_REVISION,
+  });
   if (error) return falla("No se pudo leer la caja por revisar.");
   return {
     ok: true,
-    data: data.map((r) => ({
-      tipo: r.tipo === "apertura" ? "apertura" : "movimiento",
-      id: r.id,
-      sesionId: r.sesion_id,
-      hora: r.hora,
-      usuario: r.usuario_nombre,
-      enviadaPor: textoEnviadaPor(r.usuario_id, r.enviada_por, r.enviada_por_nombre),
-      detalle: r.detalle,
-      monto: Number(r.monto),
-      motivos: r.motivos,
-    })),
+    data: {
+      hayMas: data.length > LIMITE_CAJA_REVISION,
+      filas: data.slice(0, LIMITE_CAJA_REVISION).map((r) => ({
+        tipo: r.tipo === "apertura" ? "apertura" : "movimiento",
+        id: r.id,
+        sesionId: r.sesion_id,
+        hora: r.hora,
+        usuario: r.usuario_nombre,
+        enviadaPor: textoEnviadaPor(r.usuario_id, r.enviada_por, r.enviada_por_nombre),
+        detalle: r.detalle,
+        monto: Number(r.monto),
+        motivos: r.motivos,
+      })),
+    },
   };
 }
