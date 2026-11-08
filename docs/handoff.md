@@ -1,7 +1,24 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-04.
+Última actualización: 2026-11-05.
+
+## Próxima sesión (arrancar acá)
+
+- **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
+  ensayado (PRs #71 a #79) y el CI está en verde en `main`.
+- **Bloqueado por el cliente o el CTO, en orden:**
+  1. Precios del cliente. Sin ellos no se puede vender (`ERP_PRODUCTO_SIN_PRECIO`) ni capacitar.
+  2. Servicios de lavandería, catálogo del frial y tope de descuento (D-03).
+  3. Conteo físico (P-17, P-02 a P-05).
+  4. Usuarios del personal (correos y roles), al final.
+  5. Prueba en el equipo real con lector.
+  6. Capacitación. Antes del paralelo va la limpieza: seco y real con `--linked`, `SUPABASE_DB_PASSWORD` lo escribe el
+     CTO, y se resetea el contador local en cada equipo (`docs/despliegue.md`).
+  7. Paralelo de 3 días y acta.
+  8. Fecha de firma (D-04), dominio (RF-TR-10), rotación de credenciales a la entrega y adenda D-01.
+- **Codex:** cuando vuelva la cuota (2026-11-16), correr las revisiones pendientes de las fases 3 a 6 y `verify-fix`
+  sobre los `fix:`.
 
 ## Estado actual
 
