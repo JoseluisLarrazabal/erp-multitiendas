@@ -15,6 +15,7 @@ const fila = (extra: Partial<FilaCola> = {}): FilaCola => ({
   nota: null,
   estado: "pendiente",
   intentos: 0,
+  inesperados: 0,
   proximoIntento: 0,
   error: null,
   numeroImpreso: null,

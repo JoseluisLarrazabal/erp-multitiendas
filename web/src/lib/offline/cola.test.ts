@@ -16,6 +16,7 @@ import {
   type FilaNueva,
 } from "./cola";
 import { baseOffline } from "./db";
+import { resultadoDeError } from "./envio";
 import { avisarRed, leerSinRed } from "./red";
 
 const uuid = (n: number) => `a0000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -211,6 +212,26 @@ describe("vaciar", () => {
       },
     });
     expect(vistos).toEqual([{ n: 1 }]);
+  });
+
+  it("los fallos de red no gastan el tope de errores inesperados; 5 con respuesta sí rechazan; reabrir lo reinicia", async () => {
+    await encolar(nueva(1));
+    for (let i = 0; i < 5; i++) await marcarRed(uuid(1), "sin red");
+    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 5, inesperados: 0 });
+    const enviador = vi.fn<Enviador>(async (f) =>
+      resultadoDeError({ message: "boom", code: "PGRST000" }, f.inesperados),
+    );
+    await vaciar({ ...todas(), forzar: true, enviadores: { venta: enviador } });
+    expect((await leerFilas()).filas[0]).toMatchObject({ estado: "pendiente", inesperados: 1 });
+    for (let i = 0; i < 5; i++)
+      await vaciar({ ...todas(), forzar: true, enviadores: { venta: enviador } });
+    expect((await leerFilas()).filas[0]).toMatchObject({ estado: "rechazada", inesperados: 5 });
+    await reabrir(uuid(1));
+    expect((await leerFilas()).filas[0]).toMatchObject({
+      estado: "pendiente",
+      inesperados: 0,
+      intentos: 10,
+    });
   });
 
   it("Reintentar conserva los intentos: la duda no se borra", async () => {

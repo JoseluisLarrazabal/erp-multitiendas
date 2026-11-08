@@ -104,7 +104,12 @@ function cliente(opts: OpcionesCliente) {
   return { supabase, llamadas, funciones };
 }
 const exito: Respuesta = { data: { id: venta.id, numero: "C1-000007", total: 25 }, error: null };
-const fila = (extra: Partial<FilaCola> = {}) => ({ ...nuevaFila, intentos: 0, ...extra });
+const fila = (extra: Partial<FilaCola> = {}) => ({
+  ...nuevaFila,
+  intentos: 0,
+  inesperados: 0,
+  ...extra,
+});
 
 beforeEach(async () => {
   await baseOffline().cola.clear();
@@ -234,14 +239,14 @@ describe("errores sin código ERP_ y ERP_OPERACION_REPETIDA", () => {
     },
   );
 
-  it("un error sin código tras 5 intentos pasa a rechazo con mensaje claro; sin respuesta nunca", async () => {
+  it("un error sin código tras 5 errores con respuesta pasa a rechazo con mensaje claro; sin respuesta nunca", async () => {
     const roto = { data: null, error: { message: "boom", code: "PGRST000" } };
     const c = cliente({ respuestas: [roto] });
-    expect((await enviarVentaDeCola(fila({ intentos: 4 }), c.supabase, false)).resultado.t).toBe(
+    expect((await enviarVentaDeCola(fila({ inesperados: 4 }), c.supabase, false)).resultado.t).toBe(
       "red",
     );
     const r = await enviarVentaDeCola(
-      fila({ intentos: 5 }),
+      fila({ inesperados: 5 }),
       cliente({ respuestas: [roto], existe: false }).supabase,
       false,
     );
@@ -250,14 +255,21 @@ describe("errores sin código ERP_ y ERP_OPERACION_REPETIDA", () => {
     // Si la venta ya está en el servidor sigue siendo éxito.
     const existe = cliente({ respuestas: [roto], existe: true });
     expect(
-      (await enviarVentaDeCola(fila({ intentos: 9 }), existe.supabase, false)).resultado.t,
+      (await enviarVentaDeCola(fila({ intentos: 9, inesperados: 9 }), existe.supabase, false))
+        .resultado.t,
     ).toBe("ok");
     // Sin respuesta (red real): siempre red.
     const sinRespuesta = cliente({
       respuestas: [{ data: null, error: { message: "AbortError", code: "" } }],
     });
     expect(
-      (await enviarVentaDeCola(fila({ intentos: 50 }), sinRespuesta.supabase, false)).resultado.t,
+      (
+        await enviarVentaDeCola(
+          fila({ intentos: 50, inesperados: 50 }),
+          sinRespuesta.supabase,
+          false,
+        )
+      ).resultado.t,
     ).toBe("red");
   });
 

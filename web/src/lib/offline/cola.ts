@@ -14,6 +14,8 @@ export const filaColaSchema = z.object({
   nota: z.json(),
   estado: z.enum(["pendiente", "rechazada"]),
   intentos: z.number().int().min(0),
+  // Solo errores con respuesta del servidor (no red): el tope MAX_INTENTOS_INESPERADOS cuenta estos, no `intentos`.
+  inesperados: z.number().int().min(0).default(0),
   proximoIntento: z.number(),
   error: z.string().nullable(),
   numeroImpreso: z.string().nullable(),
@@ -65,6 +67,7 @@ export async function encolar(nueva: FilaNueva): Promise<void> {
     ...nueva,
     estado: "pendiente",
     intentos: 0,
+    inesperados: 0,
     proximoIntento: 0,
     error: null,
   });
@@ -81,18 +84,25 @@ export const actualizarFila = (
   id: string,
   cambios: Partial<Pick<FilaCola, "payload" | "nota" | "numeroImpreso" | "entregada">>,
 ) => porId(id).modify(cambios);
-export const marcarRed = (id: string, error: string) =>
+export const marcarRed = (id: string, error: string, respondio = false) =>
   porId(id).modify((f) => {
     f.intentos += 1;
+    if (respondio) f.inesperados = f.inesperados + 1;
     f.proximoIntento = Date.now() + esperaReintento(f.intentos);
     f.error = error;
   });
 export const marcarRechazada = (id: string, error: string) =>
   porId(id).modify({ estado: "rechazada", error });
-// Conserva `intentos`: una venta en duda sigue en duda y se comprueba antes de reenviarla. Quien reabre ya decidió
+// Conserva `intentos` (resetea `inesperados`): una venta en duda sigue en duda y se comprueba antes de reenviarla. Quien reabre ya decidió
 // reenviarla: deja de ser un primer intento interrumpido.
 export const reabrir = (id: string) =>
-  porId(id).modify({ estado: "pendiente", error: null, proximoIntento: 0, entregada: true });
+  porId(id).modify({
+    estado: "pendiente",
+    error: null,
+    proximoIntento: 0,
+    entregada: true,
+    inesperados: 0,
+  });
 
 // Descartar solo borra lo que sigue rechazado: entre pulsar el botón y confirmar, Reintentar pudo reabrirla. Va bajo el
 // cerrojo de la fila para no borrar una que el motor está enviando. false: no se borró.
@@ -262,7 +272,7 @@ async function enviarFila(
   if (r.t === "ok") await quitar(fila.id);
   else if (r.t === "rechazo") await marcarRechazada(fila.id, r.error);
   else if (r.t === "red") {
-    await marcarRed(fila.id, r.error);
+    await marcarRed(fila.id, r.error, r.respondio);
     return "cortar";
   } else return "cortar";
   return "seguir";

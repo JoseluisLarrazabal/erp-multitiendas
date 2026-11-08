@@ -82,7 +82,7 @@ async function enviar(
   const sesion = await leerSesion(supabase);
   if (sesion === "red" || sesion === "ninguna") return { t: "pausa" };
   const { error } = await llamar();
-  return error ? traducir(resultadoDeError(error, fila.intentos)) : { t: "ok" };
+  return error ? traducir(resultadoDeError(error, fila.inesperados)) : { t: "ok" };
 }
 
 export function enviarAperturaDeCola(fila: FilaCola, supabase: Cliente): Promise<ResultadoEnvio> {
