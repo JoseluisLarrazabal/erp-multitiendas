@@ -1,6 +1,6 @@
 -- Hallazgos de base de la auditoría de la Entrega A (migración 20261108130000): A2, M3, M4, M5 y los bajos.
 begin;
-select plan(47);
+select plan(68);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -24,6 +24,7 @@ insert into public.ubicaciones (id, negocio_id, nombre, tipo) values
   (pg_temp.i('UT'), pg_temp.i('T'), 'UT', 'local'), (pg_temp.i('UL'), pg_temp.i('L'), 'UL', 'local');
 insert into public.dispositivos (id, negocio_id, ubicacion_id, nombre, prefijo) values
   (pg_temp.i('DT'), pg_temp.i('T'), pg_temp.i('UT'), 'DT', 'C1'), (pg_temp.i('DT2'), pg_temp.i('T'), pg_temp.i('UT'), 'DT2', 'C2'),
+  (pg_temp.i('DT3'), pg_temp.i('T'), pg_temp.i('UT'), 'DT3', 'C3'), (pg_temp.i('DT4'), pg_temp.i('T'), pg_temp.i('UT'), 'DT4', 'C4'),
   (pg_temp.i('DL'), pg_temp.i('L'), pg_temp.i('UL'), 'DL', 'L1');
 -- SC: sesión de DT cerrada por otro hace una hora (monto_esperado 0). ST: la abierta de DT. SL: la de lavandería.
 insert into public.caja_sesiones (id, negocio_id, dispositivo_id, usuario_apertura, abierta_en, monto_inicial, cerrada_en,
@@ -107,20 +108,27 @@ select is(public.resumen_caja(pg_temp.i('ST')) -> 'esperado', 'null'::jsonb, 'M4
 select pg_temp.como(pg_temp.i('e'));
 select is((public.resumen_caja(pg_temp.i('ST')) ->> 'esperado')::numeric, 100::numeric, 'M4: el encargado (ver_reportes) lo recibe');
 
--- M5: caja offline
+-- M5: caja offline. Un miembro nunca se rechaza (se acepta y se marca); un no miembro sí.
 select pg_temp.como(pg_temp.i('v'));
-select throws_ok($$select public.abrir_caja(pg_temp.i('M5a'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('c', pg_temp.dia(1)))$$,
-  'P0001', 'ERP_SIN_PERMISO', 'M5: abrir offline con un usuario sin caja (contador)');
-select throws_ok($$select public.abrir_caja(pg_temp.i('M5a'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('ina', pg_temp.dia(1)))$$,
-  'P0001', 'ERP_SIN_PERMISO', 'M5: abrir offline con un usuario desactivado');
-select throws_ok($$select public.abrir_caja(pg_temp.i('M5a'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('v', pg_temp.dia(31)))$$,
-  'P0001', 'ERP_DATOS_INVALIDOS', 'M5: abrir offline con hora de hace más de 30 días');
-select is(public.abrir_caja(pg_temp.i('M5a'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('v', pg_temp.dia(29))),
-  pg_temp.i('M5a'), 'M5: abrir offline de hace 29 días con usuario con caja se acepta');
-select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('M5m'), pg_temp.i('M5a'), 'ingreso', 5, 'x', pg_temp.oc('c', pg_temp.dia(1)))$$,
-  'P0001', 'ERP_SIN_PERMISO', 'M5: movimiento offline con un usuario sin caja');
-select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('M5m'), pg_temp.i('M5a'), 'ingreso', 5, 'x', pg_temp.oc('v', pg_temp.dia(31)))$$,
-  'P0001', 'ERP_DATOS_INVALIDOS', 'M5: movimiento offline de hace más de 30 días');
+select throws_ok($$select public.abrir_caja(pg_temp.i('M5z'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('x', pg_temp.dia(1)))$$,
+  'P0001', 'ERP_SIN_PERMISO', 'M5: abrir offline con un no miembro se rechaza');
+select is(public.abrir_caja(pg_temp.i('M5c'), pg_temp.i('T'), pg_temp.i('DT2'), 10, pg_temp.oc('c', pg_temp.dia(1))), pg_temp.i('M5c'),
+  'M5: abrir offline con un miembro sin caja (contador) se acepta');
+select is((select array_to_string(motivos_revision, ',') from public.caja_sesiones where id = pg_temp.i('M5c')), 'usuario_sin_permiso', 'M5: marcada usuario_sin_permiso');
+select is(public.abrir_caja(pg_temp.i('M5i'), pg_temp.i('T'), pg_temp.i('DT3'), 10, pg_temp.oc('ina', pg_temp.dia(1))), pg_temp.i('M5i'),
+  'M5: abrir offline con un miembro desactivado se acepta');
+select is(public.abrir_caja(pg_temp.i('M5a'), pg_temp.i('T'), pg_temp.i('DT4'), 10, pg_temp.oc('v', pg_temp.dia(40))), pg_temp.i('M5a'),
+  'M5: abrir offline con hora de hace 40 días se acepta');
+select is((select array_to_string(motivos_revision, ',') || '/' || (abierta_en >= now() - interval '30 days 1 minute')::text from public.caja_sesiones where id = pg_temp.i('M5a')),
+  'fecha_fuera_de_rango/true', 'M5: marcada fecha_fuera_de_rango y la hora queda en hoy - 30 días');
+select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('M5m'), pg_temp.i('ST'), 'ingreso', 5, 'x', pg_temp.oc('x', pg_temp.dia(1)))$$,
+  'P0001', 'ERP_SIN_PERMISO', 'M5: movimiento offline de un no miembro se rechaza');
+select is(public.registrar_movimiento_caja(pg_temp.i('M5n'), pg_temp.i('ST'), 'ingreso', 5, 'x', pg_temp.oc('c', pg_temp.ahora(5))), pg_temp.i('M5n'),
+  'M5: movimiento offline de un miembro sin caja se acepta');
+select is((select array_to_string(motivos_revision, ',') from public.caja_movimientos where id = pg_temp.i('M5n')), 'usuario_sin_permiso', 'M5: movimiento marcado usuario_sin_permiso');
+select is(public.registrar_movimiento_caja(pg_temp.i('M5o'), pg_temp.i('ST'), 'ingreso', 5, 'x', pg_temp.oc('v', pg_temp.dia(35))), pg_temp.i('M5o'),
+  'M5: movimiento offline de hace 35 días se acepta');
+select is((select array_to_string(motivos_revision, ',') from public.caja_movimientos where id = pg_temp.i('M5o')), 'fecha_fuera_de_rango', 'M5: movimiento marcado fecha_fuera_de_rango');
 select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('M5g'), pg_temp.i('ST'), 'gasto', 500, 'x')$$,
   'P0001', 'ERP_EFECTIVO_INSUFICIENTE', 'M5: en línea un gasto sobre el esperado se rechaza');
 select is(public.registrar_movimiento_caja(pg_temp.i('M5h'), pg_temp.i('ST'), 'gasto', 20, 'x', pg_temp.oc('v', pg_temp.ahora(10))),
@@ -142,7 +150,7 @@ select pg_temp.como(pg_temp.i('e'));
 select throws_ok($$select public.devolver_venta(jsonb_build_object('id', pg_temp.i('DQ1'), 'venta_id', pg_temp.i('Q1'), 'dispositivo_id', pg_temp.i('DT'),
   'caja_sesion_id', pg_temp.i('ST'), 'medio', 'qr', 'motivo', 'm', 'items', jsonb_build_array(jsonb_build_object(
     'venta_item_id', (select id from public.venta_items where venta_id = pg_temp.i('Q1')), 'cantidad', 1))))$$,
-  'P0001', 'ERP_DATOS_INVALIDOS', 'devolver_venta: no devuelve lo cobrado por un QR rechazado (nunca entró)');
+  'P0001', 'ERP_QR_RECHAZADO', 'devolver_venta: no devuelve lo cobrado por un QR rechazado (nunca entró)');
 
 -- Bajos: bloqueos por uuid (el mismo orden que bloquear_stock)
 select is((select count(*) from pg_proc where pronamespace = 'public'::regnamespace
@@ -183,12 +191,50 @@ select pg_temp.como(pg_temp.i('x'));
 select public.cambiar_estado_orden(pg_temp.i('O1'), 'en_lavado');
 select public.cambiar_estado_orden(pg_temp.i('O1'), 'lista');
 select is(public.entregar_orden(pg_temp.i('O1'), 'Juan', 'boleta') ->> 'estado', 'entregada', 'orden entregada');
-select throws_ok($$select public.anular_venta(pg_temp.i('O1'), 'x')$$, 'P0001', 'ERP_ORDEN_ESTADO', 'anular_venta de una orden entregada');
+select throws_ok($$select public.anular_venta(pg_temp.i('O1'), 'x')$$, 'P0001', 'ERP_ORDEN_ENTREGADA', 'anular_venta de una orden entregada');
 
 -- Bajos: stock sin TRUNCATE
 reset role;
 select throws_ok($$truncate public.stock$$, 'P0001', 'ERP_SOLO_AGREGAR', 'stock: TRUNCATE rechazado');
 
+-- H1: A2 solo dentro de la sesión y con cierre reciente; reversa por ver_reportes
+reset role;
+insert into public.caja_sesiones (id, negocio_id, dispositivo_id, usuario_apertura, abierta_en, monto_inicial, cerrada_en,
+  usuario_cierre, monto_contado, monto_esperado, diferencia)
+  values (pg_temp.i('SOLD'), pg_temp.i('T'), pg_temp.i('DT4'), pg_temp.i('d'), now() - interval '50 days', 0, now() - interval '40 days',
+    pg_temp.i('e'), 0, 0, 0);
+select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vt('H1a', 'SC', 'C1-000010', 90), '{creada_en_cliente}', to_jsonb(now() - interval '5 hours')), pg_temp.off('v'))$$,
+  'P0001', 'ERP_CAJA_CERRADA', 'H1: hora anterior a abierta_en se rechaza');
+select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('H1m'), pg_temp.i('SC'), 'ingreso', 5, 'x', pg_temp.oc('v', pg_temp.ahora(300)))$$,
+  'P0001', 'ERP_CAJA_CERRADA', 'H1: movimiento anterior a abierta_en se rechaza');
+select throws_ok($$select public.registrar_movimiento_caja(pg_temp.i('H1o'), pg_temp.i('SOLD'), 'ingreso', 5, 'x', pg_temp.oc('v', pg_temp.dia(45)))$$,
+  'P0001', 'ERP_CAJA_CERRADA', 'H1: sesión cerrada hace más de 30 días se rechaza');
+select throws_ok($$select public.anular_venta(pg_temp.i('A2a'), 'x')$$, 'P0001', 'ERP_SIN_PERMISO', 'H1: el vendedor no anula una venta caja_cerrada');
+select pg_temp.como(pg_temp.i('e'));
+select is(public.anular_venta(pg_temp.i('A2a'), 'revisada') ->> 'estado', 'anulada', 'H1: el encargado anula una venta caja_cerrada de sesión cerrada');
+select is((select cantidad from public.stock where producto_id = pg_temp.i('P1') and ubicacion_id = pg_temp.i('UT')) >= 19, true, 'H1: el stock vuelve');
+
+-- Revisión de la caja
+select is((select count(*) from public.reconciliacion_caja(pg_temp.i('T')) where id = pg_temp.i('M5c'))::integer, 1, 'revisión: la apertura marcada aparece');
+select is((select count(*) from public.reconciliacion_caja(pg_temp.i('T')) where id = pg_temp.i('M5n'))::integer, 1, 'revisión: el movimiento marcado aparece');
+select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select public.revisar_caja('apertura', pg_temp.i('M5c'))$$, 'P0001', 'ERP_SIN_PERMISO', 'revisión: el vendedor no revisa');
+select throws_ok($$select public.reconciliacion_caja(pg_temp.i('T'))$$, 'P0001', 'ERP_SIN_PERMISO', 'revisión: el vendedor no lista');
+select pg_temp.como(pg_temp.i('e'));
+select throws_ok($$select public.revisar_caja('movimiento', pg_temp.i('M5h'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'revisión: sin marcas no hay nada que revisar');
+select is(public.revisar_caja('apertura', pg_temp.i('M5c')) ->> 'tipo', 'apertura', 'revisión: el encargado revisa la apertura');
+select is(public.revisar_caja('apertura', pg_temp.i('M5c')) ->> 'tipo', 'apertura', 'revisión: repetir es idempotente');
+select is(public.revisar_caja('movimiento', pg_temp.i('M5n')) ->> 'tipo', 'movimiento', 'revisión: el encargado revisa el movimiento');
+select is((select count(*) from public.reconciliacion_caja(pg_temp.i('T')) where id in (pg_temp.i('M5c'), pg_temp.i('M5n')))::integer, 0, 'revisión: salen de la lista');
+
+-- M4: sin ver_reportes todos los términos del esperado van en null
+select pg_temp.como(pg_temp.i('v'));
+select is((select (r -> 'ventas_efectivo')::text || (r -> 'ingresos')::text || (r -> 'gastos')::text || (r -> 'retiros')::text
+  || (r -> 'devoluciones_efectivo')::text || (r -> 'qr_neto')::text from (select public.resumen_caja(pg_temp.i('ST')) r) q),
+  'nullnullnullnullnullnull', 'M4: el vendedor recibe nulos en todos los términos');
+
+reset role;
 -- Bajos: dos dueños no dejan a T sin dueño activo
 update auth.users set banned_until = now() + interval '100 years' where id = pg_temp.i('d');
 select is((select activo from public.perfiles where id = pg_temp.i('d')), false, 'dueño: con otro dueño activo, d se desactiva');

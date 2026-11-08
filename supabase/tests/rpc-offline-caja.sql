@@ -53,8 +53,8 @@ select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('v', pg_temp.
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('x', pg_temp.t('10:00:00Z', 10)))$$, 'P0001', 'ERP_SIN_PERMISO', 'otro negocio no abre caja offline');
 select pg_temp.como(pg_temp.i('d'));
-select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('x', pg_temp.t('10:00:00Z', 10)))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'usuario_id de otro negocio');
-select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('nadie', pg_temp.t('10:00:00Z', 10)))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'usuario_id inexistente');
+select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('x', pg_temp.t('10:00:00Z', 10)))$$, 'P0001', 'ERP_SIN_PERMISO', 'usuario_id de otro negocio');
+select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('nadie', pg_temp.t('10:00:00Z', 10)))$$, 'P0001', 'ERP_SIN_PERMISO', 'usuario_id inexistente');
 select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('v', pg_temp.t('10:00:00Z', 10)) || '{"x": 1}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'clave desconocida');
 select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('v', pg_temp.t('10:00:00Z', 10)) - 'usuario_id')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'sin usuario_id');
 select throws_ok($$select pg_temp.abrir('S1', 'D1', 100, pg_temp.o('v', pg_temp.t('10:00:00Z', 10)) - 'creada_en')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'sin creada_en');
@@ -92,7 +92,7 @@ select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('v', 
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('x', pg_temp.t('11:00:00Z', 10)))$$, 'P0001', 'ERP_SIN_PERMISO', 'sesión de otro negocio');
 select pg_temp.como(pg_temp.i('d'));
-select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('x', pg_temp.t('11:00:00Z', 10)))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'usuario_id de otro negocio');
+select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('x', pg_temp.t('11:00:00Z', 10)))$$, 'P0001', 'ERP_SIN_PERMISO', 'usuario_id de otro negocio');
 select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('v', 'ayer'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'creada_en inválida');
 select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 10, pg_temp.o('v', pg_temp.t('11:00:00Z', 10)) || '{"x": 1}')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'clave desconocida');
 select throws_ok($$select pg_temp.mov('M1', 'S1', 'ingreso', 0, pg_temp.o('v', pg_temp.t('11:00:00Z', 10)))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'monto 0 sigue inválido');

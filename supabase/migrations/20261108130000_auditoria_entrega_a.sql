@@ -1,21 +1,30 @@
 -- Hallazgos de base de la auditoría de la Entrega A (docs/auditoria-entrega-a.md; CTO, 2026-11-08: arreglar todos los
 -- hallazgos). Solo create or replace con la misma firma: nada de sobrecargas. Códigos nuevos: ERP_SERIE_CON_STOCK,
 -- ERP_ULTIMO_DUENO (este último lo lanza el trigger que sincroniza el baneo, no una RPC).
---  A2  registrar_venta y registrar_movimiento_caja con p_offline: lo hecho antes de cerrada_en en una sesión que otro
---      usuario cerró se acepta y queda marcado 'caja_cerrada' (la sesión cerrada no se muta). En línea sigue ERP_CAJA_CERRADA.
+--  A2  registrar_venta y registrar_movimiento_caja con p_offline: lo hecho en una sesión que otro usuario cerró se acepta
+--      y queda marcado 'caja_cerrada' solo si abierta_en <= hora <= cerrada_en y el cierre es de hace menos de 30 días
+--      (una hora inventada no entra); si no, ERP_CAJA_CERRADA. La sesión cerrada no se muta. En línea sigue rechazando.
+--      Reversa: anular_venta deja anular una venta 'caja_cerrada' de sesión cerrada a quien tiene `anular` y
+--      `ver_reportes`: devuelve el stock y no toca efectivo (la sesión ya cerró con otro esperado).
 --  M3  el vendedor y el empleado pierden `anular` (P-11). Efecto: tampoco devuelven dentro de las 24 h (devolver_venta
 --      usa `anular`) ni anulan órdenes.
---  M4  resumen_caja devuelve `esperado` solo con `ver_reportes`; sin él, null. Residual: ventas, movimientos y
---      devoluciones siguen legibles por RLS para todo miembro, así que el esperado es deducible por quien sepa sumar.
---  M5  abrir_caja y registrar_movimiento_caja con p_offline: usuario con `caja` hoy (si no, ERP_SIN_PERMISO), hora de
---      máximo 30 días atrás (ERP_DATOS_INVALIDOS) y gasto o retiro sobre el efectivo esperado aceptado pero marcado
---      'efectivo_insuficiente' en caja_movimientos.motivos_revision. cerrar_caja no tiene p_offline: nada que acotar.
+--  M4  resumen_caja sin `ver_reportes` devuelve en null ventas_efectivo, ingresos, gastos, retiros, devoluciones_efectivo,
+--      esperado y qr_neto (queda monto_inicial). Residual aceptado: por RLS todo miembro sigue leyendo las filas de ventas,
+--      movimientos y devoluciones (el POS las necesita), así que el arqueo ciego no es hermético en la base.
+--  M5  abrir_caja y registrar_movimiento_caja con p_offline pasan por validar_offline_caja: un no miembro es
+--      ERP_SIN_PERMISO; un miembro que ya no tiene `caja` (o está desactivado) o con hora de hace más de 30 días se ACEPTA
+--      (dato perdido = dinero sin registro), con la hora limitada a hoy - 30 días, y queda marcado 'usuario_sin_permiso' /
+--      'fecha_fuera_de_rango' en motivos_revision (caja_sesiones y caja_movimientos). Gasto o retiro offline sobre el
+--      efectivo esperado: 'efectivo_insuficiente'. cerrar_caja no tiene p_offline: nada que acotar.
+--      Revisión: caja_revisiones (append-only, una fila por ítem), revisar_caja(tipo, id) y reconciliacion_caja(negocio),
+--      con `ver_reportes`. Tabla aparte porque caja_movimientos y las sesiones cerradas son inmutables por trigger.
 --  Bajos: permiso antes del lock en las 3 RPC de órdenes; bloqueos por uuid en registrar_venta, guardar_precios,
 --  registrar_conteo y fijar_costos (el mismo orden de bloquear_stock); devolver_venta no reparte sobre un QR rechazado
 --  (nunca entró; efectivo_esperado y total_qr_sesion ya lo ignoran): si lo pedido supera efectivo + QR no rechazado,
---  ERP_DATOS_INVALIDOS; guardar_producto rechaza controla_serie false a true con stock; anular_venta rechaza una orden
---  entregada (ERP_ORDEN_ESTADO); stock con trigger de TRUNCATE; dos dueños no pueden desactivarse a la vez (el trigger
---  de baneo bloquea el negocio, igual que asignar_usuario y quitar_usuario, y exige otro dueño activo).
+--  ERP_QR_RECHAZADO; guardar_producto rechaza controla_serie false a true con stock distinto de cero
+--  (ERP_SERIE_CON_STOCK); anular_venta rechaza una orden entregada (ERP_ORDEN_ENTREGADA, después del retorno idempotente
+--  de "ya anulada"); stock con trigger de TRUNCATE; dos dueños no pueden desactivarse a la vez (el trigger de baneo
+--  bloquea el negocio, igual que asignar_usuario y quitar_usuario, y exige otro dueño activo).
 -- Verificado sin cambios: mis_negocios() (20261101120000_tenencia.sql:85) y tiene_permiso_de() (20261101210100:41, base de
 -- tiene_permiso) filtran perfiles.activo, así que desactivar una cuenta corta su JWT vivo en la base.
 
@@ -27,7 +36,138 @@ alter table public.ventas add constraint ventas_motivos_revision_check
 -- Marcas de revisión de un movimiento de caja enviado sin conexión (solo se ven en el detalle de la caja).
 alter table public.caja_movimientos
   add column motivos_revision text[] not null default '{}'
-    check (motivos_revision <@ array['caja_cerrada', 'efectivo_insuficiente']);
+    check (motivos_revision <@ array['caja_cerrada', 'efectivo_insuficiente', 'usuario_sin_permiso', 'fecha_fuera_de_rango']);
+alter table public.caja_sesiones
+  add column motivos_revision text[] not null default '{}'
+    check (motivos_revision <@ array['usuario_sin_permiso', 'fecha_fuera_de_rango']);
+
+-- Revisión de lo marcado en la caja. Tabla aparte: caja_movimientos es append-only y la sesión cerrada no cambia.
+create table public.caja_revisiones (
+  id uuid primary key default gen_random_uuid(),
+  negocio_id uuid not null references public.negocios (id),
+  tipo text not null check (tipo in ('apertura', 'movimiento')),
+  ref_id uuid not null,
+  revisado_por uuid not null references public.perfiles (id),
+  revisado_en timestamptz not null default now(),
+  unique (tipo, ref_id)
+);
+create index caja_revisiones_negocio_idx on public.caja_revisiones (negocio_id);
+create trigger caja_revisiones_solo_agregar
+  before update or delete on public.caja_revisiones
+  for each row execute function public.rechazar_modificacion();
+create trigger caja_revisiones_sin_truncate
+  before truncate on public.caja_revisiones
+  for each statement execute function public.rechazar_modificacion();
+alter table public.caja_revisiones enable row level security;
+create policy caja_revisiones_select on public.caja_revisiones for select to authenticated
+  using (negocio_id in (select public.mis_negocios()));
+revoke all on public.caja_revisiones from anon, authenticated, public;
+grant select on public.caja_revisiones to authenticated;
+
+-- Privado. Validación común de lo enviado sin conexión a la caja: un no miembro se rechaza; a un miembro (aunque ya no
+-- tenga `caja`) se le acepta lo hecho y se marca; la hora vieja se limita a hoy - 30 días y se marca.
+create function public.validar_offline_caja(p_hora timestamptz, p_usuario uuid, p_negocio_id uuid)
+returns table (hora_ajustada timestamptz, marcas text[])
+language plpgsql
+stable
+set search_path = ''
+as $$
+begin
+  if not public.usuario_en_negocio(p_usuario, p_negocio_id) then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  hora_ajustada := p_hora;
+  marcas := '{}';
+  if not public.tiene_permiso_de(p_usuario, p_negocio_id, 'caja') then
+    marcas := marcas || 'usuario_sin_permiso'::text;
+  end if;
+  if p_hora < now() - interval '30 days' then
+    hora_ajustada := now() - interval '30 days';
+    marcas := marcas || 'fecha_fuera_de_rango'::text;
+  end if;
+  return next;
+end;
+$$;
+revoke all on function public.validar_offline_caja(timestamptz, uuid, uuid) from public, anon, authenticated;
+
+-- Aperturas y movimientos enviados sin conexión con marcas sin revisar. Exige `ver_reportes`. Más reciente primero.
+create function public.reconciliacion_caja(p_negocio_id uuid, p_limite integer default 100)
+returns table (
+  tipo text, id uuid, sesion_id uuid, hora timestamptz, usuario_id uuid, usuario_nombre text, enviada_por uuid,
+  enviada_por_nombre text, detalle text, monto numeric, motivos text[]
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.tiene_permiso(p_negocio_id, 'ver_reportes') then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if p_limite is null or p_limite < 1 or p_limite > 500 then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  return query
+    select * from (
+      select 'apertura'::text, s.id, s.id, s.abierta_en, s.usuario_apertura, pu.nombre, s.enviada_por, pe.nombre,
+        'Apertura de caja · ' || d.nombre, s.monto_inicial, s.motivos_revision
+      from public.caja_sesiones s
+      join public.dispositivos d on d.id = s.dispositivo_id
+      left join public.perfiles pu on pu.id = s.usuario_apertura
+      left join public.perfiles pe on pe.id = s.enviada_por
+      where s.negocio_id = p_negocio_id and cardinality(s.motivos_revision) > 0
+        and not exists (select 1 from public.caja_revisiones r where r.tipo = 'apertura' and r.ref_id = s.id)
+      union all
+      select 'movimiento'::text, m.id, m.sesion_id, m.created_at, m.usuario_id, pu.nombre, m.enviada_por, pe.nombre,
+        initcap(m.tipo) || ' · ' || m.motivo, m.monto, m.motivos_revision
+      from public.caja_movimientos m
+      left join public.perfiles pu on pu.id = m.usuario_id
+      left join public.perfiles pe on pe.id = m.enviada_por
+      where m.negocio_id = p_negocio_id and cardinality(m.motivos_revision) > 0
+        and not exists (select 1 from public.caja_revisiones r where r.tipo = 'movimiento' and r.ref_id = m.id)
+    ) q
+    order by 4 desc, 2
+    limit p_limite;
+end;
+$$;
+
+-- Marca como revisada una apertura o un movimiento con marcas. Exige `ver_reportes`; repetir devuelve igual.
+create function public.revisar_caja(p_tipo text, p_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := (select auth.uid());
+  v_negocio uuid;
+  v_marcas text[];
+  v_rev public.caja_revisiones;
+begin
+  if p_tipo = 'apertura' then
+    select negocio_id, motivos_revision into v_negocio, v_marcas from public.caja_sesiones where id = p_id;
+  elsif p_tipo = 'movimiento' then
+    select negocio_id, motivos_revision into v_negocio, v_marcas from public.caja_movimientos where id = p_id;
+  else
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  if v_negocio is null or not public.tiene_permiso(v_negocio, 'ver_reportes') then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if cardinality(v_marcas) = 0 then
+    raise exception 'ERP_DATOS_INVALIDOS'; -- sin marcas no hay nada que revisar
+  end if;
+  insert into public.caja_revisiones (negocio_id, tipo, ref_id, revisado_por) values (v_negocio, p_tipo, p_id, v_uid)
+  on conflict (tipo, ref_id) do nothing;
+  select * into v_rev from public.caja_revisiones where tipo = p_tipo and ref_id = p_id;
+  return jsonb_build_object('tipo', p_tipo, 'id', p_id, 'revisado_por', v_rev.revisado_por, 'revisado_en', v_rev.revisado_en);
+end;
+$$;
+revoke all on function public.reconciliacion_caja(uuid, integer) from public, anon, authenticated;
+revoke all on function public.revisar_caja(text, uuid) from public, anon, authenticated;
+grant execute on function public.reconciliacion_caja(uuid, integer) to authenticated;
+grant execute on function public.revisar_caja(text, uuid) to authenticated;
 
 delete from public.rol_permisos where permiso = 'anular' and rol in ('vendedor', 'empleado');
 
@@ -216,8 +356,10 @@ begin
   end if;
   -- A2: una venta offline hecha antes del cierre se acepta aunque otro usuario cerró la caja (el efectivo ya entró);
   -- la sesión cerrada no se toca y la venta queda para revisión. En línea, o hecha después del cierre, se rechaza.
+  -- Solo si la hora cae dentro de la sesión y el cierre es de hace menos de 30 días: una hora inventada no entra.
   if v_sesion.cerrada_en is not null then
-    if not v_off or v_creada > v_sesion.cerrada_en then
+    if not v_off or v_creada > v_sesion.cerrada_en or v_creada < v_sesion.abierta_en
+       or v_sesion.cerrada_en <= now() - interval '30 days' then
       raise exception 'ERP_CAJA_CERRADA';
     end if;
     v_motivos := v_motivos || 'caja_cerrada'::text;
@@ -429,10 +571,7 @@ begin
     raise exception 'ERP_SIN_PERMISO';
   end if;
   if exists (select 1 from public.ordenes where id = p_venta_id and estado in ('recibida', 'en_lavado', 'lista')) then
-    raise exception 'ERP_ES_ORDEN'; -- orden activa: se anula desde la orden (anular_orden); cancelada ya no
-  end if;
-  if exists (select 1 from public.ordenes where id = p_venta_id and estado = 'entregada') then
-    raise exception 'ERP_ORDEN_ESTADO'; -- la ropa ya salió: anular dejaría la orden entregada con el dinero devuelto
+    raise exception 'ERP_ES_ORDEN'; -- orden activa: se anula desde la orden (anular_orden); entregada/cancelada ya no
   end if;
   if v_motivo is null or v_motivo = '' or length(v_motivo) > 200 then
     raise exception 'ERP_DATOS_INVALIDOS';
@@ -446,18 +585,23 @@ begin
     end if;
     raise exception 'ERP_OPERACION_REPETIDA';
   end if;
+  if exists (select 1 from public.ordenes where id = p_venta_id and estado = 'entregada') then
+    raise exception 'ERP_ORDEN_ENTREGADA'; -- la ropa ya salió: se devuelve, no se anula
+  end if;
   if now() - v_venta.recibida_en > interval '24 hours'
      and not public.tiene_permiso(v_venta.negocio_id, 'devolver_fuera_plazo') then -- RN-08
     raise exception 'ERP_SIN_PERMISO';
   end if;
-  if v_sesion.cerrada_en is not null then
+  if v_sesion.cerrada_en is not null
+     and not ('caja_cerrada' = any (v_venta.motivos_revision) and public.tiene_permiso(v_venta.negocio_id, 'ver_reportes')) then
     raise exception 'ERP_CAJA_CERRADA';
   end if;
   if exists (select 1 from public.devoluciones where venta_id = p_venta_id) then
     raise exception 'ERP_VENTA_CON_DEVOLUCIONES';
   end if;
-  if (select coalesce(sum(monto), 0) from public.venta_pagos where venta_id = p_venta_id and medio = 'efectivo')
-     > public.efectivo_esperado(v_sesion.id) then
+  if v_sesion.cerrada_en is null
+     and (select coalesce(sum(monto), 0) from public.venta_pagos where venta_id = p_venta_id and medio = 'efectivo')
+         > public.efectivo_esperado(v_sesion.id) then
     raise exception 'ERP_EFECTIVO_INSUFICIENTE';
   end if;
 
@@ -619,8 +763,9 @@ begin
   v_rest_qr := v_rest_qr - (select coalesce(sum(monto - monto_efectivo), 0) from public.devoluciones
                             where venta_id = v_venta_id);
   -- Un QR rechazado nunca entró (efectivo_esperado y total_qr_sesion no lo cuentan): no se devuelve a ese pago.
+  v_rest_qr := greatest(v_rest_qr, 0);
   if v_total > v_rest_ef + v_rest_qr then
-    raise exception 'ERP_DATOS_INVALIDOS';
+    raise exception 'ERP_QR_RECHAZADO';
   end if;
   v_ef := case v_medio when 'efectivo' then least(v_total, v_rest_ef) else v_total - least(v_total, v_rest_qr) end;
   if v_ef > public.efectivo_esperado(v_sesion.id) then
@@ -796,6 +941,7 @@ declare
   v_off boolean := p_offline is not null and jsonb_typeof(p_offline) <> 'null';
   v_hora timestamptz;
   v_usuario uuid := (select auth.uid());
+  v_motivos text[] := '{}';
 begin
   if not public.tiene_permiso(p_negocio_id, 'caja') then
     raise exception 'ERP_SIN_PERMISO';
@@ -821,21 +967,14 @@ begin
     if exists (select 1 from public.caja_sesiones where dispositivo_id = p_dispositivo_id and cerrada_en is null) then
       raise exception 'ERP_CAJA_ABIERTA';
     end if;
-    if v_off and not public.usuario_en_negocio(v_usuario, p_negocio_id) then
-      raise exception 'ERP_DATOS_INVALIDOS';
-    end if;
-    -- M5: quien abrió sin conexión tiene que ser hoy un miembro activo con `caja`, y la hora no puede ser de hace meses.
-    if v_off and not public.tiene_permiso_de(v_usuario, p_negocio_id, 'caja') then
-      raise exception 'ERP_SIN_PERMISO';
-    end if;
-    if v_off and v_hora < now() - interval '30 days' then
-      raise exception 'ERP_DATOS_INVALIDOS';
+    if v_off then -- no miembro: ERP_SIN_PERMISO; sin `caja` hoy o hora vieja: se acepta y se marca
+      select h.hora_ajustada, h.marcas into v_hora, v_motivos from public.validar_offline_caja(v_hora, v_usuario, p_negocio_id) h;
     end if;
     -- El mismo id en otro equipo en paralelo: no inserta y relee la fila ganadora (que cae en REPETIDA).
     insert into public.caja_sesiones (id, negocio_id, dispositivo_id, usuario_apertura, abierta_en, monto_inicial, origen,
-      enviada_por)
+      enviada_por, motivos_revision)
     values (p_id, p_negocio_id, p_dispositivo_id, v_usuario, coalesce(v_hora, now()), p_monto_inicial,
-      case when v_off then 'offline' else 'online' end, (select auth.uid()))
+      case when v_off then 'offline' else 'online' end, (select auth.uid()), v_motivos)
     on conflict (id) do nothing;
     select * into v_sesion from public.caja_sesiones where id = p_id;
   end if;
@@ -885,22 +1024,16 @@ begin
 
   select * into v_mov from public.caja_movimientos where id = p_id;
   if not found then
-    -- A2: igual que la venta offline: hecho antes del cierre se acepta y queda para revisión.
+    if v_off then -- no miembro: ERP_SIN_PERMISO; sin `caja` hoy o hora vieja: se acepta y se marca
+      select h.hora_ajustada, h.marcas into v_hora, v_motivos from public.validar_offline_caja(v_hora, v_usuario, v_sesion.negocio_id) h;
+    end if;
+    -- A2: hecho dentro de la sesión (abierta_en a cerrada_en) y con cierre de hace menos de 30 días se acepta y se revisa.
     if v_sesion.cerrada_en is not null then
-      if not v_off or v_hora > v_sesion.cerrada_en then
+      if not v_off or v_hora > v_sesion.cerrada_en or v_hora < v_sesion.abierta_en
+         or v_sesion.cerrada_en <= now() - interval '30 days' then
         raise exception 'ERP_CAJA_CERRADA';
       end if;
       v_motivos := v_motivos || 'caja_cerrada'::text;
-    end if;
-    if v_off and not public.usuario_en_negocio(v_usuario, v_sesion.negocio_id) then
-      raise exception 'ERP_DATOS_INVALIDOS';
-    end if;
-    -- M5: usuario con `caja` hoy, hora de máximo 30 días atrás.
-    if v_off and not public.tiene_permiso_de(v_usuario, v_sesion.negocio_id, 'caja') then
-      raise exception 'ERP_SIN_PERMISO';
-    end if;
-    if v_off and v_hora < now() - interval '30 days' then
-      raise exception 'ERP_DATOS_INVALIDOS';
     end if;
     if p_tipo in ('gasto', 'retiro') and p_monto > public.efectivo_esperado(p_sesion_id) then
       if not v_off then
@@ -941,10 +1074,11 @@ as $$
 declare
   v_negocio_id uuid;
   v_res jsonb;
+  v_rev boolean;
 begin
   select negocio_id into v_negocio_id from public.caja_sesiones where id = p_sesion_id;
-  if v_negocio_id is null
-     or not (public.tiene_permiso(v_negocio_id, 'caja') or public.tiene_permiso(v_negocio_id, 'ver_reportes')) then
+  v_rev := coalesce(public.tiene_permiso(v_negocio_id, 'ver_reportes'), false);
+  if v_negocio_id is null or not (v_rev or public.tiene_permiso(v_negocio_id, 'caja')) then
     raise exception 'ERP_SIN_PERMISO';
   end if;
   select jsonb_build_object(
@@ -955,8 +1089,7 @@ begin
     'gastos', coalesce((select sum(m.monto) from public.caja_movimientos m where m.sesion_id = s.id and m.tipo = 'gasto'), 0),
     'retiros', coalesce((select sum(m.monto) from public.caja_movimientos m where m.sesion_id = s.id and m.tipo = 'retiro'), 0),
     'devoluciones_efectivo', coalesce((select sum(d.monto_efectivo) from public.devoluciones d where d.caja_sesion_id = s.id), 0),
-    -- M4: arqueo ciego en la base; el esperado solo lo ve quien revisa reportes.
-    'esperado', case when public.tiene_permiso(v_negocio_id, 'ver_reportes') then public.efectivo_esperado(s.id) end,
+    'esperado', public.efectivo_esperado(s.id),
     'qr_neto', public.total_qr_sesion(s.id),
     'qr_pendiente', coalesce((select sum(vp.monto) from public.venta_pagos vp join public.ventas v on v.id = vp.venta_id
                               where v.caja_sesion_id = s.id and v.estado = 'completada' and vp.medio = 'qr'
@@ -965,6 +1098,12 @@ begin
     'cantidad_movimientos', (select count(*) from public.caja_movimientos m where m.sesion_id = s.id)
   ) into v_res
   from public.caja_sesiones s where s.id = p_sesion_id;
+  -- M4: sin `ver_reportes` van en null todos los términos del esperado (queda monto_inicial, que escribió el cajero).
+  -- Residual aceptado: por RLS todo miembro sigue leyendo las filas de ventas, movimientos y devoluciones (el POS las usa).
+  if not v_rev then
+    v_res := v_res || jsonb_build_object('ventas_efectivo', null, 'ingresos', null, 'gastos', null, 'retiros', null,
+      'devoluciones_efectivo', null, 'esperado', null, 'qr_neto', null);
+  end if;
   return v_res;
 end;
 $$;
@@ -1030,7 +1169,7 @@ begin
     end if;
     -- Con stock sin series el producto quedaría invendible: primero se vende o se ajusta a cero.
     if found and not v_actual.controla_serie and coalesce((p_datos ->> 'controla_serie')::boolean, false)
-       and exists (select 1 from public.stock where producto_id = v_id and cantidad > 0) then
+       and exists (select 1 from public.stock where producto_id = v_id and cantidad <> 0) then
       raise exception 'ERP_SERIE_CON_STOCK';
     end if;
     update public.productos set

@@ -29,14 +29,14 @@ export type Cierre = z.infer<typeof cierreSchema>;
 // Respuesta de resumen_caja (jsonb): arqueo calculado en SQL, en Bs.
 export const resumenCajaSchema = z.object({
   monto_inicial: z.number(),
-  ventas_efectivo: z.number(),
-  ingresos: z.number(),
-  gastos: z.number(),
-  retiros: z.number(),
-  devoluciones_efectivo: z.number(),
-  // null sin `ver_reportes`: arqueo ciego forzado en la base (M4).
+  // null sin `ver_reportes` (M4): los términos del esperado no salen de la base.
+  ventas_efectivo: z.number().nullable(),
+  ingresos: z.number().nullable(),
+  gastos: z.number().nullable(),
+  retiros: z.number().nullable(),
+  devoluciones_efectivo: z.number().nullable(),
   esperado: z.number().nullable(),
-  qr_neto: z.number(),
+  qr_neto: z.number().nullable(),
   cantidad_ventas: z.number(),
   cantidad_movimientos: z.number(),
 });

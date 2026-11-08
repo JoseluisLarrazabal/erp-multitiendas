@@ -57,6 +57,7 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
     ERP_DATOS_INVALIDOS: "Escribe el motivo de la anulación (hasta 200 caracteres).",
     ERP_EFECTIVO_INSUFICIENTE:
       "La caja de la venta no tiene efectivo suficiente para reponer lo cobrado. Repón efectivo con un ingreso.",
+    ERP_ORDEN_ENTREGADA: "La orden ya se entregó: registra una devolución en lugar de anular.",
     ERP_VENTA_CON_DEVOLUCIONES:
       "La venta ya tiene devoluciones y no se puede anular. Devuelve lo que falte.",
   },
@@ -66,6 +67,7 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
     ERP_EFECTIVO_INSUFICIENTE:
       "La caja no tiene efectivo suficiente para esta devolución. Repón efectivo con un ingreso o usa otra caja.",
     ERP_VENTA_ANULADA: "La venta está anulada: no admite devolución.",
+    ERP_QR_RECHAZADO: "El pago QR de esta venta fue rechazado: solo se puede devolver lo cobrado.",
   },
   tope: {
     ERP_DATOS_INVALIDOS: "El tope debe ser un porcentaje entre 0 y 100 con hasta 2 decimales",

@@ -6,6 +6,7 @@ import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
+import { listarCajaPorRevisar, ListaCajaPorRevisar } from "@/modules/caja/panel";
 import { listarStock, ListaStock } from "@/modules/inventario/panel";
 import { exigirAlgunPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 import {
@@ -31,7 +32,7 @@ export default async function PaginaReconciliacion({
     invalido,
   } = leerDesdeReconciliacion(await searchParams);
   const supabase = await createClient();
-  const [ventasInicial, negativos, ubicaciones] = await Promise.all([
+  const [ventasInicial, negativos, ubicaciones, caja] = await Promise.all([
     listarReconciliacion(supabase, activo.negocioId, desdePedido || null, PAGINA_RECONCILIACION),
     listarStock(
       supabase,
@@ -41,6 +42,7 @@ export default async function PaginaReconciliacion({
       false,
     ),
     listarUbicaciones(supabase, activo.negocioId),
+    listarCajaPorRevisar(supabase, activo.negocioId),
   ]);
   // Un cursor de otro negocio (o viejo) lo rechaza la RPC: se ignora y se parte del inicio, como un filtro inválido.
   const cursorIgnorado = !ventasInicial.ok && !!desdePedido;
@@ -97,6 +99,16 @@ export default async function PaginaReconciliacion({
                 </Link>
               )}
             </nav>
+          )}
+        </Seccion>
+
+        <Seccion titulo="Caja por revisar">
+          {!caja.ok ? (
+            <p role="alert" className="text-destructive text-sm">
+              {caja.error}
+            </p>
+          ) : (
+            <ListaCajaPorRevisar filas={caja.data} />
           )}
         </Seccion>
 

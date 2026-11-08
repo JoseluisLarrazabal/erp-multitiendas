@@ -346,7 +346,7 @@ select pg_temp.como(pg_temp.i('d'));
 select throws_ok($$select public.devolver_venta(jsonb_build_object('id', pg_temp.i('DR1'), 'venta_id', pg_temp.i('R1'), 'dispositivo_id', pg_temp.i('D1'),
   'caja_sesion_id', pg_temp.i('S1'), 'medio', 'qr', 'motivo', 'm',
   'items', jsonb_build_array(jsonb_build_object('venta_item_id', (select id from public.venta_items where venta_id = pg_temp.i('R1')), 'cantidad', 1))))$$,
-  'P0001', 'ERP_DATOS_INVALIDOS', 'devolver_venta no devuelve a un QR rechazado (nunca entró)');
+  'P0001', 'ERP_QR_RECHAZADO', 'devolver_venta no devuelve a un QR rechazado (nunca entró)');
 
 -- Inmutabilidad: solo cambian las marcas, de vacío a lleno
 select pg_temp.como(pg_temp.i('c'));

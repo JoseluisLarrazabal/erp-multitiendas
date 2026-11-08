@@ -12,7 +12,7 @@ import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 export const metadata: Metadata = { title: "Caja · ERP Multitiendas" };
 
 export default async function PaginaCaja({ params }: { params: Promise<{ id: string }> }) {
-  const { activo } = await exigirAlgunPermiso(["caja", "ver_reportes"]);
+  const { activo, permisos } = await exigirAlgunPermiso(["caja", "ver_reportes"]);
   const { id } = await params;
   if (!z.guid().safeParse(id).success) notFound();
   const d = await detalleSesion(await createClient(), activo.negocioId, id);
@@ -37,7 +37,10 @@ export default async function PaginaCaja({ params }: { params: Promise<{ id: str
           {d.ok ? "" : d.error}
         </p>
       ) : (
-        <DetalleSesionVista d={d.data} />
+        <DetalleSesionVista
+          d={d.data}
+          verVentas={permisos.includes("ver_reportes") || permisos.includes("anular")}
+        />
       )}
     </>
   );

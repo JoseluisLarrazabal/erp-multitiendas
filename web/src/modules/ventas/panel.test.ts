@@ -41,6 +41,10 @@ describe("cantidadADevolver", () => {
 });
 
 describe("mensajeDeVentas", () => {
+  it("orden entregada y QR rechazado tienen mensaje propio", () => {
+    expect(mensajeDeVentas("anular", "ERP_ORDEN_ENTREGADA")).toContain("devolución");
+    expect(mensajeDeVentas("devolver", "ERP_QR_RECHAZADO")).toContain("rechazado");
+  });
   it("cubre los códigos de cada acción", () => {
     for (const c of [
       "ERP_SIN_PERMISO",
