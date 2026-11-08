@@ -6,11 +6,16 @@ export const PAGINA_VENTAS = 25;
 export const PLAZO_HORAS = 24;
 export const PAGINA_RECONCILIACION = 25;
 
-// Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página se cuenta "25+".
-export function textoPorRevisar(cantidad: number, hayMas: boolean): string | null {
-  if (cantidad <= 0) return null;
-  const n = hayMas ? `${cantidad}+` : String(cantidad);
-  return cantidad === 1 && !hayMas ? "1 venta por revisar" : `${n} ventas por revisar`;
+// Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página de ventas se cuenta "25+".
+// La caja por revisar no se pagina (reconciliacion_caja devuelve todo), así que su cuenta es exacta.
+export function textoPorRevisar(ventas: number, hayMasVentas: boolean, caja = 0): string | null {
+  const partes: string[] = [];
+  if (ventas > 0) {
+    const n = hayMasVentas ? `${ventas}+` : String(ventas);
+    partes.push(ventas === 1 && !hayMasVentas ? "1 venta" : `${n} ventas`);
+  }
+  if (caja > 0) partes.push(caja === 1 ? "1 movimiento de caja" : `${caja} movimientos de caja`);
+  return partes.length ? `${partes.join(" y ")} por revisar` : null;
 }
 
 // Marcas de motivos_revision (registrar_venta con p_offline), en palabras del encargado.

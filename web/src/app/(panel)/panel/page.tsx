@@ -6,6 +6,7 @@ import { itemsVisibles } from "@/components/panel/panel-items";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import { createClient } from "@/lib/supabase/server";
 import { etiquetaRol } from "@/modules/usuarios";
+import { listarCajaPorRevisar } from "@/modules/caja/panel";
 import { exigirPanel } from "@/modules/usuarios/panel";
 import {
   listarReconciliacion,
@@ -52,18 +53,17 @@ export default async function PanelInicio() {
   );
 }
 
-// Si la lectura falla no se avisa: /panel/reconciliacion muestra el error.
+// Si una lectura falla se cuenta solo la otra: /panel/reconciliacion muestra el error.
 async function AvisoPorRevisar({ negocioId }: { negocioId: string }) {
-  const r = await listarReconciliacion(
-    await createClient(),
-    negocioId,
-    null,
-    PAGINA_RECONCILIACION,
-  );
-  if (!r.ok) return null;
+  const supabase = await createClient();
+  const [ventas, caja] = await Promise.all([
+    listarReconciliacion(supabase, negocioId, null, PAGINA_RECONCILIACION),
+    listarCajaPorRevisar(supabase, negocioId),
+  ]);
   const aviso = textoPorRevisar(
-    r.data.filas.filter((f) => !f.revisada).length,
-    r.data.siguiente !== null,
+    ventas.ok ? ventas.data.filas.filter((f) => !f.revisada).length : 0,
+    ventas.ok && ventas.data.siguiente !== null,
+    caja.ok ? caja.data.length : 0,
   );
   if (!aviso) return null;
   return (
