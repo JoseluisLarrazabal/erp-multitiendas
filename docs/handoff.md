@@ -8,7 +8,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Plan activo: fase 7, Entrega B** (CTO, 2026-11-08: "no nos importa ya el contrato ahora mismo, implementa
   entrega B"). Plan en `docs/plan-fase-7.md`, con 4 PRs en serie: compras, insumos, reservas y crédito. Estado por PR
   en la tabla "Estado" del plan. D-01 queda sin resolver y no frena la fase.
-- **Auditoría de la Entrega A en curso (2026-11-08):** resultado en `docs/auditoria-entrega-a.md` cuando cierre.
+- **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. El CTO pidió arreglar todo; estado por PR al final de ese documento.
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
 - **Bloqueado por el cliente o el CTO, en orden:**
@@ -21,7 +21,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
      CTO, y se resetea el contador local en cada equipo (`docs/despliegue.md`).
   7. Paralelo de 3 días y acta.
   8. Fecha de firma (D-04), dominio (RF-TR-10), rotación de credenciales a la entrega y adenda D-01.
-- **Codex:** cuando vuelva la cuota (2026-11-16), correr las revisiones pendientes de las fases 3 a 6 y `verify-fix`
+- **Codex:** cuando vuelva la cuota (2026-12-03, según el error de Codex del 2026-11-08), correr las revisiones pendientes de las fases 3 a 6 y `verify-fix`
   sobre los `fix:`.
 
 ## Estado actual
@@ -324,7 +324,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     `responsive.spec.ts` recorre las 26 rutas del panel a 390 px con datos propios; único desborde real arreglado:
     nombre largo en `/panel/productos`. Helpers de E2E unificados en `helpers.ts`. E2E 196.
     **No verificado:** instalación en Android real, Safari y Firefox; móvil táctil real; lector de pantalla.
-  - **Pendiente de la fase:** Codex sobre las fases 3, 4 y 5 cuando vuelva la cuota (2026-11-16). `catalogo.spec.ts:195`
+  - **Pendiente de la fase:** Codex sobre las fases 3, 4 y 5 cuando vuelva la cuota (2026-12-03, según el error de Codex del 2026-11-08). `catalogo.spec.ts:195`
     falló una vez en una corrida completa y pasó en las siguientes: posible intermitencia, sin investigar.
   - **Próximo:** fase 6 (`docs/roadmap.md`): backups con restauración probada, dominio, carga real, capacitación,
     paralelo y acta.
