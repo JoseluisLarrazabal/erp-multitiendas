@@ -136,6 +136,6 @@ después del merge: rutas nuevas abiertas con Playwright con la cuenta del dueñ
 | PR | Estado |
 |---|---|
 | 1 compras | mergeado (#83) y migración aplicada en producción el 2026-11-08; `/panel/proveedores` verificado con Playwright |
-| 2 insumos | pendiente |
+| 2 insumos | PR abierto (2026-11-08). Cambio sobre la decisión 10: el consumo es un tipo de `ajustar_inventario` (solo insumos activos de lavandería), sin RPC propia. `revertir_consumo` corrige un consumo mal cargado: contra-movimiento sin costo, que no recalcula el costo promedio. `reporte_insumos` cuenta solo consumos vigentes; la cantidad sale solo agrupando por insumo, para no mezclar unidades |
 | 3 reservas | pendiente |
 | 4 crédito | pendiente |

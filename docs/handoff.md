@@ -11,7 +11,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
-- **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. El CTO pidió arreglar todo; estado por PR al final de ese documento.
+- **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85; migración `20261108130000` aplicada y `/panel/reconciliacion` verificada). Queda el PR `test/brechas-trazabilidad`.
+- **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
 - **Bloqueado por el cliente o el CTO, en orden:**
