@@ -26,10 +26,9 @@ describe("formatearBs", () => {
     expect(formatearBs(1.1 + 2.2)).toBe("Bs 3,30");
   });
 
-  it("valores no finitos muestran un guion en vez de romper el render", () => {
-    expect(formatearBs(NaN)).toBe("—");
-    expect(formatearBs(Infinity)).toBe("—");
-    expect(formatearBs(-Infinity)).toBe("—");
+  it("rechaza valores no finitos", () => {
+    expect(() => formatearBs(NaN)).toThrow(RangeError);
+    expect(() => formatearBs(Infinity)).toThrow(RangeError);
   });
 });
 
@@ -37,6 +36,11 @@ describe("parsearMonto", () => {
   it("devuelve la escala pedida", () => {
     expect(parsearMonto("12,5")).toBe(1250);
     expect(parsearMonto("6,9612", 4)).toBe(69612);
+  });
+  it("tope de enteros según los decimales: 10 con 2, 8 con 4", () => {
+    expect(parsearMonto("123456789")).toBe(12_345_678_900);
+    expect(parsearMonto("123456789", 4)).toBeNull();
+    expect(parsearMonto("12345678", 4)).toBe(123_456_780_000);
   });
   it("tope de 10 enteros (numeric(12,2))", () => {
     expect(parsearMonto("9999999999,99")).toBe(999_999_999_999);

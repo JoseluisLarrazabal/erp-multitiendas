@@ -20,7 +20,10 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
         .map((f) => f.proximoIntento);
       // Tras el await: dos programar solapados no pueden dejar cada uno su temporizador.
       clearTimeout(temporizador);
-      if (proximas.length === 0 || !activo) return;
+      if (proximas.length === 0 || !activo) {
+        giros = 0;
+        return;
+      }
       // Una fila lista pero en pausa (sesión caducada) no puede girar en vacío: espera creciente hasta el tope.
       const falta = Math.min(...proximas) - Date.now();
       giros = falta <= 0 ? giros + 1 : 0;

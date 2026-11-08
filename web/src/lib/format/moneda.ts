@@ -1,8 +1,10 @@
 // Único parser de montos: "12", "12,5", "12.50" -> entero a escala 10^decimales (decimales=2: centavos). null si no es
-// válido: vacío, negativo, más de `decimales`, más de 10 enteros (numeric(12,2)) o, con 3 o más decimales admitidos,
+// válido: vacío, negativo, más de `decimales`, más de 12 - `decimales` enteros (numeric(12,2): 10) o, con 3 o más decimales admitidos,
 // un punto seguido de exactamente 3 dígitos ("1.500" es ambiguo con miles). La coma siempre es decimal.
 export function parsearMonto(texto: string, decimales = 2): number | null {
-  const m = new RegExp(`^(\\d{1,10})(?:[.,](\\d{1,${decimales}}))?$`).exec(texto.trim());
+  const m = new RegExp(`^(\\d{1,${12 - decimales}})(?:[.,](\\d{1,${decimales}}))?$`).exec(
+    texto.trim(),
+  );
   if (!m) return null;
   const frac = m[2] ?? "";
   if (decimales >= 3 && frac.length === 3 && /^\d+\.\d{3}$/.test(texto.trim())) return null;
@@ -11,7 +13,7 @@ export function parsearMonto(texto: string, decimales = 2): number | null {
 
 // Recibe el valor numeric(12,2) de Postgres en bolivianos; trabaja en centavos enteros.
 export function formatearBs(bolivianos: number): string {
-  if (!Number.isFinite(bolivianos)) return "—";
+  if (!Number.isFinite(bolivianos)) throw new RangeError("bolivianos debe ser un número finito");
   const centavos = Math.round(bolivianos * 100);
   const absoluto = Math.abs(centavos);
   const enteros = String(Math.trunc(absoluto / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");

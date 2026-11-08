@@ -92,6 +92,31 @@ describe("iniciarMotor: sesión caducada con filas pendientes", () => {
   });
 });
 
+describe("iniciarMotor: red caída", () => {
+  it("un fallo de red usa su propia espera (5 s), no el crecimiento de la sesión caducada", async () => {
+    await encolar({
+      id: "a0000000-0000-4000-8000-000000000003",
+      tipo: "venta",
+      negocioId: "n1",
+      dispositivoId: "d1",
+      usuarioId: "u1",
+      payload: {},
+      nota: null,
+      numeroImpreso: null,
+    });
+    const set = vi.spyOn(globalThis, "setTimeout");
+    const motor = iniciarMotor({
+      enviadores: { venta: async () => ({ t: "red", error: "x" }) },
+      elegible: () => true,
+    });
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setTimeout(r, 50));
+    const esperas = set.mock.calls.map((c) => c[1] ?? 0).filter((ms) => ms >= 4_000);
+    motor.detener();
+    expect(esperas.at(-1)).toBeLessThanOrEqual(5_000);
+  });
+});
+
 describe("iniciarMotor: online durante un vaciado", () => {
   it("un disparar forzado mientras corre otro se repite al terminar", async () => {
     await encolar({

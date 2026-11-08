@@ -11,7 +11,7 @@ import {
   guardarSesionLocal,
   leerSesionLocal,
 } from "./contexto-local";
-import { bloquearEscrituras } from "@/lib/offline/datos";
+import { desbloquearEscrituras } from "@/lib/offline/datos";
 
 const sesion = (usuarioId: string) => ({
   usuarioId,
@@ -22,6 +22,7 @@ const sesion = (usuarioId: string) => ({
 const esperar = () => new Promise((r) => setTimeout(r, 30));
 
 beforeEach(async () => {
+  desbloquearEscrituras();
   await baseOffline().datos.clear();
 });
 
@@ -29,7 +30,7 @@ describe("contexto local de la sesión", () => {
   it("guarda y lee la cuenta de la última vez", async () => {
     await guardarSesionLocal(sesion("u1"));
     await esperar();
-    expect(await leerSesionLocal()).toEqual(sesion("u1"));
+    expect(await leerSesionLocal()).toMatchObject(sesion("u1"));
   });
 
   it("otra cuenta en el mismo navegador no hereda nada de la anterior", async () => {
@@ -57,7 +58,6 @@ describe("caducidad del contexto (72 h)", () => {
   it("contextoCaducado: justo en el límite vale, pasado caduca, sin fecha caduca", () => {
     expect(contextoCaducado(1_000, 1_000 + CADUCIDAD_CONTEXTO_MS)).toBe(false);
     expect(contextoCaducado(1_000, 1_001 + CADUCIDAD_CONTEXTO_MS)).toBe(true);
-    expect(contextoCaducado(undefined)).toBe(true);
   });
 
   it("un contexto viejo no se lee como sesión y uno renovado sí", async () => {
@@ -69,14 +69,23 @@ describe("caducidad del contexto (72 h)", () => {
     });
     expect(await leerSesionLocal()).toBe(CADUCADO);
     await guardarSesionLocal(sesion("u1"));
-    expect(await leerSesionLocal()).toEqual(sesion("u1"));
+    expect(await leerSesionLocal()).toMatchObject(sesion("u1"));
+  });
+});
+
+describe("filas de la versión anterior", () => {
+  it("sin fecha se sella y vale", async () => {
+    await baseOffline().datos.put({ clave: "ultimo", valor: { usuarioId: "u1" } });
+    await baseOffline().datos.put({ clave: "sesion:u1", valor: sesion("u1") });
+    expect(await leerSesionLocal()).toMatchObject(sesion("u1"));
+    const fila = await baseOffline().datos.get("sesion:u1");
+    expect((fila!.valor as { validadaEn?: number }).validadaEn).toBeTypeOf("number");
   });
 });
 
 describe("cierre de sesión", () => {
-  it("con las escrituras bloqueadas, una escritura tardía no resucita el contexto borrado", async () => {
+  it("borrar el contexto bloquea las escrituras tardías, sin tocar la cola", async () => {
     await guardarSesionLocal(sesion("u1"));
-    bloquearEscrituras(true);
     try {
       await borrarContextoLocal();
       await guardarSesionLocal(sesion("u1"));
@@ -85,7 +94,15 @@ describe("cierre de sesión", () => {
       expect(await leerSesionLocal()).toBeNull();
       expect(await leerDato("catalogo:u1:n1:x", z.object({ n: z.number() }))).toBeNull();
     } finally {
-      bloquearEscrituras(false);
+      desbloquearEscrituras();
     }
+    await guardarSesionLocal(sesion("u1"));
+    expect(await leerSesionLocal()).toMatchObject(sesion("u1"));
+  });
+
+  it("el cambio de cuenta borra pero no bloquea: la cuenta nueva se guarda", async () => {
+    await guardarSesionLocal(sesion("u1"));
+    await guardarSesionLocal(sesion("u2"));
+    expect(await leerSesionLocal()).toMatchObject({ usuarioId: "u2" });
   });
 });

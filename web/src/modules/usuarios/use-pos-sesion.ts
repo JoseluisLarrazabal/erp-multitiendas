@@ -5,9 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { avisarRed, useSinRed } from "@/lib/offline/red";
 import { esErrorTransitorio, esSinRedAuth, esSinSesion } from "@/lib/supabase/errores";
+import { desbloquearEscrituras } from "@/lib/offline/datos";
 import {
   borrarContextoLocal,
   CADUCADO,
+  contextoCaducado,
   guardarSesionLocal,
   leerSesionLocal,
 } from "./contexto-local";
@@ -18,7 +20,7 @@ import { listarMisNegocios, permisosDeRol } from "./queries";
 export type SesionPos =
   | { fase: "verificando" }
   // `caducado`: había contexto guardado pero hace más de 72 h que el servidor no lo confirma; no se vende.
-  | { fase: "sin-conexion"; caducado?: boolean }
+  | { fase: "sin-conexion"; contextoVencido?: boolean }
   | { fase: "error"; mensaje: string }
   | {
       fase: "lista";
@@ -32,6 +34,16 @@ export type SesionPos =
     };
 
 const ERROR_AUTH = "No pudimos verificar tu sesión.";
+const VENCIDO: SesionPos = { fase: "sin-conexion", contextoVencido: true };
+// Tope de la escritura del contexto: un IndexedDB colgado no puede dejar la pantalla en "Verificando sesión…".
+const TOPE_GUARDADO_MS = 3_000;
+
+// Una sesión `lista` cuyo contexto lleva más de 72 h sin que el servidor lo confirme deja de vender. No toca la cola.
+export function vencerSiCorresponde(s: SesionPos, validadaEn: number | null, ahora = Date.now()) {
+  return s.fase === "lista" && validadaEn !== null && contextoCaducado(validadaEn, ahora)
+    ? VENCIDO
+    : s;
+}
 
 // /pos es estático: no hay servidor que decida, así que la guarda vive en el cliente.
 // Solo va a /login si no hay sesión o es inválida; cualquier otro fallo de Auth es `error` y no navega
@@ -53,6 +65,18 @@ export function usePosSesion(): {
       sesion.fase === "lista" ? { usuarioId: sesion.usuarioId, activoId: sesion.activoId } : null;
   }, [sesion]);
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
+  // Cuándo el servidor confirmó por última vez el contexto en pantalla (null si aún no hay sesión lista).
+  const validada = useRef<number | null>(null);
+  // Entrar al POS suelta cualquier bloqueo de escrituras que haya dejado un borrado anterior (bfcache).
+  useEffect(desbloquearEscrituras, []);
+  // Una pestaña abierta sin servidor también vence: se revisa aunque no haya un nuevo intento de verificar.
+  useEffect(() => {
+    const id = setInterval(
+      () => setSesion((s) => vencerSiCorresponde(s, validada.current)),
+      60_000,
+    );
+    return () => clearInterval(id);
+  }, []);
 
   // Un fetch fallido también cuenta como sin red (navigator.onLine miente): al recuperarse se vuelve a verificar.
   const sinRed = useSinRed();
@@ -83,11 +107,13 @@ export function usePosSesion(): {
 
     // Un lista ya en pantalla no se reemplaza por una copia vieja: el carrito y los permisos vigentes mandan.
     async function desdeLocal() {
-      if (vista.current) return;
+      if (vista.current) return setSesion((s) => vencerSiCorresponde(s, validada.current));
       const local = await leerSesionLocal();
-      if (local === CADUCADO) return publicar({ fase: "sin-conexion", caducado: true });
+      if (local === CADUCADO) return publicar(VENCIDO);
       if (!local) return publicar({ fase: "sin-conexion" });
-      publicar({ fase: "lista", ...local });
+      const { validadaEn, ...resto } = local;
+      validada.current = validadaEn;
+      publicar({ fase: "lista", ...resto });
     }
 
     async function verificar() {
@@ -137,8 +163,12 @@ export function usePosSesion(): {
         permisos: permisos.data,
       };
       avisarRed(true);
-      await guardarSesionLocal(lista);
+      validada.current = Date.now();
       publicar({ fase: "lista", ...lista });
+      await Promise.race([
+        guardarSesionLocal(lista),
+        new Promise((r) => setTimeout(r, TOPE_GUARDADO_MS)),
+      ]);
     }
 
     verificar().catch((e: unknown) => {
@@ -162,6 +192,7 @@ export function usePosSesion(): {
     if (!nuevo) return "No tienes acceso a ese negocio.";
     const permisos = await permisosDeRol(createClient(), nuevo.tipo, nuevo.rol);
     if (!permisos.ok) return permisos.error;
+    validada.current = Date.now();
     await guardarSesionLocal({
       usuarioId: sesion.usuarioId,
       negocios: sesion.negocios,
