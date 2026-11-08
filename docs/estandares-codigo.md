@@ -46,6 +46,7 @@ Reglas verificables para `web/`, `supabase/` y `scripts/`. Lo que una herramient
 - Excepción: un módulo con server actions las expone en `panel.ts`, segunda entrada solo para páginas del panel. Así no
   entran al bundle precacheado de `/pos`. Lo que solo corre en servidor y necesitan páginas fuera del panel (portada,
   sin-acceso) sale por `servidor.ts`, que `panel.ts` reexporta; `/pos` no importa ninguna de las dos.
+- Los componentes de cliente del panel que otro módulo reutiliza (con actions dentro) salen por `panel-cliente.ts`, tampoco desde `/pos`.
 - `lib/` no importa `modules/`.
 - ESLint lo impone con `no-restricted-imports`.
 

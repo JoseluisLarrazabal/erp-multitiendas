@@ -8,7 +8,7 @@ después de la capacitación y antes del paralelo. Nunca después del paralelo: 
 - **Corte por fecha.** El script borra todo lo transaccional con fecha >= `--desde` (el inicio de la capacitación) y
   conserva lo anterior: la importación, el conteo físico (P-17) si se hizo antes y la configuración.
 - **Se borra (>= desde):** ventas y sus líneas, pagos y series vendidas; anulaciones y devoluciones; sesiones y
-  movimientos de caja; órdenes de lavandería y sus estados; clientes creados; movimientos de inventario de cualquier
+  movimientos de caja; órdenes de lavandería y sus estados; clientes creados; compras, sus líneas, pagos a proveedores y proveedores creados; movimientos de inventario de cualquier
   tipo; cola y reconciliación offline. El mapa exacto de tablas sale del esquema, no de esta lista.
 - **Se conserva:** negocios, ubicaciones, usuarios y membresías, dispositivos, permisos, productos, categorías,
   precios, tipos de cambio, tope de descuento, fotos y auditoría.

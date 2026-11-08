@@ -1,0 +1,56 @@
+import { z } from "zod";
+import { leerFiltros } from "@/lib/filtros";
+import { parsearMonto } from "@/lib/format/moneda";
+import { MEDIOS_PAGO, parsearCantidadCompra, parsearCostoCompra } from "./domain";
+
+const textoOpcional = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((s) => (s === "" ? null : s));
+
+// Alta o edición. `id` presente = edición (reemplaza nombre, contacto y activo).
+export const proveedorSchema = z.object({
+  negocioId: z.guid(),
+  id: z.guid().optional(),
+  nombre: z.string().trim().min(1).max(200),
+  contacto: textoOpcional(300),
+  activo: z.boolean().default(true),
+});
+
+const medio = z.enum(MEDIOS_PAGO);
+
+export const pagoSchema = z.object({
+  operacionId: z.guid(),
+  negocioId: z.guid(),
+  proveedorId: z.guid(),
+  monto: z.string().refine((t) => (parsearMonto(t) ?? 0) > 0),
+  medio,
+});
+
+const itemSchema = z.object({
+  productoId: z.guid(),
+  cantidad: z.string().refine((t) => (parsearCantidadCompra(t) ?? 0n) > 0n),
+  costo: z.string().refine((t) => parsearCostoCompra(t) !== null),
+});
+
+export const compraSchema = z
+  .object({
+    operacionId: z.guid(),
+    negocioId: z.guid(),
+    proveedorId: z.guid(),
+    ubicacionId: z.guid(),
+    condicion: z.enum(["contado", "credito"]),
+    medio: medio.optional(),
+    items: z.array(itemSchema).min(1).max(200),
+  })
+  .refine((d) => d.condicion === "credito" || d.medio, { path: ["medio"] })
+  .refine((d) => new Set(d.items.map((i) => i.productoId)).size === d.items.length, {
+    path: ["items"],
+  });
+
+export const PAGINA_COMPRAS = 25;
+export type FiltrosCompras = { pagina: number };
+export const leerFiltrosCompras = (crudo: Parameters<typeof leerFiltros>[2]) =>
+  leerFiltros({ pagina: z.coerce.number().int().min(1).max(10_000) }, { pagina: 1 }, crudo);

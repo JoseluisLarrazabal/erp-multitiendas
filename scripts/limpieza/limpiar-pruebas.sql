@@ -104,6 +104,15 @@ begin
     insert into _resumen (tabla, filas) select 'caja_movimientos', count(*) from d;
   with d as (delete from public.caja_sesiones where id in (select id from _sesiones) returning 1)
     insert into _resumen (tabla, filas) select 'caja_sesiones', count(*) from d;
+  with d as (delete from public.proveedor_pagos where created_at >= v_desde returning 1)
+    insert into _resumen (tabla, filas) select 'proveedor_pagos', count(*) from d;
+  with d as (delete from public.compra_items ci using public.compras c
+             where ci.compra_id = c.id and c.created_at >= v_desde returning 1)
+    insert into _resumen (tabla, filas) select 'compra_items', count(*) from d;
+  with d as (delete from public.compras where created_at >= v_desde returning 1)
+    insert into _resumen (tabla, filas) select 'compras', count(*) from d;
+  with d as (delete from public.proveedores where created_at >= v_desde returning 1)
+    insert into _resumen (tabla, filas) select 'proveedores', count(*) from d;
   with d as (delete from public.clientes where created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'clientes', count(*) from d;
   with d as (delete from public.conteo_items ci using public.conteos c
@@ -179,6 +188,11 @@ begin
             or id in (select id from _sesiones))
        + (select count(*) from public.caja_movimientos where created_at >= v_desde or sesion_id not in (select id from public.caja_sesiones))
        + (select count(*) from public.clientes where created_at >= v_desde)
+       + (select count(*) from public.proveedor_pagos where created_at >= v_desde
+            or compra_id not in (select id from public.compras))
+       + (select count(*) from public.compra_items where compra_id not in (select id from public.compras))
+       + (select count(*) from public.compras where created_at >= v_desde)
+       + (select count(*) from public.proveedores where created_at >= v_desde)
        + (select count(*) from public.conteos where fecha >= v_desde)
        + (select count(*) from public.conteo_items where conteo_id not in (select id from public.conteos))
        + (select count(*) from public.lotes where created_at >= v_desde)

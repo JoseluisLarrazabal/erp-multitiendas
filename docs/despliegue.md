@@ -88,7 +88,7 @@ Los precios los carga el cliente en "Precios".
 ## Limpieza de pruebas antes del paralelo
 
 Se corre una sola vez, después de la capacitación y antes del paralelo (`docs/plan-limpieza-pruebas.md`). Borra todo lo
-transaccional con fecha >= `--desde` (ventas, cajas, órdenes, clientes, kardex, conteos) y recalcula `stock` y la
+transaccional con fecha >= `--desde` (ventas, cajas, órdenes, clientes, kardex, conteos, compras, pagos a proveedores y proveedores creados en la ventana) y recalcula `stock` y la
 numeración; conserva usuarios, productos, precios, fotos y auditoría. `--desde` es el inicio de la capacitación, con zona
 horaria (`2026-11-10T08:00:00-04:00`). Si el stock inicial de la importación es posterior a ese corte, también se borra:
 el script aborta (también en seco): elegí un `--desde` posterior a la importación.
