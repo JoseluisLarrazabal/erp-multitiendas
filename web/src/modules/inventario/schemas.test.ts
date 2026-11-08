@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   conteoSchema,
+  consumoSchema,
   entradaSchema,
   filtrosStockSchema,
   leerFiltrosVencimientos,
@@ -24,6 +25,18 @@ describe("entradaSchema", () => {
       expect(entradaSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, costo: "x" }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, operacionId: "no" }).success).toBe(false);
+  });
+});
+
+describe("consumoSchema", () => {
+  const ok = { ...base, productoId: A, ubicacionId: B, cantidad: "2,5", motivo: " lavado " };
+  it("cantidad con coma y motivo recortado", () => {
+    expect(consumoSchema.parse(ok)).toMatchObject({ cantidad: 2.5, motivo: "lavado" });
+  });
+  it("rechaza cantidad 0 o negativa y motivo vacío", () => {
+    for (const cantidad of ["0", "-1", "abc", ""])
+      expect(consumoSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
+    expect(consumoSchema.safeParse({ ...ok, motivo: "  " }).success).toBe(false);
   });
 });
 

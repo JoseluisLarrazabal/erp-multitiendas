@@ -1,11 +1,19 @@
 // Qué reportes tiene cada tipo de negocio (RF-REP-01 a 03) y la forma de lo que devuelven las RPC de reportes.
 export type TipoNegocio = "tienda" | "lavanderia" | "frial";
-export type IdReporte = "ventas" | "masvendidos" | "ingresos" | "stock" | "caja";
-export type Agrupar = "dia" | "vendedor" | "producto" | "categoria" | "marca";
+export type IdReporte = "ventas" | "masvendidos" | "ingresos" | "stock" | "caja" | "insumos";
+export type Agrupar = "dia" | "vendedor" | "producto" | "categoria" | "marca" | "insumo";
 export type FiltroStock = "todo" | "bajo" | "sin";
 
-export const IDS_REPORTE = ["ventas", "masvendidos", "ingresos", "stock", "caja"] as const;
+export const IDS_REPORTE = [
+  "ventas",
+  "masvendidos",
+  "ingresos",
+  "stock",
+  "caja",
+  "insumos",
+] as const;
 export const AGRUPAR = ["dia", "vendedor", "producto", "categoria", "marca"] as const;
+export const AGRUPAR_INSUMOS = ["dia", "insumo"] as const;
 export const FILTROS_STOCK = ["todo", "bajo", "sin"] as const;
 export const DIAS_SIN_MOVIMIENTO = [30, 60, 90] as const;
 // El rango máximo de la RPC: 366 días con ambos extremos.
@@ -16,9 +24,16 @@ export type DefReporte = { id: IdReporte; etiqueta: string; agrupar?: readonly A
 const CAJA: DefReporte = { id: "caja", etiqueta: "Caja" };
 const STOCK: DefReporte = { id: "stock", etiqueta: "Stock" };
 
-export function reportesDe(tipo: string): readonly DefReporte[] {
+// El reporte de insumos es de costos: sin ver_costos no se ofrece (la RPC lo exige también).
+export function reportesDe(tipo: string, verCostos = true): readonly DefReporte[] {
   if (tipo === "lavanderia")
-    return [{ id: "ingresos", etiqueta: "Ingresos", agrupar: ["dia", "producto"] }, CAJA];
+    return [
+      { id: "ingresos", etiqueta: "Ingresos", agrupar: ["dia", "producto"] },
+      ...(verCostos
+        ? [{ id: "insumos", etiqueta: "Insumos", agrupar: AGRUPAR_INSUMOS } as DefReporte]
+        : []),
+      CAJA,
+    ];
   if (tipo === "frial")
     return [{ id: "ventas", etiqueta: "Ventas", agrupar: ["dia", "producto"] }, STOCK, CAJA];
   return [
@@ -35,6 +50,7 @@ const ETIQUETA_AGRUPAR: Record<Agrupar, string> = {
   producto: "Producto",
   categoria: "Categoría",
   marca: "Marca",
+  insumo: "Insumo",
 };
 
 // "producto" se llama Servicio en la lavandería y Corte en el frial.
@@ -111,7 +127,18 @@ export type TotalesCaja = {
   sesiones_abiertas: number;
 };
 
+export type FilaInsumos = {
+  clave: string | null;
+  etiqueta: string;
+  consumos: number;
+  cantidad: number;
+  gasto: number;
+  sin_costo: number;
+};
+export type TotalesInsumos = Omit<FilaInsumos, "clave" | "etiqueta">;
+
 export type DatosReporte =
+  | { tipo: "insumos"; filas: FilaInsumos[]; totales: TotalesInsumos }
   | { tipo: "ventas"; filas: FilaVentas[]; totales: TotalesVentas }
   | { tipo: "stock"; filas: FilaStockReporte[]; totales: TotalesStock }
   | { tipo: "caja"; filas: FilaCaja[]; totales: TotalesCaja };

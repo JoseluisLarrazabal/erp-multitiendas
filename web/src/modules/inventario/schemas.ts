@@ -140,6 +140,15 @@ export const seriesSchema = z.object({
 export const busquedaSchema = z.object({
   negocioId: id,
   q: z.string().trim().min(1).max(80),
+  tipo: z.enum(["producto", "insumo"]).optional(),
+});
+
+export const consumoSchema = z.object({
+  ...operacion,
+  productoId: id,
+  ubicacionId: id,
+  cantidad: cantidad().refine((n) => n > 0),
+  motivo: z.string().trim().min(1).max(200),
 });
 
 export const stockProductoSchema = z.object({ negocioId: id, productoId: id });

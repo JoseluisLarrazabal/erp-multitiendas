@@ -982,7 +982,7 @@ isOneToOne: false
           Views: {
             "inventario_lista": {
                   Row: {
-                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"unidad": string
+                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"tipo": string,"unidad": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -1230,6 +1230,9 @@ isOneToOne: false
 "registrar_compra":
 { Args: { "p_compra": Json }; Returns: Json
                            },
+"registrar_consumo":
+{ Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
+                           },
 "registrar_conteo":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number
                            },
@@ -1259,6 +1262,9 @@ isOneToOne: false
                            },
 "reporte_caja":
 { Args: { "p_desde": string,"p_hasta": string,"p_negocio_id": string }; Returns: Json
+                           },
+"reporte_insumos":
+{ Args: { "p_agrupar": string,"p_desde": string,"p_hasta": string,"p_negocio_id": string }; Returns: Json
                            },
 "reporte_stock":
 { Args: { "p_dias_sin_movimiento"?: number,"p_negocio_id": string }; Returns: Json

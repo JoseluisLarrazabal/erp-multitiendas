@@ -5,6 +5,7 @@ import type { Resultado } from "@/modules/usuarios";
 import type { DatosReporte } from "./domain";
 import {
   respuestaCajaSchema,
+  respuestaInsumosSchema,
   respuestaStockSchema,
   respuestaVentasSchema,
   type FiltrosReporte,
@@ -39,6 +40,18 @@ export async function leerReporte(
     const d = respuestaStockSchema.safeParse(data);
     if (!d.success) return { ok: false, error: RESPUESTA_INVALIDA };
     return { ok: true, data: { tipo: "stock", ...d.data } };
+  }
+  if (f.r === "insumos") {
+    const { data, error } = await supabase.rpc("reporte_insumos", {
+      p_negocio_id: negocioId,
+      p_desde: f.desde,
+      p_hasta: f.hasta,
+      p_agrupar: f.agrupar,
+    });
+    if (error) return mensaje(error);
+    const d = respuestaInsumosSchema.safeParse(data);
+    if (!d.success) return { ok: false, error: RESPUESTA_INVALIDA };
+    return { ok: true, data: { tipo: "insumos", ...d.data } };
   }
   if (f.r === "caja") {
     const { data, error } = await supabase.rpc("reporte_caja", {

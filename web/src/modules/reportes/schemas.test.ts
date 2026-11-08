@@ -36,6 +36,16 @@ describe("leerFiltrosReporte", () => {
     expect(r.filtros.r).toBe("ingresos");
     expect(leer({ r: "masvendidos" }, "frial").invalido).toBe(true);
   });
+  it("el reporte de insumos es de lavandería y exige ver_costos", () => {
+    const r = leer({ r: "insumos", agrupar: "insumo" }, "lavanderia");
+    expect(r).toMatchObject({ invalido: false, filtros: { r: "insumos", agrupar: "insumo" } });
+    expect(leerFiltrosReporte({ r: "insumos" }, "lavanderia", HOY, false)).toMatchObject({
+      invalido: true,
+      filtros: { r: "ingresos" },
+    });
+    expect(leer({ r: "insumos" }, "tienda").invalido).toBe(true);
+    expect(leer({ r: "ventas", agrupar: "insumo" }, "tienda").invalido).toBe(true);
+  });
   it("una agrupación que el reporte no admite avisa; si no vino en la URL, no", () => {
     expect(leer({ r: "ingresos", agrupar: "marca" }, "lavanderia")).toMatchObject({
       invalido: true,

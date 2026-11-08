@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   CalendarClock,
   ClipboardCheck,
+  Droplets,
   PackageMinus,
   PackagePlus,
 } from "lucide-react";
@@ -61,6 +62,11 @@ export default async function PaginaInventario({
                   <Link href="/panel/inventario/salida" className={enlace}>
                     <PackageMinus aria-hidden /> Salida o ajuste
                   </Link>
+                  {activo.tipo === "lavanderia" && (
+                    <Link href="/panel/inventario/consumo" className={enlace}>
+                      <Droplets aria-hidden /> Consumo
+                    </Link>
+                  )}
                   <Link href="/panel/inventario/traslado" className={enlace}>
                     <ArrowLeftRight aria-hidden /> Traslado
                   </Link>

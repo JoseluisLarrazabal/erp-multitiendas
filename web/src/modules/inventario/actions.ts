@@ -21,6 +21,7 @@ import {
 } from "./queries";
 import {
   busquedaSchema,
+  consumoSchema,
   conteoSchema,
   entradaSchema,
   paginaConteoSchema,
@@ -62,6 +63,22 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
           p_vence: d.vence,
         })
       : await supabase.rpc("registrar_entrada", comunes);
+  if (error) return fallo(codigoDeMensaje(error.message));
+  return listo();
+}
+
+export async function registrarConsumo(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(consumoSchema, entrada);
+  if (!d) return fallo("ERP_DATOS_INVALIDOS");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("registrar_consumo", {
+    p_operacion_id: d.operacionId,
+    p_negocio_id: d.negocioId,
+    p_producto_id: d.productoId,
+    p_ubicacion_id: d.ubicacionId,
+    p_cantidad: d.cantidad,
+    p_motivo: d.motivo,
+  });
   if (error) return fallo(codigoDeMensaje(error.message));
   return listo();
 }
@@ -146,7 +163,7 @@ export async function buscarProductosAccion(
 ): Promise<Resultado<ProductoElegible[]>> {
   const d = validar(busquedaSchema, entrada);
   if (!d) return { ok: true, data: [] };
-  return buscarProductos(await createClient(), d.negocioId, d.q);
+  return buscarProductos(await createClient(), d.negocioId, d.q, d.tipo);
 }
 
 export async function stockProductoAccion(

@@ -25,6 +25,41 @@ const base = { tipo: "tienda", agrupar: "producto", filtro: "todo", puedeVerCost
 const titulos = (d: DatosReporte, o: Parameters<typeof armarTabla>[1]) =>
   armarTabla(d, o).columnas.map((c) => c.titulo);
 
+describe("armarTabla insumos", () => {
+  const datos = (sinCosto = 0): DatosReporte => ({
+    tipo: "insumos",
+    filas: [
+      {
+        clave: "2026-11-02",
+        etiqueta: "2026-11-02",
+        consumos: 2,
+        cantidad: 4.5,
+        gasto: 21,
+        sin_costo: sinCosto,
+      },
+    ],
+    totales: { consumos: 2, cantidad: 4.5, gasto: 21, sin_costo: sinCosto },
+  });
+  it("por día: columna de día, gasto y fila de totales", () => {
+    const t = armarTabla(datos(), { ...base, tipo: "lavanderia", agrupar: "dia" });
+    expect(t.hoja).toBe("Insumos");
+    expect(t.columnas).toEqual([
+      { titulo: "Día", tipo: "dia" },
+      { titulo: "Consumos", tipo: "entero" },
+      { titulo: "Cantidad", tipo: "cantidad" },
+      { titulo: "Gasto", tipo: "monto" },
+    ]);
+    expect(t.filas[0]).toEqual(["2026-11-02", 2, 4.5, 21]);
+    expect(t.totales).toEqual(["Total", 2, 4.5, 21]);
+    expect(t.avisos).toEqual([]);
+  });
+  it("por insumo es texto y avisa de los consumos sin costo", () => {
+    const t = armarTabla(datos(1), { ...base, tipo: "lavanderia", agrupar: "insumo" });
+    expect(t.columnas[0]).toEqual({ titulo: "Insumo", tipo: "texto" });
+    expect(t.avisos[0]).toContain("1 consumo sin costo cargado");
+  });
+});
+
 describe("armarTabla ventas", () => {
   it("costo y ganancia solo con ver_costos", () => {
     expect(titulos(ventas([venta()]), base)).toEqual(expect.arrayContaining(["Costo", "Ganancia"]));

@@ -201,13 +201,16 @@ export async function buscarProductos(
   supabase: Cliente,
   negocioId: string,
   texto: string,
+  tipo?: "producto" | "insumo",
 ): Promise<Resultado<ProductoElegible[]>> {
-  const base = () =>
-    supabase
+  const base = () => {
+    const q = supabase
       .from("inventario_lista")
       .select(COLUMNAS_ELEGIBLE)
       .eq("negocio_id", negocioId)
       .eq("activo", true);
+    return tipo ? q.eq("tipo", tipo) : q;
+  };
   const q = sanearBusqueda(texto);
   const sinFilas = { data: [], error: null };
   const [exacto, parecidos] = await Promise.all([
