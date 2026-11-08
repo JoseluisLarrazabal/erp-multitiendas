@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"caja_movimientos": {
                   Row: {
-                    "created_at": string,"enviada_por": string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at": string,"enviada_por": string | null,"id": string,"monto": number,"motivo": string,"motivos_revision": (string)[],"negocio_id": string,"origen": string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"enviada_por"?: string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen"?: string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at"?: string,"enviada_por"?: string | null,"id": string,"monto": number,"motivo": string,"motivos_revision"?: (string)[],"negocio_id": string,"origen"?: string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   Update: {
-                    "created_at"?: string,"enviada_por"?: string | null,"id"?: string,"monto"?: number,"motivo"?: string,"negocio_id"?: string,"origen"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
+                    "created_at"?: string,"enviada_por"?: string | null,"id"?: string,"monto"?: number,"motivo"?: string,"motivos_revision"?: (string)[],"negocio_id"?: string,"origen"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
                   }
                   Relationships: [
                     {

@@ -189,7 +189,7 @@ select lives_ok($$select public.registrar_venta(pg_temp.vp('MQ', 'C1-000016', 'P
 -- Siguen rechazando offline
 select throws_ok($$select public.registrar_venta(pg_temp.v('H1', 'D1', 'S1', 'C1-000017', 21, jsonb_build_array(pg_temp.it('P1', 2, 10)), jsonb_build_array(pg_temp.pg('efectivo', 21))), pg_temp.o('v'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'offline: total distinto del calculado');
 select throws_ok($$select public.registrar_venta(pg_temp.v1('H1', 'C1-001700', 1), pg_temp.o('v'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'offline: salto de numeración');
-select throws_ok($$select public.registrar_venta(pg_temp.v('H1', 'D1', 'SC', 'C1-000017', 10, jsonb_build_array(pg_temp.it('P1', 1, 10)), jsonb_build_array(pg_temp.pg('efectivo', 10))), pg_temp.o('v'))$$, 'P0001', 'ERP_CAJA_CERRADA', 'offline: caja cerrada');
+select throws_ok($$select public.registrar_venta(pg_temp.v('H1', 'D1', 'SC', 'C1-000017', 10, jsonb_build_array(pg_temp.it('P1', 1, 10)), jsonb_build_array(pg_temp.pg('efectivo', 10))) || jsonb_build_object('creada_en_cliente', now() + interval '1 minute'), pg_temp.o('v'))$$, 'P0001', 'ERP_CAJA_CERRADA', 'offline: caja cerrada y venta hecha después del cierre (A2: antes del cierre sí se acepta)');
 select throws_ok($$select public.registrar_venta(pg_temp.v('H1', 'D2', 'S1', 'C2-000001', 10, jsonb_build_array(pg_temp.it('P1', 1, 10)), jsonb_build_array(pg_temp.pg('efectivo', 10))), pg_temp.o('v'))$$, 'P0001', 'ERP_CAJA_CERRADA', 'offline: sesión de otro equipo');
 select lives_ok($$select public.registrar_venta(pg_temp.v('SV1', 'D1', 'S1', 'C1-000017', 100, jsonb_build_array(pg_temp.it('PS', 1, 100) || jsonb_build_object('serie_id', pg_temp.i('SE1'))), jsonb_build_array(pg_temp.pg('efectivo', 100))), pg_temp.o('v'))$$, 'offline: venta con serie disponible');
 select throws_ok($$select public.registrar_venta(pg_temp.v('SV2', 'D1', 'S1', 'C1-000018', 100, jsonb_build_array(pg_temp.it('PS', 1, 100) || jsonb_build_object('serie_id', pg_temp.i('SE1'))), jsonb_build_array(pg_temp.pg('efectivo', 100))), pg_temp.o('v'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'offline: la misma serie no se vende dos veces');
@@ -286,7 +286,7 @@ select pg_temp.como(pg_temp.i('v'));
 select lives_ok($$select public.registrar_venta(pg_temp.vp('A1', 'C1-000021', 'PN', 5, pg_temp.pg('qr', 5, false)), pg_temp.o('v'))$$, 'A1: offline, sin precio, QR pendiente');
 select pg_temp.como(pg_temp.i('c'));
 select is(pg_temp.en_lista('A1'), true, 'A1 entra a la lista');
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('d'));
 select is(public.anular_venta(pg_temp.i('A1'), 'error') ->> 'estado', 'anulada', 'A1 se anula');
 select pg_temp.como(pg_temp.i('c'));
 select is(pg_temp.en_lista('A1'), false, 'anulada: no entra a la lista');
@@ -343,10 +343,10 @@ select is((public.resumen_caja(pg_temp.i('S1')) ->> 'qr_pendiente')::numeric, 0:
 select is(current_setting('t.qr_antes')::numeric - (public.resumen_caja(pg_temp.i('S1')) ->> 'qr_neto')::numeric, 10::numeric, 'qr_neto (total_qr_sesion) no suma el rechazado');
 select is((select estado from public.ventas where id = pg_temp.i('R1')), 'completada', 'la venta con QR rechazado sigue completada');
 select pg_temp.como(pg_temp.i('d'));
-select lives_ok($$select public.devolver_venta(jsonb_build_object('id', pg_temp.i('DR1'), 'venta_id', pg_temp.i('R1'), 'dispositivo_id', pg_temp.i('D1'),
+select throws_ok($$select public.devolver_venta(jsonb_build_object('id', pg_temp.i('DR1'), 'venta_id', pg_temp.i('R1'), 'dispositivo_id', pg_temp.i('D1'),
   'caja_sesion_id', pg_temp.i('S1'), 'medio', 'qr', 'motivo', 'm',
   'items', jsonb_build_array(jsonb_build_object('venta_item_id', (select id from public.venta_items where venta_id = pg_temp.i('R1')), 'cantidad', 1))))$$,
-  'devolver_venta no revienta con un pago rechazado');
+  'P0001', 'ERP_DATOS_INVALIDOS', 'devolver_venta no devuelve a un QR rechazado (nunca entró)');
 
 -- Inmutabilidad: solo cambian las marcas, de vacío a lleno
 select pg_temp.como(pg_temp.i('c'));

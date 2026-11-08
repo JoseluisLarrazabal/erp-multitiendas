@@ -67,7 +67,7 @@ select public.registrar_entrada(pg_temp.i('O2'), pg_temp.i('T'), pg_temp.i('PS')
 -- Con movimientos
 select throws_ok($$select public.guardar_producto(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('P1')::text, 'codigo', 'P1', 'nombre', 'P1', 'tipo', 'producto', 'unidad', 'kg'))$$, 'P0001', 'ERP_PRODUCTO_CON_MOVIMIENTOS', 'con movimientos: no cambia la unidad');
 select throws_ok($$select public.guardar_producto(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('PS')::text, 'codigo', 'PS', 'nombre', 'PS', 'tipo', 'producto', 'controla_serie', false))$$, 'P0001', 'ERP_PRODUCTO_CON_MOVIMIENTOS', 'con movimientos: no deja de controlar series');
-select lives_ok($$select public.guardar_producto(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('P1')::text, 'codigo', 'P1', 'nombre', 'P1 renombrado', 'tipo', 'producto', 'controla_serie', true))$$, 'con movimientos: puede empezar a controlar series');
+select throws_ok($$select public.guardar_producto(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('P1')::text, 'codigo', 'P1', 'nombre', 'P1 renombrado', 'tipo', 'producto', 'controla_serie', true))$$, 'P0001', 'ERP_SERIE_CON_STOCK', 'con stock: no puede empezar a controlar series (quedaría invendible)');
 select lives_ok($$select public.guardar_producto(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('PS')::text, 'codigo', 'PS', 'nombre', 'PS 2', 'tipo', 'producto', 'controla_serie', true, 'stock_minimo', 2))$$, 'con movimientos: edita nombre y stock mínimo');
 select is((select nombre from public.productos where id = pg_temp.i('PS')), 'PS 2', 'con movimientos: el cambio permitido se guarda');
 

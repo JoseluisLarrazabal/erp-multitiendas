@@ -36,7 +36,7 @@ select is((select count(*) from public.ubicaciones), 1::bigint, 'A ve solo su ub
 select is((select count(*) from public.dispositivos), 1::bigint, 'A ve solo su dispositivo');
 select is((select count(*) from public.usuario_negocio), 1::bigint, 'A ve solo las asignaciones de su negocio');
 select is((select count(*) from public.perfiles), 1::bigint, 'A ve solo su perfil, no el de B');
-select is((select count(*) from public.rol_permisos), 106::bigint, 'cualquier autenticado lee la matriz completa');
+select is((select count(*) from public.rol_permisos), 100::bigint, 'cualquier autenticado lee la matriz completa');
 
 -- Escritura: sin privilegios, tanto sobre filas propias como ajenas.
 select throws_ok(format('insert into public.%I default values', t), '42501', null, 'INSERT directo denegado en ' || t)

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Dato, Seccion } from "@/modules/catalogo/panel";
 import { formatearFechaHora, formatearHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
-import { bsONulo, ETIQUETA_MOVIMIENTO } from "../domain";
+import { bsONulo, ETIQUETA_MOVIMIENTO, ETIQUETA_REVISION_MOVIMIENTO } from "../domain";
 import type { DetalleSesion } from "../lecturas-panel";
 
 // `enviadaPor` ya es la etiqueta completa ("Sin conexión, enviada por X"); null si la envió quien la registró.
@@ -60,7 +60,7 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
           <div className={fila}>
             <dt>Esperado</dt>
             <dd className="font-semibold" data-testid="sesion-esperado">
-              {formatearBs(r.esperado)}
+              {r.esperado === null ? "—" : formatearBs(r.esperado)}
             </dd>
           </div>
           <div className={fila}>
@@ -105,6 +105,11 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
                       {marca(d.movimientosOffline[m.id]!)}
                     </span>
                   )}
+                  {d.movimientosOffline[m.id]?.motivos.map((x) => (
+                    <span key={x} className="text-destructive block text-xs">
+                      Por revisar: {ETIQUETA_REVISION_MOVIMIENTO[x] ?? x}
+                    </span>
+                  ))}
                 </span>
                 <span className="font-medium tabular-nums">
                   {m.tipo === "ingreso" ? "+" : "−"}

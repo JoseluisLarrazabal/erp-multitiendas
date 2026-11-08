@@ -26,6 +26,12 @@ export const ETIQUETA_MOVIMIENTO: Record<TipoMovimiento, string> = {
   retiro: "Retiro",
 };
 
+// Marcas de caja_movimientos.motivos_revision (enviados sin conexión), en palabras del encargado.
+export const ETIQUETA_REVISION_MOVIMIENTO: Record<string, string> = {
+  caja_cerrada: "Enviado después de que se cerró la caja",
+  efectivo_insuficiente: "Salida mayor al efectivo esperado",
+};
+
 export type Movimiento = {
   id: string;
   tipo: TipoMovimiento;

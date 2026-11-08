@@ -86,7 +86,7 @@ export type DetalleSesion = {
   resumen: ResumenCaja;
   // Rastro de lo enviado sin conexión (RN-04). `enviadaPor` solo si difiere de quien lo registró.
   aperturaOffline: { enviadaPor: string | null } | null;
-  movimientosOffline: Record<string, { enviadaPor: string | null }>;
+  movimientosOffline: Record<string, { enviadaPor: string | null; motivos: string[] }>;
 };
 
 async function resumenCaja(supabase: Cliente, sesionId: string): Promise<ResumenCaja | null> {
@@ -188,6 +188,7 @@ export async function detalleSesion(
               m.enviadaPor,
               nombre.get(m.enviadaPor ?? "") ?? null,
             ),
+            motivos: m.motivos,
           },
         ]),
       ),

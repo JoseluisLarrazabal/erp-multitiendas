@@ -34,7 +34,8 @@ export const resumenCajaSchema = z.object({
   gastos: z.number(),
   retiros: z.number(),
   devoluciones_efectivo: z.number(),
-  esperado: z.number(),
+  // null sin `ver_reportes`: arqueo ciego forzado en la base (M4).
+  esperado: z.number().nullable(),
   qr_neto: z.number(),
   cantidad_ventas: z.number(),
   cantidad_movimientos: z.number(),

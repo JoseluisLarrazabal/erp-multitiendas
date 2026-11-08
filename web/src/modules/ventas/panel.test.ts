@@ -121,6 +121,7 @@ describe("schemas del panel de ventas", () => {
 describe("reconciliación", () => {
   it("cada motivo de la base tiene un texto en español; uno desconocido se muestra tal cual", () => {
     expect(Object.keys(ETIQUETA_MOTIVO).sort()).toEqual([
+      "caja_cerrada",
       "descuento_sin_permiso",
       "otra_cuenta",
       "producto_inactivo",

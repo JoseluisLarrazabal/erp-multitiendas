@@ -103,7 +103,7 @@ select ok(has_function_privilege('authenticated', 'public.anular_venta(uuid, tex
   and not has_function_privilege('anon', 'public.devolver_venta(jsonb)', 'EXECUTE'), 'anular y devolver: authenticated sí, anon no');
 
 -- A. Cierre con pagos mixtos, gasto, retiro, devolución en efectivo y venta anulada (DB-06). S2: inicial 50.
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.registrar_venta(pg_temp.v('VA', 'D2', 'S2', 'C2-000001', 50,
   jsonb_build_array(pg_temp.it('P1', 3, 10), pg_temp.it('PK', 1, 20)),
   jsonb_build_array(pg_temp.pg('efectivo', 30), pg_temp.pg('qr', 20, true))))$$, 'venta con pago mixto');
@@ -113,7 +113,7 @@ select lives_ok($$select pg_temp.mov('M1', 'S2', 'ingreso', 10)$$, 'ingreso');
 select lives_ok($$select pg_temp.mov('M2', 'S2', 'gasto', 5)$$, 'gasto');
 select lives_ok($$select pg_temp.mov('M3', 'S2', 'retiro', 5)$$, 'retiro');
 select is(public.anular_venta(pg_temp.i('VB'), 'Error de cajero')->>'estado', 'anulada', 'anular VB');
-select is((select estado || '/' || motivo_anulacion || '/' || (anulada_por = pg_temp.i('v'))::text from public.ventas where id = pg_temp.i('VB')), 'anulada/Error de cajero/true', 'estado, motivo y usuario de anulación');
+select is((select estado || '/' || motivo_anulacion || '/' || (anulada_por = pg_temp.i('e'))::text from public.ventas where id = pg_temp.i('VB')), 'anulada/Error de cajero/true', 'estado, motivo y usuario de anulación');
 select is((select cantidad from public.stock where producto_id = pg_temp.i('P1')), 100.000 - 3 - 1, 'stock: VA y VC vendidos, VB repuesto');
 select is((select string_agg(tipo || ':' || cantidad, ',' order by tipo) from public.movimientos_inventario where ref_id = pg_temp.i('VB')), 'anulacion_venta:4.000,venta:-4.000', 'venta y contramovimiento en el kardex');
 select lives_ok($$select public.devolver_venta(pg_temp.dv('DA', 'VA', 'D2', 'S2', 'efectivo', 'Defecto', jsonb_build_array(pg_temp.di('VA', 1))))$$, 'devolución de 1 en efectivo');
@@ -131,7 +131,7 @@ select throws_ok($$select public.anular_venta(pg_temp.i('VB'), 'x')$$, 'P0001', 
 select pg_temp.como(pg_temp.i('x'));
 select throws_ok($$select public.anular_venta(pg_temp.i('VB'), 'x')$$, 'P0001', 'ERP_SIN_PERMISO', 'otro negocio no anula');
 select throws_ok($$select public.anular_venta(pg_temp.i('nadie'), 'x')$$, 'P0001', 'ERP_SIN_PERMISO', 'venta inexistente');
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.registrar_venta(pg_temp.v1('VN', 'D1', 'S1', 'C1-000001', 5))$$, 'venta a anular');
 select throws_ok($$select public.anular_venta(pg_temp.i('VN'), '  ')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'motivo vacío');
 select throws_ok($$select public.anular_venta(pg_temp.i('VN'), repeat('a', 201))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'motivo de 201 caracteres');
@@ -145,7 +145,7 @@ select throws_ok($$select public.devolver_venta(pg_temp.dv('DN', 'VN', 'D1', 'S1
 -- C. Devolución parcial: prorrateo y el resto en la última (VR: 3 x 3.5 - 0.5 = 10.00)
 select pg_temp.como(pg_temp.i('d'));
 select lives_ok($$select public.registrar_venta(pg_temp.v('VR', 'D1', 'S1', 'C1-000002', 10, jsonb_build_array(pg_temp.it('P2', 3, 3.5, '{"descuento": 0.5}')), jsonb_build_array(pg_temp.pg('efectivo', 10))))$$, 'venta con descuento');
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select throws_ok($$select public.devolver_venta(pg_temp.dv('R0', 'VR', 'D1', 'S1', 'efectivo', 'x', jsonb_build_array(pg_temp.di('VR', 4))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'más de lo vendido');
 select throws_ok($$select public.devolver_venta(pg_temp.dv('R0', 'VR', 'D1', 'S1', 'efectivo', 'x', jsonb_build_array(pg_temp.di('VR', 0))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cantidad 0');
 select throws_ok($$select public.devolver_venta(pg_temp.dv('R0', 'VR', 'D1', 'S1', 'efectivo', 'x', jsonb_build_array(pg_temp.di('VR', 1.5))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'cantidad decimal en unidad');
@@ -181,7 +181,7 @@ select throws_ok($$update public.devoluciones set monto = 0 where id = pg_temp.i
 select throws_ok($$delete from public.devolucion_items where devolucion_id = pg_temp.i('R1')$$, 'P0001', 'ERP_SOLO_AGREGAR', 'devolucion_items append-only');
 
 -- E. Plazo de 24 h (DB-14)
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.registrar_venta(pg_temp.v1('VP', 'D1', 'S1', 'C1-000003', 1))$$, 'venta que envejece');
 reset role;
 alter table public.ventas disable trigger ventas_inmutable;
@@ -195,7 +195,7 @@ select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.devolver_venta(pg_temp.dv('DP', 'VP', 'D1', 'S1', 'efectivo', 'Tarde', jsonb_build_array(pg_temp.di('VP', 1))))$$, 'encargado devuelve fuera de plazo');
 
 -- E2. anular_venta también respeta el plazo de 24 h (RN-08)
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.registrar_venta(pg_temp.v1('VP2', 'D1', 'S1', 'C1-000012', 1))$$, 'otra venta que envejece');
 reset role;
 alter table public.ventas disable trigger ventas_inmutable;
@@ -205,11 +205,11 @@ select pg_temp.como(pg_temp.i('v'));
 select throws_ok($$select public.anular_venta(pg_temp.i('VP2'), 'Tarde')$$, 'P0001', 'ERP_SIN_PERMISO', 'vendedor no anula fuera de plazo');
 select pg_temp.como(pg_temp.i('e'));
 select is(public.anular_venta(pg_temp.i('VP2'), 'Tarde')->>'estado', 'anulada', 'con devolver_fuera_plazo sí anula');
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select is(public.anular_venta(pg_temp.i('VP2'), 'Tarde')->>'estado', 'anulada', 'el reenvío idempotente sigue funcionando fuera de plazo');
 
 -- F. Series (DB-15)
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.registrar_venta(pg_temp.v('VS', 'D1', 'S1', 'C1-000004', 100, jsonb_build_array(pg_temp.it('PS', 1, 100, jsonb_build_object('serie_id', pg_temp.i('SE3')))), jsonb_build_array(pg_temp.pg('efectivo', 100))))$$, 'venta con serie');
 select lives_ok($$select public.devolver_venta(pg_temp.dv('DS', 'VS', 'D1', 'S1', 'efectivo', 'Defecto', jsonb_build_array(pg_temp.di('VS', 1))))$$, 'devolver la serie');
 select is((select estado from public.series where id = pg_temp.i('SE3')), 'disponible', 'la serie vuelve a disponible');

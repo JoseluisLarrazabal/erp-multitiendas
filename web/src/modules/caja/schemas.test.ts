@@ -59,5 +59,6 @@ describe("resumen de caja", () => {
     };
     expect(resumenCajaSchema.safeParse(ok).success).toBe(true);
     expect(resumenCajaSchema.safeParse({ ...ok, esperado: undefined }).success).toBe(false);
+    expect(resumenCajaSchema.safeParse({ ...ok, esperado: null }).success).toBe(true);
   });
 });

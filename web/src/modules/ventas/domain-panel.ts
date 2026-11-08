@@ -22,6 +22,7 @@ export const ETIQUETA_MOTIVO: Record<string, string> = {
   renumerada: "Número cambiado al enviarse",
   otra_cuenta: "Enviada desde otra cuenta",
   sin_cliente: "Sin cliente registrado",
+  caja_cerrada: "Enviada después de que se cerró la caja",
 };
 export const textoMotivo = (m: string) => ETIQUETA_MOTIVO[m] ?? m;
 

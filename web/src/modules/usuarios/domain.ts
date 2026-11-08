@@ -122,6 +122,8 @@ export const MENSAJES_ERROR: Record<string, string> = {
   ERP_SIN_SESION: "Tu sesión terminó. Vuelve a ingresar.",
   ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
   ERP_DUENO_PROTEGIDO: "Solo un dueño del negocio puede asignar o modificar a un dueño.",
+  ERP_ULTIMO_DUENO:
+    "Es el único dueño activo de uno de sus negocios: nombra o reactiva a otro dueño antes de desactivarlo.",
   ERP_AUTOGESTION: "No puedes cambiar tu propio rol ni quitarte a ti mismo.",
   ERP_ULTIMO_NEGOCIO:
     "Es el último negocio de esta cuenta, no se puede quitar. Desactívala en su lugar.",

@@ -272,7 +272,7 @@ create function pg_temp.vr(p_id text, p_num text, p_n numeric, p_pagos jsonb) re
     'items', jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'lista', 'contado', 'cantidad', p_n, 'precio_unitario', 10)),
     'pagos', p_pagos)
 $$;
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('d'));
 select lives_ok($$select public.registrar_venta(pg_temp.vr('VA', 'C1-000001', 5, jsonb_build_array(pg_temp.pg('efectivo', 30), pg_temp.pg('qr', 20, true))))$$, 'VA mixta');
 select lives_ok($$select public.registrar_movimiento_caja(pg_temp.i('M1'), pg_temp.i('S1'), 'ingreso', 25, 't')$$, 'ingreso');
 select lives_ok($$select public.registrar_movimiento_caja(pg_temp.i('M2'), pg_temp.i('S1'), 'gasto', 7.5, 't')$$, 'gasto');
