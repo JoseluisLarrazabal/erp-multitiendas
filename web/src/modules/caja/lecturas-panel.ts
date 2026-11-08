@@ -86,7 +86,7 @@ export type DetalleSesion = {
   resumen: ResumenCaja;
   // Rastro de lo enviado sin conexión (RN-04). `enviadaPor` solo si difiere de quien lo registró.
   aperturaOffline: { enviadaPor: string | null } | null;
-  movimientosOffline: Record<string, { enviadaPor: string | null }>;
+  movimientosOffline: Record<string, { enviadaPor: string | null; motivos: string[] }>;
 };
 
 async function resumenCaja(supabase: Cliente, sesionId: string): Promise<ResumenCaja | null> {
@@ -188,9 +188,53 @@ export async function detalleSesion(
               m.enviadaPor,
               nombre.get(m.enviadaPor ?? "") ?? null,
             ),
+            motivos: m.motivos,
           },
         ]),
       ),
+    },
+  };
+}
+
+export const LIMITE_CAJA_REVISION = 100;
+
+export type FilaCajaRevision = {
+  tipo: "apertura" | "movimiento";
+  id: string;
+  sesionId: string;
+  hora: string;
+  usuario: string | null;
+  enviadaPor: string | null;
+  detalle: string;
+  monto: number;
+  motivos: string[];
+};
+
+// Aperturas y movimientos enviados sin conexión con marcas sin revisar (RPC reconciliacion_caja, exige ver_reportes).
+export async function listarCajaPorRevisar(
+  supabase: Cliente,
+  negocioId: string,
+): Promise<Resultado<{ filas: FilaCajaRevision[]; hayMas: boolean }>> {
+  const { data, error } = await supabase.rpc("reconciliacion_caja", {
+    p_negocio_id: negocioId,
+    p_limite: LIMITE_CAJA_REVISION,
+  });
+  if (error) return falla("No se pudo leer la caja por revisar.");
+  return {
+    ok: true,
+    data: {
+      hayMas: data.length > LIMITE_CAJA_REVISION,
+      filas: data.slice(0, LIMITE_CAJA_REVISION).map((r) => ({
+        tipo: r.tipo === "apertura" ? "apertura" : "movimiento",
+        id: r.id,
+        sesionId: r.sesion_id,
+        hora: r.hora,
+        usuario: r.usuario_nombre,
+        enviadaPor: textoEnviadaPor(r.usuario_id, r.enviada_por, r.enviada_por_nombre),
+        detalle: r.detalle,
+        monto: Number(r.monto),
+        motivos: r.motivos,
+      })),
     },
   };
 }

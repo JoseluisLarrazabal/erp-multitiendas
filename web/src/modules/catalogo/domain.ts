@@ -64,6 +64,8 @@ const MENSAJES_CATALOGO: Record<string, string> = {
   ERP_MONEDA_MIXTA: "Todas las listas de un producto deben estar en la misma moneda.",
   ERP_PRODUCTO_CON_MOVIMIENTOS:
     "Este producto ya tiene movimientos de inventario: no se puede cambiar su tipo ni su unidad, ni quitarle el control de series.",
+  ERP_SERIE_CON_STOCK:
+    "Este producto tiene stock sin series: no se puede activar el control de series hasta que el stock sea cero.",
 };
 
 // Solo los códigos propios del catálogo; el resto lo traduce usuarios/domain (ERP_SIN_PERMISO, ERP_INTERNO...).

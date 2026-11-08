@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm exec supabase --workdir * db push --linked)",
+      "Bash(pnpm exec supabase --workdir * db push --linked --dry-run)"
+    ]
+  }
+}

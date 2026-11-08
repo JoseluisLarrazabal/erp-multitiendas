@@ -1,6 +1,6 @@
 -- resumen_caja: permisos (caja, ver_reportes, ninguno, otro negocio, anon) y desglose = esperado, sesión abierta y cerrada.
 begin;
-select plan(21);
+select plan(22);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -53,7 +53,7 @@ select ok(has_function_privilege('authenticated', 'public.resumen_caja(uuid)', '
   and not has_function_privilege('anon', 'public.resumen_caja(uuid)', 'EXECUTE'), 'resumen_caja: authenticated sí, anon no');
 
 -- Sesión S1 (inicial 100): VA 5 u = 30 efectivo + 20 qr · VB 3 u en efectivo · VC 2 u en qr · VD anulada.
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('d'));
 select lives_ok($$select public.registrar_venta(pg_temp.v('VA', 'S1', 'C1-000001', 5, jsonb_build_array(pg_temp.pg('efectivo', 30), pg_temp.pg('qr', 20, true))))$$, 'VA mixta');
 select lives_ok($$select public.registrar_venta(pg_temp.v('VB', 'S1', 'C1-000002', 3, jsonb_build_array(pg_temp.pg('efectivo', 30))))$$, 'VB efectivo');
 select lives_ok($$select public.registrar_venta(pg_temp.v('VC', 'S1', 'C1-000003', 2, jsonb_build_array(pg_temp.pg('qr', 20, true))))$$, 'VC qr');
@@ -75,8 +75,10 @@ select is((select r->>'monto_inicial' from (select public.resumen_caja(pg_temp.i
      - (r->>'devoluciones_efectivo')::numeric from (select public.resumen_caja(pg_temp.i('S1')) r) q),
   (public.resumen_caja(pg_temp.i('S1'))->>'esperado')::numeric, 'el desglose suma exactamente al esperado');
 
--- Permisos (vendedor tiene caja; ya está como v)
+-- Permisos (vendedor tiene caja pero no ver_reportes: M4, el esperado no sale)
+select pg_temp.como(pg_temp.i('v'));
 select is(public.resumen_caja(pg_temp.i('S2'))->>'cantidad_ventas', '0', 'vendedor (caja): sesión vacía');
+select is(public.resumen_caja(pg_temp.i('S1')) -> 'esperado', 'null'::jsonb, 'M4: vendedor (caja, sin ver_reportes) no recibe el esperado');
 select pg_temp.como(pg_temp.i('c'));
 select is((public.resumen_caja(pg_temp.i('S1'))->>'esperado')::numeric, 155.5, 'contador (ver_reportes, sin caja) lee');
 select pg_temp.como(pg_temp.i('x'));

@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"caja_movimientos": {
                   Row: {
-                    "created_at": string,"enviada_por": string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen": string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at": string,"enviada_por": string | null,"id": string,"monto": number,"motivo": string,"motivos_revision": (string)[],"negocio_id": string,"origen": string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"enviada_por"?: string | null,"id": string,"monto": number,"motivo": string,"negocio_id": string,"origen"?: string,"sesion_id": string,"tipo": string,"usuario_id": string
+                    "created_at"?: string,"enviada_por"?: string | null,"id": string,"monto": number,"motivo": string,"motivos_revision"?: (string)[],"negocio_id": string,"origen"?: string,"sesion_id": string,"tipo": string,"usuario_id": string
                   }
                   Update: {
-                    "created_at"?: string,"enviada_por"?: string | null,"id"?: string,"monto"?: number,"motivo"?: string,"negocio_id"?: string,"origen"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
+                    "created_at"?: string,"enviada_por"?: string | null,"id"?: string,"monto"?: number,"motivo"?: string,"motivos_revision"?: (string)[],"negocio_id"?: string,"origen"?: string,"sesion_id"?: string,"tipo"?: string,"usuario_id"?: string
                   }
                   Relationships: [
                     {
@@ -75,16 +75,42 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"caja_sesiones": {
+                },"caja_revisiones": {
                   Row: {
-                    "abierta_en": string,"cerrada_en": string | null,"diferencia": number | null,"dispositivo_id": string,"enviada_por": string | null,"id": string,"monto_contado": number | null,"monto_esperado": number | null,"monto_inicial": number,"negocio_id": string,"origen": string,"usuario_apertura": string,"usuario_cierre": string | null
+                    "id": string,"negocio_id": string,"ref_id": string,"revisado_en": string,"revisado_por": string,"tipo": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id": string,"enviada_por"?: string | null,"id": string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial": number,"negocio_id": string,"origen"?: string,"usuario_apertura": string,"usuario_cierre"?: string | null
+                    "id"?: string,"negocio_id": string,"ref_id": string,"revisado_en"?: string,"revisado_por": string,"tipo": string
                   }
                   Update: {
-                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id"?: string,"enviada_por"?: string | null,"id"?: string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial"?: number,"negocio_id"?: string,"origen"?: string,"usuario_apertura"?: string,"usuario_cierre"?: string | null
+                    "id"?: string,"negocio_id"?: string,"ref_id"?: string,"revisado_en"?: string,"revisado_por"?: string,"tipo"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "caja_revisiones_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "caja_revisiones_revisado_por_fkey"
+      columns: ["revisado_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"caja_sesiones": {
+                  Row: {
+                    "abierta_en": string,"cerrada_en": string | null,"diferencia": number | null,"dispositivo_id": string,"enviada_por": string | null,"id": string,"monto_contado": number | null,"monto_esperado": number | null,"monto_inicial": number,"motivos_revision": (string)[],"negocio_id": string,"origen": string,"usuario_apertura": string,"usuario_cierre": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id": string,"enviada_por"?: string | null,"id": string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial": number,"motivos_revision"?: (string)[],"negocio_id": string,"origen"?: string,"usuario_apertura": string,"usuario_cierre"?: string | null
+                  }
+                  Update: {
+                    "abierta_en"?: string,"cerrada_en"?: string | null,"diferencia"?: number | null,"dispositivo_id"?: string,"enviada_por"?: string | null,"id"?: string,"monto_contado"?: number | null,"monto_esperado"?: number | null,"monto_inicial"?: number,"motivos_revision"?: (string)[],"negocio_id"?: string,"origen"?: string,"usuario_apertura"?: string,"usuario_cierre"?: string | null
                   }
                   Relationships: [
                     {
@@ -1058,6 +1084,7 @@ isOneToOne: false
 "monto_contado": number | null,
 "monto_esperado": number | null,
 "monto_inicial": number,
+"motivos_revision": (string)[],
 "negocio_id": string,
 "origen": string,
 "usuario_apertura": string,
@@ -1190,6 +1217,11 @@ isOneToOne: false
 "reclamar_operacion":
 { Args: { "p_huella": string,"p_id": string,"p_negocio_id": string }; Returns: boolean
                            },
+"reconciliacion_caja":
+{ Args: { "p_limite"?: number,"p_negocio_id": string }; Returns: {
+              "detalle": string,"enviada_por": string,"enviada_por_nombre": string,"hora": string,"id": string,"monto": number,"motivos": (string)[],"sesion_id": string,"tipo": string,"usuario_id": string,"usuario_nombre": string
+            }[]
+                           },
 "reconciliacion_ventas":
 { Args: { "p_desde_id"?: string,"p_limite"?: number,"p_negocio_id": string }; Returns: {
               "creada_en_cliente": string,"enviada_por": string,"enviada_por_nombre": string,"id": string,"motivos_revision": (string)[],"numero": string,"pagos_pendientes": Json,"recibida_en": string,"total": number,"vendedor_id": string,"vendedor_nombre": string
@@ -1242,6 +1274,9 @@ isOneToOne: false
                            },
 "resumen_caja":
 { Args: { "p_sesion_id": string }; Returns: Json
+                           },
+"revisar_caja":
+{ Args: { "p_id": string,"p_tipo": string }; Returns: Json
                            },
 "revisar_venta":
 { Args: { "p_venta_id": string }; Returns: Json
@@ -1298,6 +1333,11 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"validar_offline_caja":
+{ Args: { "p_hora": string,"p_negocio_id": string,"p_usuario": string }; Returns: {
+              "hora_ajustada": string,"marcas": (string)[]
+            }[]
+                           },
 "verificar_pago_qr":
 { Args: { "p_cobrado"?: boolean,"p_pago_id": string }; Returns: Json
                            }

@@ -135,7 +135,7 @@ después del merge: rutas nuevas abiertas con Playwright con la cuenta del dueñ
 
 | PR | Estado |
 |---|---|
-| 1 compras | PR abierto (2026-11-08) |
+| 1 compras | mergeado (#83) y migración aplicada en producción el 2026-11-08; `/panel/proveedores` verificado con Playwright |
 | 2 insumos | pendiente |
 | 3 reservas | pendiente |
 | 4 crédito | pendiente |

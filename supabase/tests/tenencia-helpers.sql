@@ -77,6 +77,10 @@ select ok(not public.puede_administrar_cuenta('44444444-0000-0000-0000-000000000
 
 -- Cuenta baneada en Auth (el trigger baja perfiles.activo): el mismo JWT deja de servir.
 reset role;
+-- Otro dueño activo en T y L: desactivar al último dueño lo rechaza el trigger (ERP_ULTIMO_DUENO).
+insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
+  ('44444444-0000-0000-0000-000000000008', '55555555-0000-0000-0000-000000000001', 'dueno'),
+  ('44444444-0000-0000-0000-000000000008', '55555555-0000-0000-0000-000000000002', 'dueno');
 update auth.users set banned_until = now() + interval '100 years' where id = '44444444-0000-0000-0000-000000000001';
 select pg_temp.como('44444444-0000-0000-0000-000000000001');
 select is((select count(*) from public.mis_negocios()), 0::bigint, 'desactivada: mis_negocios vacío con el mismo JWT');

@@ -2,13 +2,34 @@ import Link from "next/link";
 import { Dato, Seccion } from "@/modules/catalogo/panel";
 import { formatearFechaHora, formatearHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
-import { bsONulo, ETIQUETA_MOVIMIENTO } from "../domain";
+import { bsONulo, ETIQUETA_MOVIMIENTO, ETIQUETA_REVISION_MOVIMIENTO } from "../domain";
 import type { DetalleSesion } from "../lecturas-panel";
 
 // `enviadaPor` ya es la etiqueta completa ("Sin conexión, enviada por X"); null si la envió quien la registró.
 const marca = (o: { enviadaPor: string | null }) => o.enviadaPor ?? "Sin conexión";
 
-export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
+function FilaVentaSesion({ v }: { v: { numero: string; total: number; estado: string } }) {
+  return (
+    <>
+      <span className="font-mono font-semibold">{v.numero}</span>
+      <span className="text-muted-foreground flex-1 text-xs">
+        {v.estado === "anulada" ? "Anulada" : ""}
+      </span>
+      <span>{formatearBs(v.total)}</span>
+    </>
+  );
+}
+
+const bs = (n: number | null) => (n === null ? "—" : formatearBs(n));
+
+export function DetalleSesionVista({
+  d,
+  verVentas,
+}: {
+  d: DetalleSesion;
+  // El detalle de una venta exige `ver_reportes` o `anular`: sin ellos la fila es texto.
+  verVentas: boolean;
+}) {
   const { sesion: s, resumen: r } = d;
   const fila = "flex items-baseline justify-between gap-3 py-2 tabular-nums";
   return (
@@ -39,28 +60,30 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
           </div>
           <div className={fila}>
             <dt>Ventas en efectivo</dt>
-            <dd>{formatearBs(r.ventas_efectivo)}</dd>
+            <dd>{bs(r.ventas_efectivo)}</dd>
           </div>
           <div className={fila}>
             <dt>Ingresos</dt>
-            <dd>{formatearBs(r.ingresos)}</dd>
+            <dd>{bs(r.ingresos)}</dd>
           </div>
           <div className={fila}>
             <dt>Gastos</dt>
-            <dd>−{formatearBs(r.gastos)}</dd>
+            <dd>{r.gastos === null ? "—" : `−${formatearBs(r.gastos)}`}</dd>
           </div>
           <div className={fila}>
             <dt>Retiros</dt>
-            <dd>−{formatearBs(r.retiros)}</dd>
+            <dd>{r.retiros === null ? "—" : `−${formatearBs(r.retiros)}`}</dd>
           </div>
           <div className={fila}>
             <dt>Devoluciones en efectivo</dt>
-            <dd>−{formatearBs(r.devoluciones_efectivo)}</dd>
+            <dd>
+              {r.devoluciones_efectivo === null ? "—" : `−${formatearBs(r.devoluciones_efectivo)}`}
+            </dd>
           </div>
           <div className={fila}>
             <dt>Esperado</dt>
             <dd className="font-semibold" data-testid="sesion-esperado">
-              {formatearBs(r.esperado)}
+              {r.esperado === null ? "—" : formatearBs(r.esperado)}
             </dd>
           </div>
           <div className={fila}>
@@ -76,7 +99,7 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
           <div className={fila}>
             <dt>QR (cobrado menos devuelto)</dt>
             <dd className="font-semibold" data-testid="sesion-qr">
-              {formatearBs(r.qr_neto)}
+              {bs(r.qr_neto)}
             </dd>
           </div>
         </dl>
@@ -105,6 +128,11 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
                       {marca(d.movimientosOffline[m.id]!)}
                     </span>
                   )}
+                  {d.movimientosOffline[m.id]?.motivos.map((x) => (
+                    <span key={x} className="text-destructive block text-xs">
+                      Por revisar: {ETIQUETA_REVISION_MOVIMIENTO[x] ?? x}
+                    </span>
+                  ))}
                 </span>
                 <span className="font-medium tabular-nums">
                   {m.tipo === "ingreso" ? "+" : "−"}
@@ -130,16 +158,18 @@ export function DetalleSesionVista({ d }: { d: DetalleSesion }) {
             <ul aria-label="Ventas de la sesión" className="divide-y text-sm">
               {d.ventas.map((v) => (
                 <li key={v.id}>
-                  <Link
-                    href={`/panel/ventas/${v.id}`}
-                    className="hover:bg-muted/60 flex items-baseline justify-between gap-3 py-2 tabular-nums"
-                  >
-                    <span className="font-mono font-semibold">{v.numero}</span>
-                    <span className="text-muted-foreground flex-1 text-xs">
-                      {v.estado === "anulada" ? "Anulada" : ""}
-                    </span>
-                    <span>{formatearBs(v.total)}</span>
-                  </Link>
+                  {verVentas ? (
+                    <Link
+                      href={`/panel/ventas/${v.id}`}
+                      className="hover:bg-muted/60 flex items-baseline justify-between gap-3 py-2 tabular-nums"
+                    >
+                      <FilaVentaSesion v={v} />
+                    </Link>
+                  ) : (
+                    <div className="flex items-baseline justify-between gap-3 py-2 tabular-nums">
+                      <FilaVentaSesion v={v} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

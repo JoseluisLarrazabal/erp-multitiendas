@@ -6,11 +6,24 @@ export const PAGINA_VENTAS = 25;
 export const PLAZO_HORAS = 24;
 export const PAGINA_RECONCILIACION = 25;
 
-// Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página se cuenta "25+".
-export function textoPorRevisar(cantidad: number, hayMas: boolean): string | null {
-  if (cantidad <= 0) return null;
-  const n = hayMas ? `${cantidad}+` : String(cantidad);
-  return cantidad === 1 && !hayMas ? "1 venta por revisar" : `${n} ventas por revisar`;
+// Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página de ventas se cuenta "25+".
+// La caja por revisar trae hasta 100: con más, "100+".
+export function textoPorRevisar(
+  ventas: number,
+  hayMasVentas: boolean,
+  caja = 0,
+  hayMasCaja = false,
+): string | null {
+  const partes: string[] = [];
+  if (ventas > 0) {
+    const n = hayMasVentas ? `${ventas}+` : String(ventas);
+    partes.push(ventas === 1 && !hayMasVentas ? "1 venta" : `${n} ventas`);
+  }
+  if (caja > 0) {
+    const n = hayMasCaja ? `${caja}+` : String(caja);
+    partes.push(caja === 1 && !hayMasCaja ? "1 movimiento de caja" : `${n} movimientos de caja`);
+  }
+  return partes.length ? `${partes.join(" y ")} por revisar` : null;
 }
 
 // Marcas de motivos_revision (registrar_venta con p_offline), en palabras del encargado.
@@ -22,6 +35,7 @@ export const ETIQUETA_MOTIVO: Record<string, string> = {
   renumerada: "Número cambiado al enviarse",
   otra_cuenta: "Enviada desde otra cuenta",
   sin_cliente: "Sin cliente registrado",
+  caja_cerrada: "Enviada después de que se cerró la caja",
 };
 export const textoMotivo = (m: string) => ETIQUETA_MOTIVO[m] ?? m;
 
@@ -56,6 +70,7 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
     ERP_DATOS_INVALIDOS: "Escribe el motivo de la anulación (hasta 200 caracteres).",
     ERP_EFECTIVO_INSUFICIENTE:
       "La caja de la venta no tiene efectivo suficiente para reponer lo cobrado. Repón efectivo con un ingreso.",
+    ERP_ORDEN_ENTREGADA: "La orden ya se entregó: registra una devolución en lugar de anular.",
     ERP_VENTA_CON_DEVOLUCIONES:
       "La venta ya tiene devoluciones y no se puede anular. Devuelve lo que falte.",
   },
@@ -65,6 +80,7 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
     ERP_EFECTIVO_INSUFICIENTE:
       "La caja no tiene efectivo suficiente para esta devolución. Repón efectivo con un ingreso o usa otra caja.",
     ERP_VENTA_ANULADA: "La venta está anulada: no admite devolución.",
+    ERP_QR_RECHAZADO: "El pago QR de esta venta fue rechazado: solo se puede devolver lo cobrado.",
   },
   tope: {
     ERP_DATOS_INVALIDOS: "El tope debe ser un porcentaje entre 0 y 100 con hasta 2 decimales",

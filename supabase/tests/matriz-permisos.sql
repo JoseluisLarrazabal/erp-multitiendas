@@ -17,7 +17,7 @@ insert into esperado values
   ('vender',               '{dueno,encargado,vendedor,empleado}',  '{dueno,encargado,vendedor,empleado}'),
   ('ver_costos',           '{dueno,encargado,contador}',           '{dueno,encargado,contador}'),
   ('descontar',            '{dueno,encargado}',                    '{dueno,encargado,vendedor,empleado}'),
-  ('anular',               '{dueno,encargado,vendedor,empleado}',  '{dueno,encargado,vendedor,empleado}'),
+  ('anular',               '{dueno,encargado}',                    '{dueno,encargado}'),
   ('devolver_fuera_plazo', '{dueno,encargado}',                    '{dueno,encargado}'),
   ('ajustar_inventario',   '{dueno,encargado}',                    '{dueno,encargado}'),
   ('editar_productos',     '{dueno,encargado}',                    '{dueno,encargado}'),
@@ -29,8 +29,8 @@ insert into esperado values
   ('gestionar_reservas',   '{dueno,encargado,vendedor,empleado}',  '{}'),
   ('gestionar_compras',    '{dueno,encargado}',                    '{dueno,encargado}');
 
-select is((select count(*) from public.rol_permisos), 106::bigint, 'matriz: 106 filas en total');
-select is((select count(*) from public.rol_permisos where tipo_negocio = 'lavanderia'), 36::bigint, 'matriz: 36 filas de lavandería');
+select is((select count(*) from public.rol_permisos), 100::bigint, 'matriz: 100 filas en total');
+select is((select count(*) from public.rol_permisos where tipo_negocio = 'lavanderia'), 34::bigint, 'matriz: 34 filas de lavandería');
 select set_eq(
   $$select tipo_negocio, rol, permiso from public.rol_permisos where tipo_negocio = 'tienda'$$,
   $$select 'tienda', r, permiso from esperado, unnest(tienda_frial) r$$,

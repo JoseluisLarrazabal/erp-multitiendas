@@ -8,6 +8,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Plan activo: fase 7, Entrega B** (CTO, 2026-11-08: "no nos importa ya el contrato ahora mismo, implementa
   entrega B"). Plan en `docs/plan-fase-7.md`, con 4 PRs en serie: compras, insumos, reservas y crédito. Estado por PR
   en la tabla "Estado" del plan. D-01 queda sin resolver y no frena la fase.
+- **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
+  `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
+  `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
 - **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. El CTO pidió arreglar todo; estado por PR al final de ese documento.
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.

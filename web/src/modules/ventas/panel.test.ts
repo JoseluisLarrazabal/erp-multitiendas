@@ -41,6 +41,10 @@ describe("cantidadADevolver", () => {
 });
 
 describe("mensajeDeVentas", () => {
+  it("orden entregada y QR rechazado tienen mensaje propio", () => {
+    expect(mensajeDeVentas("anular", "ERP_ORDEN_ENTREGADA")).toContain("devolución");
+    expect(mensajeDeVentas("devolver", "ERP_QR_RECHAZADO")).toContain("rechazado");
+  });
   it("cubre los códigos de cada acción", () => {
     for (const c of [
       "ERP_SIN_PERMISO",
@@ -121,6 +125,7 @@ describe("schemas del panel de ventas", () => {
 describe("reconciliación", () => {
   it("cada motivo de la base tiene un texto en español; uno desconocido se muestra tal cual", () => {
     expect(Object.keys(ETIQUETA_MOTIVO).sort()).toEqual([
+      "caja_cerrada",
       "descuento_sin_permiso",
       "otra_cuenta",
       "producto_inactivo",
@@ -160,5 +165,15 @@ describe("textoPorRevisar", () => {
     expect(textoPorRevisar(1, false)).toBe("1 venta por revisar");
     expect(textoPorRevisar(3, false)).toBe("3 ventas por revisar");
     expect(textoPorRevisar(25, true)).toBe("25+ ventas por revisar");
+    expect(textoPorRevisar(0, false, 100, true)).toBe("100+ movimientos de caja por revisar");
+    expect(textoPorRevisar(2, false, 1)).toBe("2 ventas y 1 movimiento de caja por revisar");
+  });
+
+  it("solo caja, ventas y caja juntas, y nada", () => {
+    expect(textoPorRevisar(0, false, 1)).toBe("1 movimiento de caja por revisar");
+    expect(textoPorRevisar(0, false, 4)).toBe("4 movimientos de caja por revisar");
+    expect(textoPorRevisar(3, false, 1)).toBe("3 ventas y 1 movimiento de caja por revisar");
+    expect(textoPorRevisar(25, true, 2)).toBe("25+ ventas y 2 movimientos de caja por revisar");
+    expect(textoPorRevisar(0, false, 0)).toBeNull();
   });
 });

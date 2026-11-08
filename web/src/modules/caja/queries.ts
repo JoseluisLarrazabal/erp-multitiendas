@@ -88,14 +88,22 @@ export async function listarMovimientos(
     movimientos: Movimiento[];
     total: number;
     // Rastro de los enviados sin conexión (RN-04), solo de los movimientos devueltos.
-    offline: { id: string; usuarioId: string | null; enviadaPor: string | null }[];
+    offline: {
+      id: string;
+      usuarioId: string | null;
+      enviadaPor: string | null;
+      motivos: string[];
+    }[];
   }>
 > {
   const { data, error, count } = await supabase
     .from("caja_movimientos")
-    .select("id, tipo, monto, motivo, created_at, origen, usuario_id, enviada_por", {
-      count: "exact",
-    })
+    .select(
+      "id, tipo, monto, motivo, created_at, origen, usuario_id, enviada_por, motivos_revision",
+      {
+        count: "exact",
+      },
+    )
     .eq("sesion_id", sesionId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
@@ -110,7 +118,12 @@ export async function listarMovimientos(
       total: count ?? data.length,
       offline: data
         .filter((m) => m.origen === "offline")
-        .map((m) => ({ id: m.id, usuarioId: m.usuario_id, enviadaPor: m.enviada_por })),
+        .map((m) => ({
+          id: m.id,
+          usuarioId: m.usuario_id,
+          enviadaPor: m.enviada_por,
+          motivos: m.motivos_revision,
+        })),
       movimientos: data.reverse().map((m) => ({
         id: m.id,
         tipo: m.tipo as TipoMovimiento,

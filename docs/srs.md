@@ -211,7 +211,7 @@ Datos de `rol_permisos`, editables sin cambiar código. D dueño, E encargado, C
 | `vender` | D, E, V | D, E, V |
 | `ver_costos` | D, E, C | D, E, C |
 | `descontar` | D, E | D, E, V |
-| `anular` | D, E, V (P-11) | D, E, V (P-11) |
+| `anular` | D, E | D, E |
 | `devolver_fuera_plazo` | D, E | D, E |
 | `ajustar_inventario` | D, E | D, E |
 | `editar_productos` | D, E | D, E |
@@ -272,7 +272,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 | P-08 | Regla de redondeo de Bs al convertir desde USD | 2 decimales | RF-CAT-05 |
 | P-09 | ¿"Eterazama y sacaba" son 2 depósitos? | 1 depósito | RF-INV-01 |
 | P-10 | ¿Quién compró impresora? Lider dice "No sé", lavandería no tiene | Nota en PDF hasta confirmar; lavandería sigue con talonario si no imprime | RF-VEN-05, RF-LAV-03 |
-| P-11 | ¿El vendedor puede anular sin autorización? | Se respeta la grilla. Recomendado limitarlo | Matriz |
+| P-11 | ¿El vendedor puede anular sin autorización? | No: `anular` queda en D y E. Resuelto (CTO, 2026-11-08: arreglar hallazgos de auditoría). Efecto: V tampoco devuelve dentro de las 24 h | Matriz |
 | P-12 | Al cancelar una reserva, ¿se devuelve el anticipo? | Se devuelve por caja | RF-RES-03 |
 | P-13 | Precios de lavandería por prenda, planchado y piezas grandes; recargo express; cobro mínimo | Se cargan en `Servicios` antes de arrancar | RF-LAV-01 |
 | P-14 | Lavandería pide "saldos por cobrar" pero cobra todo al recibir | Sin saldos; reporte excluido | RF-REP-02 |

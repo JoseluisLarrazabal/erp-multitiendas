@@ -36,6 +36,7 @@ const ESTADO: Record<string, number> = {
   ERP_SIN_PERMISO: 403,
   ERP_DUENO_PROTEGIDO: 403,
   ERP_AUTOGESTION: 403,
+  ERP_ULTIMO_DUENO: 409,
   ERP_CORREO_EXISTE: 409,
   ERP_DATOS_INVALIDOS: 400,
   ERP_CLAVE_DEBIL: 400,
@@ -140,7 +141,10 @@ Deno.serve(async (req) => {
     const { error: errorBan } = await admin.updateUserById(datos.usuario_id, {
       ban_duration: datos.accion === "desactivar" ? "876000h" : "none",
     });
-    if (errorBan) return falla("ERP_INTERNO");
+    // El trigger que sincroniza el baneo lanza ERP_ULTIMO_DUENO si dejaría un negocio sin dueño activo.
+    if (errorBan) {
+      return falla(errorBan.message?.includes("ERP_ULTIMO_DUENO") ? "ERP_ULTIMO_DUENO" : "ERP_INTERNO");
+    }
     // El baneo ya rige: si la auditoría falla se avisa, no se oculta ni se deshace.
     const { error: errorAuditoria } = await clienteServicio.rpc("auditar_cuenta", {
       p_actor_id: sesion.user.id,
