@@ -1,6 +1,6 @@
 -- DB-26: registrar_consumo y reporte_insumos (RF-INS-02). Consumo baja stock y suma al gasto con costo foto.
 begin;
-select plan(56);
+select plan(62);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -11,14 +11,14 @@ create function pg_temp.crear_usuario(p_nombre text) returns void language sql a
   values (pg_temp.i(p_nombre), p_nombre || '@test.local', jsonb_build_object('nombre', p_nombre))
 $$;
 -- d dueño de L · e encargado · v vendedor · m empleado · c contador · x dueño de L2
-select pg_temp.crear_usuario(n) from (values ('d'), ('e'), ('v'), ('m'), ('c'), ('x')) u (n);
-insert into public.negocios (id, nombre, tipo) values (pg_temp.i('L'), 'L', 'lavanderia'), (pg_temp.i('L2'), 'L2', 'lavanderia');
+select pg_temp.crear_usuario(n) from (values ('d'), ('e'), ('v'), ('m'), ('c'), ('x'), ('t')) u (n);
+insert into public.negocios (id, nombre, tipo) values (pg_temp.i('L'), 'L', 'lavanderia'), (pg_temp.i('L2'), 'L2', 'lavanderia'), (pg_temp.i('T'), 'T', 'tienda');
 insert into public.usuario_negocio (usuario_id, negocio_id, rol) values
   (pg_temp.i('d'), pg_temp.i('L'), 'dueno'), (pg_temp.i('e'), pg_temp.i('L'), 'encargado'),
   (pg_temp.i('v'), pg_temp.i('L'), 'vendedor'), (pg_temp.i('m'), pg_temp.i('L'), 'empleado'),
-  (pg_temp.i('c'), pg_temp.i('L'), 'contador'), (pg_temp.i('x'), pg_temp.i('L2'), 'dueno');
+  (pg_temp.i('c'), pg_temp.i('L'), 'contador'), (pg_temp.i('x'), pg_temp.i('L2'), 'dueno'), (pg_temp.i('t'), pg_temp.i('T'), 'dueno');
 insert into public.ubicaciones (id, negocio_id, nombre, tipo) values
-  (pg_temp.i('UL'), pg_temp.i('L'), 'UL', 'local'), (pg_temp.i('UX'), pg_temp.i('L2'), 'UX', 'local');
+  (pg_temp.i('UL'), pg_temp.i('L'), 'UL', 'local'), (pg_temp.i('UX'), pg_temp.i('L2'), 'UX', 'local'), (pg_temp.i('UT'), pg_temp.i('T'), 'UT', 'local');
 -- I1 insumo por unidad · I2 insumo por kg · PS servicio · PP producto · PN insumo inactivo · IX insumo de L2
 insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad, activo) values
   (pg_temp.i('I1'), pg_temp.i('L'), 'I1', 'Insumo1', 'insumo', 'unidad', true),
@@ -26,7 +26,8 @@ insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad, acti
   (pg_temp.i('PS'), pg_temp.i('L'), 'PS', 'Servicio', 'servicio', 'unidad', true),
   (pg_temp.i('PP'), pg_temp.i('L'), 'PP', 'Producto', 'producto', 'unidad', true),
   (pg_temp.i('PN'), pg_temp.i('L'), 'PN', 'Inactivo', 'insumo', 'unidad', false),
-  (pg_temp.i('IX'), pg_temp.i('L2'), 'IX', 'Ajeno', 'insumo', 'unidad', true);
+  (pg_temp.i('IX'), pg_temp.i('L2'), 'IX', 'Ajeno', 'insumo', 'unidad', true),
+  (pg_temp.i('IT'), pg_temp.i('T'), 'IT', 'EnTienda', 'insumo', 'unidad', true);
 -- Stock inicial: I1 10 a 5 · I2 20 a 4 · PP 5 a 1 · PN 5 a 1. Consumos pasados (La Paz): I1 -2 a 5 el 10-mar 23:30, I2 -1 a 4 el 11-mar.
 insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, created_at) values
   (pg_temp.i('L'), pg_temp.i('UL'), pg_temp.i('I1'), 'inicial', 10, 5, now() - interval '400 days'),
@@ -128,16 +129,24 @@ delete from public.rol_permisos where tipo_negocio = 'lavanderia' and rol = 'con
 select pg_temp.como(pg_temp.i('c'));
 select throws_ok($$select public.reporte_insumos(pg_temp.i('L'), '2026-03-09', '2026-03-12', 'dia')$$, 'P0001', 'ERP_SIN_PERMISO', 'sin ver_costos no hay reporte');
 
--- Reversión: netea stock y gasto, una sola vez
+-- Solo lavandería
+select pg_temp.como(pg_temp.i('t'));
+select throws_ok($$select public.ajustar_inventario(pg_temp.i('OT'), pg_temp.i('T'), pg_temp.i('IT'), pg_temp.i('UT'), 'consumo', -1, 'x')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'el consumo no existe fuera de la lavandería');
+select throws_ok($$select public.reporte_insumos(pg_temp.i('T'), '2026-03-09', '2026-03-12', 'dia')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'reporte_insumos solo en lavandería');
+
+-- Reversión: netea stock y gasto, una sola vez. El costo promedio no se toca (se fuerza a 9 para distinguirlo).
+reset role;
+update public.stock set costo_promedio = 9 where producto_id = pg_temp.i('I2');
 select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select pg_temp.revertir('R1', pg_temp.mov('O2'))$$, 'el encargado revierte el consumo O2');
 select is(pg_temp.revertir('R1', pg_temp.mov('O2')), (select id from public.movimientos_inventario where ref_tipo = 'consumo_revertido' and ref_id = pg_temp.mov('O2')), 'repetir la reversión (misma operación) devuelve la misma');
 reset role;
 select is(pg_temp.stock('I2'), 19::numeric, 'I2 vuelve a 19 (20 - 1 del consumo pasado)');
-select is((select costo_unitario from public.movimientos_inventario where ref_tipo = 'consumo_revertido'), 4::numeric, 'la reversión usa el costo del original');
+select is((select costo_unitario from public.movimientos_inventario where ref_tipo = 'consumo_revertido'), null, 'la reversión no lleva costo');
+select is((select costo_promedio from public.stock where producto_id = pg_temp.i('I2')), 9::numeric, 'la reversión no re-pondera el costo promedio');
 select pg_temp.como(pg_temp.i('d'));
 select is(public.reporte_insumos(pg_temp.i('L'), pg_temp.hoy(), pg_temp.hoy(), 'insumo') -> 'totales',
-  '{"consumos":3,"gasto":15.00,"sin_costo":0}'::jsonb, 'el gasto de hoy netea la reversión: solo quedan los 15 de I1');
+  '{"consumos":1,"gasto":15.00,"sin_costo":0}'::jsonb, 'el consumo revertido no cuenta: solo quedan los 15 de I1');
 select is((select revertido from public.kardex_producto(pg_temp.i('I2')) where id = pg_temp.mov('O2')), true, 'kardex: el consumo revertido sale con revertido');
 select is((select revertido from public.kardex_producto(pg_temp.i('I1')) where id = pg_temp.mov('O1')), false, 'kardex: un consumo vigente no');
 select is((select revertido from public.kardex_producto(pg_temp.i('I2')) where ref_tipo = 'consumo_revertido'), false, 'kardex: la reversión misma no');
@@ -158,6 +167,12 @@ select pg_temp.como(pg_temp.i('d'));
 select lives_ok($$select pg_temp.consumo('O5', 'I1', 20)$$, 'consumir más que el stock se permite (RN-04)');
 reset role;
 select is(pg_temp.stock('I1'), -15::numeric, 'I1 queda en -15');
+update public.stock set costo_promedio = 9 where producto_id = pg_temp.i('I1');
+select pg_temp.como(pg_temp.i('d'));
+select lives_ok($$select pg_temp.revertir('R8', pg_temp.mov('O5'))$$, 'revertir con stock negativo');
+reset role;
+select is(pg_temp.stock('I1'), 5::numeric, 'I1: -15 + 20 = 5');
+select is((select costo_promedio from public.stock where producto_id = pg_temp.i('I1')), 9::numeric, 'con stock negativo tampoco cambia el costo promedio');
 select pg_temp.como(pg_temp.i('d'));
 select is((select count(*) from public.stock_inconsistente(pg_temp.i('L'))), 0::bigint, 'stock = suma del kardex');
 

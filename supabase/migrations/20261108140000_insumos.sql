@@ -5,9 +5,13 @@
 -- Consumo: es un tipo de ajustar_inventario ('consumo', cantidad negativa, costo foto, idempotente). Solo vale para un
 -- insumo activo; el chequeo va después de reclamar_operacion para que repetir una operación ya confirmada devuelva
 -- el movimiento original aunque el insumo se haya desactivado después. Stock negativo permitido (RN-04).
--- revertir_consumo: contra-movimiento 'consumo' positivo con el mismo costo del original (ref_tipo
--- 'consumo_revertido', ref_id = movimiento original). El gasto del reporte lo netea solo.
--- reporte_insumos: gasto = suma de -cantidad * costo_unitario de los movimientos 'consumo' (con las reversiones).
+-- revertir_consumo: contra-movimiento 'consumo' positivo SIN costo (ref_tipo 'consumo_revertido', ref_id = movimiento
+-- original): con costo, el trigger re-ponderaría costo_promedio como una compra. Residuo aceptado: un usuario con
+-- ajustar_inventario podría elegir un operacion_id igual al id de un movimiento y bloquear su reversión (solo dentro
+-- de su negocio, sin efecto en stock ni costo).
+-- 'consumo' y reporte_insumos son solo de lavandería (ERP_DATOS_INVALIDOS en otro negocio).
+-- reporte_insumos: gasto = suma de -cantidad * costo_unitario de los consumos originales; los revertidos y las
+-- reversiones no entran (ni a consumos ni a sin_costo).
 -- Un consumo sin costo no suma al gasto y se cuenta en sin_costo. Por día solo hay consumos y gasto (insumos de
 -- unidades distintas no se suman); por insumo, además, la cantidad con su unidad. Gasto por fila redondeado a 2
 -- decimales y total = suma de las filas redondeadas.
@@ -36,8 +40,11 @@ begin
      or p_cantidad is null or p_cantidad = 0 or (p_tipo <> 'ajuste' and p_cantidad > 0) then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
-  -- La merma es del frial.
+  -- La merma es del frial y el consumo, de la lavandería.
   if p_tipo = 'merma' and (select tipo from public.negocios where id = p_negocio_id) is distinct from 'frial' then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  if p_tipo = 'consumo' and (select tipo from public.negocios where id = p_negocio_id) is distinct from 'lavanderia' then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
   v_producto := public.validar_inventario(p_negocio_id, p_producto_id, p_ubicacion_id, p_cantidad);
@@ -107,21 +114,26 @@ begin
   end if;
   if not public.reclamar_operacion(p_operacion_id, v_mov.negocio_id, md5(jsonb_build_array(
        'revertir_consumo', p_movimiento_id, p_motivo)::text)) then
-    return (select id from public.movimientos_inventario where ref_id = p_movimiento_id and tipo = 'consumo');
-  end if;
-  if exists (select 1 from public.movimientos_inventario where ref_id = p_movimiento_id and tipo = 'consumo') then
-    raise exception 'ERP_DATOS_INVALIDOS';
+    return (select id from public.movimientos_inventario
+            where ref_id = p_movimiento_id and ref_tipo = 'consumo_revertido');
   end if;
 
   perform public.bloquear_stock(v_mov.negocio_id, v_mov.ubicacion_id, array[v_mov.producto_id]);
+  if exists (select 1 from public.movimientos_inventario where ref_id = p_movimiento_id and ref_tipo = 'consumo_revertido') then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  -- costo_unitario null: la reversión no re-pondera costo_promedio (el trigger lo deja igual con costo null).
   insert into public.movimientos_inventario (
     negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, ref_tipo, ref_id, usuario_id, motivo
   ) values (
-    v_mov.negocio_id, v_mov.ubicacion_id, v_mov.producto_id, 'consumo', -v_mov.cantidad, v_mov.costo_unitario,
+    v_mov.negocio_id, v_mov.ubicacion_id, v_mov.producto_id, 'consumo', -v_mov.cantidad, null,
     'consumo_revertido', p_movimiento_id, (select auth.uid()), btrim(p_motivo)
   )
   returning id into v_id;
   return v_id;
+exception
+  when unique_violation then
+    raise exception 'ERP_DATOS_INVALIDOS';
 end;
 $$;
 
@@ -198,7 +210,8 @@ begin
   if not public.tiene_permiso(p_negocio_id, 'ver_reportes') or not public.tiene_permiso(p_negocio_id, 'ver_costos') then
     raise exception 'ERP_SIN_PERMISO';
   end if;
-  if p_desde is null or p_hasta is null or p_desde > p_hasta or p_hasta - p_desde > 365
+  if (select tipo from public.negocios where id = p_negocio_id) is distinct from 'lavanderia'
+     or p_desde is null or p_hasta is null or p_desde > p_hasta or p_hasta - p_desde > 365
      or p_agrupar is null or p_agrupar not in ('dia', 'insumo') then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
@@ -211,6 +224,10 @@ begin
     from public.movimientos_inventario m
     join public.productos p on p.id = m.producto_id
     where m.negocio_id = p_negocio_id and m.tipo = 'consumo' and m.created_at >= v_ini and m.created_at < v_fin
+      -- Solo consumos originales y vigentes: ni las reversiones ni los consumos que ya tienen una.
+      and m.cantidad < 0
+      and not exists (select 1 from public.movimientos_inventario r
+                      where r.ref_id = m.id and r.ref_tipo = 'consumo_revertido')
   ),
   k as (
     select x.clave, x.etiqueta, b.*

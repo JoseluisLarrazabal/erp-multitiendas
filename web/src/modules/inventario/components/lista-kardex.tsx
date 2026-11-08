@@ -83,7 +83,9 @@ export function ListaKardex({
             <span className="col-span-2 min-w-0 md:col-span-1">
               {m.motivo ?? <span className="text-muted-foreground">Sin motivo</span>}
               {m.refTipo && (
-                <span className="text-muted-foreground block text-xs">Ref.: {m.refTipo}</span>
+                <span className="text-muted-foreground block text-xs">
+                  Ref.: {m.refTipo === "consumo_revertido" ? "Reversión de consumo" : m.refTipo}
+                </span>
               )}
               {puedeRevertir && m.tipo === "consumo" && m.cantidad < 0 && !m.revertido && (
                 <BotonRevertirConsumo movimientoId={m.id} />

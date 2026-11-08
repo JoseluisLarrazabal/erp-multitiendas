@@ -77,7 +77,7 @@ test.describe("encargado de lavandería", () => {
     );
     expect(despues.json).toEqual([{ cantidad: 10 }]);
     await ir(page, "/panel/reportes?r=insumos&agrupar=insumo");
-    await expect(page.getByRole("row").filter({ hasText: nombre })).toContainText("Bs 0,00");
+    await expect(page.getByRole("row").filter({ hasText: nombre })).toHaveCount(0);
   });
 });
 
