@@ -87,14 +87,16 @@ export const actualizarFila = (
 export const marcarRed = (id: string, error: string, respondio = false) =>
   porId(id).modify((f) => {
     f.intentos += 1;
-    if (respondio) f.inesperados = f.inesperados + 1;
-    f.proximoIntento = Date.now() + esperaReintento(f.intentos);
+    // Filas encoladas antes de existir `inesperados` no traen la clave: sin `?? 0` se guardaría NaN y la fila quedaría ilegible.
+    if (respondio) f.inesperados = (f.inesperados ?? 0) + 1;
+    // Con respuesta del servidor la espera sale de `inesperados`: `intentos` acumula la caída de red y daría siempre el máximo.
+    f.proximoIntento = Date.now() + esperaReintento(respondio ? f.inesperados : f.intentos);
     f.error = error;
   });
 export const marcarRechazada = (id: string, error: string) =>
   porId(id).modify({ estado: "rechazada", error });
-// Conserva `intentos` (resetea `inesperados`): una venta en duda sigue en duda y se comprueba antes de reenviarla. Quien reabre ya decidió
-// reenviarla: deja de ser un primer intento interrumpido.
+// Conserva `intentos` (resetea `inesperados`): una venta en duda sigue en duda y se comprueba antes de reenviarla. Quien
+// reabre ya decidió reenviarla: deja de ser un primer intento interrumpido.
 export const reabrir = (id: string) =>
   porId(id).modify({
     estado: "pendiente",
@@ -264,6 +266,7 @@ async function enviarFila(
   try {
     r = await enviador(fila);
   } catch {
+    // respondio:true a propósito: una excepción local persistente debe acabar en rechazo visible, no en bucle infinito.
     r = { t: "red", error: "No se pudo enviar. Se reintentará.", respondio: true };
   }
   // Una respuesta del servidor (ok o rechazo) prueba que hay red; un fallo sin respuesta, lo contrario.

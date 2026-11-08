@@ -214,7 +214,7 @@ describe("vaciar", () => {
     expect(vistos).toEqual([{ n: 1 }]);
   });
 
-  it("los fallos de red no gastan el tope de errores inesperados; 5 con respuesta sí rechazan; reabrir lo reinicia", async () => {
+  it("los fallos de red no gastan el tope de errores inesperados; tras 5 errores con respuesta el siguiente rechaza; reabrir lo reinicia", async () => {
     await encolar(nueva(1));
     for (let i = 0; i < 5; i++) await marcarRed(uuid(1), "sin red");
     expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 5, inesperados: 0 });
@@ -232,6 +232,29 @@ describe("vaciar", () => {
       inesperados: 0,
       intentos: 10,
     });
+  });
+
+  it("una fila vieja sin `inesperados` sigue legible tras marcarRed con respuesta", async () => {
+    await encolar(nueva(1));
+    await baseOffline()
+      .cola.where("id")
+      .equals(uuid(1))
+      .modify((f) => {
+        delete (f as { inesperados?: number }).inesperados;
+      });
+    await marcarRed(uuid(1), "x", true);
+    const r = await leerFilas();
+    expect(r.ilegibles).toBe(0);
+    expect(r.filas[0]).toMatchObject({ inesperados: 1, intentos: 1 });
+  });
+
+  it("tras un error con respuesta la espera sale de `inesperados`, no de los intentos de red", async () => {
+    await encolar(nueva(1));
+    await baseOffline().cola.where("id").equals(uuid(1)).modify({ intentos: 40 });
+    const antes = Date.now();
+    await marcarRed(uuid(1), "x", true);
+    const f = (await leerFilas()).filas[0]!;
+    expect(f.proximoIntento - antes).toBeLessThan(esperaReintento(1) + 1_000);
   });
 
   it("Reintentar conserva los intentos: la duda no se borra", async () => {
