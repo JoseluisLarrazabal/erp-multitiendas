@@ -22,8 +22,8 @@ export function BotonCerrarSesion({ deshabilitado = false }: { deshabilitado?: b
       if (error) throw error;
       borrarNegocioGuardado();
       // El contexto offline se va con la sesión; la cola de ventas pendientes no se toca.
-      // Con tope: un IndexedDB lento no puede dejar la sesión a medias en pantalla.
-      await Promise.race([borrarContextoLocal(), new Promise((r) => setTimeout(r, 1500))]);
+      // borrarContextoLocal bloquea las escrituras nuevas antes de borrar, y solo corre si el signOut tuvo éxito. Tope solo contra un IndexedDB colgado.
+      await Promise.race([borrarContextoLocal(), new Promise((r) => setTimeout(r, 10_000))]);
       navegarA("/login");
     } catch {
       setError("No se pudo cerrar la sesión. Revisa tu conexión.");

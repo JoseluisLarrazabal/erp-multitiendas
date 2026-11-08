@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatearBs } from "./moneda";
+import { formatearBs, parsearMonto } from "./moneda";
 
 describe("formatearBs", () => {
   it("formatea cero", () => {
@@ -29,5 +29,31 @@ describe("formatearBs", () => {
   it("rechaza valores no finitos", () => {
     expect(() => formatearBs(NaN)).toThrow(RangeError);
     expect(() => formatearBs(Infinity)).toThrow(RangeError);
+  });
+});
+
+describe("parsearMonto", () => {
+  it("devuelve la escala pedida", () => {
+    expect(parsearMonto("12,5")).toBe(1250);
+    expect(parsearMonto("6,9612", 4)).toBe(69612);
+  });
+  it("tope de enteros según los decimales: 10 con 2, 8 con 4", () => {
+    expect(parsearMonto("123456789")).toBe(12_345_678_900);
+    expect(parsearMonto("123456789", 4)).toBeNull();
+    expect(parsearMonto("12345678", 4)).toBe(123_456_780_000);
+  });
+  it("tope de 10 enteros (numeric(12,2))", () => {
+    expect(parsearMonto("9999999999,99")).toBe(999_999_999_999);
+    expect(parsearMonto("10000000000")).toBeNull();
+    expect(parsearMonto("1".repeat(20))).toBeNull();
+  });
+  it("la coma es siempre decimal; punto con 3 dígitos es ambiguo", () => {
+    expect(parsearMonto("6,965", 4)).toBe(69650);
+    expect(parsearMonto("0,125", 4)).toBe(1250);
+    expect(parsearMonto("0.125", 4)).toBeNull();
+    expect(parsearMonto("1.234", 4)).toBeNull();
+    expect(parsearMonto("12,50")).toBe(1250);
+    expect(parsearMonto("0,125")).toBeNull();
+    expect(parsearMonto("0.125")).toBeNull();
   });
 });

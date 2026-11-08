@@ -1,8 +1,14 @@
-// "12", "12,5", "12.50" -> centavos. null si no es un monto válido (más de 2 decimales, vacío, negativo).
-export function parsearMonto(texto: string): number | null {
-  const m = /^(\d{1,9})(?:[.,](\d{1,2}))?$/.exec(texto.trim());
+// Único parser de montos: "12", "12,5", "12.50" -> entero a escala 10^decimales (decimales=2: centavos). null si no es
+// válido: vacío, negativo, más de `decimales`, más de 12 - `decimales` enteros (numeric(12,2): 10) o, con 3 o más decimales admitidos,
+// un punto seguido de exactamente 3 dígitos ("1.500" es ambiguo con miles). La coma siempre es decimal.
+export function parsearMonto(texto: string, decimales = 2): number | null {
+  const m = new RegExp(`^(\\d{1,${12 - decimales}})(?:[.,](\\d{1,${decimales}}))?$`).exec(
+    texto.trim(),
+  );
   if (!m) return null;
-  return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
+  const frac = m[2] ?? "";
+  if (decimales >= 3 && frac.length === 3 && /^\d+\.\d{3}$/.test(texto.trim())) return null;
+  return Number(m[1]) * 10 ** decimales + Number(frac.padEnd(decimales, "0"));
 }
 
 // Recibe el valor numeric(12,2) de Postgres en bolivianos; trabaja en centavos enteros.

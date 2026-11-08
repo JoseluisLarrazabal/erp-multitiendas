@@ -14,11 +14,25 @@ export async function leerDato<T>(clave: string, schema: ZodType<T>): Promise<T 
   }
 }
 
-// No bloquea la UI: el llamador no espera ni se entera del fallo. `despues` corre solo si se guardó.
-export function guardarDato(clave: string, valor: unknown, despues?: () => void): void {
-  void baseOffline()
+// Tras un borrado de cuenta (cierre de sesión, salida a /login) ninguna escritura nueva, ni las diferidas, puede
+// resucitar lo borrado. La página navega por completo después, así que el bloqueo muere con ella; `pageshow` (bfcache)
+// y el montaje del POS lo sueltan si la página se restaura.
+let escrituraBloqueada = false;
+export function desbloquearEscrituras(): void {
+  escrituraBloqueada = false;
+}
+if (typeof window !== "undefined")
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) desbloquearEscrituras();
+  });
+
+// Nunca lanza: el llamador puede ignorar la promesa (no bloquea la UI) o esperarla cuando una escritura no deba
+// quedar en vuelo (cierre de sesión). `despues` corre solo si se guardó.
+export function guardarDato(clave: string, valor: unknown, despues?: () => void): Promise<void> {
+  if (escrituraBloqueada) return Promise.resolve();
+  return baseOffline()
     .datos.put({ clave, valor })
-    .then(despues)
+    .then(() => despues?.())
     .catch(() => undefined);
 }
 
@@ -31,7 +45,12 @@ export async function borrarDato(clave: string): Promise<void> {
 }
 
 // Cerrar sesión: borra el contexto. La cola es otra tabla y nunca se toca aquí.
-export async function borrarDatos(): Promise<void> {
+export async function borrarDatos(bloquear = true): Promise<void> {
+  if (bloquear) {
+    escrituraBloqueada = true;
+    for (const { t } of pendientes.values()) clearTimeout(t);
+    pendientes.clear();
+  }
   try {
     await baseOffline().datos.clear();
   } catch {

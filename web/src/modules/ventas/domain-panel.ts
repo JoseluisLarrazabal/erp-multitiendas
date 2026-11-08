@@ -6,6 +6,13 @@ export const PAGINA_VENTAS = 25;
 export const PLAZO_HORAS = 24;
 export const PAGINA_RECONCILIACION = 25;
 
+// Aviso del Inicio del panel (RF-VEN-13): null si no hay nada; con más de una página se cuenta "25+".
+export function textoPorRevisar(cantidad: number, hayMas: boolean): string | null {
+  if (cantidad <= 0) return null;
+  const n = hayMas ? `${cantidad}+` : String(cantidad);
+  return cantidad === 1 && !hayMas ? "1 venta por revisar" : `${n} ventas por revisar`;
+}
+
 // Marcas de motivos_revision (registrar_venta con p_offline), en palabras del encargado.
 export const ETIQUETA_MOTIVO: Record<string, string> = {
   producto_inactivo: "Producto inactivo al enviarse",
