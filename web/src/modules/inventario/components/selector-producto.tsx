@@ -17,8 +17,8 @@ type Props = {
   // Id del control que recibe el foco al elegir (la cantidad): el lector USB escanea, Enter y sigue tecleando.
   idSiguiente: string;
   error?: string;
-  // Solo productos de ese tipo (el consumo busca insumos).
-  tipo?: "producto" | "insumo";
+  // Etiqueta del campo (el consumo de insumos lo llama "Insumo").
+  etiqueta?: string;
 };
 
 const DEMORA_MS = 250;
@@ -31,7 +31,7 @@ export function SelectorProducto({
   alElegir,
   idSiguiente,
   error,
-  tipo,
+  etiqueta = "Producto",
 }: Props) {
   const lista = useId();
   const campo = useRef<HTMLInputElement>(null);
@@ -61,7 +61,7 @@ export function SelectorProducto({
   async function buscar(q: string): Promise<ProductoElegible[]> {
     const turno = ++consulta.current;
     try {
-      const r = await buscarProductosAccion({ negocioId, q, tipo });
+      const r = await buscarProductosAccion({ negocioId, q });
       if (turno !== consulta.current) return [];
       setFalla(r.ok ? null : r.error);
       const filas = r.ok ? r.data : [];
@@ -126,7 +126,7 @@ export function SelectorProducto({
   return (
     <Campo
       id={id}
-      etiqueta="Producto"
+      etiqueta={etiqueta}
       error={error}
       ayuda={valor ? undefined : "Escribe o escanea el código."}
     >

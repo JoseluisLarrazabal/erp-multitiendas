@@ -8,6 +8,7 @@ import { SelectUbicacion } from "./select-ubicacion";
 export function TipoUbicacionSalida({
   ubicaciones,
   esFrial,
+  esLavanderia,
   tipo,
   ubicacionId,
   alCambiarTipo,
@@ -16,6 +17,7 @@ export function TipoUbicacionSalida({
 }: {
   ubicaciones: readonly Ubicacion[];
   esFrial: boolean;
+  esLavanderia: boolean;
   tipo: TipoSalida;
   ubicacionId: string;
   alCambiarTipo: (tipo: TipoSalida) => void;
@@ -31,7 +33,9 @@ export function TipoUbicacionSalida({
           onChange={(e) => alCambiarTipo(e.target.value as TipoSalida)}
           {...propsCampo("sal-tipo", errores)}
         >
-          {TIPOS_SALIDA.filter((t) => esFrial || t.valor !== "merma").map((t) => (
+          {TIPOS_SALIDA.filter(
+            (t) => (esFrial || t.valor !== "merma") && (esLavanderia || t.valor !== "consumo"),
+          ).map((t) => (
             <option key={t.valor} value={t.valor}>
               {t.etiqueta}
             </option>

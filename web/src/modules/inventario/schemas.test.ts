@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   conteoSchema,
-  consumoSchema,
   entradaSchema,
   filtrosStockSchema,
   leerFiltrosVencimientos,
+  revertirConsumoSchema,
   salidaSchema,
   seriesSchema,
   trasladoSchema,
@@ -28,15 +28,32 @@ describe("entradaSchema", () => {
   });
 });
 
-describe("consumoSchema", () => {
-  const ok = { ...base, productoId: A, ubicacionId: B, cantidad: "2,5", motivo: " lavado " };
-  it("cantidad con coma y motivo recortado", () => {
-    expect(consumoSchema.parse(ok)).toMatchObject({ cantidad: 2.5, motivo: "lavado" });
+describe("salidaSchema: consumo", () => {
+  const ok = {
+    ...base,
+    productoId: A,
+    ubicacionId: B,
+    tipo: "consumo",
+    cantidad: "2,5",
+    motivo: " lavado ",
+    serieIds: null,
+  };
+  it("el consumo sale negativo y recorta el motivo", () => {
+    expect(salidaSchema.parse(ok)).toMatchObject({ cantidad: -2.5, motivo: "lavado" });
   });
-  it("rechaza cantidad 0 o negativa y motivo vacío", () => {
+  it("rechaza cantidad 0 o con signo y motivo vacío", () => {
     for (const cantidad of ["0", "-1", "abc", ""])
-      expect(consumoSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
-    expect(consumoSchema.safeParse({ ...ok, motivo: "  " }).success).toBe(false);
+      expect(salidaSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
+    expect(salidaSchema.safeParse({ ...ok, motivo: "  " }).success).toBe(false);
+  });
+});
+
+describe("revertirConsumoSchema", () => {
+  it("pide motivo y ids válidos", () => {
+    const ok = { operacionId: A, movimientoId: B, motivo: " error de carga " };
+    expect(revertirConsumoSchema.parse(ok).motivo).toBe("error de carga");
+    expect(revertirConsumoSchema.safeParse({ ...ok, motivo: " " }).success).toBe(false);
+    expect(revertirConsumoSchema.safeParse({ ...ok, movimientoId: "x" }).success).toBe(false);
   });
 });
 

@@ -39,14 +39,15 @@ test.describe("encargado de lavandería", () => {
 
     await ir(page, "/panel/inventario");
     await page.getByRole("link", { name: "Consumo" }).click();
-    await expect(page).toHaveURL(/\/panel\/inventario\/consumo$/);
-    await page.getByRole("combobox", { name: "Producto" }).fill(codigo);
+    await expect(page).toHaveURL(/\/panel\/inventario\/salida\?tipo=consumo$/);
+    await expect(page.getByLabel("Tipo")).toHaveValue("consumo");
+    await page.getByRole("combobox", { name: "Insumo" }).fill(codigo);
     await page.getByRole("option", { name: new RegExp(nombre) }).click();
     await page.getByLabel("Cantidad").fill("3");
     await page.getByLabel("Motivo").fill("lavado de la mañana");
-    await page.getByRole("button", { name: "Registrar consumo" }).click();
+    await page.getByRole("button", { name: "Registrar", exact: true }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: `Consumo registrado: 3 de ${nombre}.` }),
+      page.getByRole("status").filter({ hasText: `Movimiento registrado: 3 de ${nombre}.` }),
     ).toBeVisible();
 
     const stock = await apiComo(
@@ -62,6 +63,21 @@ test.describe("encargado de lavandería", () => {
     );
     const fila = page.getByRole("row").filter({ hasText: nombre });
     await expect(fila).toContainText("Bs 15,00");
+
+    // Revertir desde el kardex devuelve el stock y netea el gasto.
+    await ir(page, `/panel/inventario/${productoId}`);
+    await page.getByLabel("Motivo de la reversión").fill("carga equivocada");
+    await page.getByRole("button", { name: "Revertir", exact: true }).click();
+    await page.getByRole("button", { name: "Revertir consumo" }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Revertir", exact: true })).toHaveCount(0);
+    const despues = await apiComo(
+      "encargadoLavanderia",
+      `stock?select=cantidad&producto_id=eq.${productoId}`,
+    );
+    expect(despues.json).toEqual([{ cantidad: 10 }]);
+    await ir(page, "/panel/reportes?r=insumos&agrupar=insumo");
+    await expect(page.getByRole("row").filter({ hasText: nombre })).toContainText("Bs 0,00");
   });
 });
 
@@ -69,15 +85,18 @@ test.describe("sin acceso", () => {
   test.describe("vendedor", () => {
     test.use({ storageState: rutaAuth("vendedor") });
     test("no abre el consumo", async ({ page }) => {
-      await page.goto("/panel/inventario/consumo");
+      await page.goto("/panel/inventario/salida?tipo=consumo");
       await expect(page).toHaveURL(/\/pos$/);
     });
   });
   test.describe("encargado de tienda", () => {
     test.use({ storageState: rutaAuth("encargadoTienda") });
-    test("en un negocio que no es lavandería vuelve al inicio", async ({ page }) => {
-      await page.goto("/panel/inventario/consumo");
-      await expect(page).toHaveURL(/\/panel$/);
+    test("en un negocio que no es lavandería no ofrece el consumo", async ({ page }) => {
+      await page.goto("/panel/inventario/salida?tipo=consumo");
+      await expect(page.getByLabel("Tipo")).not.toHaveValue("consumo");
+      await expect(page.getByLabel("Tipo").locator("option", { hasText: "Consumo" })).toHaveCount(
+        0,
+      );
     });
   });
 });

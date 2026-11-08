@@ -170,22 +170,28 @@ function tablaStock(
 }
 
 function tablaInsumos(filas: FilaInsumos[], t: TotalesInsumos, agrupar: Agrupar): TablaDatos {
-  const fila = (x: Pick<FilaInsumos, keyof TotalesInsumos>, primera: Celda): Celda[] => [
-    primera,
-    x.consumos,
-    x.cantidad,
-    x.gasto,
+  const porInsumo = agrupar === "insumo";
+  const columnas: Columna[] = [
+    { titulo: porInsumo ? "Insumo" : "Día", tipo: porInsumo ? "texto" : "dia" },
+    { titulo: "Consumos", tipo: "entero" },
+    ...(porInsumo
+      ? [
+          { titulo: "Cantidad", tipo: "cantidad" } as Columna,
+          { titulo: "Unidad", tipo: "texto" } as Columna,
+        ]
+      : []),
+    { titulo: "Gasto", tipo: "monto" },
   ];
   return {
     hoja: "Insumos",
-    columnas: [
-      { titulo: agrupar === "dia" ? "Día" : "Insumo", tipo: agrupar === "dia" ? "dia" : "texto" },
-      { titulo: "Consumos", tipo: "entero" },
-      { titulo: "Cantidad", tipo: "cantidad" },
-      { titulo: "Gasto", tipo: "monto" },
-    ],
-    filas: filas.map((f) => fila(f, f.etiqueta)),
-    totales: fila(t, "Total"),
+    columnas,
+    filas: filas.map((f) => [
+      f.etiqueta,
+      f.consumos,
+      ...(porInsumo ? [f.cantidad ?? null, f.unidad === "kg" ? "kg" : "unidad"] : []),
+      f.gasto,
+    ]),
+    totales: ["Total", t.consumos, ...(porInsumo ? [null, null] : []), t.gasto],
     avisos:
       t.sin_costo > 0
         ? [

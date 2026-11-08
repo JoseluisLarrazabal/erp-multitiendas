@@ -21,10 +21,10 @@ import {
 } from "./queries";
 import {
   busquedaSchema,
-  consumoSchema,
   conteoSchema,
   entradaSchema,
   paginaConteoSchema,
+  revertirConsumoSchema,
   salidaSchema,
   seriesDisponiblesSchema,
   seriesSchema,
@@ -67,20 +67,18 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
   return listo();
 }
 
-export async function registrarConsumo(entrada: unknown): Promise<Resultado<null>> {
-  const d = validar(consumoSchema, entrada);
+export async function revertirConsumo(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(revertirConsumoSchema, entrada);
   if (!d) return fallo("ERP_DATOS_INVALIDOS");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("registrar_consumo", {
+  const { error } = await supabase.rpc("revertir_consumo", {
     p_operacion_id: d.operacionId,
-    p_negocio_id: d.negocioId,
-    p_producto_id: d.productoId,
-    p_ubicacion_id: d.ubicacionId,
-    p_cantidad: d.cantidad,
+    p_movimiento_id: d.movimientoId,
     p_motivo: d.motivo,
   });
   if (error) return fallo(codigoDeMensaje(error.message));
-  return listo();
+  revalidatePath(REVALIDAR, "layout");
+  return { ok: true, data: null };
 }
 
 export async function registrarSalida(entrada: unknown): Promise<Resultado<null>> {
@@ -163,7 +161,7 @@ export async function buscarProductosAccion(
 ): Promise<Resultado<ProductoElegible[]>> {
   const d = validar(busquedaSchema, entrada);
   if (!d) return { ok: true, data: [] };
-  return buscarProductos(await createClient(), d.negocioId, d.q, d.tipo);
+  return buscarProductos(await createClient(), d.negocioId, d.q);
 }
 
 export async function stockProductoAccion(

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import {
+  agruparAlCambiar,
   armarTabla,
   hrefReportes,
   leerFiltrosReporte,
@@ -79,7 +80,7 @@ export default async function PaginaReportes({
               href={hrefReportes({
                 ...filtros,
                 r: d.id,
-                agrupar: d.agrupar?.includes(filtros.agrupar) ? filtros.agrupar : "dia",
+                agrupar: agruparAlCambiar(d, filtros.agrupar),
               })}
               aria-current={d.id === filtros.r ? "page" : undefined}
               className={cn(

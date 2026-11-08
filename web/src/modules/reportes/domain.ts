@@ -25,7 +25,7 @@ const CAJA: DefReporte = { id: "caja", etiqueta: "Caja" };
 const STOCK: DefReporte = { id: "stock", etiqueta: "Stock" };
 
 // El reporte de insumos es de costos: sin ver_costos no se ofrece (la RPC lo exige también).
-export function reportesDe(tipo: string, verCostos = true): readonly DefReporte[] {
+export function reportesDe(tipo: string, verCostos: boolean): readonly DefReporte[] {
   if (tipo === "lavanderia")
     return [
       { id: "ingresos", etiqueta: "Ingresos", agrupar: ["dia", "producto"] },
@@ -127,15 +127,22 @@ export type TotalesCaja = {
   sesiones_abiertas: number;
 };
 
+// Por día no hay cantidad (insumos de unidades distintas no se suman); por insumo sí, con su unidad.
 export type FilaInsumos = {
   clave: string | null;
   etiqueta: string;
   consumos: number;
-  cantidad: number;
   gasto: number;
   sin_costo: number;
+  cantidad?: number;
+  unidad?: "unidad" | "kg";
 };
-export type TotalesInsumos = Omit<FilaInsumos, "clave" | "etiqueta">;
+export type TotalesInsumos = { consumos: number; gasto: number; sin_costo: number };
+
+// Enlace entre pestañas de reportes: conserva la agrupación si la pestaña destino no tiene lista (la guarda oculta)
+// o la admite; si no, vuelve a "dia".
+export const agruparAlCambiar = (def: DefReporte, actual: Agrupar): Agrupar =>
+  !def.agrupar || def.agrupar.includes(actual) ? actual : "dia";
 
 export type DatosReporte =
   | { tipo: "insumos"; filas: FilaInsumos[]; totales: TotalesInsumos }

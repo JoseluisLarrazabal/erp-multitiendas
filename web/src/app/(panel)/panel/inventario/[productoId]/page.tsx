@@ -147,6 +147,7 @@ export default async function PaginaKardex({
               movimientos={kardex.data.filas}
               ubicaciones={ubicaciones.data}
               unidad={p.unidad}
+              puedeRevertir={puedeAjustar}
             />
           </>
         )}

@@ -10,13 +10,6 @@ export const camposSalida = (unidad: Unidad | undefined, conSigno: boolean): Cam
   motivo: { id: "sal-motivo", mensaje: "El motivo es obligatorio." },
 });
 
-export const camposConsumo = (unidad: Unidad | undefined): Campos => ({
-  productoId: { id: "con-producto", mensaje: "Elige un insumo." },
-  ubicacionId: { id: "con-ubicacion", mensaje: "Elige una ubicación." },
-  cantidad: { id: "con-cantidad", mensaje: mensajeCantidad(unidad) },
-  motivo: { id: "con-motivo", mensaje: "El motivo es obligatorio." },
-});
-
 export const camposTraslado = (unidad: Unidad | undefined): Campos => ({
   productoId: { id: "tra-producto", mensaje: "Elige un producto." },
   origenId: { id: "tra-origen", mensaje: "Elige un origen." },

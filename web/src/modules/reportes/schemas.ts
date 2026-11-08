@@ -42,7 +42,7 @@ export function leerFiltrosReporte(
   crudo: Parameters<typeof leerFiltros>[2],
   tipo: string,
   hoy: string,
-  verCostos = true,
+  verCostos: boolean,
 ): { filtros: FiltrosReporte; invalido: boolean } {
   const lista = reportesDe(tipo, verCostos);
   const defectos: FiltrosReporte = {
@@ -184,10 +184,11 @@ export const respuestaInsumosSchema = z.object({
       clave: textoONulo,
       etiqueta: z.string(),
       consumos: numero,
-      cantidad: numero,
       gasto: numero,
       sin_costo: numero,
+      cantidad: numero.optional(),
+      unidad: z.enum(["unidad", "kg"]).optional(),
     }),
   ),
-  totales: z.object({ consumos: numero, cantidad: numero, gasto: numero, sin_costo: numero }),
+  totales: z.object({ consumos: numero, gasto: numero, sin_costo: numero }),
 });

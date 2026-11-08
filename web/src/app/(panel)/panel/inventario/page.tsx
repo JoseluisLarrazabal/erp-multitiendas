@@ -63,7 +63,7 @@ export default async function PaginaInventario({
                     <PackageMinus aria-hidden /> Salida o ajuste
                   </Link>
                   {activo.tipo === "lavanderia" && (
-                    <Link href="/panel/inventario/consumo" className={enlace}>
+                    <Link href="/panel/inventario/salida?tipo=consumo" className={enlace}>
                       <Droplets aria-hidden /> Consumo
                     </Link>
                   )}

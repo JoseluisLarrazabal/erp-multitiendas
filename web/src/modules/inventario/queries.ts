@@ -169,6 +169,7 @@ export async function leerKardex(
       siguiente: data.length > porPagina ? pagina[pagina.length - 1]!.id : null,
       filas: pagina.map((m) => ({
         id: m.id,
+        refId: m.ref_id,
         ubicacionId: m.ubicacion_id,
         tipo: m.tipo,
         cantidad: m.cantidad,
@@ -201,16 +202,13 @@ export async function buscarProductos(
   supabase: Cliente,
   negocioId: string,
   texto: string,
-  tipo?: "producto" | "insumo",
 ): Promise<Resultado<ProductoElegible[]>> {
-  const base = () => {
-    const q = supabase
+  const base = () =>
+    supabase
       .from("inventario_lista")
       .select(COLUMNAS_ELEGIBLE)
       .eq("negocio_id", negocioId)
       .eq("activo", true);
-    return tipo ? q.eq("tipo", tipo) : q;
-  };
   const q = sanearBusqueda(texto);
   const sinFilas = { data: [], error: null };
   const [exacto, parecidos] = await Promise.all([

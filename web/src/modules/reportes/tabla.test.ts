@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DatosReporte, FilaStockReporte, FilaVentas } from "./domain";
+import type { DatosReporte, FilaInsumos, FilaStockReporte, FilaVentas } from "./domain";
 import { armarTabla, formatearKg, tablaKardex, textoCelda } from "./tabla";
 
 const venta = (p: Partial<FilaVentas> = {}): FilaVentas => ({
@@ -26,36 +26,43 @@ const titulos = (d: DatosReporte, o: Parameters<typeof armarTabla>[1]) =>
   armarTabla(d, o).columnas.map((c) => c.titulo);
 
 describe("armarTabla insumos", () => {
-  const datos = (sinCosto = 0): DatosReporte => ({
+  const filaDia = {
+    clave: "2026-11-02",
+    etiqueta: "2026-11-02",
+    consumos: 2,
+    gasto: 21,
+    sin_costo: 0,
+  };
+  const datos = (filas: FilaInsumos[], sinCosto = 0): DatosReporte => ({
     tipo: "insumos",
-    filas: [
-      {
-        clave: "2026-11-02",
-        etiqueta: "2026-11-02",
-        consumos: 2,
-        cantidad: 4.5,
-        gasto: 21,
-        sin_costo: sinCosto,
-      },
-    ],
-    totales: { consumos: 2, cantidad: 4.5, gasto: 21, sin_costo: sinCosto },
+    filas,
+    totales: { consumos: 2, gasto: 21, sin_costo: sinCosto },
   });
-  it("por día: columna de día, gasto y fila de totales", () => {
-    const t = armarTabla(datos(), { ...base, tipo: "lavanderia", agrupar: "dia" });
+  const o = { ...base, tipo: "lavanderia" } as const;
+  it("por día: sin cantidad, con gasto y fila de totales", () => {
+    const t = armarTabla(datos([filaDia]), { ...o, agrupar: "dia" });
     expect(t.hoja).toBe("Insumos");
     expect(t.columnas).toEqual([
       { titulo: "Día", tipo: "dia" },
       { titulo: "Consumos", tipo: "entero" },
-      { titulo: "Cantidad", tipo: "cantidad" },
       { titulo: "Gasto", tipo: "monto" },
     ]);
-    expect(t.filas[0]).toEqual(["2026-11-02", 2, 4.5, 21]);
-    expect(t.totales).toEqual(["Total", 2, 4.5, 21]);
+    expect(t.filas[0]).toEqual(["2026-11-02", 2, 21]);
+    expect(t.totales).toEqual(["Total", 2, 21]);
     expect(t.avisos).toEqual([]);
   });
-  it("por insumo es texto y avisa de los consumos sin costo", () => {
-    const t = armarTabla(datos(1), { ...base, tipo: "lavanderia", agrupar: "insumo" });
-    expect(t.columnas[0]).toEqual({ titulo: "Insumo", tipo: "texto" });
+  it("por insumo: cantidad con su unidad y avisa de los consumos sin costo", () => {
+    const fila = { ...filaDia, etiqueta: "I2 Insumo2", cantidad: 1.5, unidad: "kg" as const };
+    const t = armarTabla(datos([fila], 1), { ...o, agrupar: "insumo" });
+    expect(t.columnas.map((c) => c.titulo)).toEqual([
+      "Insumo",
+      "Consumos",
+      "Cantidad",
+      "Unidad",
+      "Gasto",
+    ]);
+    expect(t.filas[0]).toEqual(["I2 Insumo2", 2, 1.5, "kg", 21]);
+    expect(t.totales).toEqual(["Total", 2, null, null, 21]);
     expect(t.avisos[0]).toContain("1 consumo sin costo cargado");
   });
 });

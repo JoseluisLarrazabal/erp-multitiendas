@@ -1,7 +1,6 @@
 // Segunda entrada del módulo, solo para páginas de /panel. Arrastra las server actions: si estuviera en
 // index.ts, /pos y /login (precacheados) cargarían sus referencias aunque no las usen.
 export { FiltrosStockForm } from "./components/filtros-stock";
-export { FormConsumo } from "./components/form-consumo";
 export { FormConteo } from "./components/form-conteo";
 export { FormEntrada } from "./components/form-entrada";
 export { FormSalida } from "./components/form-salida";
