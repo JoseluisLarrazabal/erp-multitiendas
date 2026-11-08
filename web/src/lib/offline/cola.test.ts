@@ -16,6 +16,7 @@ import {
   type FilaNueva,
 } from "./cola";
 import { baseOffline } from "./db";
+import { resultadoDeError } from "./envio";
 import { avisarRed, leerSinRed } from "./red";
 
 const uuid = (n: number) => `a0000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -211,6 +212,49 @@ describe("vaciar", () => {
       },
     });
     expect(vistos).toEqual([{ n: 1 }]);
+  });
+
+  it("los fallos de red no gastan el tope de errores inesperados; tras 5 errores con respuesta el siguiente rechaza; reabrir lo reinicia", async () => {
+    await encolar(nueva(1));
+    for (let i = 0; i < 5; i++) await marcarRed(uuid(1), "sin red");
+    expect((await leerFilas()).filas[0]).toMatchObject({ intentos: 5, inesperados: 0 });
+    const enviador = vi.fn<Enviador>(async (f) =>
+      resultadoDeError({ message: "boom", code: "PGRST000" }, f.inesperados),
+    );
+    await vaciar({ ...todas(), forzar: true, enviadores: { venta: enviador } });
+    expect((await leerFilas()).filas[0]).toMatchObject({ estado: "pendiente", inesperados: 1 });
+    for (let i = 0; i < 5; i++)
+      await vaciar({ ...todas(), forzar: true, enviadores: { venta: enviador } });
+    expect((await leerFilas()).filas[0]).toMatchObject({ estado: "rechazada", inesperados: 5 });
+    await reabrir(uuid(1));
+    expect((await leerFilas()).filas[0]).toMatchObject({
+      estado: "pendiente",
+      inesperados: 0,
+      intentos: 10,
+    });
+  });
+
+  it("una fila vieja sin `inesperados` sigue legible tras marcarRed con respuesta", async () => {
+    await encolar(nueva(1));
+    await baseOffline()
+      .cola.where("id")
+      .equals(uuid(1))
+      .modify((f) => {
+        delete (f as { inesperados?: number }).inesperados;
+      });
+    await marcarRed(uuid(1), "x", true);
+    const r = await leerFilas();
+    expect(r.ilegibles).toBe(0);
+    expect(r.filas[0]).toMatchObject({ inesperados: 1, intentos: 1 });
+  });
+
+  it("tras un error con respuesta la espera sale de `inesperados`, no de los intentos de red", async () => {
+    await encolar(nueva(1));
+    await baseOffline().cola.where("id").equals(uuid(1)).modify({ intentos: 40 });
+    const antes = Date.now();
+    await marcarRed(uuid(1), "x", true);
+    const f = (await leerFilas()).filas[0]!;
+    expect(f.proximoIntento - antes).toBeLessThan(esperaReintento(1) + 1_000);
   });
 
   it("Reintentar conserva los intentos: la duda no se borra", async () => {

@@ -47,7 +47,14 @@ const MENSAJE_LIMPIEZA =
 
 export type EntradaVenta = Pick<
   FilaCola,
-  "id" | "usuarioId" | "dispositivoId" | "payload" | "nota" | "numeroImpreso" | "intentos"
+  | "id"
+  | "usuarioId"
+  | "dispositivoId"
+  | "payload"
+  | "nota"
+  | "numeroImpreso"
+  | "intentos"
+  | "inesperados"
 >;
 export type SalidaVenta = { resultado: ResultadoEnvio; numero: string | null };
 
@@ -124,7 +131,7 @@ export async function enviarVentaDeCola(
     // Solo un código ERP_ es una respuesta definitiva de la base; cualquier otro fallo (PGRST, 40P01, 5xx) puede
     // ser transitorio y la venta ya se cobró: se reintenta hasta MAX_INTENTOS_INESPERADOS. Sin respuesta (r.red)
     // siempre se reintenta.
-    const inesperado = !r.codigo && fila.intentos >= MAX_INTENTOS_INESPERADOS;
+    const inesperado = !r.codigo && fila.inesperados >= MAX_INTENTOS_INESPERADOS;
     if (r.red || (!r.codigo && !inesperado))
       return {
         resultado: { t: "red", error: r.error, respondio: !r.red },
@@ -223,7 +230,7 @@ export async function cobrarEnCola(
       salida = { resultado: { t: "red", error: MENSAJE_RED }, numero: fila.numeroImpreso };
     else {
       try {
-        salida = await enviarVentaDeCola({ ...fila, intentos: 0 }, supabase, true);
+        salida = await enviarVentaDeCola({ ...fila, intentos: 0, inesperados: 0 }, supabase, true);
       } catch {
         // El primer intento pudo renumerar la fila: el número vigente es el de la fila, no el original.
         const vigente = await leerFila(fila.id).catch(() => null);
@@ -251,7 +258,8 @@ export async function cobrarEnCola(
     else if (enLinea) {
       await marcarEntregada();
       // Sin red al confirmar no hubo intento, y no se cuenta como fallo.
-      if (res.t === "red") await marcarRed(fila.id, res.error).catch(() => undefined);
+      if (res.t === "red")
+        await marcarRed(fila.id, res.error, res.respondio).catch(() => undefined);
     }
     return {
       t: "entregada",
