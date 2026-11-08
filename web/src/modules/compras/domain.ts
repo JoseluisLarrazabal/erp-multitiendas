@@ -37,4 +37,16 @@ export function totalCentavos(
   return total;
 }
 
+const MENSAJES_COMPRAS: Record<string, string> = {
+  ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
+  ERP_OPERACION_REPETIDA: "La compra ya se registró con otros datos; recarga la página.",
+  ERP_SIN_PERMISO: "No tienes permiso para gestionar compras.",
+  ERP_PAGO_EXCEDE_DEUDA: "El pago supera lo que se le debe al proveedor.",
+};
+
+// Solo los códigos propios de compras; el resto lo traduce usuarios/domain (ERP_INTERNO...). Un fallo de red lo
+// muestra useAccion en el cliente: la action corre en el servidor y no distingue red.
+export const mensajeDeCompras = (codigo: string | undefined) =>
+  codigo ? MENSAJES_COMPRAS[codigo] : undefined;
+
 export const aNumero = (texto: string) => Number(texto.trim().replace(",", "."));

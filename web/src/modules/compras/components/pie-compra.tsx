@@ -1,4 +1,4 @@
-import { PieOperacion } from "@/modules/inventario";
+import { PieOperacion } from "@/modules/inventario/panel-cliente";
 import { formatearBs } from "@/lib/format/moneda";
 
 // Total en pantalla (centavos enteros) y botón de envío con sus avisos.

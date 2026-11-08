@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lineaCentavos, parsearDecimal, totalCentavos } from "./domain";
+import { lineaCentavos, mensajeDeCompras, parsearDecimal, totalCentavos } from "./domain";
 
 describe("parsearDecimal", () => {
   it("escala por los decimales y acepta coma o punto", () => {
@@ -41,5 +41,18 @@ describe("totalCentavos", () => {
   });
   it("null si una línea es inválida", () => {
     expect(totalCentavos([{ cantidad: "1", costo: "" }])).toBeNull();
+  });
+});
+
+describe("mensajeDeCompras", () => {
+  it("traduce los códigos propios de compras", () => {
+    expect(mensajeDeCompras("ERP_OPERACION_REPETIDA")).toContain("recarga la página");
+    expect(mensajeDeCompras("ERP_PAGO_EXCEDE_DEUDA")).toContain("proveedor");
+    expect(mensajeDeCompras("ERP_SIN_PERMISO")).toContain("compras");
+    expect(mensajeDeCompras("ERP_DATOS_INVALIDOS")).toBeDefined();
+  });
+  it("deja pasar lo que no es suyo", () => {
+    expect(mensajeDeCompras("ERP_INTERNO")).toBeUndefined();
+    expect(mensajeDeCompras(undefined)).toBeUndefined();
   });
 });

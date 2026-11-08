@@ -2,22 +2,20 @@
 
 // Solo para el panel (se importa por panel.ts). No importar desde /pos: ver usuarios/actions.ts.
 import { revalidatePath } from "next/cache";
-import { codigoErp, mensajeErp } from "@/lib/erp-errores";
 import { parsearMonto } from "@/lib/format/moneda";
 import { createClient } from "@/lib/supabase/server";
-import { validar, type Resultado } from "@/modules/usuarios/panel";
-import { aNumero, totalCentavos } from "./domain";
+import {
+  codigoDeMensaje,
+  mensajeDeError as mensajeBase,
+  validar,
+  type Resultado,
+} from "@/modules/usuarios/panel";
+import { aNumero, mensajeDeCompras, totalCentavos } from "./domain";
 import { compraSchema, pagoSchema, proveedorSchema } from "./schemas";
 
-const invalido = (): Resultado<never> => ({
-  ok: false,
-  error: mensajeErp("ERP_DATOS_INVALIDOS"),
-  codigo: "ERP_DATOS_INVALIDOS",
-});
-const fallo = (error: { message?: string }): Resultado<never> => {
-  const codigo = codigoErp(error);
-  return { ok: false, error: mensajeErp(codigo), codigo };
-};
+const mensaje = (codigo?: string) => mensajeDeCompras(codigo) ?? mensajeBase(codigo);
+const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensaje(codigo) });
+const invalido = () => fallo("ERP_DATOS_INVALIDOS");
 const listo = (): Resultado<null> => {
   revalidatePath("/panel/proveedores");
   revalidatePath("/panel/compras");
@@ -38,7 +36,7 @@ export async function guardarProveedor(entrada: unknown): Promise<Resultado<null
       activo: d.activo,
     },
   });
-  return error ? fallo(error) : listo();
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
 }
 
 export async function pagarProveedor(entrada: unknown): Promise<Resultado<null>> {
@@ -56,7 +54,7 @@ export async function pagarProveedor(entrada: unknown): Promise<Resultado<null>>
       medio: d.medio,
     },
   });
-  return error ? fallo(error) : listo();
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
 }
 
 export async function registrarCompra(entrada: unknown): Promise<Resultado<null>> {
@@ -81,5 +79,5 @@ export async function registrarCompra(entrada: unknown): Promise<Resultado<null>
       })),
     },
   });
-  return error ? fallo(error) : listo();
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
 }

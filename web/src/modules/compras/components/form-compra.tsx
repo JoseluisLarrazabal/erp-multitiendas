@@ -11,9 +11,8 @@ import {
   MENSAJE_DATOS,
   parsearCantidad,
   type Ubicacion,
-  SelectUbicacion,
-  useOperacion,
 } from "@/modules/inventario";
+import { SelectUbicacion, useOperacion } from "@/modules/inventario/panel-cliente";
 import { registrarCompra } from "../actions";
 import {
   ETIQUETA_MEDIO,
@@ -56,7 +55,7 @@ export function FormCompra({
 
   const total = totalCentavos(items);
   const cambiar = (clave: number, cambio: Partial<ItemCompra>) =>
-    setItems(items.map((i) => (i.clave === clave ? { ...i, ...cambio } : i)));
+    setItems((prev) => prev.map((i) => (i.clave === clave ? { ...i, ...cambio } : i)));
 
   function alEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -172,7 +171,7 @@ export function FormCompra({
             errores={errores}
             puedeQuitar={items.length > 1}
             alCambiar={(c) => cambiar(i.clave, c)}
-            alQuitar={() => setItems(items.filter((x) => x.clave !== i.clave))}
+            alQuitar={() => setItems((prev) => prev.filter((x) => x.clave !== i.clave))}
           />
         ))}
         <div>
@@ -181,7 +180,9 @@ export function FormCompra({
             id="cmp-agregar"
             variant="outline"
             className="h-10"
-            onClick={() => setItems([...items, nueva(Math.max(...items.map((x) => x.clave)) + 1)])}
+            onClick={() =>
+              setItems((prev) => [...prev, nueva(Math.max(...prev.map((x) => x.clave)) + 1)])
+            }
           >
             <Plus aria-hidden /> Agregar producto
           </Button>

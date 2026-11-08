@@ -7,7 +7,7 @@ import { Campo, propsCampo, type Errores } from "@/components/panel/campo";
 import { lineaCentavos } from "../domain";
 import { formatearBs } from "@/lib/format/moneda";
 import type { ProductoElegible } from "@/modules/inventario";
-import { SelectorProducto } from "@/modules/inventario";
+import { SelectorProducto } from "@/modules/inventario/panel-cliente";
 
 export type ItemCompra = {
   clave: number;

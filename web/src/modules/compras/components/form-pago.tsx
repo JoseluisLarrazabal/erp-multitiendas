@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import { Campo, propsCampo } from "@/components/panel/campo";
 import { formatearBs, parsearMonto } from "@/lib/format/moneda";
-import { useOperacion } from "@/modules/inventario";
+import { useOperacion } from "@/modules/inventario/panel-cliente";
 import { pagarProveedor } from "../actions";
 import { ETIQUETA_MEDIO, MEDIOS_PAGO, type MedioPago } from "../domain";
 import type { FilaProveedor } from "../queries";

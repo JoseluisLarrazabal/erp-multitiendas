@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
-import { FormCompra, listarProveedores } from "@/modules/compras/panel";
+import { FormCompra } from "@/modules/compras/panel";
 import { exigirPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Nueva compra · ERP Multitiendas" };
@@ -15,11 +15,21 @@ export default async function PaginaNuevaCompra() {
   const { activo } = await exigirPermiso("gestionar_compras");
   const supabase = await createClient();
   const [proveedores, ubicaciones] = await Promise.all([
-    listarProveedores(supabase, activo.negocioId),
+    supabase
+      .from("proveedores")
+      .select("id, nombre")
+      .eq("negocio_id", activo.negocioId)
+      .eq("activo", true)
+      .order("nombre")
+      .order("id"),
     listarUbicaciones(supabase, activo.negocioId),
   ]);
-  const error = !proveedores.ok ? proveedores.error : !ubicaciones.ok ? ubicaciones.error : null;
-  const activos = proveedores.ok ? proveedores.data.filter((p) => p.activo) : [];
+  const error = proveedores.error
+    ? "No se pudieron leer los proveedores."
+    : !ubicaciones.ok
+      ? ubicaciones.error
+      : null;
+  const activos = proveedores.data ?? [];
 
   return (
     <>

@@ -199,14 +199,14 @@ isOneToOne: false
                   ]
                 },"compras": {
                   Row: {
-                    "condicion": string,"created_at": string,"fecha": string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id": string | null
+                    "condicion": string,"created_at": string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "condicion": string,"created_at"?: string,"fecha"?: string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id"?: string | null
+                    "condicion": string,"created_at"?: string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id"?: string | null
                   }
                   Update: {
-                    "condicion"?: string,"created_at"?: string,"fecha"?: string,"id"?: string,"negocio_id"?: string,"proveedor_id"?: string,"total"?: number,"ubicacion_id"?: string,"usuario_id"?: string | null
+                    "condicion"?: string,"created_at"?: string,"id"?: string,"negocio_id"?: string,"proveedor_id"?: string,"total"?: number,"ubicacion_id"?: string,"usuario_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1091,6 +1091,9 @@ isOneToOne: false
                            },
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
+                           },
+"deuda_proveedor":
+{ Args: { "p_proveedor_id": string }; Returns: number
                            },
 "deudas_proveedores":
 { Args: { "p_negocio_id": string }; Returns: {

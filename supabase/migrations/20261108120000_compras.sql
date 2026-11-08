@@ -30,7 +30,6 @@ create table public.compras (
   negocio_id uuid not null,
   proveedor_id uuid not null,
   ubicacion_id uuid not null,
-  fecha timestamptz not null default now(),
   total numeric(12,2) not null check (total >= 0 and total <> 'NaN'),
   condicion text not null check (condicion in ('contado', 'credito')),
   usuario_id uuid,
@@ -40,7 +39,7 @@ create table public.compras (
   foreign key (negocio_id, ubicacion_id) references public.ubicaciones (negocio_id, id)
 );
 create index compras_proveedor_idx on public.compras (proveedor_id);
-create index compras_negocio_fecha_idx on public.compras (negocio_id, created_at);
+create index compras_negocio_creada_idx on public.compras (negocio_id, created_at desc);
 
 create table public.compra_items (
   compra_id uuid not null,
@@ -106,7 +105,7 @@ revoke all on public.compras from anon, authenticated, public;
 revoke all on public.compra_items from anon, authenticated, public;
 revoke all on public.proveedor_pagos from anon, authenticated, public;
 grant select on public.proveedores to authenticated;
-grant select (id, negocio_id, proveedor_id, ubicacion_id, fecha, condicion, usuario_id, created_at)
+grant select (id, negocio_id, proveedor_id, ubicacion_id, condicion, usuario_id, created_at)
   on public.compras to authenticated;
 grant select (compra_id, negocio_id, producto_id, cantidad) on public.compra_items to authenticated;
 grant select (id, negocio_id, proveedor_id, compra_id, medio, usuario_id, created_at)
@@ -185,9 +184,12 @@ declare
   v_items jsonb;
   v_item jsonb;
   v_ids uuid[] := '{}';
+  v_cants numeric[] := '{}';
+  v_costos numeric[] := '{}';
   v_pid uuid;
   v_cant numeric;
   v_costo numeric;
+  i integer;
   v_producto public.productos;
   v_existente public.compras;
 begin
@@ -226,6 +228,8 @@ begin
       raise exception 'ERP_DATOS_INVALIDOS';
     end if;
     v_ids := v_ids || v_pid;
+    v_cants := v_cants || v_cant;
+    v_costos := v_costos || v_costo;
     v_total_items := v_total_items + round(v_cant * v_costo, 2);
   end loop;
   if v_total_items <> v_total then
@@ -245,20 +249,21 @@ begin
   insert into public.compras (id, negocio_id, proveedor_id, ubicacion_id, total, condicion, usuario_id)
   values (v_id, v_negocio_id, v_proveedor_id, v_ubicacion_id, v_total, v_condicion, (select auth.uid()));
 
-  for v_item in select * from jsonb_array_elements(v_items) loop
-    v_pid := (v_item ->> 'producto_id')::uuid;
-    v_cant := (v_item ->> 'cantidad')::numeric;
-    v_costo := (v_item ->> 'costo_unitario')::numeric;
-    v_producto := public.validar_inventario(v_negocio_id, v_pid, v_ubicacion_id, v_cant);
+  for i in 1 .. cardinality(v_ids) loop
+    v_producto := public.validar_inventario(v_negocio_id, v_ids[i], v_ubicacion_id, v_cants[i]);
     if not v_producto.activo then
       raise exception 'ERP_DATOS_INVALIDOS';
     end if;
+  end loop;
+  -- Mismo orden de bloqueo que las ventas (por producto): sin interbloqueo con una venta concurrente.
+  perform public.bloquear_stock(v_negocio_id, v_ubicacion_id, v_ids);
+  for i in 1 .. cardinality(v_ids) loop
     insert into public.compra_items (compra_id, negocio_id, producto_id, cantidad, costo_unitario)
-    values (v_id, v_negocio_id, v_pid, v_cant, v_costo);
+    values (v_id, v_negocio_id, v_ids[i], v_cants[i], v_costos[i]);
     insert into public.movimientos_inventario (
       negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, ref_tipo, ref_id, usuario_id
     ) values (
-      v_negocio_id, v_ubicacion_id, v_pid, 'compra', v_cant, v_costo, 'compra', v_id, (select auth.uid())
+      v_negocio_id, v_ubicacion_id, v_ids[i], 'compra', v_cants[i], v_costos[i], 'compra', v_id, (select auth.uid())
     );
   end loop;
 
@@ -271,6 +276,18 @@ exception
   when numeric_value_out_of_range or invalid_text_representation or foreign_key_violation then
     raise exception 'ERP_DATOS_INVALIDOS';
 end;
+$$;
+
+-- Privado (sin grant): compras - pagos de un proveedor. La usa pagar_proveedor, que ya validó el permiso.
+create function public.deuda_proveedor(p_proveedor_id uuid)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select sum(total) from public.compras where proveedor_id = p_proveedor_id), 0)
+       - coalesce((select sum(monto) from public.proveedor_pagos where proveedor_id = p_proveedor_id), 0)
 $$;
 
 -- p_pago: id, negocio_id, proveedor_id, compra_id (opcional), monto > 0, medio. Devuelve el id del pago.
@@ -315,9 +332,7 @@ begin
                          where id = v_compra_id and negocio_id = v_negocio_id and proveedor_id = v_proveedor_id)) then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
-  select coalesce((select sum(total) from public.compras where proveedor_id = v_proveedor_id), 0)
-       - coalesce((select sum(monto) from public.proveedor_pagos where proveedor_id = v_proveedor_id), 0)
-    into v_deuda;
+  v_deuda := public.deuda_proveedor(v_proveedor_id);
   if v_monto > v_deuda then
     raise exception 'ERP_PAGO_EXCEDE_DEUDA';
   end if;
@@ -344,12 +359,12 @@ begin
     raise exception 'ERP_SIN_PERMISO';
   end if;
   return query
-    select p.id,
-           coalesce((select sum(c.total) from public.compras c where c.proveedor_id = p.id), 0),
-           coalesce((select sum(g.monto) from public.proveedor_pagos g where g.proveedor_id = p.id), 0),
-           coalesce((select sum(c.total) from public.compras c where c.proveedor_id = p.id), 0)
-             - coalesce((select sum(g.monto) from public.proveedor_pagos g where g.proveedor_id = p.id), 0)
+    select p.id, s.compras, s.pagos, s.compras - s.pagos
     from public.proveedores p
+    cross join lateral (
+      select coalesce((select sum(c.total) from public.compras c where c.proveedor_id = p.id), 0) as compras,
+             coalesce((select sum(g.monto) from public.proveedor_pagos g where g.proveedor_id = p.id), 0) as pagos
+    ) s
     where p.negocio_id = p_negocio_id;
 end;
 $$;
@@ -375,6 +390,7 @@ $$;
 revoke all on function public.guardar_proveedor(uuid, jsonb) from public, anon, authenticated;
 revoke all on function public.registrar_compra(jsonb) from public, anon, authenticated;
 revoke all on function public.pagar_proveedor(jsonb) from public, anon, authenticated;
+revoke all on function public.deuda_proveedor(uuid) from public, anon, authenticated;
 revoke all on function public.deudas_proveedores(uuid) from public, anon, authenticated;
 revoke all on function public.totales_compras(uuid, uuid[]) from public, anon, authenticated;
 grant execute on function public.guardar_proveedor(uuid, jsonb) to authenticated;

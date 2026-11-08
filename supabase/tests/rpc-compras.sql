@@ -1,6 +1,6 @@
 -- RPC de compras: guardar_proveedor, registrar_compra, pagar_proveedor, deudas_proveedores, totales_compras (DB-25).
 begin;
-select plan(91);
+select plan(99);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -79,6 +79,8 @@ select ok(has_function_privilege('authenticated', 'public.registrar_compra(jsonb
   and not has_function_privilege('anon', 'public.registrar_compra(jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.pagar_proveedor(jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.deudas_proveedores(uuid)', 'EXECUTE'), 'solo authenticated ejecuta');
+select ok(not has_function_privilege('authenticated', 'public.deuda_proveedor(uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.deuda_proveedor(uuid)', 'EXECUTE'), 'deuda_proveedor es privada');
 
 -- guardar_proveedor
 select pg_temp.como(pg_temp.i('d'));
@@ -153,6 +155,17 @@ select is((select count(*) from public.movimientos_inventario where ref_id = pg_
 select is((select count(*) from public.compras where id = pg_temp.i('O10')), 1::bigint, 'idempotencia: no duplica la compra');
 select throws_ok($$select public.registrar_compra(pg_temp.compra('O10', 'PV1', 'credito', 77, jsonb_build_array(pg_temp.it('P1', 10, 7.7))))$$, 'P0001', 'ERP_OPERACION_REPETIDA', 'idempotencia: mismo id con otro payload');
 
+-- Redondeo por línea: 3 × 1,005 = 3,015 -> 3,02 (mitad hacia arriba, igual que lineaCentavos en el dominio TS)
+select throws_ok($$select public.registrar_compra(pg_temp.compra('O13', 'PV2', 'credito', 3.01, jsonb_build_array(pg_temp.it('P1', 3, 1.005))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'redondeo: 3 × 1,005 no suma 3,01');
+select lives_ok($$select public.registrar_compra(pg_temp.compra('O13', 'PV2', 'credito', 3.02, jsonb_build_array(pg_temp.it('P1', 3, 1.005))))$$, 'redondeo: 3 × 1,005 suma 3,02');
+select is(pg_temp.deuda('PV2'), 3.02::numeric, 'redondeo: la deuda es 3,02');
+
+-- Un proveedor desactivado no recibe compras nuevas, pero se le puede pagar lo que ya se le debe (intencional).
+select lives_ok($$select public.guardar_proveedor(pg_temp.i('T'), jsonb_build_object('id', pg_temp.i('PV2'), 'nombre', 'PV2', 'activo', false))$$, 'proveedor: desactivar');
+select throws_ok($$select public.registrar_compra(pg_temp.compra('O14', 'PV2', 'credito', 7, jsonb_build_array(pg_temp.it('P1', 1, 7))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'proveedor inactivo: no recibe compras');
+select lives_ok($$select public.pagar_proveedor(pg_temp.pago('O25', 'PV2', 3.02))$$, 'proveedor inactivo: se le paga la deuda que quedó');
+select is(pg_temp.deuda('PV2'), 0::numeric, 'proveedor inactivo: deuda saldada');
+
 -- Datos inválidos
 select throws_ok($$select public.registrar_compra(pg_temp.compra('O30', 'PV1', 'credito', 0, jsonb_build_array(pg_temp.it('P1', 0, 7))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'inválido: cantidad 0');
 select throws_ok($$select public.registrar_compra(pg_temp.compra('O30', 'PV1', 'credito', 0, jsonb_build_array(pg_temp.it('P1', -1, 7))))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'inválido: cantidad negativa');
@@ -195,8 +208,8 @@ select pg_temp.como(pg_temp.i('d'));
 select throws_ok($$select total from public.compras$$, '42501', null, 'compras.total no se lee por columna');
 select throws_ok($$select costo_unitario from public.compra_items$$, '42501', null, 'compra_items.costo_unitario no se lee por columna');
 select throws_ok($$select monto from public.proveedor_pagos$$, '42501', null, 'proveedor_pagos.monto no se lee por columna');
-select is((select count(*) from public.compras where negocio_id = pg_temp.i('T')), 3::bigint, 'el dueño lee las compras de su negocio');
-select is((select count(*) from public.compra_items where negocio_id = pg_temp.i('T')), 4::bigint, 'el dueño lee los ítems de su negocio');
+select is((select count(*) from public.compras where negocio_id = pg_temp.i('T')), 4::bigint, 'el dueño lee las compras de su negocio');
+select is((select count(*) from public.compra_items where negocio_id = pg_temp.i('T')), 5::bigint, 'el dueño lee los ítems de su negocio');
 select pg_temp.como(pg_temp.i('x'));
 select is((select count(*) from public.proveedores where negocio_id = pg_temp.i('T')), 0::bigint, 'RLS: otro negocio no lee proveedores');
 select is((select count(*) from public.compras where negocio_id = pg_temp.i('T')), 0::bigint, 'RLS: otro negocio no lee compras');

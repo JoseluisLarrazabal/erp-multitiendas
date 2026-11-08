@@ -14,7 +14,7 @@ export type FilaProveedor = {
 
 export type FilaCompra = {
   id: string;
-  fecha: string;
+  creadaEn: string;
   proveedor: string;
   condicion: string;
   // null = sin ver_costos.
@@ -57,17 +57,14 @@ export async function listarCompras(
   const actual = Math.min(Math.max(1, pagina), Math.max(1, Math.ceil(total / porPagina)));
   if (total === 0) return { ok: true, data: { filas: [], total, pagina: actual } };
   const desde = (actual - 1) * porPagina;
-  const [compras, proveedores] = await Promise.all([
-    supabase
-      .from("compras")
-      .select("id, proveedor_id, fecha, condicion")
-      .eq("negocio_id", negocioId)
-      .order("fecha", { ascending: false })
-      .order("id")
-      .range(desde, desde + porPagina - 1),
-    supabase.from("proveedores").select("id, nombre").eq("negocio_id", negocioId),
-  ]);
-  if (compras.error || proveedores.error) return falla;
+  const compras = await supabase
+    .from("compras")
+    .select("id, created_at, condicion, proveedores(nombre)")
+    .eq("negocio_id", negocioId)
+    .order("created_at", { ascending: false })
+    .order("id")
+    .range(desde, desde + porPagina - 1);
+  if (compras.error) return falla;
   const totales = new Map<string, number>();
   if (verCostos) {
     const t = await supabase.rpc("totales_compras", {
@@ -77,7 +74,6 @@ export async function listarCompras(
     if (t.error) return falla;
     for (const f of t.data) totales.set(f.compra_id, f.total);
   }
-  const nombres = new Map(proveedores.data.map((p) => [p.id, p.nombre]));
   return {
     ok: true,
     data: {
@@ -85,8 +81,8 @@ export async function listarCompras(
       pagina: actual,
       filas: compras.data.map((c) => ({
         id: c.id,
-        fecha: c.fecha,
-        proveedor: nombres.get(c.proveedor_id) ?? "",
+        creadaEn: c.created_at,
+        proveedor: c.proveedores?.nombre ?? "",
         condicion: c.condicion,
         total: verCostos ? (totales.get(c.id) ?? 0) : null,
       })),
