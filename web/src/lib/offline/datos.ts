@@ -14,11 +14,22 @@ export async function leerDato<T>(clave: string, schema: ZodType<T>): Promise<T 
   }
 }
 
-// No bloquea la UI: el llamador no espera ni se entera del fallo. `despues` corre solo si se guardó.
-export function guardarDato(clave: string, valor: unknown, despues?: () => void): void {
-  void baseOffline()
+// Cerrando sesión: desde aquí ninguna escritura nueva (ni las diferidas) puede resucitar lo que el cierre va a borrar.
+let escrituraBloqueada = false;
+export function bloquearEscrituras(bloquear: boolean): void {
+  escrituraBloqueada = bloquear;
+  if (!bloquear) return;
+  for (const { t } of pendientes.values()) clearTimeout(t);
+  pendientes.clear();
+}
+
+// Nunca lanza: el llamador puede ignorar la promesa (no bloquea la UI) o esperarla cuando una escritura no deba
+// quedar en vuelo (cierre de sesión). `despues` corre solo si se guardó.
+export function guardarDato(clave: string, valor: unknown, despues?: () => void): Promise<void> {
+  if (escrituraBloqueada) return Promise.resolve();
+  return baseOffline()
     .datos.put({ clave, valor })
-    .then(despues)
+    .then(() => despues?.())
     .catch(() => undefined);
 }
 

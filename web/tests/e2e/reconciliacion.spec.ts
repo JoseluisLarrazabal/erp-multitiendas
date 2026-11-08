@@ -153,6 +153,16 @@ test.afterAll(async () => {
 test.describe("con ver_reportes", () => {
   test.use({ storageState: rutaAuth("dueno") });
 
+  test("el Inicio avisa cuántas ventas hay por revisar y lleva a la reconciliación", async ({
+    page,
+  }) => {
+    await ir(page, "/panel");
+    const aviso = page.getByTestId("aviso-por-revisar");
+    await expect(aviso).toContainText(/ventas? por revisar/);
+    await aviso.click();
+    await expect(page).toHaveURL(/\/panel\/reconciliacion$/);
+  });
+
   test("la venta con QR pendiente y marca aparece con motivo, origen y quién la envió", async ({
     page,
   }) => {

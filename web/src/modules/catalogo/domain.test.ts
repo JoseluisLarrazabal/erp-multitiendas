@@ -35,10 +35,10 @@ describe("parsearMonto", () => {
 });
 
 describe("parsearMonto: miles y cero", () => {
-  it("no adivina miles: 1.500 se rechaza, con coma o con más decimales sí", () => {
+  it("no adivina miles: 1.500 y 1,500 se rechazan; con 4 decimales sí", () => {
     expect(parsearMonto("1.500", 4)).toBeNull();
     expect(parsearMonto("1.500")).toBeNull();
-    expect(parsearMonto("1,500", 4)).toBe(1.5);
+    expect(parsearMonto("1,500", 4)).toBeNull();
     expect(parsearMonto("1.5000", 4)).toBe(1.5);
   });
   it("el cero solo vale si se admite (costos)", () => {

@@ -1,3 +1,5 @@
+import { parsearMonto as parsearMontoBase } from "@/lib/format/moneda";
+
 export type Lista = "contado" | "credito" | "mayorista" | "minimo" | "normal" | "express";
 export type Moneda = "BOB" | "USD";
 
@@ -73,14 +75,12 @@ export const MENSAJE_DATOS = "Revisa los datos: hay algo incompleto o inválido.
 
 export const MENSAJE_MILES = "Escribe el monto con coma, sin puntos de miles. Ej.: 1500,50";
 
-// Texto de un monto -> número. Acepta coma o punto como decimal, con a lo más `decimales`. Mayor a 0, o desde 0 si
-// `admiteCero` (costos). No adivina miles: "1.500" es ambiguo (¿1,5 o 1500?) y se rechaza. null si no vale.
+// Texto de un monto -> número en Bs (el parseo es el de lib/format/moneda). Mayor a 0, o desde 0 si `admiteCero`
+// (costos). No adivina miles: "1.500" es ambiguo (¿1,5 o 1500?) y se rechaza. null si no vale.
 export function parsearMonto(texto: string, decimales = 2, admiteCero = false): number | null {
-  const t = texto.trim();
-  if (!new RegExp(`^\\d+([.,]\\d{1,${decimales}})?$`).test(t) || /^\d+\.\d{3}$/.test(t))
-    return null;
-  const n = Number(t.replace(",", "."));
-  return n > 0 || (admiteCero && n === 0) ? n : null;
+  const u = parsearMontoBase(texto, decimales);
+  if (u === null) return null;
+  return u > 0 || admiteCero ? u / 10 ** decimales : null;
 }
 
 // Precio -> texto para editar: coma decimal y siempre 2 decimales ("12,50").

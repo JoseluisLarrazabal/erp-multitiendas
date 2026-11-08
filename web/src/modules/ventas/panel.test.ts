@@ -5,6 +5,7 @@ import {
   fueraDePlazo,
   mensajeDeVentas,
   textoMotivo,
+  textoPorRevisar,
 } from "./domain-panel";
 import {
   anularSchema,
@@ -150,5 +151,14 @@ describe("reconciliación", () => {
     expect(mensajeDeVentas("revisar", "ERP_VENTA_ANULADA")).toBeTruthy();
     expect(mensajeDeVentas("qr", "ERP_OPERACION_REPETIDA")).toBeTruthy();
     expect(mensajeDeVentas("qr", "ERP_SIN_PERMISO")).toBeTruthy();
+  });
+});
+
+describe("textoPorRevisar", () => {
+  it("sin ventas no hay aviso; singular, plural y más de una página", () => {
+    expect(textoPorRevisar(0, false)).toBeNull();
+    expect(textoPorRevisar(1, false)).toBe("1 venta por revisar");
+    expect(textoPorRevisar(3, false)).toBe("3 ventas por revisar");
+    expect(textoPorRevisar(25, true)).toBe("25+ ventas por revisar");
   });
 });

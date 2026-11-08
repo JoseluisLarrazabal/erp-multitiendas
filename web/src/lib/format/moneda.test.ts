@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatearBs } from "./moneda";
+import { formatearBs, parsearMonto } from "./moneda";
 
 describe("formatearBs", () => {
   it("formatea cero", () => {
@@ -26,8 +26,28 @@ describe("formatearBs", () => {
     expect(formatearBs(1.1 + 2.2)).toBe("Bs 3,30");
   });
 
-  it("rechaza valores no finitos", () => {
-    expect(() => formatearBs(NaN)).toThrow(RangeError);
-    expect(() => formatearBs(Infinity)).toThrow(RangeError);
+  it("valores no finitos muestran un guion en vez de romper el render", () => {
+    expect(formatearBs(NaN)).toBe("—");
+    expect(formatearBs(Infinity)).toBe("—");
+    expect(formatearBs(-Infinity)).toBe("—");
+  });
+});
+
+describe("parsearMonto", () => {
+  it("devuelve la escala pedida", () => {
+    expect(parsearMonto("12,5")).toBe(1250);
+    expect(parsearMonto("6,9612", 4)).toBe(69612);
+  });
+  it("tope de 10 enteros (numeric(12,2))", () => {
+    expect(parsearMonto("9999999999,99")).toBe(999_999_999_999);
+    expect(parsearMonto("10000000000")).toBeNull();
+    expect(parsearMonto("1".repeat(20))).toBeNull();
+  });
+  it("tres decimales: fuera con 2 decimales; con 4 se rechaza igual con punto o coma", () => {
+    for (const t of ["0.125", "0,125"]) {
+      expect(parsearMonto(t), t).toBeNull();
+      expect(parsearMonto(t, 4), t).toBeNull();
+    }
+    expect(parsearMonto("0,1250", 4)).toBe(1250);
   });
 });

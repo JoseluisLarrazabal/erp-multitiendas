@@ -1,7 +1,5 @@
 import { liveQuery } from "dexie";
-import { leerFilas, vaciar, type LecturaCola, type OpcionesVaciado } from "./cola";
-
-const ESPERA_MIN_TEMPORIZADOR_MS = 5_000;
+import { esperaReintento, leerFilas, vaciar, type LecturaCola, type OpcionesVaciado } from "./cola";
 
 export type Motor = { disparar: (forzar?: boolean) => void; detener: () => void };
 
@@ -10,6 +8,8 @@ export type Motor = { disparar: (forzar?: boolean) => void; detener: () => void 
 export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let activo = true;
+  // Veces seguidas que la fila más próxima ya estaba lista y sigue pendiente (sesión caducada: `pausa`).
+  let giros = 0;
 
   async function programar() {
     if (!activo) return;
@@ -21,8 +21,10 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
       // Tras el await: dos programar solapados no pueden dejar cada uno su temporizador.
       clearTimeout(temporizador);
       if (proximas.length === 0 || !activo) return;
-      // Piso: una fila lista pero en pausa (sesión caducada) no puede girar en vacío.
-      const espera = Math.max(Math.min(...proximas) - Date.now(), ESPERA_MIN_TEMPORIZADOR_MS);
+      // Una fila lista pero en pausa (sesión caducada) no puede girar en vacío: espera creciente hasta el tope.
+      const falta = Math.min(...proximas) - Date.now();
+      giros = falta <= 0 ? giros + 1 : 0;
+      const espera = Math.max(falta, esperaReintento(giros));
       temporizador = setTimeout(() => disparar(false), espera);
     } catch {
       // IndexedDB no disponible: no hay cola que vaciar.
@@ -36,7 +38,10 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
       .catch(() => undefined)
       .then(programar);
   }
-  const alVolverLaRed = () => disparar(true);
+  const alVolverLaRed = () => {
+    giros = 0;
+    disparar(true);
+  };
   window.addEventListener("online", alVolverLaRed);
   disparar(true);
   return {

@@ -36,7 +36,17 @@ export function PosBarra({
           <Loader2 className="size-4 animate-spin" aria-hidden /> Verificando sesión…
         </p>
       )}
-      {sesion.fase === "sin-conexion" && (
+      {sesion.fase === "sin-conexion" && sesion.caducado && (
+        <p
+          role="alert"
+          className="border-destructive text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm"
+        >
+          <WifiOff className="size-4 shrink-0" aria-hidden />
+          Hace más de 72 horas que este equipo no se conecta. Conéctalo a internet e inicia sesión
+          para vender. Las ventas pendientes no se pierden.
+        </p>
+      )}
+      {sesion.fase === "sin-conexion" && !sesion.caducado && (
         <p role="status" className="bg-secondary flex items-center gap-2 rounded-lg p-3 text-sm">
           <WifiOff className="size-4 shrink-0" aria-hidden />
           Sin conexión. Puedes seguir trabajando; lo registrado se enviará al volver la red. Cerrar

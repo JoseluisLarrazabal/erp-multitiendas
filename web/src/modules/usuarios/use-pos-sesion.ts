@@ -5,14 +5,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { avisarRed, useSinRed } from "@/lib/offline/red";
 import { esErrorTransitorio, esSinRedAuth, esSinSesion } from "@/lib/supabase/errores";
-import { borrarContextoLocal, guardarSesionLocal, leerSesionLocal } from "./contexto-local";
+import {
+  borrarContextoLocal,
+  CADUCADO,
+  guardarSesionLocal,
+  leerSesionLocal,
+} from "./contexto-local";
 import { conservarLista, negocioDeRecheck, type NegocioUsuario } from "./domain";
 import { leerNegocioGuardado } from "./negocio-cliente";
 import { listarMisNegocios, permisosDeRol } from "./queries";
 
 export type SesionPos =
   | { fase: "verificando" }
-  | { fase: "sin-conexion" }
+  // `caducado`: había contexto guardado pero hace más de 72 h que el servidor no lo confirma; no se vende.
+  | { fase: "sin-conexion"; caducado?: boolean }
   | { fase: "error"; mensaje: string }
   | {
       fase: "lista";
@@ -79,6 +85,7 @@ export function usePosSesion(): {
     async function desdeLocal() {
       if (vista.current) return;
       const local = await leerSesionLocal();
+      if (local === CADUCADO) return publicar({ fase: "sin-conexion", caducado: true });
       if (!local) return publicar({ fase: "sin-conexion" });
       publicar({ fase: "lista", ...local });
     }

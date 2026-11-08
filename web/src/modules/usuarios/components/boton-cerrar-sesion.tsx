@@ -4,6 +4,7 @@ import { navegarA } from "@/lib/navegar";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { bloquearEscrituras } from "@/lib/offline/datos";
 import { createClient } from "@/lib/supabase/browser";
 import { borrarContextoLocal } from "../contexto-local";
 import { borrarNegocioGuardado } from "../negocio-cliente";
@@ -16,16 +17,19 @@ export function BotonCerrarSesion({ deshabilitado = false }: { deshabilitado?: b
   async function salir() {
     setError(null);
     setPendiente(true);
+    // Una escritura tardía (catálogo, contexto) no puede reaparecer tras el borrado.
+    bloquearEscrituras(true);
     try {
       // scope local: cerrar un POS no debe matar la sesión del dueño en otro equipo.
       const { error } = await createClient().auth.signOut({ scope: "local" });
       if (error) throw error;
       borrarNegocioGuardado();
       // El contexto offline se va con la sesión; la cola de ventas pendientes no se toca.
-      // Con tope: un IndexedDB lento no puede dejar la sesión a medias en pantalla.
-      await Promise.race([borrarContextoLocal(), new Promise((r) => setTimeout(r, 1500))]);
+      // Tope solo contra un IndexedDB colgado: con las escrituras bloqueadas, un borrado lento igual termina antes.
+      await Promise.race([borrarContextoLocal(), new Promise((r) => setTimeout(r, 10_000))]);
       navegarA("/login");
     } catch {
+      bloquearEscrituras(false);
       setError("No se pudo cerrar la sesión. Revisa tu conexión.");
       setPendiente(false);
     }

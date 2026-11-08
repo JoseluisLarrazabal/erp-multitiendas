@@ -55,6 +55,43 @@ describe("iniciarMotor", () => {
   });
 });
 
+describe("iniciarMotor: sesión caducada con filas pendientes", () => {
+  it("la espera entre intentos crece hasta un tope en vez de repetirse cada 5 s", async () => {
+    await encolar({
+      id: "a0000000-0000-4000-8000-000000000002",
+      tipo: "venta",
+      negocioId: "n1",
+      dispositivoId: "d1",
+      usuarioId: "u1",
+      payload: {},
+      nota: null,
+      numeroImpreso: null,
+    });
+    const set = vi.spyOn(globalThis, "setTimeout");
+    const motor = iniciarMotor({
+      enviadores: { venta: async () => ({ t: "pausa" }) },
+      elegible: () => true,
+    });
+    const esperas: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      const antes = set.mock.calls.length;
+      if (i > 0) motor.disparar();
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setTimeout(r, 50));
+      esperas.push(
+        ...set.mock.calls
+          .slice(antes)
+          .map((c) => c[1] ?? 0)
+          .filter((ms) => ms >= 5_000),
+      );
+    }
+    motor.detener();
+    expect(esperas.at(-1)).toBeGreaterThan(esperas[0]!);
+    expect(esperas.every((ms) => ms <= 300_000)).toBe(true);
+    expect(esperas).toEqual([...esperas].sort((a, b) => a - b));
+  });
+});
+
 describe("iniciarMotor: online durante un vaciado", () => {
   it("un disparar forzado mientras corre otro se repite al terminar", async () => {
     await encolar({
