@@ -1,6 +1,9 @@
 import { liveQuery } from "dexie";
 import { esperaReintento, leerFilas, vaciar, type LecturaCola, type OpcionesVaciado } from "./cola";
 
+// Tope de la espera por pausa: un fallo de red al leer la sesión no debe dejar las ventas esperando minutos.
+const ESPERA_MAX_PAUSA_MS = 30_000;
+
 export type Motor = { disparar: (forzar?: boolean) => void; detener: () => void };
 
 // Disparadores del vaciado: al montar, al volver la red (`online`) y un temporizador mientras haya filas. No se
@@ -8,7 +11,7 @@ export type Motor = { disparar: (forzar?: boolean) => void; detener: () => void 
 export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let activo = true;
-  // Veces seguidas que la fila más próxima ya estaba lista y sigue pendiente (sesión caducada: `pausa`).
+  // Veces seguidas que la fila más próxima ya estaba lista y sigue pendiente (`pausa`: sesión caducada o sin red al leerla).
   let giros = 0;
 
   async function programar() {
@@ -27,7 +30,7 @@ export function iniciarMotor(o: Omit<OpcionesVaciado, "forzar">): Motor {
       // Una fila lista pero en pausa (sesión caducada) no puede girar en vacío: espera creciente hasta el tope.
       const falta = Math.min(...proximas) - Date.now();
       giros = falta <= 0 ? giros + 1 : 0;
-      const espera = Math.max(falta, esperaReintento(giros));
+      const espera = Math.max(falta, Math.min(esperaReintento(giros), ESPERA_MAX_PAUSA_MS));
       temporizador = setTimeout(() => disparar(false), espera);
     } catch {
       // IndexedDB no disponible: no hay cola que vaciar.

@@ -87,7 +87,7 @@ describe("iniciarMotor: sesión caducada con filas pendientes", () => {
     }
     motor.detener();
     expect(esperas.at(-1)).toBeGreaterThan(esperas[0]!);
-    expect(esperas.every((ms) => ms <= 300_000)).toBe(true);
+    expect(esperas.every((ms) => ms <= 30_000)).toBe(true);
     expect(esperas).toEqual([...esperas].sort((a, b) => a - b));
   });
 });
