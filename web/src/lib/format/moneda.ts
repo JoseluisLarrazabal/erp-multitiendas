@@ -1,11 +1,11 @@
 // Único parser de montos: "12", "12,5", "12.50" -> entero a escala 10^decimales (decimales=2: centavos). null si no es
-// válido: vacío, negativo, más de `decimales`, más de 10 enteros (numeric(12,2)) o con exactamente 3 decimales cuando se
-// admiten más de 3 ("1.500" y "1,500" son ambiguos con miles; se rechazan los dos, se escribe "1,5000").
+// válido: vacío, negativo, más de `decimales`, más de 10 enteros (numeric(12,2)) o, con 3 o más decimales admitidos,
+// un punto seguido de exactamente 3 dígitos ("1.500" es ambiguo con miles). La coma siempre es decimal.
 export function parsearMonto(texto: string, decimales = 2): number | null {
   const m = new RegExp(`^(\\d{1,10})(?:[.,](\\d{1,${decimales}}))?$`).exec(texto.trim());
   if (!m) return null;
   const frac = m[2] ?? "";
-  if (decimales > 3 && frac.length === 3) return null;
+  if (decimales >= 3 && frac.length === 3 && /^\d+\.\d{3}$/.test(texto.trim())) return null;
   return Number(m[1]) * 10 ** decimales + Number(frac.padEnd(decimales, "0"));
 }
 

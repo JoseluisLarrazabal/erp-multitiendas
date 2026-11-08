@@ -43,11 +43,13 @@ describe("parsearMonto", () => {
     expect(parsearMonto("10000000000")).toBeNull();
     expect(parsearMonto("1".repeat(20))).toBeNull();
   });
-  it("tres decimales: fuera con 2 decimales; con 4 se rechaza igual con punto o coma", () => {
-    for (const t of ["0.125", "0,125"]) {
-      expect(parsearMonto(t), t).toBeNull();
-      expect(parsearMonto(t, 4), t).toBeNull();
-    }
-    expect(parsearMonto("0,1250", 4)).toBe(1250);
+  it("la coma es siempre decimal; punto con 3 dígitos es ambiguo", () => {
+    expect(parsearMonto("6,965", 4)).toBe(69650);
+    expect(parsearMonto("0,125", 4)).toBe(1250);
+    expect(parsearMonto("0.125", 4)).toBeNull();
+    expect(parsearMonto("1.234", 4)).toBeNull();
+    expect(parsearMonto("12,50")).toBe(1250);
+    expect(parsearMonto("0,125")).toBeNull();
+    expect(parsearMonto("0.125")).toBeNull();
   });
 });
