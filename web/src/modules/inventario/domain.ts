@@ -26,6 +26,7 @@ export type FilaStock = ProductoElegible & {
 export type Movimiento = {
   id: string;
   refId: string | null;
+  revertido: boolean;
   ubicacionId: string;
   tipo: string;
   cantidad: number;

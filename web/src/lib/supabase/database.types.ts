@@ -982,7 +982,7 @@ isOneToOne: false
           Views: {
             "inventario_lista": {
                   Row: {
-                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"tipo": string,"unidad": string
+                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"unidad": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -1162,7 +1162,7 @@ isOneToOne: false
                            },
 "kardex_producto":
 { Args: { "p_desde_id"?: string,"p_limite"?: number,"p_producto_id": string,"p_ubicacion_id"?: string }; Returns: {
-              "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
+              "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"revertido": boolean,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
             }[]
                            },
 "lotes_por_vencer":
@@ -1230,9 +1230,6 @@ isOneToOne: false
 "registrar_compra":
 { Args: { "p_compra": Json }; Returns: Json
                            },
-"registrar_consumo":
-{ Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string }; Returns: string
-                           },
 "registrar_conteo":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number
                            },
@@ -1280,6 +1277,9 @@ isOneToOne: false
                            },
 "resumen_caja":
 { Args: { "p_sesion_id": string }; Returns: Json
+                           },
+"revertir_consumo":
+{ Args: { "p_motivo": string,"p_movimiento_id": string,"p_operacion_id": string }; Returns: string
                            },
 "revisar_caja":
 { Args: { "p_id": string,"p_tipo": string }; Returns: Json

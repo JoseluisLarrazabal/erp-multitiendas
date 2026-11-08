@@ -22,12 +22,9 @@ export function ListaKardex({
   movimientos: readonly Movimiento[];
   ubicaciones: readonly Ubicacion[];
   unidad: Unidad;
-  // Con ajustar_inventario, los consumos llevan "Revertir" (salvo los ya revertidos en esta página).
+  // Con ajustar_inventario, los consumos llevan "Revertir" (salvo los ya revertidos).
   puedeRevertir?: boolean;
 }) {
-  const revertidos = new Set(
-    movimientos.filter((m) => m.refTipo === "consumo_revertido").map((m) => m.refId),
-  );
   const nombre = (id: string) => ubicaciones.find((u) => u.id === id)?.nombre ?? "—";
   return (
     <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
@@ -88,7 +85,7 @@ export function ListaKardex({
               {m.refTipo && (
                 <span className="text-muted-foreground block text-xs">Ref.: {m.refTipo}</span>
               )}
-              {puedeRevertir && m.tipo === "consumo" && m.cantidad < 0 && !revertidos.has(m.id) && (
+              {puedeRevertir && m.tipo === "consumo" && m.cantidad < 0 && !m.revertido && (
                 <BotonRevertirConsumo movimientoId={m.id} />
               )}
             </span>

@@ -170,6 +170,7 @@ export async function leerKardex(
       filas: pagina.map((m) => ({
         id: m.id,
         refId: m.ref_id,
+        revertido: m.revertido,
         ubicacionId: m.ubicacion_id,
         tipo: m.tipo,
         cantidad: m.cantidad,

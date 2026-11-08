@@ -1,6 +1,6 @@
 -- DB-26: registrar_consumo y reporte_insumos (RF-INS-02). Consumo baja stock y suma al gasto con costo foto.
 begin;
-select plan(52);
+select plan(56);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -138,6 +138,12 @@ select is((select costo_unitario from public.movimientos_inventario where ref_ti
 select pg_temp.como(pg_temp.i('d'));
 select is(public.reporte_insumos(pg_temp.i('L'), pg_temp.hoy(), pg_temp.hoy(), 'insumo') -> 'totales',
   '{"consumos":3,"gasto":15.00,"sin_costo":0}'::jsonb, 'el gasto de hoy netea la reversión: solo quedan los 15 de I1');
+select is((select revertido from public.kardex_producto(pg_temp.i('I2')) where id = pg_temp.mov('O2')), true, 'kardex: el consumo revertido sale con revertido');
+select is((select revertido from public.kardex_producto(pg_temp.i('I1')) where id = pg_temp.mov('O1')), false, 'kardex: un consumo vigente no');
+select is((select revertido from public.kardex_producto(pg_temp.i('I2')) where ref_tipo = 'consumo_revertido'), false, 'kardex: la reversión misma no');
+select is((public.reporte_insumos(pg_temp.i('L'), '2026-03-09', pg_temp.hoy(), 'dia') -> 'totales' ->> 'gasto')::numeric,
+  (select sum((f ->> 'gasto')::numeric) from jsonb_array_elements(public.reporte_insumos(pg_temp.i('L'), '2026-03-09', pg_temp.hoy(), 'dia') -> 'filas') f),
+  'el total del gasto es la suma de las filas');
 select throws_ok($$select pg_temp.revertir('R2', pg_temp.mov('O2'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'no se revierte dos veces');
 select throws_ok($$select pg_temp.revertir('R3', (select id from public.movimientos_inventario where ref_tipo = 'consumo_revertido'))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'no se revierte una reversión');
 select throws_ok($$select pg_temp.revertir('R4', (select id from public.movimientos_inventario where tipo = 'inicial' limit 1))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'un movimiento que no es consumo se rechaza');
