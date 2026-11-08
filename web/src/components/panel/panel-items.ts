@@ -4,6 +4,8 @@ import {
   ChartColumn,
   CircleDollarSign,
   Contact,
+  ShoppingCart,
+  Truck,
   Landmark,
   LayoutDashboard,
   MonitorSmartphone,
@@ -78,6 +80,18 @@ export const ITEMS: Item[] = [
     etiqueta: "Clientes",
     icono: Contact,
     permisos: ["vender", "editar_productos"],
+  },
+  {
+    href: "/panel/proveedores",
+    etiqueta: "Proveedores",
+    icono: Truck,
+    permisos: ["gestionar_compras"],
+  },
+  {
+    href: "/panel/compras",
+    etiqueta: "Compras",
+    icono: ShoppingCart,
+    permisos: ["gestionar_compras"],
   },
   { href: "/panel/descuento", etiqueta: "Descuento", icono: Percent, permisos: ["usuarios"] },
   {

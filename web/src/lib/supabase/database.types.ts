@@ -159,6 +159,70 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"compra_items": {
+                  Row: {
+                    "cantidad": number,"compra_id": string,"costo_unitario": number,"negocio_id": string,"producto_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"compra_id": string,"costo_unitario": number,"negocio_id": string,"producto_id": string
+                  }
+                  Update: {
+                    "cantidad"?: number,"compra_id"?: string,"costo_unitario"?: number,"negocio_id"?: string,"producto_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "compra_items_negocio_id_compra_id_fkey"
+      columns: ["negocio_id","compra_id"]
+isOneToOne: false
+      referencedRelation: "compras"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "compra_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "compra_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "compra_items_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"compras": {
+                  Row: {
+                    "condicion": string,"created_at": string,"fecha": string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "condicion": string,"created_at"?: string,"fecha"?: string,"id": string,"negocio_id": string,"proveedor_id": string,"total": number,"ubicacion_id": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "condicion"?: string,"created_at"?: string,"fecha"?: string,"id"?: string,"negocio_id"?: string,"proveedor_id"?: string,"total"?: number,"ubicacion_id"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "compras_negocio_id_proveedor_id_fkey"
+      columns: ["negocio_id","proveedor_id"]
+isOneToOne: false
+      referencedRelation: "proveedores"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "compras_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"conteo_items": {
                   Row: {
                     "cantidad_contada": number,"cantidad_sistema": number,"conteo_id": string,"negocio_id": string,"producto_id": string
@@ -541,6 +605,52 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     },{
       foreignKeyName: "productos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"proveedor_pagos": {
+                  Row: {
+                    "compra_id": string | null,"created_at": string,"id": string,"medio": string,"monto": number,"negocio_id": string,"proveedor_id": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "compra_id"?: string | null,"created_at"?: string,"id": string,"medio": string,"monto": number,"negocio_id": string,"proveedor_id": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "compra_id"?: string | null,"created_at"?: string,"id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"proveedor_id"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "proveedor_pagos_negocio_id_compra_id_fkey"
+      columns: ["negocio_id","compra_id"]
+isOneToOne: false
+      referencedRelation: "compras"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "proveedor_pagos_negocio_id_proveedor_id_fkey"
+      columns: ["negocio_id","proveedor_id"]
+isOneToOne: false
+      referencedRelation: "proveedores"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"proveedores": {
+                  Row: {
+                    "activo": boolean,"contacto": string | null,"created_at": string,"id": string,"negocio_id": string,"nombre": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activo"?: boolean,"contacto"?: string | null,"created_at"?: string,"id"?: string,"negocio_id": string,"nombre": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "activo"?: boolean,"contacto"?: string | null,"created_at"?: string,"id"?: string,"negocio_id"?: string,"nombre"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "proveedores_negocio_id_fkey"
       columns: ["negocio_id"]
 isOneToOne: false
       referencedRelation: "negocios"
@@ -982,6 +1092,11 @@ isOneToOne: false
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
                            },
+"deudas_proveedores":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "deuda": number,"proveedor_id": string,"total_compras": number,"total_pagos": number
+            }[]
+                           },
 "devolver_venta":
 { Args: { "p_devolucion": Json }; Returns: Json
                            },
@@ -1012,6 +1127,9 @@ isOneToOne: false
 "guardar_producto":
 { Args: { "p_datos": Json,"p_negocio_id": string }; Returns: string
                            },
+"guardar_proveedor":
+{ Args: { "p_datos": Json,"p_negocio_id": string }; Returns: string
+                           },
 "kardex_producto":
 { Args: { "p_desde_id"?: string,"p_limite"?: number,"p_producto_id": string,"p_ubicacion_id"?: string }; Returns: {
               "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
@@ -1030,6 +1148,9 @@ isOneToOne: false
 { Args: { "p_offline": Json }; Returns: {
               "hora": string,"usuario_id": string
             }[]
+                           },
+"pagar_proveedor":
+{ Args: { "p_pago": Json }; Returns: string
                            },
 "payload_claves":
 { Args: { "p": Json,"p_claves": (string)[] }; Returns: undefined
@@ -1070,6 +1191,9 @@ isOneToOne: false
 { Args: { "p_desde_id"?: string,"p_limite"?: number,"p_negocio_id": string }; Returns: {
               "creada_en_cliente": string,"enviada_por": string,"enviada_por_nombre": string,"id": string,"motivos_revision": (string)[],"numero": string,"pagos_pendientes": Json,"recibida_en": string,"total": number,"vendedor_id": string,"vendedor_nombre": string
             }[]
+                           },
+"registrar_compra":
+{ Args: { "p_compra": Json }; Returns: Json
                            },
 "registrar_conteo":
 { Args: { "p_items": Json,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_ubicacion_id": string }; Returns: number
@@ -1132,6 +1256,11 @@ isOneToOne: false
                            },
 "total_qr_sesion":
 { Args: { "p_sesion_id": string }; Returns: number
+                           },
+"totales_compras":
+{ Args: { "p_compra_ids": (string)[],"p_negocio_id": string }; Returns: {
+              "compra_id": string,"total": number
+            }[]
                            },
 "trasladar_stock":
 { Args: { "p_cantidad": number,"p_destino_id": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_origen_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[] }; Returns: string

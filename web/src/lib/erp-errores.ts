@@ -19,6 +19,7 @@ const MENSAJES: Record<string, string> = {
   ERP_VENTA_ANULADA: "La venta está anulada.",
   ERP_VENTA_CON_DEVOLUCIONES: "La venta tiene devoluciones.",
   ERP_ORDEN_ESTADO: "La orden no puede pasar a ese estado.",
+  ERP_PAGO_EXCEDE_DEUDA: "El pago supera lo que se le debe al proveedor.",
   ERP_ES_ORDEN: "Esa venta es una orden de lavandería: anúlala desde la orden.",
 };
 
