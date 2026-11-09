@@ -5,6 +5,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 
 ## Próxima sesión (arrancar acá)
 
+- **Manual de usuario y documentos de entrega (CTO, 2026-11-09):** se escriben a partir de
+  `docs/decisiones-manual.md`, el registro de reglas, restricciones, riesgos aceptados y supuestos que el usuario y el
+  cliente tienen que conocer (22 módulos, más una tabla de contradicciones resueltas). Toda decisión visible para el
+  usuario que se tome de acá en adelante se anota ahí en el mismo PR. Ninguna regla vigente puede faltar en el manual del
+  rol al que afecta; cada supuesto se confirma con el cliente o se entrega escrito como supuesto.
 - **Fase 7, Entrega B: cerrada el 2026-11-09.** Los 4 PRs están mergeados y con la migración aplicada en producción:
   compras (#83), insumos (#86), reservas (#87) y crédito (#88). `/panel/creditos` se verificó con Playwright. Plan en
   `docs/plan-fase-7.md`. D-01 sigue sin resolver. Codex no revisó ninguno de los 4: queda pendiente para cuando vuelva
@@ -33,7 +38,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - El interés vive en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.
   - Una venta con crédito no se anula ni se devuelve (`ERP_VENTA_CON_CREDITO`).
   - Los saldos iniciales se cargan sin interés. Falta confirmar P-07 (interés sobre saldo) con el cliente: cambia solo `plan_cuotas`.
-- **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
+- **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_reportes` y `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
 - **Bloqueado por el cliente o el CTO, en orden:**
@@ -127,7 +132,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     - Lavandería: 4 estados (Recibido, En lavado, Listo para entregar, Entregado), cobro total al recibir, caja separada
       de Lider, solo Bs, 25 Bs por kilo. Sin impresora. Stock de insumos pedido, fuera del contrato.
     - **Frial aún no abre, según el cliente (2026-11-01).** Se construye según contrato: ventas por peso, inventario,
-      kardex y reportes. `lotes` y `despieces` fuera de la primera versión. Recomendado acordar por escrito que se
+      kardex y reportes. Lotes y despieces se sumaron después (fase 5, RF-FRI-04 a 07). Recomendado acordar por escrito que se
       entrega sin catálogo y no traba el acta, porque el saldo de Bs 5.000 depende de ella.
     - Imprescindible para el cliente: precios según tipo de cambio diario. Recomendado: precio en USD y Bs calculado.
     - Resuelto en Lider: tienda y depósito, costo promedio, listas contado/crédito/mayorista, clientes por negocio,

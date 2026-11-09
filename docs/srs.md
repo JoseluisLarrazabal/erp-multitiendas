@@ -172,7 +172,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-CRE-01 | Venta a crédito | Con inicial, plazo, interés y frecuencia parametrizados por negocio; por defecto 50 %, 3 meses, 2,5 %, mensual | RL |
+| RF-CRE-01 | Venta a crédito | Con inicial, plazo, interés y frecuencia parametrizados por negocio; por defecto 50 %, 3 meses, 2,5 %, mensual. Implementado: frecuencia solo mensual (`docs/plan-fase-7.md`, decisión 7) | RL |
 | RF-CRE-02 | Plan de cuotas | Se genera al crear el crédito y se imprime | RL |
 | RF-CRE-03 | Documentos del crédito | Registra CI, comprobante de domicilio y pagaré | RL |
 | RF-CRE-04 | Pago de cuotas | Admite pago parcial, entra por caja y reduce el saldo | RL |

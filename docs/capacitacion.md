@@ -13,7 +13,7 @@ el tope de descuento está fijado (panel, "Descuento"; con 0 % nadie descuenta).
 | Dueño | Panel y punto de venta | Todo. En tienda y frial, es el único que gestiona usuarios, dispositivos y descuento |
 | Encargado | Panel y punto de venta | Todo menos usuarios, dispositivos y descuento en tienda y frial (en lavandería, también eso) |
 | Contador | Panel | Ver productos, inventario, ventas, cajas, reconciliación y reportes, con costos. No vende ni edita |
-| Vendedor y empleado | Solo punto de venta | Vender, abrir y cerrar su caja, anular dentro del plazo. En lavandería, también descontar y mover órdenes |
+| Vendedor y empleado | Solo punto de venta | Vender, abrir y cerrar su caja. No anulan ni devuelven: lo hace el encargado. En lavandería, también descontar y mover órdenes |
 
 Una persona puede tener un rol distinto en cada negocio y cambia de negocio con el selector "Negocio activo".
 
@@ -97,9 +97,9 @@ Cada persona hace, en su equipo, con productos reales:
 - [ ] (Encargado) anular una venta, devolver otra, revisar "Reconciliación"
 - [ ] (Encargado) entrada, traslado y un reporte en Excel
 
-Las ventas de práctica se anulan al terminar, con motivo "Capacitación".
+El encargado anula las ventas de práctica al terminar, con motivo "Capacitación".
 
 ## Pendiente antes de la sesión
 
-- El "Inicio" del panel todavía dice que no hay módulos activos: corregir antes de capacitar.
+- Sumar crédito, reservas, compras e insumos (fase 7) y revisar todo contra `docs/decisiones-manual.md`.
 - Probar en los equipos reales del cliente con su lector y su impresora.
