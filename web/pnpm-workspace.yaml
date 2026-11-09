@@ -3,3 +3,6 @@ allowBuilds:
   esbuild: false
   supabase: true
   unrs-resolver: false
+# @serwist/turbopack fija zod 4.6.5 (GHSA-mrhx-c7xc-m3w5); quitar cuando serwist suba su zod.
+overrides:
+  zod: 4.6.7

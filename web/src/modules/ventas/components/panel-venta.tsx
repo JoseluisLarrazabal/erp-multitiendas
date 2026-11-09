@@ -207,7 +207,8 @@ export function PanelVenta({
         disabled={!puedeCobrar}
         onClick={abrirCobro}
       >
-        Cobrar <kbd className="bg-primary-foreground/20 ml-1 rounded px-1.5 text-xs">F2</kbd>
+        Cobrar{" "}
+        <kbd className="border-primary-foreground/50 ml-1 rounded border px-1.5 text-xs">F2</kbd>
       </Button>
     </aside>
   );

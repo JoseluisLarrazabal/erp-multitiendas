@@ -392,6 +392,34 @@ test("venta con serie: se elige la serie y queda vendida en base", async ({ page
   expect(await stockEn(a.id)).toBe(1);
 });
 
+// RNF-02: venta confirmada en menos de 2 s. Se mide solo "Confirmar cobro" -> nota visible, con la red real al Supabase
+// local y la página ya tibia (una primera venta calienta la ruta, la conexión y el catálogo en memoria).
+test("RNF-02: una venta en línea se confirma en menos de 2 s", async ({ page }) => {
+  const a = await crearProductoConPrecio({ contado: 10, stock: 5 });
+  await abrirCajaPorUI(page, "0");
+  const nota = page.getByRole("article", { name: /Nota de venta/ });
+  const vender = async () => {
+    await agregarPorCodigo(page, a.codigo);
+    const cobro = await abrirCobro(page);
+    const confirmar = cobro.getByRole("button", { name: "Confirmar cobro" });
+    await expect(confirmar).toBeEnabled();
+    // El reloj corre del clic al evento de la nota visible, no a un sondeo de expect.
+    const visible = nota.waitFor({ state: "visible", timeout: 10_000 });
+    const inicio = performance.now();
+    await confirmar.click();
+    await visible;
+    return performance.now() - inicio;
+  };
+  await vender(); // calentamiento
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+  await expect(page.getByText("El carrito está vacío.")).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Buscar producto" })).toBeFocused();
+  const ms = await vender();
+  console.log(`RNF-02: venta confirmada en ${Math.round(ms)} ms`);
+  expect(ms, `la venta tardó ${Math.round(ms)} ms`).toBeLessThan(2000);
+  expect(await ventasDeLaCaja(equipoId)).toHaveLength(2);
+});
+
 test("venta en kg con decimales: total y stock exactos en base", async ({ page }) => {
   const a = await crearProductoConPrecio({ contado: 18, stock: 5, unidad: "kg" });
   await abrirCajaPorUI(page, "0");

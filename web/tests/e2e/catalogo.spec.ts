@@ -22,7 +22,14 @@ const PNG = Buffer.from(
   "base64",
 );
 
-type Datos = { codigo: string; nombre: string; barras?: string; tipo?: string };
+type Datos = {
+  codigo: string;
+  nombre: string;
+  barras?: string;
+  tipo?: string;
+  marca?: string;
+  categoria?: string; // nombre de una categoría ya creada
+};
 
 async function crearProducto(page: Page, p: Datos) {
   await ir(page, "/panel/productos/nuevo");
@@ -30,6 +37,8 @@ async function crearProducto(page: Page, p: Datos) {
   await page.getByLabel("Código", { exact: true }).fill(p.codigo);
   if (p.barras) await page.getByLabel("Código de barras").fill(p.barras);
   await page.getByLabel("Nombre").fill(p.nombre);
+  if (p.marca) await page.getByLabel("Marca").fill(p.marca);
+  if (p.categoria) await page.getByLabel("Categoría").selectOption({ label: p.categoria });
   await page.getByRole("button", { name: "Crear producto" }).click();
 }
 
@@ -38,10 +47,17 @@ async function productoCreado(page: Page, p: Datos) {
   await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
 }
 
+// Con `q` la grilla de precios lleva el foco a su primera celda al montar (efecto posterior a la hidratación). Los
+// tests que escriben con el teclado sin enfocar antes esperan ese foco; los que enfocan una celda no lo pierden.
+async function irAGrilla(page: Page, url: string) {
+  await ir(page, url);
+  await expect(page.locator('input[data-fila="0"]:not(:disabled)').first()).toBeFocused();
+}
+
 test.describe("dueño: catálogo", () => {
   test.use({ storageState: rutaAuth("dueno") });
 
-  test("crea un producto y lo encuentra por código de barras; código repetido da error", async ({
+  test("crea un producto y lo encuentra por código de barras; código repetido da error @cross", async ({
     page,
   }) => {
     const p = unico();
@@ -92,6 +108,49 @@ test.describe("dueño: catálogo", () => {
     await productoCreado(page, { ...p, nombre });
     await ir(page, `/panel/productos?q=${encodeURIComponent(nombre)}`);
     await expect(page.getByRole("list", { name: "Productos" })).toContainText(nombre);
+  });
+
+  // RF-CAT-02: la búsqueda se combina con marca y categoría. Dos productos que solo se distinguen por ellas.
+  test("filtra por marca y por categoría: incluye lo que coincide y excluye el resto @cross", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000); // 2 categorías y 2 productos por la UI: con muchos workers a la vez pasa de 30 s
+    const categoriaA = `Cat A ${corrida}${++contador}`;
+    const categoriaB = `Cat B ${corrida}${++contador}`;
+    for (const nombre of [categoriaA, categoriaB]) {
+      await ir(page, "/panel/productos/categorias");
+      await page.getByLabel("Nombre de la categoría").fill(nombre);
+      await page.getByRole("button", { name: "Crear categoría" }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Categoría creada" })).toBeVisible();
+    }
+    const marcaA = `MarcaA${corrida}${++contador}`;
+    const marcaB = `MarcaB${corrida}${++contador}`;
+    const token = `Filtro${corrida}${++contador}`;
+    const a = { ...unico(), marca: marcaA, categoria: categoriaA };
+    const b = { ...unico(), marca: marcaB, categoria: categoriaB };
+    a.nombre += ` ${token}`;
+    b.nombre += ` ${token}`;
+    await productoCreado(page, a);
+    await productoCreado(page, b);
+
+    const lista = page.getByRole("list", { name: "Productos" });
+    // `q` acota a los productos de esta prueba; el filtro es lo que se verifica.
+    await ir(page, `/panel/productos?q=${token}`);
+    await expect(lista).toContainText(a.nombre);
+    await expect(lista).toContainText(b.nombre);
+
+    await page.getByLabel("Marca").selectOption(marcaA);
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await expect(page).toHaveURL(new RegExp(`marca=${marcaA}`));
+    await expect(lista).toContainText(a.nombre);
+    await expect(lista).not.toContainText(b.nombre);
+
+    await ir(page, `/panel/productos?q=${token}`);
+    await page.getByLabel("Categoría").selectOption({ label: categoriaB });
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await expect(page).toHaveURL(/categoria=[0-9a-f-]{36}/);
+    await expect(lista).toContainText(b.nombre);
+    await expect(lista).not.toContainText(a.nombre);
   });
 
   test("sube una foto y se ve en la ficha (CSP permite el origen de Storage)", async ({ page }) => {
@@ -164,7 +223,7 @@ test.describe("dueño: catálogo", () => {
     await productoCreado(page, a);
     await productoCreado(page, b);
 
-    await ir(page, `/panel/precios?q=${corrida}`);
+    await irAGrilla(page, `/panel/precios?q=${corrida}`);
     const celdaA = page.getByLabel(`Contado de ${a.nombre}`);
     const celdaB = page.getByLabel(`Contado de ${b.nombre}`);
     await expect(page.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
@@ -199,7 +258,7 @@ test.describe("dueño: catálogo", () => {
   }) => {
     const p = unico();
     await productoCreado(page, p);
-    await ir(page, `/panel/precios?q=${p.codigo}`);
+    await irAGrilla(page, `/panel/precios?q=${p.codigo}`);
     await page.getByLabel(`Crédito de ${p.nombre}`).fill("50");
     await page.getByRole("button", { name: "Guardar cambios" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Se guardaron 1 fila" })).toBeVisible();
@@ -242,7 +301,7 @@ test.describe("dueño: catálogo", () => {
   }) => {
     const p = unico();
     await productoCreado(page, p);
-    await ir(page, `/panel/precios?q=${p.codigo}`);
+    await irAGrilla(page, `/panel/precios?q=${p.codigo}`);
     await page.getByLabel(`Contado de ${p.nombre}`).fill("1.500");
     await page.getByRole("button", { name: "Guardar cambios" }).click();
     await expect(page.getByText("sin puntos de miles")).toBeVisible();
@@ -289,7 +348,7 @@ test.describe("dueño: catálogo", () => {
   test("tipo de cambio: registrarlo cambia los Bs de un producto en USD", async ({ page }) => {
     const p = unico();
     await productoCreado(page, p);
-    await ir(page, `/panel/precios?q=${p.codigo}`);
+    await irAGrilla(page, `/panel/precios?q=${p.codigo}`);
     await page.getByLabel(`Moneda de ${p.nombre}`).selectOption("USD");
     await page.getByLabel(`Contado de ${p.nombre}`).fill("100");
     await page.getByRole("button", { name: "Guardar cambios" }).click();
@@ -328,6 +387,63 @@ test.describe("dueño: catálogo", () => {
     await dialogo.getByRole("button", { name: "Cancelar" }).click();
     await expect(dialogo).toBeHidden();
     await expect(page.getByTestId("tc-vigente")).toContainText("7,5");
+  });
+});
+
+// RF-CAT-12: el navegador pide /api/dolar-paralelo (que a su vez consulta paralelo.bo). Se intercepta esa llamada del
+// navegador: nunca se toca internet y la respuesta es determinista. El proxy del servidor lo cubre route.test.ts.
+test.describe("dueño: dólar paralelo", () => {
+  test.use({ storageState: rutaAuth("dueno") });
+
+  test("muestra la referencia, avisa si está desactualizada y 'Usar este valor' solo llena el campo", async ({
+    page,
+  }) => {
+    const respuesta = (leidoEn: string) => ({
+      status: 200,
+      json: { disponible: true, valor: 9.5, leidoEn },
+    });
+    await page.route("**/api/dolar-paralelo", (r) =>
+      r.fulfill(respuesta(new Date().toISOString())),
+    );
+    await ir(page, "/panel/tipo-cambio");
+    await expect(page.getByText("Paralelo Bs 9,50")).toBeVisible();
+    await expect(page.getByText("(desactualizado)")).toHaveCount(0);
+    const form = page.getByRole("form", { name: "Tipo de cambio nuevo" });
+    await expect(form).toContainText("Paralelo: Bs 9,50");
+    await form.getByRole("button", { name: "Usar este valor" }).click();
+    await expect(form.getByLabel("Bs por 1 USD")).toHaveValue("9,50");
+    await expect(form.getByLabel("Bs por 1 USD")).toBeFocused();
+    // Solo sugiere: no registra nada hasta que se envíe el formulario.
+    await expect(
+      page.getByRole("status").filter({ hasText: "Tipo de cambio registrado" }),
+    ).toHaveCount(0);
+
+    // Lectura de hace 30 minutos (el umbral es 15): se marca como desactualizada.
+    await page.unroute("**/api/dolar-paralelo");
+    await page.route("**/api/dolar-paralelo", (r) =>
+      r.fulfill(respuesta(new Date(Date.now() - 30 * 60_000).toISOString())),
+    );
+    await ir(page, "/panel/tipo-cambio");
+    await expect(page.getByText("(desactualizado)")).toBeVisible();
+  });
+
+  test("si paralelo.bo no responde dice 'sin datos' y no ofrece el botón; ni con la red caída", async ({
+    page,
+  }) => {
+    await page.route("**/api/dolar-paralelo", (r) =>
+      r.fulfill({ status: 200, json: { disponible: false } }),
+    );
+    await ir(page, "/panel/tipo-cambio");
+    await expect(page.getByText("Paralelo: sin datos").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Usar este valor" })).toHaveCount(0);
+    // El formulario sigue sirviendo para registrar a mano.
+    await expect(page.getByLabel("Bs por 1 USD")).toBeEnabled();
+
+    await page.unroute("**/api/dolar-paralelo");
+    await page.route("**/api/dolar-paralelo", (r) => r.abort());
+    await ir(page, "/panel/tipo-cambio");
+    await expect(page.getByText("Paralelo: sin datos").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Usar este valor" })).toHaveCount(0);
   });
 });
 

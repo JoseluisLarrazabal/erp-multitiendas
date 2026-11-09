@@ -96,20 +96,17 @@ export async function listarCategorias(
   return { ok: true, data };
 }
 
-// shortcut: trae la columna marca de todos los productos y deduplica aquí; con ~600 productos es una lectura
-// pequeña. Pasar a una vista o RPC `select distinct` si el catálogo supera ~5.000 productos.
+// La vista marcas_productos ya devuelve cada marca una sola vez (la columna de todos los productos la cortaba max_rows).
 export async function listarMarcas(
   supabase: Cliente,
   negocioId: string,
 ): Promise<Resultado<string[]>> {
   const { data, error } = await supabase
-    .from("productos")
+    .from("marcas_productos")
     .select("marca")
-    .eq("negocio_id", negocioId)
-    .not("marca", "is", null)
-    .limit(5000);
+    .eq("negocio_id", negocioId);
   if (error) return falla("No se pudieron leer las marcas.");
-  const marcas = [...new Set(data.map((f) => f.marca!))];
+  const marcas = data.map((f) => f.marca!);
   return { ok: true, data: marcas.sort((a, b) => a.localeCompare(b, "es")) };
 }
 

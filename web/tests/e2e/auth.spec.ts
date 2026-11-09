@@ -11,7 +11,7 @@ import {
 
 // E2E-01 (RF-TR-01)
 test.describe("sin sesión", () => {
-  test("/, /panel y /pos van al login", async ({ page }) => {
+  test("/, /panel y /pos van al login @cross", async ({ page }) => {
     for (const ruta of ["/", "/panel", "/pos"]) {
       await page.goto(ruta);
       await expect(page).toHaveURL(/\/login$/);
@@ -39,7 +39,7 @@ test.describe("sin sesión", () => {
     verCsp();
   });
 
-  test("login y logout del dueño", async ({ page }) => {
+  test("login y logout del dueño @cross", async ({ page }) => {
     const verCsp = vigilarCsp(page);
     await iniciarSesionUI(page, CUENTAS.dueno);
     await expect(page).toHaveURL(/\/panel$/);
@@ -47,6 +47,12 @@ test.describe("sin sesión", () => {
     verCsp();
 
     // Tras el login completo el HTML se ve antes de hidratar: un clic en ese hueco se pierde (sin petición de logout).
+    // En móvil el botón vive en el menú lateral, cerrado hasta pulsar "Abrir menú".
+    const abrirMenu = page.getByRole("button", { name: "Abrir menú" });
+    if (await abrirMenu.isVisible()) {
+      await esperarHidratacion(page, abrirMenu);
+      await abrirMenu.click();
+    }
     const cerrar = page.getByRole("button", { name: "Cerrar sesión" });
     await esperarHidratacion(page, cerrar);
     await cerrar.click();

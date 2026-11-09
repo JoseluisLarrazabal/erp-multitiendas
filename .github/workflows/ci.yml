@@ -51,7 +51,7 @@ jobs:
 
   ci:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: web
@@ -134,7 +134,7 @@ jobs:
       - name: 8. Playwright
         run: |
           pnpm db:reset
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install --with-deps chromium webkit
           pnpm test:e2e
 
       # Va después del 8 a propósito: el test crea sus propios negocios y no debe tocar el estado de Playwright.
