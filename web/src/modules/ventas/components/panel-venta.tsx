@@ -31,6 +31,7 @@ export function PanelVenta({
   tituloRef,
   orden,
   sinRed,
+  reserva,
 }: {
   consulta: boolean;
   resumen: ResumenCarrito;
@@ -57,6 +58,8 @@ export function PanelVenta({
     alCambiarExpress: (v: boolean) => void;
   } | null;
   sinRed: boolean;
+  // Venta que completa una reserva: cliente y carrito fijos, sin descuento.
+  reserva: { cliente: string; anticipo: number; alQuitar: () => void } | null;
 }) {
   const totales = resumen.totales;
   const hayLineas = cantidadLineas > 0;
@@ -76,7 +79,23 @@ export function PanelVenta({
           ({cantidadLineas} {cantidadLineas === 1 ? "línea" : "líneas"})
         </span>
       </h2>
-      {orden && sinRed && !cliente ? (
+      {reserva && (
+        <div className="bg-muted flex flex-col gap-1.5 rounded-lg p-2.5 text-sm">
+          <p>
+            Completando la reserva de <span className="font-medium">{reserva.cliente}</span>.
+            Anticipo recibido: <span className="tabular-nums">{bs(reserva.anticipo)}</span>.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 self-start"
+            onClick={reserva.alQuitar}
+          >
+            Descartar reserva
+          </Button>
+        </div>
+      )}
+      {reserva ? null : orden && sinRed && !cliente ? (
         <ClienteEscrito
           ficha={orden.ficha}
           alCambiar={orden.alCambiarFicha}
@@ -118,7 +137,7 @@ export function PanelVenta({
           Los descuentos están desactivados (tope 0 %). Un encargado puede configurarlo.
         </p>
       )}
-      {hayLineas && puedeBajar && (
+      {hayLineas && puedeBajar && !reserva && (
         <label className="flex items-center justify-between gap-2 text-sm">
           <span>Descuento de la venta (Bs)</span>
           <Input

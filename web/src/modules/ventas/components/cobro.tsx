@@ -18,12 +18,15 @@ import type { EstadoEnvio } from "../use-envio";
 // Cobro (RF-VEN-02): efectivo y QR combinables. El pago enviado es el monto aplicado; el vuelto es solo de pantalla.
 // Es un AlertDialog (Escape, foco atrapado, aria-modal). Mientras envía no se cierra.
 export function Cobro({
-  total,
+  total: totalVenta,
+  anticipo = 0,
   estado,
   alConfirmar,
   alCerrar,
 }: {
   total: number;
+  // Reserva: anticipo ya recibido (centavos). Se cobra solo el saldo.
+  anticipo?: number;
   estado: EstadoEnvio;
   alConfirmar: (c: {
     efectivo: number;
@@ -33,6 +36,7 @@ export function Cobro({
   }) => void;
   alCerrar: () => void;
 }) {
+  const total = totalVenta - anticipo;
   const [qrTexto, setQrTexto] = useState("");
   const [recibidoTexto, setRecibidoTexto] = useState(textoMonto(total));
   const [recibidoEditado, setRecibidoEditado] = useState(false);
@@ -85,6 +89,11 @@ export function Cobro({
             <AlertDialogTitle>Cobrar venta</AlertDialogTitle>
             <p className="text-2xl font-bold tabular-nums">{bs(total)}</p>
           </div>
+          {anticipo > 0 && (
+            <p className="bg-muted rounded-lg px-3 py-2 text-sm tabular-nums">
+              Total {bs(totalVenta)} menos el anticipo de la reserva {bs(anticipo)}.
+            </p>
+          )}
 
           <fieldset disabled={ocupado} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">

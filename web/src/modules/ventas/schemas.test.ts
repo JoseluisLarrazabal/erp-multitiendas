@@ -52,6 +52,22 @@ describe("ventaPayloadSchema", () => {
     expect(ventaPayloadSchema.safeParse({ ...base, numero: "c1-1" }).success).toBe(false);
     expect(ventaPayloadSchema.safeParse({ ...base, extra: 1 }).success).toBe(false);
   });
+  it("reserva_id es opcional y el pago anticipo es válido; sin las claves el payload sigue igual", () => {
+    expect(ventaPayloadSchema.safeParse(base).success).toBe(true);
+    const conReserva = {
+      ...base,
+      reserva_id: base.id,
+      pagos: [
+        { medio: "anticipo", monto: 30 },
+        { medio: "efectivo", monto: 50 },
+      ],
+    };
+    expect(ventaPayloadSchema.safeParse(conReserva).success).toBe(true);
+    expect(ventaPayloadSchema.safeParse({ ...conReserva, reserva_id: "x" }).success).toBe(false);
+    expect(
+      ventaPayloadSchema.safeParse({ ...base, pagos: [{ medio: "anticipo", monto: 0 }] }).success,
+    ).toBe(false);
+  });
   it("rechaza más decimales de los permitidos y fechas sin zona", () => {
     expect(ventaPayloadSchema.safeParse({ ...base, total: 80.005 }).success).toBe(false);
     const item = base.items[0]!;

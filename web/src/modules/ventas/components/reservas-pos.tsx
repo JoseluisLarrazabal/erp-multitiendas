@@ -1,0 +1,147 @@
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
+import { formatearBs } from "@/lib/format/moneda";
+import { useSinRed } from "@/lib/offline/red";
+import { createClient } from "@/lib/supabase/browser";
+import { ETIQUETA_MEDIO, bs, formatearCantidad, aMilesimas, type Indice } from "../domain";
+import { cancelarReserva, cargarReservasActivas } from "../queries-reservas";
+import { saldoReserva, totalReserva, type ReservaActiva } from "../reservas";
+import { FormReserva } from "./form-reserva";
+
+// Modo "Reservas" del POS: reservas activas del negocio, alta con anticipo, cancelar y completar (carga la venta).
+// Necesita conexión: lee y escribe directo contra el servidor, nunca por la cola offline.
+export function ReservasPos({
+  negocioId,
+  cajaId,
+  indice,
+  hayCarrito,
+  alCompletar,
+}: {
+  negocioId: string;
+  cajaId: string | null;
+  indice: Indice | null;
+  hayCarrito: boolean;
+  alCompletar: (r: ReservaActiva) => void;
+}) {
+  const sinRed = useSinRed();
+  const [reservas, setReservas] = useState<ReservaActiva[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const r = await cargarReservasActivas(createClient(), negocioId);
+    if (r.ok) {
+      setReservas(r.data);
+      setError(null);
+    } else setError(r.error);
+  }, [negocioId]);
+  useEffect(() => {
+    if (sinRed) return;
+    let cancelado = false;
+    void cargarReservasActivas(createClient(), negocioId).then((r) => {
+      if (cancelado) return;
+      if (r.ok) setReservas(r.data);
+      else setError(r.error);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [sinRed, negocioId]);
+
+  if (sinRed)
+    return (
+      <p role="status" className="bg-secondary rounded-lg p-3 text-sm">
+        Las reservas necesitan conexión: no se pueden crear, cancelar ni completar sin red.
+      </p>
+    );
+
+  return (
+    <section aria-label="Reservas" className="flex flex-col gap-3">
+      <FormReserva
+        negocioId={negocioId}
+        cajaId={cajaId}
+        indice={indice}
+        alCrear={() => {
+          setAviso("Reserva creada: stock apartado y anticipo en caja.");
+          void cargar();
+        }}
+      />
+      <div role="status" className="flex flex-col gap-3 empty:hidden">
+        {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
+        {reservas === null && !error && (
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando reservas…
+          </p>
+        )}
+        {reservas?.length === 0 && (
+          <p className="text-muted-foreground py-2 text-center text-sm">No hay reservas activas.</p>
+        )}
+      </div>
+      {error && (
+        <div
+          role="alert"
+          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+        >
+          <span>{error}</span>
+          <Button type="button" variant="outline" className="h-10" onClick={() => void cargar()}>
+            Reintentar
+          </Button>
+        </div>
+      )}
+      <ul
+        aria-label="Reservas activas"
+        className="divide-border bg-card divide-y rounded-xl border empty:hidden"
+      >
+        {reservas?.map((r) => (
+          <li
+            key={r.id}
+            aria-label={`Reserva de ${r.clienteNombre}`}
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
+          >
+            <div className="min-w-0 flex-1 basis-56">
+              <p className="truncate text-sm font-semibold">{r.clienteNombre}</p>
+              <p className="truncate text-sm">
+                {r.productoNombre} × {formatearCantidad(aMilesimas(r.cantidad))}
+              </p>
+              <p className="text-muted-foreground text-xs tabular-nums">
+                Total {bs(totalReserva(r))} · anticipo {formatearBs(r.anticipo)} (
+                {ETIQUETA_MEDIO[r.medio]}) · saldo {bs(saldoReserva(r))}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                className="h-10"
+                disabled={hayCarrito || !cajaId}
+                title={hayCarrito ? "Termina o vacía la venta en curso" : undefined}
+                aria-label={`Completar reserva de ${r.clienteNombre}`}
+                onClick={() => alCompletar(r)}
+              >
+                Completar venta
+              </Button>
+              <ConfirmarAccion
+                etiqueta="Cancelar"
+                titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
+                descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
+                confirmar="Cancelar reserva"
+                deshabilitado={!cajaId}
+                accion={async () => {
+                  const res = cajaId ? await cancelarReserva(createClient(), r.id, cajaId) : null;
+                  if (!res) return { ok: false, error: "Abre la caja para devolver el anticipo." };
+                  if (!res.ok) return res;
+                  setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
+                  void cargar();
+                  return { ok: true, data: null };
+                }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

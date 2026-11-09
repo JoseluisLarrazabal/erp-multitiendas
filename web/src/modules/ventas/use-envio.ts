@@ -24,6 +24,8 @@ import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from
 export type EstadoEnvio = { t: "libre" } | { t: "enviando" } | { t: "rechazada"; mensaje: string };
 
 const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_SIN_PRECIO"];
+const MENSAJE_RESERVA_RED =
+  "Completar una reserva necesita conexión: no se cobró. Vuelve a intentar con red.";
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
   "No se pudo guardar la venta en este equipo, así que no se cobró. Revisa el espacio y los permisos del navegador, o recarga la página.";
@@ -36,6 +38,9 @@ export type ContextoCobro = {
   // El cajero confirmó que el QR llegó. Sin conexión no se pide: el pago queda pendiente de verificar.
   qrConfirmado: boolean;
   recibido: number;
+  // Completar una reserva: su id y el anticipo recibido (centavos). Nunca se encola sin conexión.
+  reservaId?: string;
+  anticipo?: number;
   // Lavandería: la ficha viaja con la venta (crear_orden) y la nota se imprime como boleta.
   orden?: OrdenPayload;
   nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden">;
@@ -101,6 +106,9 @@ export function useEnvio(opts: {
           if (qrPendiente) enLinea = false;
           // Una orden sin cliente (nombre escrito sin red) tampoco viaja en línea: el servidor la rechaza sin p_offline.
           if (c.orden && !c.clienteId) enLinea = false;
+          // Una reserva exige conexión: sin ella no se cobra ni se encola.
+          if (c.reservaId && !enLinea)
+            return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
           const ventaId = crypto.randomUUID();
           const armada: { nota?: NotaVenta; items?: VentaPayload["items"] } = {};
           cola.enCurso(ventaId);
@@ -121,6 +129,7 @@ export function useEnvio(opts: {
                   efectivo: c.efectivo,
                   qr: c.qr,
                   qrVerificado: !qrPendiente,
+                  ...(c.reservaId ? { reservaId: c.reservaId, anticipo: c.anticipo } : {}),
                 };
                 const payload = construirPayload(resumen, datos);
                 const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });

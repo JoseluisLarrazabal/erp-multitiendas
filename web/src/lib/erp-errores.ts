@@ -20,6 +20,10 @@ const MENSAJES: Record<string, string> = {
   ERP_VENTA_CON_DEVOLUCIONES: "La venta tiene devoluciones.",
   ERP_ORDEN_ESTADO: "La orden no puede pasar a ese estado.",
   ERP_ES_ORDEN: "Esa venta es una orden de lavandería: anúlala desde la orden.",
+  ERP_RESERVA_NO_ACTIVA: "La reserva ya no está activa: se completó o se canceló.",
+  ERP_VENTA_DE_RESERVA:
+    "Esa venta completó una reserva: no se puede anular ni devolver desde el sistema.",
+  ERP_REQUIERE_CONEXION: "Esta operación necesita conexión. Revisa la red y vuelve a intentar.",
 };
 
 export function codigoErp(error: ErrorRpc): string | null {

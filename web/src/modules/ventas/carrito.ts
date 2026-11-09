@@ -25,6 +25,8 @@ export type Linea = {
   descuentoTexto: string;
   serieId: string | null;
   serieTexto: string | null;
+  // Línea de una reserva: el precio ya se acordó, sin piso ni descuento (igual que en registrar_venta).
+  precioFijo?: boolean;
 };
 
 export type AccionCarrito =
@@ -168,7 +170,7 @@ export function resolverLinea(l: Linea, permisos: Permisos): LineaResuelta {
   if (precio === null || precio <= 0) return { ...base, error: "Precio inválido" };
   const descuento = l.descuentoTexto.trim() === "" ? 0 : parsearMonto(l.descuentoTexto);
   if (descuento === null) return { ...base, error: "Descuento inválido" };
-  const piso = pisoUnitario(precioDe(l.producto, "minimo"), precioLista);
+  const piso = l.precioFijo ? 0 : pisoUnitario(precioDe(l.producto, "minimo"), precioLista);
   const entrada = { cantidadMilesimas, precio, descuento, pisoUnitario: piso };
   const puedeBajar = permisos.puedeDescontar && permisos.tope > 0;
   if (precio < piso && !puedeBajar)

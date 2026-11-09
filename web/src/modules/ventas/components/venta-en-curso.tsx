@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PanelCaja } from "@/modules/caja";
-import { bs } from "../domain";
+import { aCentavos, bs } from "../domain";
 import { datosBoleta } from "../orden";
 import { useVenta, type OpcionesVenta } from "../use-venta";
 import { AvisosVenta } from "./avisos-venta";
@@ -12,6 +12,7 @@ import { Cobro } from "./cobro";
 import { ConfirmarDescarte } from "./confirmar-descarte";
 import { NotaVentaVista } from "./nota-venta";
 import { PanelVenta } from "./panel-venta";
+import { ReservasPos } from "./reservas-pos";
 import { ZonaProductos } from "./zona-productos";
 
 export function VentaEnCurso({
@@ -21,7 +22,10 @@ export function VentaEnCurso({
   // La caja reemplaza la zona de venta sin desmontar el hook: el carrito sigue intacto. Con la caja a la vista
   // F2 y "/" no actúan.
   const [verCaja, setVerCaja] = useState(false);
-  const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || verCaja });
+  // Modo Reservas: como la caja, no desmonta la venta (el carrito sigue intacto).
+  const [verReservas, setVerReservas] = useState(false);
+  const aparte = verCaja || verReservas;
+  const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || aparte });
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
 
@@ -38,9 +42,11 @@ export function VentaEnCurso({
         alCambiarEquipo={() =>
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
-        modo={verCaja ? "caja" : v.consulta ? "consulta" : "vender"}
+        conReservas={opciones.permisos.includes("gestionar_reservas")}
+        modo={verCaja ? "caja" : verReservas ? "reservas" : v.consulta ? "consulta" : "vender"}
         alCambiarModo={(m) => {
           setVerCaja(m === "caja");
+          setVerReservas(m === "reservas");
           // Antes de cerrar la caja se intenta enviar lo que haya en la cola.
           if (m === "caja") opciones.cola.disparar(true);
           if (m !== "caja") v.setConsulta(m === "consulta");
@@ -70,8 +76,19 @@ export function VentaEnCurso({
           alVolver={() => setVerCaja(false)}
         />
       )}
+      {verReservas && (
+        <ReservasPos
+          negocioId={opciones.negocioId}
+          cajaId={cajaId}
+          indice={v.indice}
+          hayCarrito={v.carrito.length > 0}
+          alCompletar={(r) => {
+            if (v.cargarReserva(r)) setVerReservas(false);
+          }}
+        />
+      )}
       <div
-        hidden={verCaja}
+        hidden={aparte}
         className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] [&[hidden]]:hidden"
       >
         <ZonaProductos
@@ -106,6 +123,15 @@ export function VentaEnCurso({
           abrirCobro={v.abrirCobro}
           tituloRef={v.titulo}
           sinRed={v.sinRed}
+          reserva={
+            v.reserva
+              ? {
+                  cliente: v.reserva.clienteNombre,
+                  anticipo: aCentavos(v.reserva.anticipo),
+                  alQuitar: v.descartarReserva,
+                }
+              : null
+          }
           orden={
             v.esOrden
               ? {
@@ -119,7 +145,7 @@ export function VentaEnCurso({
         />
       </div>
 
-      {!v.consulta && !verCaja && (
+      {!v.consulta && !aparte && (
         <div className="bg-card fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
           <p className="flex-1 text-xl font-bold tabular-nums">{bs(totales?.total ?? 0)}</p>
           <Button
@@ -136,6 +162,7 @@ export function VentaEnCurso({
       {v.cobrando && totales && (
         <Cobro
           total={totales.total}
+          anticipo={v.reserva ? aCentavos(v.reserva.anticipo) : undefined}
           estado={envio.estado}
           alCerrar={() => {
             envio.limpiarRechazo();
@@ -157,6 +184,9 @@ export function VentaEnCurso({
               qr: c.qr,
               qrConfirmado: c.qrConfirmado,
               recibido: c.recibido,
+              ...(v.reserva
+                ? { reservaId: v.reserva.id, anticipo: aCentavos(v.reserva.anticipo) }
+                : {}),
               nota: {
                 negocio: { nombre: negocio.nombre, nit: negocio.nit, datosNota: negocio.datosNota },
                 vendedor: v.vendedor,

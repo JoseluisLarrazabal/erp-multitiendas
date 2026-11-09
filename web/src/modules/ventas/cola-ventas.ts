@@ -119,13 +119,15 @@ export async function enviarVentaDeCola(
   });
   let enDuda = fila.intentos > 0;
   for (let duplicados = 0; ; duplicados++) {
-    const offline: OfflineVenta | undefined = primerIntento
-      ? undefined
-      : {
-          vendedor_id: fila.usuarioId,
-          tipo_cambio: tipoCambio,
-          numero_impreso: fila.numeroImpreso,
-        };
+    // Una venta de reserva siempre va en línea (el servidor rechaza p_offline con reserva): su reenvío es idempotente por id.
+    const offline: OfflineVenta | undefined =
+      primerIntento || venta.reserva_id
+        ? undefined
+        : {
+            vendedor_id: fila.usuarioId,
+            tipo_cambio: tipoCambio,
+            numero_impreso: fila.numeroImpreso,
+          };
     const r = await enviarVenta(supabase, venta, offline, orden);
     if (r.ok) return ok();
     // Solo un código ERP_ es una respuesta definitiva de la base; cualquier otro fallo (PGRST, 40P01, 5xx) puede

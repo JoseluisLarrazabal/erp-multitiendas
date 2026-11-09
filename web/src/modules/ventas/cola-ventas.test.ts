@@ -131,6 +131,17 @@ describe("enviarVentaDeCola", () => {
     });
   });
 
+  it("una venta de reserva se reenvía sin p_offline (el servidor lo rechaza con reserva)", async () => {
+    const c = cliente({ respuestas: [exito] });
+    const reserva = { ...venta, reserva_id: uuid(8) };
+    await enviarVentaDeCola(
+      fila({ intentos: 1, payload: { venta: reserva, tipo_cambio: 6.96 } }),
+      c.supabase,
+      false,
+    );
+    expect(c.llamadas[0]).toEqual({ p_venta: reserva });
+  });
+
   it("con orden llama a crear_orden con p_orden (y p_offline en el reenvío); sin orden, a registrar_venta", async () => {
     const orden = { express: true, prendas: 3, fecha_prometida: "2026-11-05", casillero: "A1" };
     const conOrden = fila({ payload: { venta, tipo_cambio: 6.96, orden } });

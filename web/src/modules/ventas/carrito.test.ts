@@ -39,6 +39,17 @@ describe("carrito", () => {
     c = reducirCarrito(c, { tipo: "agregar", producto: s, id: "l4" });
     expect(c).toHaveLength(3);
   });
+  it("una línea de reserva (precioFijo) no se bloquea bajo el mínimo y sin permiso", () => {
+    let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
+    c = reducirCarrito(c, {
+      tipo: "cambiar",
+      id: "l1",
+      cambios: { precioTexto: "31", precioFijo: true },
+    });
+    const r = resumirCarrito(c, "", sinPermiso);
+    expect(r.error).toBeNull();
+    expect(r.totales?.total).toBe(3100);
+  });
   it("sin permiso: entre piso y lista pasa; bajo el piso o con descuento se bloquea", () => {
     let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
     c = reducirCarrito(c, { tipo: "cambiar", id: "l1", cambios: { precioTexto: "35" } });

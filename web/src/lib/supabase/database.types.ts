@@ -683,6 +683,82 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"reserva_pagos": {
+                  Row: {
+                    "caja_sesion_id": string,"created_at": string,"id": string,"medio": string,"monto": number,"negocio_id": string,"reserva_id": string,"tipo": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "caja_sesion_id": string,"created_at"?: string,"id"?: string,"medio": string,"monto": number,"negocio_id": string,"reserva_id": string,"tipo": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "caja_sesion_id"?: string,"created_at"?: string,"id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"reserva_id"?: string,"tipo"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reserva_pagos_negocio_id_caja_sesion_id_fkey"
+      columns: ["negocio_id","caja_sesion_id"]
+isOneToOne: false
+      referencedRelation: "caja_sesiones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reserva_pagos_negocio_id_reserva_id_fkey"
+      columns: ["negocio_id","reserva_id"]
+isOneToOne: false
+      referencedRelation: "reservas"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"reservas": {
+                  Row: {
+                    "cantidad": number,"cerrada_en": string | null,"cliente_id": string,"created_at": string,"estado": string,"id": string,"negocio_id": string,"precio_acordado": number,"producto_id": string,"ubicacion_id": string,"usuario_id": string | null,"venta_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantidad": number,"cerrada_en"?: string | null,"cliente_id": string,"created_at"?: string,"estado"?: string,"id": string,"negocio_id": string,"precio_acordado": number,"producto_id": string,"ubicacion_id": string,"usuario_id"?: string | null,"venta_id"?: string | null
+                  }
+                  Update: {
+                    "cantidad"?: number,"cerrada_en"?: string | null,"cliente_id"?: string,"created_at"?: string,"estado"?: string,"id"?: string,"negocio_id"?: string,"precio_acordado"?: number,"producto_id"?: string,"ubicacion_id"?: string,"usuario_id"?: string | null,"venta_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reservas_negocio_id_cliente_id_fkey"
+      columns: ["negocio_id","cliente_id"]
+isOneToOne: false
+      referencedRelation: "clientes"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_venta_id_fkey"
+      columns: ["negocio_id","venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"rol_permisos": {
                   Row: {
                     "permiso": string,"rol": string,"tipo_negocio": string
@@ -1099,6 +1175,9 @@ isOneToOne: false
 "cambiar_estado_orden":
 { Args: { "p_estado": string,"p_orden_id": string }; Returns: Json
                            },
+"cancelar_reserva":
+{ Args: { "p_reserva_id": string,"p_sesion_id": string }; Returns: Json
+                           },
 "catalogo_pos":
 { Args: { "p_ubicacion_id": string }; Returns: Json
                            },
@@ -1115,6 +1194,9 @@ isOneToOne: false
                            },
 "crear_orden":
 { Args: { "p_offline"?: Json,"p_orden": Json,"p_venta": Json }; Returns: Json
+                           },
+"crear_reserva":
+{ Args: { "p_reserva": Json }; Returns: Json
                            },
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
@@ -1268,6 +1350,11 @@ isOneToOne: false
                            },
 "reporte_ventas":
 { Args: { "p_agrupar": string,"p_desde": string,"p_hasta": string,"p_negocio_id": string }; Returns: Json
+                           },
+"reservas_activas":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "anticipo": number,"cantidad": number,"cliente_id": string,"cliente_nombre": string,"created_at": string,"id": string,"medio": string,"precio_acordado": number,"producto_id": string,"producto_nombre": string,"ubicacion_id": string
+            }[]
                            },
 "resolver_devolucion_existente":
 { Args: { "p_dev": Omit<Database["public"]['Tables']["devoluciones"]['Row'], Database["public"]['Tables']["devoluciones"]['ComputedFields']>,"p_huella": string,"p_negocio_id": string }; Returns: Json
