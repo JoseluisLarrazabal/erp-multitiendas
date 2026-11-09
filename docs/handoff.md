@@ -12,6 +12,12 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
 - **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85; migración `20261108130000` aplicada y `/panel/reconciliacion` verificada). Queda el PR `test/brechas-trazabilidad`.
+- **Fase 7, reservas (PR 3):** pestaña Reservas del POS, solo con conexión, con anticipo en efectivo o QR. Decisiones:
+  - La reserva valida el precio mínimo y exige stock disponible en el equipo.
+  - Una venta de reserva nunca se encola: se reintenta en memoria con el mismo id, y si no se confirma se ofrece "Descartar y verificar".
+  - Costo de la venta = foto de la reserva. Al completar, la liberación va sin costo; al cancelar reingresa con la foto.
+  - Una venta de reserva no se anula ni se devuelve.
+  - Para el CTO: el QR del anticipo se confirma en el mostrador y no se puede marcar como rechazado después.
 - **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
