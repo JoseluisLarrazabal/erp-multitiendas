@@ -133,3 +133,123 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
   await page.context().setOffline(false);
   await expect(page.getByRole("form", { name: "Nueva reserva" })).toBeVisible();
 });
+
+// Cobro de reserva sin confirmar: el cobro nunca va a la cola; se reintenta en memoria y, si no se sabe qué pasó,
+// el cajero verifica contra el servidor antes de soltar el producto.
+async function reservaApi(producto: { id: string }, cantidad: number) {
+  const id = crypto.randomUUID();
+  const r = await apiComo("vendedor", "rpc/crear_reserva", {
+    metodo: "POST",
+    cuerpo: {
+      p_reserva: {
+        id,
+        dispositivo_id: equipoId,
+        caja_sesion_id: cajaId,
+        cliente_id: clienteId,
+        producto_id: producto.id,
+        cantidad,
+        precio_acordado: 50,
+        anticipo: 20,
+        medio: "efectivo",
+      },
+    },
+  });
+  expect(r.status, JSON.stringify(r.json)).toBeLessThan(300);
+  return id;
+}
+async function estadoReserva(id: string) {
+  const r = await apiComo("vendedor", `reservas?select=estado,venta_id&id=eq.${id}`);
+  return (r.json as { estado: string; venta_id: string | null }[])[0]!;
+}
+async function ventasDe(ventaId: string) {
+  const v = await apiComo("vendedor", `ventas?select=id&id=eq.${ventaId}`);
+  const p = await apiComo(
+    "vendedor",
+    `venta_pagos?select=id&venta_id=eq.${ventaId}&medio=eq.anticipo`,
+  );
+  return { ventas: (v.json as unknown[]).length, anticipos: (p.json as unknown[]).length };
+}
+
+async function abrirCobroDeReserva(page: import("@playwright/test").Page) {
+  await fijarEquipo(page, equipoId);
+  await page.goto("/pos");
+  await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
+  await page.getByRole("button", { name: "Reservas" }).click();
+  await page
+    .getByRole("listitem", { name: `Reserva de ${nombreCliente}` })
+    .getByRole("button", { name: `Completar reserva de ${nombreCliente}` })
+    .click();
+  await page
+    .getByRole("button", { name: /^Cobrar/ })
+    .first()
+    .click();
+  return page.getByRole("alertdialog", { name: "Cobrar venta" });
+}
+
+test("respuesta perdida: el servidor guarda el cobro pero el cliente no lo ve", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
+  const reservaId = await reservaApi(producto, 1);
+  const cobro = await abrirCobroDeReserva(page);
+
+  // Cada intento llega al servidor (guarda) pero la respuesta se pierde; la comprobación de existencia también falla.
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await page.route(
+    (url) => url.pathname.endsWith("/rest/v1/ventas"),
+    (route) => route.abort("failed"),
+  );
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro).toContainText("No se confirmó el cobro", { timeout: 30_000 });
+  await expect(cobro.getByRole("button", { name: "Reintentar cobro" })).toBeVisible();
+  await expect(cobro.getByLabel("Efectivo recibido (Bs)")).toBeDisabled();
+  await expect(cobro.getByLabel("Efectivo recibido (Bs)")).toHaveValue("30,00");
+
+  // El carrito no se puede descartar mientras el cobro no se verifique.
+  await cobro.getByRole("button", { name: "Volver" }).click();
+  await page.getByRole("button", { name: "Descartar reserva" }).click();
+  await expect(page.getByText(/cobro sin confirmar de esta reserva/)).toBeVisible();
+  await page
+    .getByRole("button", { name: /^Cobrar/ })
+    .first()
+    .click();
+
+  await page.unroute("**/rest/v1/rpc/registrar_venta");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await page
+    .getByRole("alertdialog", { name: "Cobrar venta" })
+    .getByRole("button", { name: "Descartar y verificar" })
+    .click();
+  await expect(page.getByRole("article", { name: /Nota de venta W1-\d{6}/ })).toBeVisible();
+  const r = await estadoReserva(reservaId);
+  expect(r.estado).toBe("completada");
+  expect(await ventasDe(r.venta_id!)).toEqual({ ventas: 1, anticipos: 1 });
+});
+
+test("nunca llegó: la verificación dice que no se registró y se cobra de nuevo", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
+  const reservaId = await reservaApi(producto, 1);
+  const cobro = await abrirCobroDeReserva(page);
+
+  await page.route("**/rest/v1/rpc/registrar_venta", (route) => route.abort("failed"));
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro).toContainText("No se confirmó el cobro", { timeout: 30_000 });
+  await cobro.getByRole("button", { name: "Descartar y verificar" }).click();
+  await expect(cobro).toContainText("No se registró: el cobro no se hizo");
+  expect((await estadoReserva(reservaId)).estado).toBe("activa");
+
+  // Con la red de vuelta, el cobro normal completa la reserva con una sola venta.
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(page.getByRole("article", { name: /Nota de venta W1-\d{6}/ })).toBeVisible();
+  const r = await estadoReserva(reservaId);
+  expect(r.estado).toBe("completada");
+  expect(await ventasDe(r.venta_id!)).toEqual({ ventas: 1, anticipos: 1 });
+});
