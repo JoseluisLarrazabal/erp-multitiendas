@@ -1168,6 +1168,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"marcas_productos": {
+                  Row: {
+                    "marca": string | null,"negocio_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "productos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"producto_precios_bs": {
                   Row: {
                     "lista": string,"moneda": string,"monto": number,"monto_bs": number | null,"negocio_id": string,"producto_id": string,"tipo_cambio": number | null

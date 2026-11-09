@@ -4,7 +4,9 @@ import { rutaAuth } from "./helpers";
 test.use({ storageState: rutaAuth("dueno"), viewport: { width: 390, height: 844 } });
 
 // Teclado real: foco al abrir, Tab llega a los enlaces, Escape cierra y devuelve el foco.
-test("menú móvil: Enter abre, Tab recorre, Escape cierra y devuelve el foco", async ({ page }) => {
+test("menú móvil: Enter abre, Tab recorre, Escape cierra y devuelve el foco @cross", async ({
+  page,
+}) => {
   await page.goto("/panel");
   await page.waitForLoadState("networkidle"); // hidratado: si no, Enter no abre nada
   const abrir = page.getByRole("button", { name: "Abrir menú" });

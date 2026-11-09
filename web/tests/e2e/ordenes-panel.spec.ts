@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { apiComo, NEGOCIOS, rutaAuth } from "./helpers";
+import { apiComo, envejecerOrden, NEGOCIOS, rutaAuth } from "./helpers";
 
 // Panel de órdenes (fase 4, PR 3). Serial: comparten la caja L2 de la lavandería (propia, para no chocar con lavanderia.spec que usa L1). Cada orden se anula al final.
 test.describe.configure({ mode: "serial" });
@@ -143,7 +143,8 @@ test.describe("encargado de lavandería", () => {
     await page.goto(`/panel/ordenes?q=${numero}`);
     await expect(page.getByRole("link", { name: new RegExp(numero) })).toBeVisible();
 
-    await page.goto(`/panel/ordenes?estado=sin_recoger&q=${encodeURIComponent(cliente)}`);
+    // Por número y no por cliente: la prueba de "sin recoger con datos" deja órdenes viejas del mismo cliente.
+    await page.goto(`/panel/ordenes?estado=sin_recoger&q=${numero}`);
     await expect(page.getByText("Ninguna orden coincide con los filtros.")).toBeVisible();
   });
 
@@ -185,6 +186,45 @@ test.describe("encargado de lavandería", () => {
     for (const t of segunda) {
       expect(t).toContain(cliente);
       expect(primera).not.toContain(t);
+    }
+  });
+
+  // RF-LAV-07 / RN-09: solo las `lista` con más de 30 días son "sin recoger". La fecha se retrocede con un script que
+  // entra como superusuario al contenedor de la base local (ninguna RPC puede), así que la prueba corre solo contra esa base.
+  test("filtro Sin recoger con datos: lista vieja aparece; lista reciente y recibida vieja, no", async ({
+    page,
+  }) => {
+    const vieja = await crearOrdenApi();
+    const reciente = await crearOrdenApi();
+    const recibidaVieja = await crearOrdenApi();
+    try {
+      for (const o of [vieja, reciente])
+        for (const estado of ["en_lavado", "lista"])
+          expect(
+            (
+              await apiComo("encargadoLavanderia", "rpc/cambiar_estado_orden", {
+                metodo: "POST",
+                cuerpo: { p_orden_id: o.id, p_estado: estado },
+              })
+            ).status,
+          ).toBeLessThan(300);
+      envejecerOrden(vieja.id, 31);
+      envejecerOrden(reciente.id, 29);
+      envejecerOrden(recibidaVieja.id, 40);
+
+      await page.goto(`/panel/ordenes?estado=sin_recoger&q=${encodeURIComponent("L2-")}`);
+      const lista = page.getByRole("list", { name: "Órdenes" });
+      const fila = lista.getByRole("link", { name: new RegExp(vieja.numero) });
+      await expect(fila).toBeVisible();
+      await expect(fila).toContainText("Lista");
+      await expect(fila).toContainText(cliente);
+      await expect(fila).toContainText("Z9");
+      await expect(lista.getByRole("link", { name: new RegExp(reciente.numero) })).toHaveCount(0);
+      await expect(lista.getByRole("link", { name: new RegExp(recibidaVieja.numero) })).toHaveCount(
+        0,
+      );
+    } finally {
+      for (const o of [vieja, reciente, recibidaVieja]) extras.push(o.id);
     }
   });
 

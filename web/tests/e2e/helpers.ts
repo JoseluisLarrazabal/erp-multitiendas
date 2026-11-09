@@ -40,18 +40,23 @@ export function vigilarCsp(page: Page): () => void {
   return () => expect(violaciones).toEqual([]);
 }
 
+// Corre un script de scripts/e2e/ (fuera de web/ a propósito). La raíz del repo sale de la ubicación de este archivo,
+// no de process.cwd(), que cambia según desde dónde se lance Playwright.
+function correrScript(nombre: string, ...args: string[]) {
+  execFileSync("bash", [resolve(__dirname, "../../../scripts/e2e", nombre), ...args], {
+    stdio: "inherit",
+  });
+}
+
 // Desactiva (banea) o reactiva una cuenta. La clave admin la maneja un script fuera de web/;
 // aquí no se lee. Siempre restaurar en finally.
 export async function fijarBaneo(correo: string, baneada: boolean) {
-  execFileSync(
-    "bash",
-    [
-      resolve(process.cwd(), "..", "scripts/e2e/banear-cuenta.sh"),
-      correo,
-      baneada ? "24h" : "none",
-    ],
-    { stdio: "inherit" },
-  );
+  correrScript("banear-cuenta.sh", correo, baneada ? "24h" : "none");
+}
+
+// Retrocede `estado_en` de una orden de lavandería (RF-LAV-07). Solo el Supabase local; ver scripts/e2e/envejecer-orden.sh.
+export function envejecerOrden(ordenId: string, dias: number) {
+  correrScript("envejecer-orden.sh", ordenId, String(dias));
 }
 
 // Llamada a PostgREST con la sesión guardada de la cuenta (sin login nuevo). Devuelve el estado y el JSON.

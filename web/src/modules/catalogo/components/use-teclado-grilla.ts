@@ -8,7 +8,9 @@ export function useTecladoGrilla(alFinal: () => void, enfocarAlMontar: boolean) 
   const tabla = useRef<HTMLTableElement>(null);
 
   useEffect(() => {
-    if (enfocarAlMontar && window.matchMedia("(pointer: fine)").matches)
+    // Si el usuario ya enfocó otro control (un lector rápido tras hidratar), no se le quita el foco.
+    const libre = !document.activeElement || document.activeElement === document.body;
+    if (enfocarAlMontar && libre && window.matchMedia("(pointer: fine)").matches)
       enfocar(tabla.current?.querySelector<HTMLInputElement>('[data-fila="0"]:not(:disabled)'));
   }, [enfocarAlMontar]);
 
