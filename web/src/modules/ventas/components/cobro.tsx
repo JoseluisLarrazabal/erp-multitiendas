@@ -20,6 +20,8 @@ import type { EstadoEnvio } from "../use-envio";
 export function Cobro({
   total: totalVenta,
   anticipo = 0,
+  congelado,
+  alVerificar,
   estado,
   alConfirmar,
   alCerrar,
@@ -27,6 +29,9 @@ export function Cobro({
   total: number;
   // Reserva: anticipo ya recibido (centavos). Se cobra solo el saldo.
   anticipo?: number;
+  // Cobro de reserva sin confirmar: lo enviado (centavos) queda fijo y solo se puede reintentar idéntico o verificar.
+  congelado?: { efectivo: number; qr: number };
+  alVerificar?: () => void;
   estado: EstadoEnvio;
   alConfirmar: (c: {
     efectivo: number;
@@ -37,10 +42,14 @@ export function Cobro({
   alCerrar: () => void;
 }) {
   const total = totalVenta - anticipo;
-  const [qrTexto, setQrTexto] = useState("");
-  const [recibidoTexto, setRecibidoTexto] = useState(textoMonto(total));
+  const [qrTexto, setQrTexto] = useState(
+    congelado && congelado.qr > 0 ? textoMonto(congelado.qr) : "",
+  );
+  const [recibidoTexto, setRecibidoTexto] = useState(
+    textoMonto(congelado ? congelado.efectivo : total),
+  );
   const [recibidoEditado, setRecibidoEditado] = useState(false);
-  const [qrOk, setQrOk] = useState(false);
+  const [qrOk, setQrOk] = useState(!!congelado && congelado.qr > 0);
   // Sin conexión el QR no se puede comprobar: se cobra como pendiente de verificar, sin casilla.
   const sinRed = useSinRed();
   const primero = useRef<HTMLInputElement>(null);
@@ -95,7 +104,7 @@ export function Cobro({
             </p>
           )}
 
-          <fieldset disabled={ocupado} className="flex flex-col gap-3">
+          <fieldset disabled={ocupado || !!congelado} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cobro-qr">
                 <QrCode className="size-4" aria-hidden /> Pago por QR (Bs)
@@ -175,6 +184,13 @@ export function Cobro({
           <p role="status" className="text-muted-foreground text-xs empty:hidden">
             {calculo && !calculo.ok ? calculo.error : null}
           </p>
+          {congelado && (
+            <p className="bg-muted rounded-lg px-3 py-2 text-sm">
+              Cobro sin confirmar: los montos quedaron fijos ({bs(congelado.efectivo)} en efectivo
+              {congelado.qr > 0 ? ` y ${bs(congelado.qr)} por QR` : ""}). Reintenta o verifica si
+              quedó registrado.
+            </p>
+          )}
           {estado.t === "rechazada" && (
             <p
               role="alert"
@@ -188,6 +204,17 @@ export function Cobro({
             <AlertDialogCancel className="h-12" disabled={ocupado}>
               Volver
             </AlertDialogCancel>
+            {congelado && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12"
+                disabled={ocupado}
+                onClick={alVerificar}
+              >
+                Descartar y verificar
+              </Button>
+            )}
             {/* aria-disabled y no disabled: al enviar el foco no se pierde; la guarda real está en onSubmit. */}
             <Button
               type="submit"
@@ -199,7 +226,9 @@ export function Cobro({
                 ? "Verificando el cobro…"
                 : ocupado
                   ? "Enviando…"
-                  : "Confirmar cobro"}
+                  : congelado
+                    ? "Reintentar cobro"
+                    : "Confirmar cobro"}
             </Button>
           </div>
         </form>

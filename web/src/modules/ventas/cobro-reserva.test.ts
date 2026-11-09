@@ -61,6 +61,7 @@ const base = (alVerificar = vi.fn()) => ({
   primerNumero: 7,
   alVerificar,
   esperar: async () => undefined,
+  mayorEnCola: async () => 0,
 });
 
 describe("cobrarReserva (sin cola offline)", () => {

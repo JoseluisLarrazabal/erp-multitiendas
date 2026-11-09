@@ -38,7 +38,7 @@ export function ReservasPos({
   const [reservas, setReservas] = useState<ReservaActiva[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  // Una operación por reserva a cancelar: repetir la confirmación tras un corte de red devuelve lo original.
+  // Una operación por reserva y sesión de caja a cancelar: repetir la confirmación tras un corte de red devuelve lo original.
   const operaciones = useRef(new Map<string, string>());
 
   const cargar = useCallback(async () => {
@@ -152,8 +152,9 @@ export function ReservasPos({
                   accion={async () => {
                     if (!cajaId)
                       return { ok: false, error: "Abre la caja para devolver el anticipo." };
-                    const operacion = operaciones.current.get(r.id) ?? crypto.randomUUID();
-                    operaciones.current.set(r.id, operacion);
+                    const clave = `${r.id}:${cajaId}`; // otra sesión de caja = otra operación
+                    const operacion = operaciones.current.get(clave) ?? crypto.randomUUID();
+                    operaciones.current.set(clave, operacion);
                     const res = await cancelarReserva(
                       createClient(),
                       operacion,
@@ -163,13 +164,16 @@ export function ReservasPos({
                     );
                     if (!res.ok) {
                       // Ya se completó o canceló en otro equipo: se recarga la lista y se descarta la operación.
-                      if (res.codigo === "ERP_RESERVA_NO_ACTIVA") {
-                        operaciones.current.delete(r.id);
+                      if (
+                        res.codigo === "ERP_RESERVA_NO_ACTIVA" ||
+                        res.codigo === "ERP_OPERACION_REPETIDA"
+                      ) {
+                        operaciones.current.delete(clave);
                         void cargar();
                       }
                       return res;
                     }
-                    operaciones.current.delete(r.id);
+                    operaciones.current.delete(clave);
                     setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
                     void cargar();
                     return { ok: true, data: null };

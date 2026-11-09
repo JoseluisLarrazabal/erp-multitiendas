@@ -3,8 +3,7 @@
 -- Errores nuevos: ERP_RESERVA_NO_ACTIVA (completar o cancelar una reserva ya cerrada), ERP_VENTA_DE_RESERVA (anular o
 -- devolver una venta que completó una reserva), ERP_REQUIERE_CONEXION (registrar_venta con reserva y p_offline).
 -- Stock: crear_reserva escribe `reserva` (-cantidad, costo foto); completar escribe `reserva_liberada` (+) y `venta` (-)
--- con ref_id distintos (reserva y venta; índice único del kardex); cancelar escribe `reserva_liberada` (+). La liberación
--- reingresa con el costo foto de la reserva (ver abajo). Series: un producto con serie no se reserva.
+-- con ref_id distintos (reserva y venta; índice único del kardex); cancelar escribe `reserva_liberada` (+). Series: un producto con serie no se reserva.
 -- Caja: reserva_pagos lleva el anticipo (tipo `anticipo`) y la devolución (tipo `devolucion`, P-12: se devuelve por caja, mismo
 -- medio y monto, en la sesión abierta de quien cancela). efectivo_esperado y total_qr_sesion suman los anticipos y restan
 -- las devoluciones por medio; resumen_caja los expone. El pago `anticipo` de la venta no es efectivo de la sesión
@@ -15,8 +14,9 @@
 -- Precio acordado: crear_reserva lo valida como una línea de registrar_venta (lista contado): bajo el mínimo exige `descontar`
 -- y la brecha respeta negocios.tope_descuento (ERP_SIN_PERMISO, ERP_DESCUENTO_TOPE). La venta que completa la reserva ya no
 -- re-valida el piso. Exige stock disponible >= cantidad (ERP_STOCK_INSUFICIENTE): la reserva no deja stock negativo.
--- Costo: reserva_liberada (cancelar y completar) reingresa con el costo foto del movimiento `reserva` original y la línea de
--- la venta usa esa misma foto como costo_unitario (como devolucion_cliente).
+-- Costo: al completar, reserva_liberada va sin costo (el stock restante conserva su promedio) y la línea de la venta usa como
+-- costo_unitario la foto del movimiento `reserva`. Al cancelar, reserva_liberada reingresa con esa foto (re-promedia, como
+-- devolucion_cliente).
 -- Equipo: crear y cancelar validan que la sesión sea de ese dispositivo y esté abierta (como registrar_venta); la ubicación
 -- de la reserva es la del equipo. cancelar_reserva es idempotente por p_operacion_id.
 
@@ -223,7 +223,7 @@ begin
   perform public.bloquear_stock(v_sesion.negocio_id, v_disp.ubicacion_id, array[v_producto_id]);
   select cantidad, costo_promedio into v_stock, v_costo from public.stock
   where producto_id = v_producto_id and ubicacion_id = v_disp.ubicacion_id;
-  if v_stock < v_cant then
+  if coalesce(v_stock, 0) < v_cant then
     raise exception 'ERP_STOCK_INSUFICIENTE';
   end if;
   insert into public.reservas (id, negocio_id, cliente_id, producto_id, ubicacion_id, cantidad, precio_acordado, usuario_id)
@@ -708,12 +708,12 @@ begin
   from jsonb_array_elements(v_pagos) e;
 
   -- La reserva ya descontó el stock: se libera (+) y la venta lo descuenta (-), con ref_id distintos (índice único del
-  -- kardex). La liberación reingresa con el costo foto de la reserva.
+  -- kardex). Al completar la liberación va SIN costo (no re-pondera costo_promedio) y la línea de la venta usa la foto.
   if v_reserva_id is not null then
     insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,
       ref_tipo, ref_id, usuario_id)
     values (v_disp.negocio_id, v_reserva.ubicacion_id, v_reserva.producto_id, 'reserva_liberada', v_reserva.cantidad,
-      v_costo_reserva, 'reserva', v_reserva_id, v_uid);
+      null, 'reserva', v_reserva_id, v_uid);
     update public.reservas set estado = 'completada', venta_id = v_id, cerrada_en = now() where id = v_reserva_id;
   end if;
   insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,

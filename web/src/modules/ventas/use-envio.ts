@@ -18,11 +18,13 @@ import {
 import { cobrarReserva, MENSAJE_SIN_CONFIRMAR } from "./cobro-reserva";
 import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
-import type { Equipo } from "./queries";
+import { existeVenta, type Equipo } from "./queries";
 import type { OrdenPayload, VentaPayload } from "./schemas";
+
+// Cobro de reserva sin confirmar: lo que se envió y la nota armada con esos datos.
+export type PendienteReserva = { payload: VentaPayload; nota: NotaVenta };
 import { equipoTieneCola, type ColaPos } from "./use-cola";
 import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from "./venta";
-import type { VentaPayload as Payload } from "./schemas";
 
 export type EstadoEnvio =
   | { t: "libre" }
@@ -87,10 +89,17 @@ export function useEnvio(opts: {
   }, [equipo.id, equipo.ultimoNumero]);
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const ocupado = useRef(false);
-  // Cobro de reserva sin confirmar: su payload se reenvía idéntico (mismo id y número) hasta saber qué pasó en el servidor.
-  const sinConfirmar = useRef<{ reservaId: string; payload: Payload; nota: NotaVenta } | null>(
-    null,
-  );
+  // Cobros de reserva sin confirmar, por reserva: el payload se reenvía idéntico (mismo id y número) hasta saber qué pasó
+  // en el servidor. El mapa vive en estado (la pantalla lo muestra) y en un ref (hayPendiente lo lee sin render).
+  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteReserva>>(new Map());
+  const pendRef = useRef(pendientes);
+  const fijarPendiente = useCallback((reservaId: string, p: PendienteReserva | null) => {
+    const m = new Map(pendRef.current);
+    if (p) m.set(reservaId, p);
+    else m.delete(reservaId);
+    pendRef.current = m;
+    setPendientes(m);
+  }, []);
 
   // Una reserva nunca pasa por la cola ni por IndexedDB: sin conexión no se cobra.
   const confirmarReserva = useCallback(
@@ -102,9 +111,11 @@ export function useEnvio(opts: {
         : await comprobarCuenta(createClient(), usuarioId);
       if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
       if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
-      const previo = sinConfirmar.current?.reservaId === c.reservaId ? sinConfirmar.current : null;
-      let nota = previo?.nota ?? null;
+      const previo = pendRef.current.get(c.reservaId) ?? null;
+      const armada: { nota?: NotaVenta } = { nota: previo?.nota };
       const ventaId = crypto.randomUUID();
+      // Igual que en la venta normal: un QR sin confirmar no viaja en línea.
+      const qrVerificado = !(c.qr > 0 && !c.qrConfirmado);
       const primerNumero = previo
         ? secuenciaDe(previo.payload.numero)
         : siguienteSecuencia(
@@ -127,34 +138,68 @@ export function useEnvio(opts: {
             descuentoVentaTexto: c.descuentoVentaTexto,
             efectivo: c.efectivo,
             qr: c.qr,
-            qrVerificado: true,
+            qrVerificado,
             reservaId: c.reservaId,
             anticipo: c.anticipo,
           };
           const payload = construirPayload(resumen, datos);
-          nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
+          const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
+          if (!payload || !nota) return null;
+          armada.nota = nota;
           return payload;
         },
       });
+      if (salida.t === "no-armada" || !armada.nota)
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
       if (salida.t === "sin-confirmar") {
-        sinConfirmar.current = { reservaId: c.reservaId, payload: salida.payload, nota: nota! };
+        fijarPendiente(c.reservaId, { payload: salida.payload, nota: armada.nota });
         return setEstado({ t: "rechazada", mensaje: MENSAJE_SIN_CONFIRMAR });
       }
-      sinConfirmar.current = null;
-      if (salida.t === "agotada") return setEstado({ t: "rechazada", mensaje: MENSAJE_AGOTADA });
-      if (salida.t === "no-armada") return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
       if (salida.t === "rechazada") {
+        fijarPendiente(c.reservaId, null);
         setEstado({ t: "rechazada", mensaje: salida.error });
         if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
         else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
         return;
       }
+      fijarPendiente(c.reservaId, null);
       contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
       subirContador(equipo.id, secuenciaDe(salida.numero));
       setEstado({ t: "libre" });
-      alExito({ ...nota!, numero: salida.numero }, salida.payload.items, true);
+      alExito({ ...armada.nota, numero: salida.numero }, salida.payload.items, true);
     },
-    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito],
+    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito, fijarPendiente],
+  );
+
+  // "Descartar y verificar": pregunta al servidor si el cobro sin confirmar quedó registrado. Si existe, muestra la nota
+  // con lo congelado; si no, lo limpia y avisa que el cobro no se hizo. Si no se puede saber, conserva la entrada.
+  const descartarYVerificar = useCallback(
+    async (reservaId: string) => {
+      const p = pendRef.current.get(reservaId);
+      if (!p || ocupado.current) return;
+      ocupado.current = true;
+      try {
+        setEstado({ t: "verificando" });
+        const r = await existeVenta(createClient(), p.payload.id);
+        if (!r.ok)
+          return setEstado({
+            t: "rechazada",
+            mensaje: `No se pudo verificar (${r.error}). No entregues el producto; intenta de nuevo.`,
+          });
+        fijarPendiente(reservaId, null);
+        if (!r.data)
+          return setEstado({
+            t: "rechazada",
+            mensaje: "No se registró: el cobro no se hizo. Puedes cobrar de nuevo.",
+          });
+        subirContador(equipo.id, secuenciaDe(p.payload.numero));
+        setEstado({ t: "libre" });
+        alExito({ ...p.nota, numero: p.payload.numero }, p.payload.items, true);
+      } finally {
+        ocupado.current = false;
+      }
+    },
+    [equipo.id, alExito, fijarPendiente],
   );
 
   const confirmar = useCallback(
@@ -282,8 +327,7 @@ export function useEnvio(opts: {
   // Cola persistente del equipo (pendientes y rechazadas) o un envío en curso.
   const equipoId = equipo.id;
   const hayPendiente = useCallback(
-    async () =>
-      ocupado.current || sinConfirmar.current !== null || (await equipoTieneCola(equipoId)),
+    async () => ocupado.current || pendRef.current.size > 0 || (await equipoTieneCola(equipoId)),
     [equipoId],
   );
   const limpiarRechazo = useCallback(
@@ -291,5 +335,5 @@ export function useEnvio(opts: {
     [],
   );
 
-  return { estado, confirmar, limpiarRechazo, hayPendiente };
+  return { estado, confirmar, limpiarRechazo, hayPendiente, pendientes, descartarYVerificar };
 }

@@ -73,7 +73,9 @@ proveedor_pagos a la caja cuando el cliente lo pida.`
      - El precio acordado se valida al crear la reserva como una línea de venta (piso, `descontar`, tope); la venta que la
        completa ya no re-valida el piso.
      - La reserva exige stock disponible (`ERP_STOCK_INSUFICIENTE`).
-     - El costo de la venta de una reserva es la foto del movimiento `reserva`; `reserva_liberada` reingresa con esa foto.
+     - Al completar, `reserva_liberada` va sin costo (el stock restante conserva su promedio) y la venta lleva como costo
+       la foto del movimiento `reserva`. Al cancelar, `reserva_liberada` reingresa a esa foto (re-promedia, como
+       `devolucion_cliente`).
      - El anticipo por QR se confirma en el mostrador (no hay camino de rechazo posterior).
      - Una venta de reserva no se anula ni se devuelve (decisión 9, `ERP_VENTA_DE_RESERVA`) y nunca pasa por la cola
        offline: se cobra directo, con reintento en memoria bajo el mismo id.

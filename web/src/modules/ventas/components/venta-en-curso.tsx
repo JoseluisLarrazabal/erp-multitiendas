@@ -33,6 +33,11 @@ export function VentaEnCurso({
     return <NotaVentaVista nota={v.nota} enCola={v.notaEnCola} alNueva={() => v.setNota(null)} />;
 
   const totales = v.resumen.totales;
+  // Cobro de reserva sin confirmar: montos fijos (de lo enviado), no los del formulario.
+  const pendiente = v.reserva ? envio.pendientes.get(v.reserva.id) : undefined;
+  const montoDe = (medio: string) =>
+    aCentavos(pendiente?.payload.pagos.find((p) => p.medio === medio)?.monto ?? 0);
+  const congelado = pendiente ? { efectivo: montoDe("efectivo"), qr: montoDe("qr") } : undefined;
   return (
     <div className="flex flex-col gap-3 pb-20 lg:pb-0 print:hidden">
       <BarraEquipo
@@ -166,6 +171,8 @@ export function VentaEnCurso({
         <Cobro
           total={totales.total}
           anticipo={v.reserva ? aCentavos(v.reserva.anticipo) : undefined}
+          congelado={congelado}
+          alVerificar={() => v.reserva && void envio.descartarYVerificar(v.reserva.id)}
           estado={envio.estado}
           alCerrar={() => {
             envio.limpiarRechazo();

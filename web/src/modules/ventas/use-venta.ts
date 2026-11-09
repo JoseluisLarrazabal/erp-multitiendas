@@ -229,6 +229,10 @@ export function useVenta(o: OpcionesVenta) {
     return true;
   }
   function descartarReserva() {
+    if (reserva && envio.pendientes.has(reserva.id))
+      return setAviso(
+        "Hay un cobro sin confirmar de esta reserva: abre el cobro y usa «Descartar y verificar».",
+      );
     setReserva(null);
     despachar({ tipo: "vaciar" });
     setCliente(null);
