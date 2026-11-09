@@ -18,6 +18,14 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Costo de la venta = foto de la reserva. Al completar, la liberación va sin costo; al cancelar reingresa con la foto.
   - Una venta de reserva no se anula ni se devuelve.
   - Para el CTO: el QR del anticipo se confirma en el mostrador y no se puede marcar como rechazado después.
+- **Fase 7, crédito (PR 4, rama `feat/credito`, pendiente de merge):** venta a crédito en el POS (solo con conexión, cliente
+  obligatorio, lista `credito`, inicial mínima por negocio, 1 a N cuotas, 3 casillas de documentos), plan de cuotas imprimible, modo
+  Cuotas para cobrar por caja, y `/panel/creditos` (saldo por cliente, vencidas con días de atraso, detalle, saldos iniciales y
+  parámetros). Decisiones y ajustes en `docs/plan-fase-7.md` (decisión 7). Para el CTO:
+  - El interés vive en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.
+  - Una venta con crédito no se anula ni se devuelve (`ERP_VENTA_CON_CREDITO`).
+  - Los saldos iniciales se cargan sin interés. Falta confirmar P-07 (interés sobre saldo) con el cliente: cambia solo `plan_cuotas`.
+  - Pendiente tras el merge: aplicar la migración `20261108160000` en producción y abrir `/panel/creditos` con Playwright.
 - **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.

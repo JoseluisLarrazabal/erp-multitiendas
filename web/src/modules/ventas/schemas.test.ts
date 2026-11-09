@@ -28,7 +28,32 @@ describe("ventaPayloadSchema", () => {
   it("acepta un payload válido, incluso con UUID de seed", () => {
     expect(ventaPayloadSchema.safeParse(base).success).toBe(true);
   });
-  it("rechaza crédito, QR sin el campo verificado, número mal formado y claves extra", () => {
+  it("la lista crédito solo vale en una venta a crédito, con su bloque", () => {
+    const item = base.items[0]!;
+    const credito = { cuotas: 3, docs_ci: true, docs_domicilio: false, docs_pagare: true };
+    const venta = {
+      ...base,
+      total: 120,
+      condicion: "credito",
+      credito,
+      items: [{ ...item, lista: "credito", cantidad: 10, precio_unitario: 12 }],
+      pagos: [{ medio: "efectivo", monto: 60 }],
+    };
+    expect(ventaPayloadSchema.safeParse(venta).success).toBe(true);
+    expect(ventaPayloadSchema.safeParse({ ...venta, credito: undefined }).success).toBe(false);
+    expect(ventaPayloadSchema.safeParse({ ...venta, condicion: undefined }).success).toBe(false);
+    expect(
+      ventaPayloadSchema.safeParse({ ...venta, items: [{ ...item, lista: "contado" }] }).success,
+    ).toBe(false);
+    expect(
+      ventaPayloadSchema.safeParse({ ...venta, credito: { ...credito, cuotas: 0 } }).success,
+    ).toBe(false);
+    expect(ventaPayloadSchema.safeParse({ ...venta, credito: { ...credito, x: 1 } }).success).toBe(
+      false,
+    );
+    expect(ventaPayloadSchema.safeParse({ ...base, credito }).success).toBe(false);
+  });
+  it("rechaza lista crédito suelta, QR sin el campo verificado, número mal formado y claves extra", () => {
     const item = base.items[0]!;
     expect(
       ventaPayloadSchema.safeParse({ ...base, items: [{ ...item, lista: "credito" }] }).success,

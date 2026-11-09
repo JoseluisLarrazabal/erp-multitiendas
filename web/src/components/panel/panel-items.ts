@@ -4,6 +4,7 @@ import {
   ChartColumn,
   CircleDollarSign,
   Contact,
+  HandCoins,
   ShoppingCart,
   Truck,
   Landmark,
@@ -92,6 +93,13 @@ export const ITEMS: Item[] = [
     etiqueta: "Compras",
     icono: ShoppingCart,
     permisos: ["gestionar_compras"],
+  },
+  {
+    href: "/panel/creditos",
+    etiqueta: "Créditos",
+    icono: HandCoins,
+    permisos: ["gestionar_credito", "ver_reportes"],
+    tipos: ["tienda", "frial"],
   },
   { href: "/panel/descuento", etiqueta: "Descuento", icono: Percent, permisos: ["usuarios"] },
   {

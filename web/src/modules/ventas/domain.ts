@@ -5,12 +5,14 @@ import { formatearBs } from "@/lib/format/moneda";
 // Cantidades en milésimas (3 decimales, como numeric(12,3)). Sin float acumulado.
 
 export const LISTAS = ["contado", "mayorista", "minimo", "normal", "express"] as const;
-export type Lista = (typeof LISTAS)[number];
+// `credito` no es una lista elegible por línea (LISTAS): toda una venta a crédito va en esa lista (RF-CRE-01).
+export type Lista = (typeof LISTAS)[number] | "credito";
 export type Unidad = "unidad" | "kg";
 export type PreciosCentavos = Record<Lista, number | null>;
 
 export const ETIQUETA_LISTA: Record<Lista, string> = {
   contado: "Contado",
+  credito: "Crédito",
   mayorista: "Mayorista",
   minimo: "Mínimo",
   normal: "Normal",
@@ -206,9 +208,9 @@ export function porCodigoExacto(indice: Indice, consulta: string): ProductoPos |
 // express (sus servicios no llevan precio de contado).
 export const listaBase = (tipoNegocio: string): Lista =>
   tipoNegocio === "lavanderia" ? "normal" : "contado";
-// Una línea de lista normal o express exige ese precio; cualquier otra, el de contado.
+// Una línea de lista normal, express o crédito exige ese precio; cualquier otra, el de contado.
 export const listaBaseDe = (lista: Lista): Lista =>
-  lista === "normal" || lista === "express" ? lista : "contado";
+  lista === "normal" || lista === "express" || lista === "credito" ? lista : "contado";
 
 export const vendible = (p: ProductoPos, lista: Lista = "contado") => p.precios[lista] !== null;
 

@@ -56,6 +56,8 @@ describe("resumen de caja", () => {
       anticipos_qr: 10,
       devoluciones_reserva_efectivo: 5,
       devoluciones_reserva_qr: 0,
+      cuotas_efectivo: 8,
+      cuotas_qr: 3,
       esperado: 155.5,
       qr_neto: -3,
       cantidad_ventas: 4,
@@ -65,6 +67,8 @@ describe("resumen de caja", () => {
     expect(resumenCajaSchema.safeParse({ ...ok, esperado: undefined }).success).toBe(false);
     expect(resumenCajaSchema.safeParse({ ...ok, esperado: null }).success).toBe(true);
     expect(resumenCajaSchema.safeParse({ ...ok, anticipos_qr: undefined }).success).toBe(false);
+    expect(resumenCajaSchema.safeParse({ ...ok, cuotas_qr: undefined }).success).toBe(false);
     expect(resumenCajaSchema.parse(ok).anticipos_efectivo).toBe(20);
+    expect(resumenCajaSchema.parse(ok).cuotas_efectivo).toBe(8);
   });
 });

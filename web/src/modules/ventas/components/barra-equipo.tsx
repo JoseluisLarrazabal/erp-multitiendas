@@ -1,11 +1,11 @@
 "use client";
 
-import { BookmarkCheck, Landmark, ScanBarcode, Search } from "lucide-react";
+import { BookmarkCheck, HandCoins, Landmark, ScanBarcode, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSinRed } from "@/lib/offline/red";
 import type { Equipo } from "../queries";
 
-export type ModoPos = "vender" | "consulta" | "caja" | "reservas";
+export type ModoPos = "vender" | "consulta" | "caja" | "reservas" | "creditos";
 
 // Equipo en uso y modo (vender, consulta rápida o caja). Con una venta pendiente no se cambia de equipo.
 export function BarraEquipo({
@@ -16,6 +16,7 @@ export function BarraEquipo({
   modo,
   alCambiarModo,
   conReservas = false,
+  conCreditos = false,
 }: {
   equipo: Equipo;
   cajaAbierta: boolean;
@@ -25,6 +26,8 @@ export function BarraEquipo({
   alCambiarModo: (modo: ModoPos) => void;
   // Quien tiene gestionar_reservas ve el modo Reservas (no existe en lavandería).
   conReservas?: boolean;
+  // Quien tiene `caja` cobra cuotas (no hay créditos en lavandería).
+  conCreditos?: boolean;
 }) {
   const sinRed = useSinRed();
   return (
@@ -80,6 +83,17 @@ export function BarraEquipo({
             onClick={() => alCambiarModo("reservas")}
           >
             <BookmarkCheck /> Reservas
+          </Button>
+        )}
+        {conCreditos && (
+          <Button
+            type="button"
+            variant={modo === "creditos" ? "secondary" : "outline"}
+            className="h-10"
+            aria-pressed={modo === "creditos"}
+            onClick={() => alCambiarModo("creditos")}
+          >
+            <HandCoins /> Cuotas
           </Button>
         )}
         <Button

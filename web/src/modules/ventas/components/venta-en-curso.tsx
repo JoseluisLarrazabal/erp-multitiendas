@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PanelCaja } from "@/modules/caja";
+import { CLAVE_CREDITO } from "../use-envio";
 import { aCentavos, bs } from "../domain";
 import { datosBoleta } from "../orden";
 import { useVenta, type OpcionesVenta } from "../use-venta";
@@ -12,6 +13,8 @@ import { Cobro } from "./cobro";
 import { ConfirmarDescarte } from "./confirmar-descarte";
 import { NotaVentaVista } from "./nota-venta";
 import { PanelVenta } from "./panel-venta";
+import { CreditosPos } from "./creditos-pos";
+import { PlanCreditoVista } from "./plan-credito";
 import { ReservasPos } from "./reservas-pos";
 import { ZonaProductos } from "./zona-productos";
 
@@ -24,20 +27,45 @@ export function VentaEnCurso({
   const [verCaja, setVerCaja] = useState(false);
   // Modo Reservas: como la caja, no desmonta la venta (el carrito sigue intacto).
   const [verReservas, setVerReservas] = useState(false);
-  const aparte = verCaja || verReservas;
+  // Modo Créditos: cobrar cuotas. Igual que la caja y las reservas, no desmonta la venta.
+  const [verCreditos, setVerCreditos] = useState(false);
+  const [verPlan, setVerPlan] = useState(false);
+  const aparte = verCaja || verReservas || verCreditos;
   const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || aparte });
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
 
-  if (v.nota)
-    return <NotaVentaVista nota={v.nota} enCola={v.notaEnCola} alNueva={() => v.setNota(null)} />;
+  if (v.nota) {
+    const alNueva = () => {
+      setVerPlan(false);
+      v.setNota(null);
+    };
+    return v.nota.credito && verPlan ? (
+      <PlanCreditoVista
+        ventaId={v.nota.credito.ventaId}
+        negocio={v.nota.negocio}
+        numeroVenta={v.nota.numero}
+        alVolver={() => setVerPlan(false)}
+        alNueva={alNueva}
+      />
+    ) : (
+      <NotaVentaVista
+        nota={v.nota}
+        enCola={v.notaEnCola}
+        alNueva={alNueva}
+        alVerPlan={v.nota.credito ? () => setVerPlan(true) : undefined}
+      />
+    );
+  }
 
   const totales = v.resumen.totales;
-  // Cobro de reserva sin confirmar: montos fijos (de lo enviado), no los del formulario.
-  const pendiente = v.reserva ? envio.pendientes.get(v.reserva.id) : undefined;
+  // Cobro online-only (reserva o crédito) sin confirmar: montos fijos (de lo enviado), no los del formulario.
+  const clavePendiente = v.reserva ? v.reserva.id : v.formCredito.activo ? CLAVE_CREDITO : null;
+  const pendiente = clavePendiente ? envio.pendientes.get(clavePendiente) : undefined;
   const montoDe = (medio: string) =>
     aCentavos(pendiente?.payload.pagos.find((p) => p.medio === medio)?.monto ?? 0);
   const congelado = pendiente ? { efectivo: montoDe("efectivo"), qr: montoDe("qr") } : undefined;
+  const planCredito = v.credito?.ok ? v.credito.plan : null;
   return (
     <div className="flex flex-col gap-3 pb-20 lg:pb-0 print:hidden">
       <BarraEquipo
@@ -48,10 +76,22 @@ export function VentaEnCurso({
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
         conReservas={opciones.permisos.includes("gestionar_reservas")}
-        modo={verCaja ? "caja" : verReservas ? "reservas" : v.consulta ? "consulta" : "vender"}
+        conCreditos={opciones.permisos.includes("caja") && opciones.tipoNegocio !== "lavanderia"}
+        modo={
+          verCaja
+            ? "caja"
+            : verReservas
+              ? "reservas"
+              : verCreditos
+                ? "creditos"
+                : v.consulta
+                  ? "consulta"
+                  : "vender"
+        }
         alCambiarModo={(m) => {
           setVerCaja(m === "caja");
           setVerReservas(m === "reservas");
+          setVerCreditos(m === "creditos");
           // Antes de cerrar la caja se intenta enviar lo que haya en la cola.
           if (m === "caja") opciones.cola.disparar(true);
           if (m !== "caja") v.setConsulta(m === "consulta");
@@ -94,6 +134,9 @@ export function VentaEnCurso({
             if (v.cargarReserva(r)) setVerReservas(false);
           }}
         />
+      )}
+      {verCreditos && (
+        <CreditosPos negocioId={opciones.negocioId} equipoId={equipo.id} cajaId={cajaId} />
       )}
       <div
         hidden={aparte}
@@ -140,6 +183,17 @@ export function VentaEnCurso({
                 }
               : null
           }
+          credito={
+            v.puedeCredito && !v.reserva
+              ? {
+                  form: v.formCredito,
+                  alCambiar: (cambios) => v.setFormCredito({ ...v.formCredito, ...cambios }),
+                  alAlternar: (activo) => void v.alternarCredito(activo),
+                  parametros: v.parametrosCredito,
+                  plan: v.credito?.ok ? v.credito.plan : null,
+                }
+              : null
+          }
           orden={
             v.esOrden
               ? {
@@ -169,10 +223,16 @@ export function VentaEnCurso({
 
       {v.cobrando && totales && (
         <Cobro
-          total={totales.total}
+          total={planCredito ? planCredito.inicial : totales.total}
+          titulo={planCredito ? "Cobrar la inicial del crédito" : undefined}
+          detalle={
+            planCredito
+              ? `Total ${bs(totales.total)}: inicial ${bs(planCredito.inicial)} ahora y ${bs(planCredito.financiado)} en ${planCredito.cuotas} ${planCredito.cuotas === 1 ? "cuota" : "cuotas"}.`
+              : undefined
+          }
           anticipo={v.reserva ? aCentavos(v.reserva.anticipo) : undefined}
           congelado={congelado}
-          alVerificar={() => v.reserva && void envio.descartarYVerificar(v.reserva.id)}
+          alVerificar={() => clavePendiente && void envio.descartarYVerificar(clavePendiente)}
           estado={envio.estado}
           alCerrar={() => {
             envio.limpiarRechazo();
@@ -196,6 +256,16 @@ export function VentaEnCurso({
               recibido: c.recibido,
               ...(v.reserva
                 ? { reservaId: v.reserva.id, anticipo: aCentavos(v.reserva.anticipo) }
+                : {}),
+              ...(planCredito
+                ? {
+                    credito: {
+                      cuotas: planCredito.cuotas,
+                      docsCi: v.formCredito.docsCi,
+                      docsDomicilio: v.formCredito.docsDomicilio,
+                      docsPagare: v.formCredito.docsPagare,
+                    },
+                  }
                 : {}),
               nota: {
                 negocio: { nombre: negocio.nombre, nit: negocio.nit, datosNota: negocio.datosNota },

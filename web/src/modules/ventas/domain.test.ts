@@ -150,7 +150,14 @@ const prod = (
   tipo: "producto",
   controlaSerie: false,
   garantiaMeses: null,
-  precios: { contado: 1000, mayorista: null, minimo: null, normal: null, express: null },
+  precios: {
+    contado: 1000,
+    credito: null,
+    mayorista: null,
+    minimo: null,
+    normal: null,
+    express: null,
+  },
   stockPorUbicacion: {},
   stockTotal: 0,
 });

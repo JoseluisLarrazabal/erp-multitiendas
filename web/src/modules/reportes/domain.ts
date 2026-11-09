@@ -111,6 +111,8 @@ export type FilaCaja = {
   devoluciones_efectivo: number;
   // Anticipos menos devoluciones de reservas, en efectivo.
   reservas_efectivo: number;
+  // Cuotas de crédito cobradas por caja, en efectivo.
+  cuotas_efectivo: number;
   esperado: number;
   contado: number | null;
   diferencia: number | null;
@@ -125,6 +127,8 @@ export type TotalesCaja = {
   devoluciones_efectivo: number;
   // Anticipos menos devoluciones de reservas, en efectivo.
   reservas_efectivo: number;
+  // Cuotas de crédito cobradas por caja, en efectivo.
+  cuotas_efectivo: number;
   esperado: number;
   contado: number;
   diferencia: number;

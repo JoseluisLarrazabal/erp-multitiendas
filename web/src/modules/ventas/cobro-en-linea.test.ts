@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
-import { cobrarReserva } from "./cobro-reserva";
+import { cobrarEnLinea } from "./cobro-en-linea";
 import type { VentaPayload } from "./schemas";
 
 const id = "a0000000-0000-4000-8000-000000000001";
@@ -64,10 +64,10 @@ const base = (alVerificar = vi.fn()) => ({
   mayorEnCola: async () => 0,
 });
 
-describe("cobrarReserva (sin cola offline)", () => {
+describe("cobrarEnLinea (reserva o crédito, sin cola offline)", () => {
   it("envía directo y en línea: registrar_venta sin p_offline", async () => {
     const c = cliente([ok("C1-000007")]);
-    const s = await cobrarReserva(c.supabase, base());
+    const s = await cobrarEnLinea(c.supabase, base());
     expect(s).toMatchObject({ t: "ok", numero: "C1-000007" });
     expect(c.llamadas).toHaveLength(1);
     expect(c.llamadas[0]).toMatchObject({ fn: "registrar_venta" });
@@ -77,7 +77,7 @@ describe("cobrarReserva (sin cola offline)", () => {
   it("ante caída avisa, reintenta en memoria el mismo payload y confirma", async () => {
     const c = cliente([caida, caida, ok("C1-000007")]);
     const alVerificar = vi.fn();
-    const s = await cobrarReserva(c.supabase, base(alVerificar));
+    const s = await cobrarEnLinea(c.supabase, base(alVerificar));
     expect(s.t).toBe("ok");
     expect(alVerificar).toHaveBeenCalled();
     expect(c.llamadas).toHaveLength(3);
@@ -86,31 +86,60 @@ describe("cobrarReserva (sin cola offline)", () => {
 
   it("sin respuesta y sin venta en el servidor: sin confirmar, conserva el payload", async () => {
     const c = cliente([caida]);
-    const s = await cobrarReserva(c.supabase, base());
+    const s = await cobrarEnLinea(c.supabase, base());
     expect(s.t).toBe("sin-confirmar");
     expect(s.t === "sin-confirmar" && s.payload.numero).toBe("C1-000007");
   });
 
   it("sin respuesta pero la venta ya existe: confirmada", async () => {
     const c = cliente([caida], true);
-    expect(await cobrarReserva(c.supabase, base())).toMatchObject({ t: "ok", numero: "C1-000007" });
+    expect(await cobrarEnLinea(c.supabase, base())).toMatchObject({ t: "ok", numero: "C1-000007" });
   });
 
   it("un reintento manual reenvía el payload previo idéntico", async () => {
     const c = cliente([ok("C1-000007")]);
     const previo = armar(7);
     const armarFalla = vi.fn(armar);
-    await cobrarReserva(c.supabase, { ...base(), previo, armar: armarFalla });
+    await cobrarEnLinea(c.supabase, { ...base(), previo, armar: armarFalla });
     expect(armarFalla).not.toHaveBeenCalled();
     expect(c.llamadas[0]!.args).toEqual({ p_venta: previo });
   });
 
   it("un rechazo con código es definitivo; el número duplicado pasa al siguiente", async () => {
-    const r = await cobrarReserva(cliente([rechazo]).supabase, base());
+    const r = await cobrarEnLinea(cliente([rechazo]).supabase, base());
     expect(r).toMatchObject({ t: "rechazada", codigo: "ERP_RESERVA_NO_ACTIVA" });
     const c = cliente([duplicado, ok("C1-000008")]);
-    const d = await cobrarReserva(c.supabase, base());
+    const d = await cobrarEnLinea(c.supabase, base());
     expect(d).toMatchObject({ t: "ok", numero: "C1-000008" });
     expect(c.llamadas).toHaveLength(2);
+  });
+});
+
+describe("cobrarEnLinea con una venta a crédito", () => {
+  const credito: VentaPayload = {
+    ...armar(7),
+    reserva_id: undefined,
+    cliente_id: "a0000000-0000-4000-8000-000000000009",
+    condicion: "credito",
+    credito: { cuotas: 3, docs_ci: true, docs_domicilio: true, docs_pagare: true },
+    items: [{ ...armar(7).items[0]!, lista: "credito" }],
+    pagos: [{ medio: "efectivo", monto: 45 }],
+  };
+  it("sin respuesta reintenta idéntico y sin confirmar conserva el payload (mismo id y número)", async () => {
+    const c = cliente([caida], false);
+    const s = await cobrarEnLinea(c.supabase, { ...base(), armar: () => credito });
+    expect(s).toMatchObject({ t: "sin-confirmar" });
+    expect(
+      c.llamadas.every((l) => JSON.stringify(l.args) === JSON.stringify(c.llamadas[0]!.args)),
+    ).toBe(true);
+    if (s.t === "sin-confirmar") expect(s.payload).toEqual(credito);
+  });
+  it("un rechazo del servidor no se reintenta", async () => {
+    const c = cliente([
+      { data: null, error: { message: "ERP_INICIAL_INSUFICIENTE", code: "P0001" } },
+    ]);
+    const s = await cobrarEnLinea(c.supabase, { ...base(), armar: () => credito });
+    expect(s).toMatchObject({ t: "rechazada", codigo: "ERP_INICIAL_INSUFICIENTE" });
+    expect(c.llamadas).toHaveLength(1);
   });
 });

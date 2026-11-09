@@ -7,8 +7,11 @@ import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
 import type { AccionCarrito, Permisos, ResumenCarrito } from "../carrito";
 import { bs } from "../domain";
 import type { FichaTexto } from "../orden";
+import type { Parametros } from "@/modules/creditos";
+import type { FormCredito, PlanVenta } from "../credito-venta";
 import { CarritoLineas } from "./carrito";
 import { ClienteEscrito, FichaOrden } from "./ficha-orden";
+import { FormCreditoVenta } from "./form-credito-venta";
 
 // Panel lateral de la venta: cliente, líneas, descuento de la venta, total y cobrar.
 export function PanelVenta({
@@ -32,6 +35,7 @@ export function PanelVenta({
   orden,
   sinRed,
   reserva,
+  credito,
 }: {
   consulta: boolean;
   resumen: ResumenCarrito;
@@ -60,6 +64,14 @@ export function PanelVenta({
   sinRed: boolean;
   // Venta que completa una reserva: cliente y carrito fijos, sin descuento.
   reserva: { cliente: string; anticipo: number; alQuitar: () => void } | null;
+  // Venta a crédito (RF-CRE): null si el usuario no puede (sin gestionar_credito, lavandería o reserva en curso).
+  credito: {
+    form: FormCredito;
+    alCambiar: (cambios: Partial<FormCredito>) => void;
+    alAlternar: (activo: boolean) => void;
+    parametros: Parametros | null;
+    plan: PlanVenta | null;
+  } | null;
 }) {
   const totales = resumen.totales;
   const hayLineas = cantidadLineas > 0;
@@ -124,8 +136,20 @@ export function PanelVenta({
         ubicacionId={ubicacionId}
         despachar={despachar}
         bloqueado={bloqueado}
-        listaFija={orden !== null}
+        listaFija={orden !== null || !!credito?.form.activo}
       />
+      {credito && (
+        <FormCreditoVenta
+          form={credito.form}
+          alCambiar={credito.alCambiar}
+          alAlternar={credito.alAlternar}
+          parametros={credito.parametros}
+          plan={credito.plan}
+          bloqueado={bloqueado}
+          sinRed={sinRed}
+          hayLineas={hayLineas}
+        />
+      )}
       {hayLineas && !permisos.puedeDescontar && (
         <p className="text-muted-foreground text-xs">
           Sin permiso de descuento: para bajar precios o descontar, pide a un encargado que venda
