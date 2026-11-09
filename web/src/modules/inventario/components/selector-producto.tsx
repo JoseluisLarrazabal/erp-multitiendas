@@ -17,12 +17,22 @@ type Props = {
   // Id del control que recibe el foco al elegir (la cantidad): el lector USB escanea, Enter y sigue tecleando.
   idSiguiente: string;
   error?: string;
+  // Etiqueta del campo (el consumo de insumos lo llama "Insumo").
+  etiqueta?: string;
 };
 
 const DEMORA_MS = 250;
 
 // Combobox de producto por código, código de barras o texto. Enter elige el producto exacto del escaneo.
-export function SelectorProducto({ negocioId, id, valor, alElegir, idSiguiente, error }: Props) {
+export function SelectorProducto({
+  negocioId,
+  id,
+  valor,
+  alElegir,
+  idSiguiente,
+  error,
+  etiqueta = "Producto",
+}: Props) {
   const lista = useId();
   const campo = useRef<HTMLInputElement>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -116,7 +126,7 @@ export function SelectorProducto({ negocioId, id, valor, alElegir, idSiguiente, 
   return (
     <Campo
       id={id}
-      etiqueta="Producto"
+      etiqueta={etiqueta}
       error={error}
       ayuda={valor ? undefined : "Escribe o escanea el código."}
     >

@@ -3,6 +3,7 @@ import { leerFiltros } from "@/lib/filtros";
 import { limitesDelDia } from "@/lib/format/fecha";
 import {
   AGRUPAR,
+  AGRUPAR_INSUMOS,
   DIAS_SIN_MOVIMIENTO,
   FILTROS_STOCK,
   IDS_REPORTE,
@@ -27,7 +28,7 @@ const campos = {
   r: z.enum(IDS_REPORTE),
   desde: fecha,
   hasta: fecha,
-  agrupar: z.enum(AGRUPAR),
+  agrupar: z.enum([...AGRUPAR, ...AGRUPAR_INSUMOS]),
   dias: z.enum(DIAS_SIN_MOVIMIENTO.map(String) as [string, ...string[]]).transform(Number),
   filtro: z.enum(FILTROS_STOCK),
 };
@@ -41,8 +42,9 @@ export function leerFiltrosReporte(
   crudo: Parameters<typeof leerFiltros>[2],
   tipo: string,
   hoy: string,
+  verCostos: boolean,
 ): { filtros: FiltrosReporte; invalido: boolean } {
-  const lista = reportesDe(tipo);
+  const lista = reportesDe(tipo, verCostos);
   const defectos: FiltrosReporte = {
     r: lista[0]!.id,
     desde: hoy,
@@ -174,4 +176,19 @@ export const respuestaCajaSchema = z.object({
     diferencia: numero,
     sesiones_abiertas: numero,
   }),
+});
+
+export const respuestaInsumosSchema = z.object({
+  filas: z.array(
+    z.object({
+      clave: textoONulo,
+      etiqueta: z.string(),
+      consumos: numero,
+      gasto: numero,
+      sin_costo: numero,
+      cantidad: numero.optional(),
+      unidad: z.enum(["unidad", "kg"]).optional(),
+    }),
+  ),
+  totales: z.object({ consumos: numero, gasto: numero, sin_costo: numero }),
 });

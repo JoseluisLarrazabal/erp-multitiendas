@@ -8,6 +8,7 @@ import {
   type Ubicacion,
   type Unidad,
 } from "../domain";
+import { BotonRevertirConsumo } from "./boton-revertir-consumo";
 
 const COLUMNAS = "md:grid-cols-[9rem_11rem_8rem_6rem_9rem_minmax(0,1fr)]";
 
@@ -16,10 +17,13 @@ export function ListaKardex({
   movimientos,
   ubicaciones,
   unidad,
+  puedeRevertir = false,
 }: {
   movimientos: readonly Movimiento[];
   ubicaciones: readonly Ubicacion[];
   unidad: Unidad;
+  // Con ajustar_inventario, los consumos llevan "Revertir" (salvo los ya revertidos).
+  puedeRevertir?: boolean;
 }) {
   const nombre = (id: string) => ubicaciones.find((u) => u.id === id)?.nombre ?? "—";
   return (
@@ -79,7 +83,12 @@ export function ListaKardex({
             <span className="col-span-2 min-w-0 md:col-span-1">
               {m.motivo ?? <span className="text-muted-foreground">Sin motivo</span>}
               {m.refTipo && (
-                <span className="text-muted-foreground block text-xs">Ref.: {m.refTipo}</span>
+                <span className="text-muted-foreground block text-xs">
+                  Ref.: {m.refTipo === "consumo_revertido" ? "Reversión de consumo" : m.refTipo}
+                </span>
+              )}
+              {puedeRevertir && m.tipo === "consumo" && m.cantidad < 0 && !m.revertido && (
+                <BotonRevertirConsumo movimientoId={m.id} />
               )}
             </span>
           </li>

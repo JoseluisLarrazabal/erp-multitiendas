@@ -169,6 +169,7 @@ export async function leerKardex(
       siguiente: data.length > porPagina ? pagina[pagina.length - 1]!.id : null,
       filas: pagina.map((m) => ({
         id: m.id,
+        revertido: m.revertido,
         ubicacionId: m.ubicacion_id,
         tipo: m.tipo,
         cantidad: m.cantidad,

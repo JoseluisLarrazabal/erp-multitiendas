@@ -4,6 +4,7 @@ import {
   entradaSchema,
   filtrosStockSchema,
   leerFiltrosVencimientos,
+  revertirConsumoSchema,
   salidaSchema,
   seriesSchema,
   trasladoSchema,
@@ -24,6 +25,35 @@ describe("entradaSchema", () => {
       expect(entradaSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, costo: "x" }).success).toBe(false);
     expect(entradaSchema.safeParse({ ...ok, operacionId: "no" }).success).toBe(false);
+  });
+});
+
+describe("salidaSchema: consumo", () => {
+  const ok = {
+    ...base,
+    productoId: A,
+    ubicacionId: B,
+    tipo: "consumo",
+    cantidad: "2,5",
+    motivo: " lavado ",
+    serieIds: null,
+  };
+  it("el consumo sale negativo y recorta el motivo", () => {
+    expect(salidaSchema.parse(ok)).toMatchObject({ cantidad: -2.5, motivo: "lavado" });
+  });
+  it("rechaza cantidad 0 o con signo y motivo vacío", () => {
+    for (const cantidad of ["0", "-1", "abc", ""])
+      expect(salidaSchema.safeParse({ ...ok, cantidad }).success).toBe(false);
+    expect(salidaSchema.safeParse({ ...ok, motivo: "  " }).success).toBe(false);
+  });
+});
+
+describe("revertirConsumoSchema", () => {
+  it("pide motivo y ids válidos", () => {
+    const ok = { operacionId: A, movimientoId: B, motivo: " error de carga " };
+    expect(revertirConsumoSchema.parse(ok).motivo).toBe("error de carga");
+    expect(revertirConsumoSchema.safeParse({ ...ok, motivo: " " }).success).toBe(false);
+    expect(revertirConsumoSchema.safeParse({ ...ok, movimientoId: "x" }).success).toBe(false);
   });
 });
 

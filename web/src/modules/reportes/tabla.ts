@@ -6,10 +6,12 @@ import {
   type Agrupar,
   type DatosReporte,
   type FilaCaja,
+  type FilaInsumos,
   type FilaStockReporte,
   type FilaVentas,
   type FiltroStock,
   type TotalesCaja,
+  type TotalesInsumos,
   type TotalesStock,
   type TotalesVentas,
 } from "./domain";
@@ -167,6 +169,38 @@ function tablaStock(
   };
 }
 
+function tablaInsumos(filas: FilaInsumos[], t: TotalesInsumos, agrupar: Agrupar): TablaDatos {
+  const porInsumo = agrupar === "insumo";
+  const columnas: Columna[] = [
+    { titulo: porInsumo ? "Insumo" : "Día", tipo: porInsumo ? "texto" : "dia" },
+    { titulo: "Consumos", tipo: "entero" },
+    ...(porInsumo
+      ? [
+          { titulo: "Cantidad", tipo: "cantidad" } as Columna,
+          { titulo: "Unidad", tipo: "texto" } as Columna,
+        ]
+      : []),
+    { titulo: "Gasto", tipo: "monto" },
+  ];
+  return {
+    hoja: "Insumos",
+    columnas,
+    filas: filas.map((f) => [
+      f.etiqueta,
+      f.consumos,
+      ...(porInsumo ? [f.cantidad ?? null, f.unidad === "kg" ? "kg" : "unidad"] : []),
+      f.gasto,
+    ]),
+    totales: ["Total", t.consumos, ...(porInsumo ? [null, null] : []), t.gasto],
+    avisos:
+      t.sin_costo > 0
+        ? [
+            `${t.sin_costo} ${t.sin_costo === 1 ? "consumo sin costo cargado" : "consumos sin costo cargado"}: el gasto está incompleto.`,
+          ]
+        : [],
+  };
+}
+
 function tablaCaja(filas: FilaCaja[], t: TotalesCaja): TablaDatos {
   const monto = (titulo: string): Columna => ({ titulo, tipo: "monto" });
   return {
@@ -236,6 +270,7 @@ export function armarTabla(
   },
 ): TablaDatos {
   if (d.tipo === "ventas") return tablaVentas(d.filas, d.totales, o);
+  if (d.tipo === "insumos") return tablaInsumos(d.filas, d.totales, o.agrupar);
   if (d.tipo === "stock") return tablaStock(d.filas, d.totales, o);
   return tablaCaja(d.filas, d.totales);
 }

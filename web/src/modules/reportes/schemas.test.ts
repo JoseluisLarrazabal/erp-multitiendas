@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { agruparAlCambiar, reportesDe } from "./domain";
 import {
   hrefReportes,
   leerFiltrosReporte,
@@ -9,7 +10,7 @@ import {
 
 const HOY = "2026-11-02";
 const leer = (crudo: Record<string, string>, tipo = "tienda") =>
-  leerFiltrosReporte(crudo, tipo, HOY);
+  leerFiltrosReporte(crudo, tipo, HOY, true);
 
 describe("leerFiltrosReporte", () => {
   it("sin parámetros: primer reporte del tipo, hoy, agrupado por día", () => {
@@ -35,6 +36,18 @@ describe("leerFiltrosReporte", () => {
     expect(r.invalido).toBe(true);
     expect(r.filtros.r).toBe("ingresos");
     expect(leer({ r: "masvendidos" }, "frial").invalido).toBe(true);
+  });
+  it("el reporte de insumos es de lavandería y exige ver_costos", () => {
+    const r = leer({ r: "insumos", agrupar: "insumo" }, "lavanderia");
+    expect(r).toMatchObject({ invalido: false, filtros: { r: "insumos", agrupar: "insumo" } });
+    expect(reportesDe("lavanderia", true).map((d) => d.id)).toContain("insumos");
+    expect(reportesDe("lavanderia", false).map((d) => d.id)).toEqual(["ingresos", "caja"]);
+    expect(leerFiltrosReporte({ r: "insumos" }, "lavanderia", HOY, false)).toMatchObject({
+      invalido: true,
+      filtros: { r: "ingresos" },
+    });
+    expect(leer({ r: "insumos" }, "tienda").invalido).toBe(true);
+    expect(leer({ r: "ventas", agrupar: "insumo" }, "tienda").invalido).toBe(true);
   });
   it("una agrupación que el reporte no admite avisa; si no vino en la URL, no", () => {
     expect(leer({ r: "ingresos", agrupar: "marca" }, "lavanderia")).toMatchObject({
@@ -115,5 +128,21 @@ describe("respuestas de las RPC", () => {
       false,
     );
     expect(respuestaCajaSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+describe("agruparAlCambiar", () => {
+  const def = (id: string) => reportesDe("tienda", true).find((d) => d.id === id)!;
+  it("conserva la agrupación si la pestaña la admite o no tiene lista", () => {
+    expect(agruparAlCambiar(def("ventas"), "marca")).toBe("marca");
+    expect(agruparAlCambiar(def("stock"), "marca")).toBe("marca");
+  });
+  it("vuelve a día si la pestaña destino no la admite", () => {
+    const ingresos = reportesDe("lavanderia", true).find((d) => d.id === "ingresos")!;
+    expect(agruparAlCambiar(ingresos, "marca")).toBe("dia");
+  });
+  it("Ventas (marca) -> Stock -> Ventas sigue en marca", () => {
+    const enStock = agruparAlCambiar(def("stock"), "marca");
+    expect(agruparAlCambiar(def("ventas"), enStock)).toBe("marca");
   });
 });

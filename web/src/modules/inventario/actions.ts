@@ -24,6 +24,7 @@ import {
   conteoSchema,
   entradaSchema,
   paginaConteoSchema,
+  revertirConsumoSchema,
   salidaSchema,
   seriesDisponiblesSchema,
   seriesSchema,
@@ -64,6 +65,20 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
       : await supabase.rpc("registrar_entrada", comunes);
   if (error) return fallo(codigoDeMensaje(error.message));
   return listo();
+}
+
+export async function revertirConsumo(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(revertirConsumoSchema, entrada);
+  if (!d) return fallo("ERP_DATOS_INVALIDOS");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("revertir_consumo", {
+    p_operacion_id: d.operacionId,
+    p_movimiento_id: d.movimientoId,
+    p_motivo: d.motivo,
+  });
+  if (error) return fallo(codigoDeMensaje(error.message));
+  revalidatePath(REVALIDAR, "layout");
+  return { ok: true, data: null };
 }
 
 export async function registrarSalida(entrada: unknown): Promise<Resultado<null>> {

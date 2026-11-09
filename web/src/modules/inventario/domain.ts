@@ -25,6 +25,7 @@ export type FilaStock = ProductoElegible & {
 
 export type Movimiento = {
   id: string;
+  revertido: boolean;
   ubicacionId: string;
   tipo: string;
   cantidad: number;
@@ -63,12 +64,14 @@ export const ETIQUETA_MOVIMIENTO: Record<string, string> = {
 
 export const etiquetaMovimiento = (tipo: string) => ETIQUETA_MOVIMIENTO[tipo] ?? tipo;
 
-export type TipoSalida = "ajuste" | "danado" | "merma" | "cambio_garantia" | "devolucion_proveedor";
+export type TipoSalida =
+  "ajuste" | "danado" | "merma" | "cambio_garantia" | "devolucion_proveedor" | "consumo";
 
 export const TIPOS_SALIDA: { valor: TipoSalida; etiqueta: string }[] = [
   { valor: "ajuste", etiqueta: "Ajuste (con signo)" },
   { valor: "danado", etiqueta: "Dañado" },
   { valor: "merma", etiqueta: "Merma" },
+  { valor: "consumo", etiqueta: "Consumo de insumo" },
   { valor: "cambio_garantia", etiqueta: "Cambio por garantía" },
   { valor: "devolucion_proveedor", etiqueta: "Devolución a proveedor" },
 ];

@@ -72,7 +72,14 @@ export const salidaSchema = z
     ...operacion,
     productoId: id,
     ubicacionId: id,
-    tipo: z.enum(["ajuste", "danado", "merma", "cambio_garantia", "devolucion_proveedor"]),
+    tipo: z.enum([
+      "ajuste",
+      "danado",
+      "merma",
+      "cambio_garantia",
+      "devolucion_proveedor",
+      "consumo",
+    ]),
     // Con signo solo en `ajuste`; en el resto es la cantidad que sale (positiva) y se envía negativa.
     cantidad: z.string(),
     motivo: z.string().trim().min(1).max(200),
@@ -140,6 +147,12 @@ export const seriesSchema = z.object({
 export const busquedaSchema = z.object({
   negocioId: id,
   q: z.string().trim().min(1).max(80),
+});
+
+export const revertirConsumoSchema = z.object({
+  operacionId: id,
+  movimientoId: id,
+  motivo: z.string().trim().min(1).max(200),
 });
 
 export const stockProductoSchema = z.object({ negocioId: id, productoId: id });

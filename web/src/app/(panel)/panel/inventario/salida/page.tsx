@@ -5,8 +5,15 @@ import { exigirPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Salida o ajuste · ERP Multitiendas" };
 
-export default async function PaginaSalida() {
+export default async function PaginaSalida({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { activo } = await exigirPermiso("ajustar_inventario");
+  const esLavanderia = activo.tipo === "lavanderia";
+  const tipoInicial =
+    esLavanderia && (await searchParams).tipo === "consumo" ? "consumo" : undefined;
   const ubicaciones = await listarUbicaciones(await createClient(), activo.negocioId);
 
   return (
@@ -19,6 +26,8 @@ export default async function PaginaSalida() {
         <FormSalida
           negocioId={activo.negocioId}
           esFrial={activo.tipo === "frial"}
+          esLavanderia={esLavanderia}
+          tipoInicial={tipoInicial}
           ubicaciones={u}
         />
       )}

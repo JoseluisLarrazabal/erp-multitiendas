@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import {
+  agruparAlCambiar,
   armarTabla,
   hrefReportes,
   leerFiltrosReporte,
@@ -32,8 +33,9 @@ export default async function PaginaReportes({
 }) {
   const { activo, permisos } = await exigirPermiso("ver_reportes");
   const hoy = hoyEnBolivia();
-  const { filtros, invalido } = leerFiltrosReporte(await searchParams, activo.tipo, hoy);
-  const lista = reportesDe(activo.tipo);
+  const verCostos = permisos.includes("ver_costos");
+  const { filtros, invalido } = leerFiltrosReporte(await searchParams, activo.tipo, hoy, verCostos);
+  const lista = reportesDe(activo.tipo, verCostos);
   const def = lista.find((d) => d.id === filtros.r)!;
   const datos = await leerReporte(await createClient(), activo.negocioId, filtros);
   const tabla = datos.ok
@@ -41,7 +43,7 @@ export default async function PaginaReportes({
         tipo: activo.tipo,
         agrupar: filtros.agrupar,
         filtro: filtros.filtro,
-        puedeVerCostos: permisos.includes("ver_costos"),
+        puedeVerCostos: verCostos,
         esMasVendidos: filtros.r === "masvendidos",
       })
     : null;
@@ -75,7 +77,11 @@ export default async function PaginaReportes({
           {lista.map((d) => (
             <Link
               key={d.id}
-              href={hrefReportes({ ...filtros, r: d.id })}
+              href={hrefReportes({
+                ...filtros,
+                r: d.id,
+                agrupar: agruparAlCambiar(d, filtros.agrupar),
+              })}
               aria-current={d.id === filtros.r ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: d.id === filtros.r ? "default" : "outline", size: "sm" }),

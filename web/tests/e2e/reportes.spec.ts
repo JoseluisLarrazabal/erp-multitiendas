@@ -268,7 +268,7 @@ test.describe("lavandería", () => {
   test("muestra Ingresos con Kilos, sin ganancia, y Caja", async ({ page }) => {
     await ir(page, "/panel/reportes?agrupar=producto");
     const nav = page.getByRole("navigation", { name: "Reporte" });
-    await expect(nav.getByRole("link")).toHaveText(["Ingresos", "Caja"]);
+    await expect(nav.getByRole("link")).toHaveText(["Ingresos", "Insumos", "Caja"]);
     const tabla = page.getByRole("table", { name: "Ingresos" });
     await expect(tabla.getByRole("columnheader", { name: "Kilos" })).toBeVisible();
     await expect(tabla.getByRole("columnheader", { name: "Servicio" })).toBeVisible();

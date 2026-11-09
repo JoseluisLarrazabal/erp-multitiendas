@@ -28,17 +28,22 @@ import { useOperacion } from "./use-operacion";
 export function FormSalida({
   negocioId,
   esFrial,
+  esLavanderia,
+  tipoInicial,
   ubicaciones,
 }: {
   negocioId: string;
   esFrial: boolean;
+  esLavanderia: boolean;
+  // El enlace "Consumo" de Inventario abre esta pantalla con el tipo ya elegido.
+  tipoInicial?: TipoSalida;
   ubicaciones: readonly Ubicacion[];
 }) {
   const formulario = useRef<HTMLFormElement>(null);
   const { operacionId, pendiente, error, enviar } = useOperacion();
   const [producto, setProducto] = useState<ProductoElegible | null>(null);
   const [ubicacionId, setUbicacionId] = useState(ubicaciones[0]?.id ?? "");
-  const [tipo, setTipo] = useState<TipoSalida>(esFrial ? "merma" : "danado");
+  const [tipo, setTipo] = useState<TipoSalida>(tipoInicial ?? (esFrial ? "merma" : "danado"));
   const [cantidadTexto, setCantidadTexto] = useState("");
   const [motivoTexto, setMotivoTexto] = useState("");
   const [series, setSeries] = useState<string[]>([]);
@@ -61,7 +66,8 @@ export function FormSalida({
     setExito(null);
     const nuevos: Errores = {};
     const motivo = motivoTexto.trim();
-    if (!producto) nuevos["sal-producto"] = "Elige un producto.";
+    if (!producto)
+      nuevos["sal-producto"] = tipo === "consumo" ? "Elige un insumo." : "Elige un producto.";
     else if (cantidad === null || (!conSigno && cantidad <= 0))
       nuevos["sal-cantidad"] = mensajeCantidad(producto.unidad, conSigno);
     else if (salidaConSerie && series.length !== necesarias)
@@ -128,6 +134,7 @@ export function FormSalida({
           setSeries([]);
           setErrores({});
         }}
+        etiqueta={tipo === "consumo" ? "Insumo" : undefined}
         idSiguiente="sal-cantidad"
         error={errores["sal-producto"]}
       />
@@ -140,6 +147,7 @@ export function FormSalida({
       <TipoUbicacionSalida
         ubicaciones={ubicaciones}
         esFrial={esFrial}
+        esLavanderia={esLavanderia}
         tipo={tipo}
         ubicacionId={ubicacionId}
         alCambiarTipo={(t) => {
