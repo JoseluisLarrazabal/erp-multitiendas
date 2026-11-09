@@ -1527,6 +1527,9 @@ isOneToOne: false
 "revisar_venta":
 { Args: { "p_venta_id": string }; Returns: Json
                            },
+"saldo_credito":
+{ Args: { "p_credito_id": string }; Returns: number
+                           },
 "simular_credito":
 { Args: { "p_cuotas"?: number,"p_inicial"?: number,"p_negocio_id": string,"p_total": number }; Returns: Json
                            },

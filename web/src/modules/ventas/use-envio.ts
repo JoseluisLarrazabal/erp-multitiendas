@@ -16,7 +16,7 @@ import {
   mayorSecuenciaEnCola,
 } from "./cola-ventas";
 import { cobrarEnLinea, MENSAJE_SIN_CONFIRMAR } from "./cobro-en-linea";
-import { hayCuotasSinConfirmar } from "./cobro-cuota";
+import { alcanceCuotas, hayCuotasSinConfirmar } from "./cobro-cuota";
 import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import { existeVenta, type Equipo } from "./queries";
@@ -359,9 +359,9 @@ export function useEnvio(opts: {
     async () =>
       ocupado.current ||
       pendRef.current.size > 0 ||
-      hayCuotasSinConfirmar() ||
+      hayCuotasSinConfirmar(alcanceCuotas(negocioId, equipoId, usuarioId)) ||
       (await equipoTieneCola(equipoId)),
-    [equipoId],
+    [equipoId, negocioId, usuarioId],
   );
   const limpiarRechazo = useCallback(
     () => setEstado((e) => (e.t === "rechazada" ? { t: "libre" } : e)),

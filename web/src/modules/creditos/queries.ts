@@ -60,6 +60,27 @@ export async function cargarCuentas(
   }
 }
 
+// Una página de clientes con saldo. Una página más allá de la última vuelve vacía y sin total (no hay filas que lo traigan): se
+// relee la primera para saber cuántas hay y se devuelve la última válida. `pagina` es la que se muestra de verdad.
+export async function cargarClientesConSaldo(
+  supabase: Cliente,
+  negocioId: string,
+  pagina: number,
+  porPagina: number,
+): Promise<Resultado<{ cuentas: Cuenta[]; total: number; pagina: number }>> {
+  const pedir = (p: number) =>
+    cargarCuentas(supabase, negocioId, { limite: porPagina, desde: (p - 1) * porPagina });
+  let actual = Math.max(1, pagina);
+  let r = await pedir(actual);
+  if (r.ok && r.data.cuentas.length === 0 && actual > 1) {
+    const primera = await pedir(1);
+    if (!primera.ok) return primera;
+    actual = Math.max(1, Math.ceil(primera.data.total / porPagina));
+    r = actual === 1 ? primera : await pedir(actual);
+  }
+  return r.ok ? { ok: true, data: { ...r.data, pagina: actual } } : r;
+}
+
 // Plan de una venta a crédito, calculado por el servidor con la misma regla que registrar_venta (totales y montos en Bs).
 export async function simularCredito(
   supabase: Cliente,

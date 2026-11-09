@@ -18,7 +18,7 @@ export default async function PaginaDetalleCredito({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await exigirAlgunPermiso(["gestionar_credito", "ver_reportes"]);
+  const { permisos } = await exigirAlgunPermiso(["gestionar_credito", "ver_reportes"]);
   if (!GUID.test(id)) notFound();
   const detalle = await cargarDetalle(await createClient(), { creditoId: id });
 
@@ -37,7 +37,10 @@ export default async function PaginaDetalleCredito({
         }
       />
       {detalle.ok ? (
-        <DetalleCreditoVista d={detalle.data} />
+        <DetalleCreditoVista
+          d={detalle.data}
+          puedeGestionar={permisos.includes("gestionar_credito")}
+        />
       ) : (
         <p role="alert" className="text-destructive text-sm">
           {detalle.error}

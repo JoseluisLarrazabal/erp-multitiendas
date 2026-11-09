@@ -71,6 +71,8 @@ export function PanelVenta({
     alAlternar: (activo: boolean) => void;
     parametros: Parametros | null;
     plan: PlanVenta | null;
+    // Fallo al calcular el plan (conexión): botón para volver a pedirlo.
+    alReintentar: (() => void) | null;
   } | null;
 }) {
   const totales = resumen.totales;
@@ -145,6 +147,7 @@ export function PanelVenta({
           alAlternar={credito.alAlternar}
           parametros={credito.parametros}
           plan={credito.plan}
+          alReintentar={credito.alReintentar}
           bloqueado={bloqueado}
           sinRed={sinRed}
           hayLineas={hayLineas}

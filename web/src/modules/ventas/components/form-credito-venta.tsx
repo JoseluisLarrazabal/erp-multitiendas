@@ -2,6 +2,7 @@
 
 import { HandCoins } from "lucide-react";
 import { useId } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatearDia } from "@/lib/format/fecha";
@@ -17,6 +18,7 @@ export function FormCreditoVenta({
   alAlternar,
   parametros,
   plan,
+  alReintentar,
   bloqueado,
   sinRed,
   hayLineas,
@@ -26,6 +28,7 @@ export function FormCreditoVenta({
   alAlternar: (activo: boolean) => void;
   parametros: Parametros | null;
   plan: PlanVenta | null;
+  alReintentar: (() => void) | null;
   bloqueado: boolean;
   sinRed: boolean;
   hayLineas: boolean;
@@ -101,6 +104,16 @@ export function FormCreditoVenta({
               </label>
             ))}
           </div>
+          {alReintentar && hayLineas && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 self-start"
+              onClick={alReintentar}
+            >
+              Reintentar el cálculo del plan
+            </Button>
+          )}
           {plan && hayLineas && (
             <div
               className="bg-muted rounded-lg p-2.5 text-sm tabular-nums"

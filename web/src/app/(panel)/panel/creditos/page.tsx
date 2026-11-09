@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador, Seccion } from "@/modules/catalogo/panel";
 import {
   agruparPorCliente,
+  cargarClientesConSaldo,
   cargarCuentas,
   cargarParametros,
   FormConfigCredito,
@@ -29,19 +30,17 @@ export default async function PaginaCreditos({
   const gestiona = permisos.includes("gestionar_credito");
   const supabase = await createClient();
   // Paginado en SQL: la página trae solo los clientes que se muestran, con todos sus créditos.
+  // shortcut: dos llamadas (la página de clientes y los vencidos); con 3 negocios no pesa. Si los créditos llegan a miles, una
+  // sola RPC que devuelva la página y los vencidos.
   const [cuentas, atrasadas, parametros] = await Promise.all([
-    cargarCuentas(supabase, activo.negocioId, {
-      limite: PAGINA_CREDITOS,
-      desde: (filtros.pagina - 1) * PAGINA_CREDITOS,
-    }),
+    cargarClientesConSaldo(supabase, activo.negocioId, filtros.pagina, PAGINA_CREDITOS),
     cargarCuentas(supabase, activo.negocioId, { soloVencidas: true, limite: PAGINA_CREDITOS }),
     cargarParametros(supabase, activo.negocioId),
   ]);
 
   const saldos = cuentas.ok ? agruparPorCliente(cuentas.data.cuentas) : [];
   const total = cuentas.ok ? cuentas.data.total : 0;
-  const paginas = Math.max(1, Math.ceil(total / PAGINA_CREDITOS));
-  const pagina = Math.min(filtros.pagina, paginas);
+  const pagina = cuentas.ok ? cuentas.data.pagina : 1;
 
   return (
     <>

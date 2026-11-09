@@ -18,11 +18,13 @@ import { createClient } from "@/lib/supabase/browser";
 import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
 import { cargarCuentas, existePagoCuota, pagoCuotaSchema, type Cuenta } from "@/modules/creditos";
 import {
+  alcanceCuotas,
   cobrarCuota,
-  cuotaSinConfirmar,
   cuotasSinConfirmar,
   fijarCuotaSinConfirmar,
   MENSAJE_CUOTA_SIN_CONFIRMAR,
+  PRUEBAN_NO_REGISTRADO,
+  type CuotaPendiente,
 } from "../cobro-cuota";
 import { aCentavos, bs, parsearMonto, textoMonto } from "../domain";
 import type { EstadoEnvio } from "../use-envio";
@@ -37,15 +39,27 @@ export function CreditosPos({
   negocioId,
   equipoId,
   cajaId,
+  usuarioId,
   alCajaCerrada,
 }: {
   negocioId: string;
   equipoId: string;
+  usuarioId: string;
   cajaId: string | null;
   // La base dice que la caja está cerrada: el POS la vuelve a comprobar (igual que al cobrar una venta).
   alCajaCerrada: () => Promise<void>;
 }) {
   const sinRed = useSinRed();
+  // Cobros sin confirmar de esta cuenta y este equipo (sessionStorage, también tras recargar): se leen una vez y el estado se
+  // actualiza junto con el almacenamiento.
+  const alcance = alcanceCuotas(negocioId, equipoId, usuarioId);
+  const [pendientes, setPendientes] = useState(() => cuotasSinConfirmar(alcance));
+  function fijar(creditoId: string, p: CuotaPendiente | null) {
+    fijarCuotaSinConfirmar(alcance, creditoId, p);
+    setPendientes(cuotasSinConfirmar(alcance));
+  }
+  const pendienteDe = (creditoId: string) =>
+    pendientes.find((p) => p.payload.credito_id === creditoId);
   const [cliente, setCliente] = useState<ClienteElegido | null>(null);
   const [cuentas, setCuentas] = useState<Cuenta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +91,10 @@ export function CreditosPos({
       </p>
     );
 
-  const sin = elegida ? cuotaSinConfirmar(elegida.creditoId) : undefined;
+  const sin = elegida ? pendienteDe(elegida.creditoId) : undefined;
   const congelado = sin
     ? { efectivo: aCentavos(sin.payload.efectivo), qr: aCentavos(sin.payload.qr) }
     : undefined;
-  // Cobros sin confirmar guardados en esta pestaña (también tras recargar): se ofrecen aunque no haya cliente elegido.
-  const pendientes = cuotasSinConfirmar();
   const cerrarCobro = () => {
     setElegida(null);
     setMonto(null);
@@ -98,7 +110,7 @@ export function CreditosPos({
       etiqueta: c.ventaNumero ? `venta ${c.ventaNumero}` : "saldo inicial",
       saldo: c.saldo,
     });
-    const previo = cuotaSinConfirmar(c.creditoId);
+    const previo = pendienteDe(c.creditoId);
     if (previo) {
       setMonto(aCentavos(previo.payload.efectivo + previo.payload.qr));
       return;
@@ -110,7 +122,7 @@ export function CreditosPos({
   async function confirmar(c: { efectivo: number; qr: number }) {
     if (!elegida || !cajaId || estado.t === "enviando" || estado.t === "verificando") return;
     const creditoId = elegida.creditoId;
-    const previo = cuotaSinConfirmar(creditoId);
+    const previo = pendienteDe(creditoId);
     const armado = pagoCuotaSchema.safeParse(
       previo?.payload ?? {
         id:
@@ -134,7 +146,7 @@ export function CreditosPos({
       alVerificar: () => setEstado({ t: "verificando" }),
     });
     if (s.t === "sin-confirmar") {
-      fijarCuotaSinConfirmar(creditoId, {
+      fijar(creditoId, {
         payload,
         cliente: elegida.clienteNombre,
         detalle: elegida.etiqueta,
@@ -142,8 +154,12 @@ export function CreditosPos({
       return setEstado({ t: "rechazada", mensaje: MENSAJE_CUOTA_SIN_CONFIRMAR });
     }
     if (s.t === "rechazada") {
-      fijarCuotaSinConfirmar(creditoId, null);
-      intento.current = null; // el servidor no guardó nada: el próximo intento estrena id
+      // Un permiso u otro rechazo no dicen qué pasó con un intento anterior: la entrada pendiente solo sale por la verificación o
+      // por un ERP que prueba que no se registró. Sin entrada previa no hay nada que conservar.
+      if (!previo || (s.codigo && PRUEBAN_NO_REGISTRADO.includes(s.codigo))) {
+        fijar(creditoId, null);
+        intento.current = null; // el servidor no guardó nada: el próximo intento estrena id
+      }
       setEstado({ t: "rechazada", mensaje: s.error });
       // Caja cerrada: el POS vuelve a comprobar la sesión del equipo, como al cobrar una venta.
       if (s.codigo === "ERP_CAJA_CERRADA") {
@@ -152,7 +168,7 @@ export function CreditosPos({
       }
       return;
     }
-    fijarCuotaSinConfirmar(creditoId, null);
+    fijar(creditoId, null);
     intento.current = null;
     cerrarCobro();
     setAviso(
@@ -171,7 +187,7 @@ export function CreditosPos({
         t: "rechazada",
         mensaje: `No se pudo verificar (${r.error}). No des el recibo por válido; intenta de nuevo.`,
       });
-    fijarCuotaSinConfirmar(elegida.creditoId, null);
+    fijar(elegida.creditoId, null);
     intento.current = null;
     const nombre = elegida.clienteNombre;
     cerrarCobro();

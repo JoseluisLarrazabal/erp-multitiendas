@@ -287,6 +287,17 @@ begin
 end;
 $$;
 
+-- Saldo de un crédito: suma de cuotas menos suma de pagos (no se guarda aparte). Privada.
+create function public.saldo_credito(p_credito_id uuid)
+returns numeric
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce((select sum(capital + interes) from public.credito_cuotas where credito_id = p_credito_id), 0)
+       - coalesce((select sum(monto) from public.credito_pagos where credito_id = p_credito_id), 0)
+$$;
+
 -- p_pago: id (UUID del cliente, idempotente por reclamar_operacion + huella), credito_id, dispositivo_id, caja_sesion_id (sesión
 -- abierta de ese equipo), efectivo y qr (Bs, suma > 0; el QR lo confirmó el cajero en el mostrador). Pagar de más:
 -- ERP_PAGO_EXCEDE_SALDO (DB-22). Devuelve {id, saldo}. Solo en línea.
@@ -327,9 +338,7 @@ begin
   end if;
   if not public.reclamar_operacion(v_id, v_sesion.negocio_id, md5(p_pago::text)) then
     -- Reintento: misma forma que la primera respuesta, con el saldo de ahora.
-    return jsonb_build_object('id', v_id, 'saldo',
-      coalesce((select sum(capital + interes) from public.credito_cuotas where credito_id = v_credito_id), 0)
-      - coalesce((select sum(monto) from public.credito_pagos where credito_id = v_credito_id), 0));
+    return jsonb_build_object('id', v_id, 'saldo', public.saldo_credito(v_credito_id));
   end if;
 
   -- Mismo orden de bloqueo que cancelar_reserva: sesión, luego el crédito (el saldo se calcula con la fila bloqueada).
@@ -338,9 +347,7 @@ begin
     raise exception 'ERP_CAJA_CERRADA';
   end if;
   select * into v_credito from public.creditos where id = v_credito_id for update;
-  select coalesce((select sum(capital + interes) from public.credito_cuotas where credito_id = v_credito_id), 0)
-       - coalesce((select sum(monto) from public.credito_pagos where credito_id = v_credito_id), 0)
-  into v_saldo;
+  v_saldo := public.saldo_credito(v_credito_id);
   if v_credito.estado <> 'activo' or v_ef + v_qr > v_saldo then
     raise exception 'ERP_PAGO_EXCEDE_SALDO';
   end if;
@@ -524,8 +531,12 @@ begin
     return jsonb_build_object('id', p_credito_id, 'estado', 'anulado');
   end if;
   select * into v_cr from public.creditos where id = p_credito_id for update;
+  if v_cr.estado = 'anulado' then
+    -- Ya estaba anulado (otra operación, otra pestaña): el resultado es el que se pedía.
+    return jsonb_build_object('id', p_credito_id, 'estado', 'anulado', 'ya_anulado', true);
+  end if;
   if v_cr.estado <> 'activo' or exists (select 1 from public.credito_pagos where credito_id = p_credito_id) then
-    raise exception 'ERP_CREDITO_CON_PAGOS'; -- ya tiene pagos (o ya no está activo): no se anula
+    raise exception 'ERP_CREDITO_CON_PAGOS'; -- ya tiene pagos (o ya está pagado): no se anula
   end if;
   update public.creditos set estado = 'anulado', anulado_en = now(), anulado_por = v_uid, motivo_anulacion = v_motivo
   where id = p_credito_id;
@@ -574,7 +585,7 @@ begin
     'cliente_documento', v_doc, 'origen', v_cr.origen, 'venta_id', v_cr.venta_id, 'venta_numero', v_numero,
     'capital', v_cr.capital, 'inicial', v_cr.inicial, 'interes_mensual_pct', v_cr.interes_mensual_pct,
     'estado', v_cr.estado, 'motivo_anulacion', v_cr.motivo_anulacion, 'docs_ci', v_cr.docs_ci, 'docs_domicilio', v_cr.docs_domicilio, 'docs_pagare', v_cr.docs_pagare,
-    'creado_en', v_cr.created_at, 'total', v_total, 'pagado', v_pagado, 'saldo', v_total - v_pagado,
+    'creado_en', v_cr.created_at, 'total', v_total, 'pagado', v_pagado, 'saldo', public.saldo_credito(v_cr.id),
     'cuotas', v_cuotas, 'pagos', v_pagos);
 end;
 $$;
@@ -587,6 +598,7 @@ revoke all on function public.guardar_credito_config(uuid, numeric, integer, int
 revoke all on function public.crear_credito_inicial(uuid, uuid, uuid, numeric, integer, date) from public, anon, authenticated;
 revoke all on function public.pagar_cuota(jsonb) from public, anon, authenticated;
 revoke all on function public.cuentas_base(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.saldo_credito(uuid) from public, anon, authenticated;
 revoke all on function public.cuentas_por_cobrar(uuid, uuid, boolean, integer, integer) from public, anon, authenticated;
 revoke all on function public.simular_credito(uuid, numeric, numeric, integer) from public, anon, authenticated;
 revoke all on function public.anular_credito_inicial(uuid, uuid, text) from public, anon, authenticated;
@@ -709,6 +721,7 @@ declare
   v_es_credito boolean := false;
   v_credito jsonb;
   v_cuotas integer;
+  v_cuotas_n numeric;
   v_docs boolean[];
   v_cred public.credito_config;
   v_credito_id uuid;
@@ -739,10 +752,11 @@ begin
   v_credito := p_venta -> 'credito';
   if v_es_credito then
     perform public.payload_claves(v_credito, array['cuotas', 'docs_ci', 'docs_domicilio', 'docs_pagare']);
-    if public.payload_numero(v_credito, 'cuotas', 0) not between 1 and 36 then
+    v_cuotas_n := public.payload_numero(v_credito, 'cuotas', 0);
+    if v_cuotas_n not between 1 and 36 then
       raise exception 'ERP_DATOS_INVALIDOS';
     end if;
-    v_cuotas := (v_credito ->> 'cuotas')::integer;
+    v_cuotas := v_cuotas_n::integer;
     if jsonb_typeof(v_credito -> 'docs_ci') is distinct from 'boolean'
        or jsonb_typeof(v_credito -> 'docs_domicilio') is distinct from 'boolean'
        or jsonb_typeof(v_credito -> 'docs_pagare') is distinct from 'boolean'

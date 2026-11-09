@@ -8,7 +8,13 @@ import type { DetalleCredito } from "../schemas";
 const MEDIOS: Record<string, string> = { efectivo: "Efectivo", qr: "QR" };
 
 // Detalle de un crédito: cuotas con lo pagado (FIFO, derivado) y los pagos recibidos.
-export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
+export function DetalleCreditoVista({
+  d,
+  puedeGestionar,
+}: {
+  d: DetalleCredito;
+  puedeGestionar: boolean;
+}) {
   const si = (v: boolean) => (v ? "Sí" : "No");
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -43,9 +49,10 @@ export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
           />
         )}
       </dl>
-      {d.origen === "saldo_inicial" && d.estado === "activo" && d.pagos.length === 0 && (
-        <AnularSaldoInicial creditoId={d.id} />
-      )}
+      {puedeGestionar &&
+        d.origen === "saldo_inicial" &&
+        d.estado === "activo" &&
+        d.pagos.length === 0 && <AnularSaldoInicial creditoId={d.id} />}
       <section aria-label="Cuotas" className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold">Cuotas</h2>
         <div className="bg-card overflow-x-auto rounded-xl border">

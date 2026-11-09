@@ -128,7 +128,7 @@ export function useVenta(o: OpcionesVenta) {
   );
   const clienteObligatorio = exigeCliente(o.tipoNegocio) || formCredito.activo;
   // El plan, el mínimo y los vencimientos los calcula el servidor (simular_credito), con debounce.
-  const credito = useSimulacionCredito({
+  const { resultado: credito, reintentar: reintentarPlan } = useSimulacionCredito({
     negocioId,
     form: formCredito,
     totalCentavos: resumen.totales?.total ?? 0,
@@ -381,6 +381,7 @@ export function useVenta(o: OpcionesVenta) {
     formCredito,
     setFormCredito,
     credito,
+    reintentarPlan,
     creditoPendiente,
     parametrosCredito,
     alternarCredito,

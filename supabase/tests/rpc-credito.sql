@@ -2,7 +2,7 @@
 -- total; pagar de más se rechaza), arqueo con cuotas, piso de precios en la lista crédito, rechazo offline, idempotencia, equipo
 -- ajeno, aislamiento entre negocios, permisos por rol, anular y devolver rechazados, saldo inicial, FIFO y vencidas.
 begin;
-select plan(222);
+select plan(226);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -433,6 +433,10 @@ select throws_ok($$select public.simular_credito(pg_temp.i('T'), 120, null, null
 select pg_temp.como(pg_temp.i('e'));
 select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr1', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '1000000000000'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas fuera del rango de integer');
 select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr2', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '2.5'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas no entera');
+select is(public.registrar_venta(jsonb_set(pg_temp.vc('Vr4', 'C1-000008', 10, 12, 60, 3), '{credito,cuotas}', '3.0')) ->> 'numero', 'C1-000008', 'cuotas 3.0 se acepta como 3');
+select is((select count(*) from public.credito_cuotas where credito_id = pg_temp.cred('Vr4')), 3::bigint, 'cuotas 3.0: tres cuotas');
+select is((public.pagar_cuota(jsonb_build_object('id', pg_temp.i('Q11'), 'credito_id', pg_temp.cred('Vr4'), 'dispositivo_id', pg_temp.i('D1'),
+  'caja_sesion_id', pg_temp.i('S1'), 'efectivo', 1, 'qr', 0)) ->> 'saldo')::numeric, pg_temp.saldo(pg_temp.cred('Vr4')), 'saldo_credito: pagar_cuota y detalle_credito coinciden');
 select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr3', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '"3"'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas como texto');
 select throws_ok($$select public.guardar_credito_config(pg_temp.i('T'), 0, 3, 12, 2.5)$$, 'ERP_DATOS_INVALIDOS', 'inicial 0 %');
 
@@ -449,7 +453,9 @@ select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp
 select is(public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'error de carga'), jsonb_build_object('id', pg_temp.i('K3'), 'estado', 'anulado'), 'K3 anulado');
 select is(public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'error de carga'), jsonb_build_object('id', pg_temp.i('K3'), 'estado', 'anulado'), 'anular es idempotente');
 select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'otro motivo')$$, 'ERP_OPERACION_REPETIDA', 'misma operación con otro motivo');
-select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A3'), pg_temp.i('K3'), 'otra vez')$$, 'ERP_CREDITO_CON_PAGOS', 'un crédito anulado no se anula de nuevo');
+select is(public.anular_credito_inicial(pg_temp.i('A3'), pg_temp.i('K3'), 'otra vez'), jsonb_build_object('id', pg_temp.i('K3'), 'estado', 'anulado', 'ya_anulado', true),
+  'ya anulado (otra operación): éxito idempotente, sin cambiar el motivo');
+select is((select motivo_anulacion from public.creditos where id = pg_temp.i('K3')), 'error de carga', 'el motivo original no cambia');
 select is((select estado || '/' || motivo_anulacion || '/' || (anulado_por = pg_temp.i('e'))::text || '/' || (anulado_en is not null)::text from public.creditos where id = pg_temp.i('K3')),
   'anulado/error de carga/true/true', 'quedan estado, motivo, quién y cuándo');
 select is((select count(*) from public.cuentas_por_cobrar(pg_temp.i('T')) where credito_id = pg_temp.i('K3')), 0::bigint, 'el anulado sale de las cuentas por cobrar');

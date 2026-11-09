@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import type { PagoCuotaPayload } from "@/modules/creditos";
 import {
+  alcanceCuotas,
   cobrarCuota,
   cuotaSinConfirmar,
   cuotasSinConfirmar,
@@ -81,6 +82,7 @@ describe("cobrarCuota (sin cola offline)", () => {
   });
 });
 
+const A = alcanceCuotas("n", "e", "u");
 describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
   function sesion() {
     const m = new Map<string, string>();
@@ -92,26 +94,26 @@ describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
   }
   it("se guardan con su payload e id, se leen validados y se borran", () => {
     sesion();
-    expect(hayCuotasSinConfirmar()).toBe(false);
-    fijarCuotaSinConfirmar(payload.credito_id, {
+    expect(hayCuotasSinConfirmar(A)).toBe(false);
+    fijarCuotaSinConfirmar(A, payload.credito_id, {
       payload,
       cliente: "Ana",
       detalle: "venta W2-000001",
     });
-    expect(hayCuotasSinConfirmar()).toBe(true);
-    expect(cuotaSinConfirmar(payload.credito_id)?.payload).toEqual(payload);
-    expect(cuotasSinConfirmar().map((p) => p.cliente)).toEqual(["Ana"]);
-    fijarCuotaSinConfirmar(payload.credito_id, null);
-    expect(hayCuotasSinConfirmar()).toBe(false);
+    expect(hayCuotasSinConfirmar(A)).toBe(true);
+    expect(cuotaSinConfirmar(A, payload.credito_id)?.payload).toEqual(payload);
+    expect(cuotasSinConfirmar(A).map((p) => p.cliente)).toEqual(["Ana"]);
+    // Otro equipo o usuario no ve ni se bloquea por esta entrada.
+    expect(cuotasSinConfirmar(alcanceCuotas("n", "otro-equipo", "u"))).toEqual([]);
+    expect(hayCuotasSinConfirmar(alcanceCuotas("n", "e", "otro-usuario"))).toBe(false);
+    fijarCuotaSinConfirmar(A, payload.credito_id, null);
+    expect(hayCuotasSinConfirmar(A)).toBe(false);
   });
   it("ignora entradas dañadas o con otro formato", () => {
     const m = sesion();
-    m.set(
-      "erp:cuotas-sin-confirmar",
-      JSON.stringify({ x: { payload: { id: "no" }, cliente: "A", detalle: "d" } }),
-    );
-    expect(cuotasSinConfirmar()).toEqual([]);
-    m.set("erp:cuotas-sin-confirmar", "{no es json");
-    expect(hayCuotasSinConfirmar()).toBe(false);
+    m.set(A, JSON.stringify({ x: { payload: { id: "no" }, cliente: "A", detalle: "d" } }));
+    expect(cuotasSinConfirmar(A)).toEqual([]);
+    m.set(A, "{no es json");
+    expect(hayCuotasSinConfirmar(A)).toBe(false);
   });
 });

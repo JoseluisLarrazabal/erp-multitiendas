@@ -19,11 +19,14 @@ export type CuotaPendiente = { payload: PagoCuotaPayload; cliente: string; detal
 
 // Viven en sessionStorage: recargar la pestaña no pierde el payload, y reintentarlo con el MISMO id nunca cobra dos veces
 // (pagar_cuota es idempotente por id). Cada lectura valida con el schema del payload.
+// La clave lleva el alcance (negocio, equipo y usuario): una pestaña con otra cuenta o equipo no ve ni se bloquea por lo de otra.
 const CLAVE = "erp:cuotas-sin-confirmar";
+export const alcanceCuotas = (negocioId: string, equipoId: string, usuarioId: string) =>
+  `${CLAVE}:${negocioId}:${equipoId}:${usuarioId}`;
 
-function leer(): Record<string, CuotaPendiente> {
+function leer(alcance: string): Record<string, CuotaPendiente> {
   try {
-    const crudo: unknown = JSON.parse(sessionStorage.getItem(CLAVE) ?? "{}");
+    const crudo: unknown = JSON.parse(sessionStorage.getItem(alcance) ?? "{}");
     if (typeof crudo !== "object" || crudo === null) return {};
     const salida: Record<string, CuotaPendiente> = {};
     for (const [creditoId, v] of Object.entries(crudo)) {
@@ -37,19 +40,28 @@ function leer(): Record<string, CuotaPendiente> {
     return {};
   }
 }
-export const cuotasSinConfirmar = () => Object.values(leer());
-export const cuotaSinConfirmar = (creditoId: string) => leer()[creditoId];
-export function fijarCuotaSinConfirmar(creditoId: string, p: CuotaPendiente | null) {
-  const todas = leer();
+export const cuotasSinConfirmar = (alcance: string) => Object.values(leer(alcance));
+export const cuotaSinConfirmar = (alcance: string, creditoId: string) => leer(alcance)[creditoId];
+// Una entrada solo sale por un éxito confirmado, por la verificación de existencia o por un ERP que prueba que no se registró
+// (PRUEBAN_NO_REGISTRADO): nunca por un permiso u otro rechazo, que no dicen qué pasó con un intento anterior.
+export function fijarCuotaSinConfirmar(
+  alcance: string,
+  creditoId: string,
+  p: CuotaPendiente | null,
+) {
+  const todas = leer(alcance);
   if (p) todas[creditoId] = p;
   else delete todas[creditoId];
   try {
-    sessionStorage.setItem(CLAVE, JSON.stringify(todas));
+    sessionStorage.setItem(alcance, JSON.stringify(todas));
   } catch {
     // Sin almacenamiento: el cobro sigue funcionando, solo no sobrevive a recargar.
   }
 }
-export const hayCuotasSinConfirmar = () => Object.keys(leer()).length > 0;
+export const hayCuotasSinConfirmar = (alcance: string) => Object.keys(leer(alcance)).length > 0;
+
+// pagar_cuota rechaza con estos DESPUÉS de reclamar la operación y la transacción se deshace: el pago no quedó.
+export const PRUEBAN_NO_REGISTRADO = ["ERP_PAGO_EXCEDE_SALDO", "ERP_CAJA_CERRADA"];
 
 // Cobra una cuota directo contra el servidor: NUNCA entra a la cola offline. Ante red caída o sin respuesta reintenta el mismo
 // payload y avisa con `alVerificar`; si al final tampoco se ve el pago en el servidor devuelve "sin-confirmar" y el llamador

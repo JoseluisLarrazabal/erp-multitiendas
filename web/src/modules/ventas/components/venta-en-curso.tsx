@@ -140,6 +140,7 @@ export function VentaEnCurso({
           negocioId={opciones.negocioId}
           equipoId={equipo.id}
           cajaId={cajaId}
+          usuarioId={opciones.usuarioId}
           alCajaCerrada={v.alCajaCerrada}
         />
       )}
@@ -196,6 +197,8 @@ export function VentaEnCurso({
                   alAlternar: (activo) => void v.alternarCredito(activo),
                   parametros: v.parametrosCredito,
                   plan: v.credito?.ok ? v.credito.plan : null,
+                  alReintentar:
+                    v.credito && !v.credito.ok && v.credito.reintentable ? v.reintentarPlan : null,
                 }
               : null
           }

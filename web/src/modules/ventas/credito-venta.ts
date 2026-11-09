@@ -28,7 +28,9 @@ export type PlanVenta = {
   financiado: number;
   plan: { fila: CuotaPlan; vence: string }[];
 };
-export type ResultadoCredito = { ok: true; plan: PlanVenta } | { ok: false; motivo: string };
+// `reintentable`: fallo de conexión o respuesta ilegible (no una regla): se puede volver a pedir.
+export type ResultadoCredito =
+  { ok: true; plan: PlanVenta } | { ok: false; motivo: string; reintentable?: boolean };
 
 // Vacío = el valor por defecto del negocio (inicial mínima, plazo por defecto): el servidor lo resuelve (null).
 export function pedirSimulacion(
