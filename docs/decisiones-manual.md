@@ -8,7 +8,8 @@ para que el manual de usuario, la capacitación (`docs/capacitacion.md`) y el ac
 - El manual de usuario y todo documento de entrega se escriben a partir de este registro. Cada regla _vigente_ tiene que
   aparecer en el manual del rol al que afecta. Cada _supuesto_ y cada _pendiente_ se confirma con el cliente o el CTO antes
   de la entrega, o se entrega escrito como supuesto.
-- Cada PR que cambie una regla visible para el usuario actualiza este archivo en el mismo PR.
+- Cada PR que cambie una regla visible para el usuario actualiza este archivo en el mismo PR, y también el manual del rol
+  afectado en `docs/manual/` y su captura (`pnpm manual:capturas`, ver `docs/manual/README.md`).
 - Estados: _vigente_ · _supuesto pendiente de confirmar con el cliente_ · _pendiente de decisión CTO_ · _riesgo aceptado_ ·
   _no verificado_. La fuente va al final de cada ítem: `H` = `docs/handoff.md`, `SRS` = `docs/srs.md`, `PF-N` =
   `docs/plan-fase-N.md`, `AUD` = `docs/auditoria-entrega-a.md`, `CAP` = `docs/capacitacion.md`, `MIG` =
@@ -207,7 +208,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 
 ## 6. POS sin conexión
 
-- **Con internet cortado se sigue vendiendo.** La barra dice "Sin conexión, catálogo de hace N" y la nota queda "guardada
+- **Con internet cortado se sigue vendiendo.** La barra dice "Sin conexión. Catálogo de hace N. Lo registrado se enviará al volver la red. Cerrar sesión necesita
+  conexión." y la nota queda "guardada
   en este equipo. Se enviará al volver la conexión". _Vigente_ · H:513-529; CAP:42-43; SRS RF-VEN-09
 - **Es un extra fuera del contrato; el CTO lo absorbe sin costo y conviene mencionarlo en el acta.** _Vigente / pendiente de
   decisión CTO (D-01)_ · H:531-533; SRS:287

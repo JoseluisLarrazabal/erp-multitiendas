@@ -1,10 +1,25 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-09 (#91).
+Última actualización: 2026-11-09 (manual de usuario).
 
 ## Próxima sesión (arrancar acá)
 
+- **Manual de usuario y capacitación con la fase 7: hecho el 2026-11-09** (`docs/plan-manual-usuario.md`, aprobado por el
+  CTO). Manuales por rol en `docs/manual/`: vendedor, lavandería, encargado y dueño, contador. Llevan 25 capturas
+  sacadas con Playwright en local sobre el seed (`pnpm manual:capturas`, config aparte que el CI no corre; solo tras
+  `supabase db reset`). Los PDF A4 salen con `scripts/manual/exportar.sh` en `docs/manual/dist/`, que no se versiona. El
+  encargado y el dueño reciben también el PDF del vendedor.
+  - `capacitacion.md` ya cubre reservas, crédito, cuotas, compras e insumos.
+  - Decisiones que el código fija y el manual recoge:
+    - la venta a crédito solo la hacen el dueño y el encargado (`gestionar_credito`); el vendedor cobra cuotas;
+    - el contador puede confirmar QR y marcar ventas revisadas en Reconciliación (`ver_reportes`).
+  - La captura `pos-elegir-equipo` simula 2 equipos, porque el seed tiene uno.
+  - Supuestos escritos como supuestos en el manual: P-03, P-07, P-09, P-12, P-15 y el consumo de insumos solo por dueño o
+    encargado.
+  - No verificado:
+    - la cobertura contra `decisiones-manual.md` se revisó leyendo ítem por ítem, sin un cruce automático;
+    - el manual no se probó con personal real.
 - **Manual de usuario y documentos de entrega (CTO, 2026-11-09):** se escriben a partir de
   `docs/decisiones-manual.md`, el registro de reglas, restricciones, riesgos aceptados y supuestos que el usuario y el
   cliente tienen que conocer (22 módulos, más una tabla de contradicciones resueltas). Toda decisión visible para el
