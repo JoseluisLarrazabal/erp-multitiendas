@@ -113,6 +113,9 @@ export type FilaCaja = {
   reservas_efectivo: number;
   // Cuotas de crédito cobradas por caja, en efectivo.
   cuotas_efectivo: number;
+  // QR de reservas (anticipos menos devoluciones) y de cuotas: ventas_qr es solo QR de ventas.
+  reservas_qr: number;
+  cuotas_qr: number;
   esperado: number;
   contado: number | null;
   diferencia: number | null;
@@ -129,6 +132,9 @@ export type TotalesCaja = {
   reservas_efectivo: number;
   // Cuotas de crédito cobradas por caja, en efectivo.
   cuotas_efectivo: number;
+  // QR de reservas (anticipos menos devoluciones) y de cuotas: ventas_qr es solo QR de ventas.
+  reservas_qr: number;
+  cuotas_qr: number;
   esperado: number;
   contado: number;
   diferencia: number;

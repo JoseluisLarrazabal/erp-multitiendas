@@ -3,12 +3,13 @@
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Campo, propsCampo } from "@/components/panel/campo";
+import { hoyEnBolivia } from "@/lib/format/fecha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
 import { useOperacion } from "@/modules/inventario/panel-cliente";
 import { crearCreditoInicial } from "../actions";
-import { hoyLaPaz, MAX_CUOTAS } from "../domain";
+import { MAX_CUOTAS } from "../domain";
 import { saldoInicialSchema } from "../schemas";
 
 // Saldo inicial (RF-CRE-06): un crédito sin venta ni caja, con lo que el cliente aún debe y sus cuotas restantes.
@@ -17,7 +18,7 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
   const [cliente, setCliente] = useState<ClienteElegido | null>(null);
   const [capital, setCapital] = useState("");
   const [cuotas, setCuotas] = useState("3");
-  const [primera, setPrimera] = useState(hoyLaPaz());
+  const [primera, setPrimera] = useState(hoyEnBolivia());
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [hecho, setHecho] = useState<string | null>(null);
 

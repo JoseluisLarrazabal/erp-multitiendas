@@ -11,20 +11,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatearDia } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { useSinRed } from "@/lib/offline/red";
 import { createClient } from "@/lib/supabase/browser";
 import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
-import {
-  cargarCuentas,
-  existePagoCuota,
-  fechaCorta,
-  type Cuenta,
-  type PagoCuotaPayload,
-} from "@/modules/creditos";
+import { cargarCuentas, existePagoCuota, pagoCuotaSchema, type Cuenta } from "@/modules/creditos";
 import {
   cobrarCuota,
   cuotaSinConfirmar,
+  cuotasSinConfirmar,
   fijarCuotaSinConfirmar,
   MENSAJE_CUOTA_SIN_CONFIRMAR,
 } from "../cobro-cuota";
@@ -32,23 +28,29 @@ import { aCentavos, bs, parsearMonto, textoMonto } from "../domain";
 import type { EstadoEnvio } from "../use-envio";
 import { Cobro } from "./cobro";
 
+// Crédito en cobro: el de la lista o, tras recargar con un cobro sin confirmar, solo lo que se guardó de él.
+type Elegida = { creditoId: string; clienteNombre: string; etiqueta: string; saldo: number | null };
+
 // Modo "Cuotas" del POS (RF-CRE-04): busca al cliente, lista sus créditos con saldo y cobra una cuota por la caja abierta.
 // Necesita conexión: lee y cobra directo contra el servidor, nunca por la cola offline.
 export function CreditosPos({
   negocioId,
   equipoId,
   cajaId,
+  alCajaCerrada,
 }: {
   negocioId: string;
   equipoId: string;
   cajaId: string | null;
+  // La base dice que la caja está cerrada: el POS la vuelve a comprobar (igual que al cobrar una venta).
+  alCajaCerrada: () => Promise<void>;
 }) {
   const sinRed = useSinRed();
   const [cliente, setCliente] = useState<ClienteElegido | null>(null);
   const [cuentas, setCuentas] = useState<Cuenta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [elegida, setElegida] = useState<Cuenta | null>(null);
+  const [elegida, setElegida] = useState<Elegida | null>(null);
   const [montoTexto, setMontoTexto] = useState("");
   // Monto (centavos) ya pedido: con él se abre el cobro. Un cobro sin confirmar reabre con lo que se envió.
   const [monto, setMonto] = useState<number | null>(null);
@@ -61,8 +63,8 @@ export function CreditosPos({
       setCuentas(null);
       setError(null);
       if (!c) return;
-      const r = await cargarCuentas(createClient(), negocioId, c.id);
-      if (r.ok) setCuentas(r.data);
+      const r = await cargarCuentas(createClient(), negocioId, { clienteId: c.id });
+      if (r.ok) setCuentas(r.data.cuentas);
       else setError(r.error);
     },
     [negocioId],
@@ -76,7 +78,11 @@ export function CreditosPos({
     );
 
   const sin = elegida ? cuotaSinConfirmar(elegida.creditoId) : undefined;
-  const congelado = sin ? { efectivo: aCentavos(sin.efectivo), qr: aCentavos(sin.qr) } : undefined;
+  const congelado = sin
+    ? { efectivo: aCentavos(sin.payload.efectivo), qr: aCentavos(sin.payload.qr) }
+    : undefined;
+  // Cobros sin confirmar guardados en esta pestaña (también tras recargar): se ofrecen aunque no haya cliente elegido.
+  const pendientes = cuotasSinConfirmar();
   const cerrarCobro = () => {
     setElegida(null);
     setMonto(null);
@@ -86,10 +92,15 @@ export function CreditosPos({
   function abrir(c: Cuenta) {
     setAviso(null);
     setEstado({ t: "libre" });
-    setElegida(c);
+    setElegida({
+      creditoId: c.creditoId,
+      clienteNombre: c.clienteNombre,
+      etiqueta: c.ventaNumero ? `venta ${c.ventaNumero}` : "saldo inicial",
+      saldo: c.saldo,
+    });
     const previo = cuotaSinConfirmar(c.creditoId);
     if (previo) {
-      setMonto(aCentavos(previo.efectivo + previo.qr));
+      setMonto(aCentavos(previo.payload.efectivo + previo.payload.qr));
       return;
     }
     setMonto(null);
@@ -100,27 +111,46 @@ export function CreditosPos({
     if (!elegida || !cajaId || estado.t === "enviando" || estado.t === "verificando") return;
     const creditoId = elegida.creditoId;
     const previo = cuotaSinConfirmar(creditoId);
-    const payload: PagoCuotaPayload = previo ?? {
-      id: (intento.current?.clave === creditoId ? intento.current.id : null) ?? crypto.randomUUID(),
-      credito_id: creditoId,
-      dispositivo_id: equipoId,
-      caja_sesion_id: cajaId,
-      efectivo: c.efectivo / 100,
-      qr: c.qr / 100,
-    };
+    const armado = pagoCuotaSchema.safeParse(
+      previo?.payload ?? {
+        id:
+          (intento.current?.clave === creditoId ? intento.current.id : null) ?? crypto.randomUUID(),
+        credito_id: creditoId,
+        dispositivo_id: equipoId,
+        caja_sesion_id: cajaId,
+        efectivo: c.efectivo / 100,
+        qr: c.qr / 100,
+      },
+    );
+    if (!armado.success)
+      return setEstado({
+        t: "rechazada",
+        mensaje: "No se pudo armar el cobro. Revisa los montos.",
+      });
+    const payload = armado.data;
     intento.current = { id: payload.id, clave: creditoId };
     setEstado({ t: "enviando" });
     const s = await cobrarCuota(createClient(), payload, {
       alVerificar: () => setEstado({ t: "verificando" }),
     });
     if (s.t === "sin-confirmar") {
-      fijarCuotaSinConfirmar(creditoId, payload);
+      fijarCuotaSinConfirmar(creditoId, {
+        payload,
+        cliente: elegida.clienteNombre,
+        detalle: elegida.etiqueta,
+      });
       return setEstado({ t: "rechazada", mensaje: MENSAJE_CUOTA_SIN_CONFIRMAR });
     }
     if (s.t === "rechazada") {
       fijarCuotaSinConfirmar(creditoId, null);
       intento.current = null; // el servidor no guardó nada: el próximo intento estrena id
-      return setEstado({ t: "rechazada", mensaje: s.error });
+      setEstado({ t: "rechazada", mensaje: s.error });
+      // Caja cerrada: el POS vuelve a comprobar la sesión del equipo, como al cobrar una venta.
+      if (s.codigo === "ERP_CAJA_CERRADA") {
+        cerrarCobro();
+        await alCajaCerrada();
+      }
+      return;
     }
     fijarCuotaSinConfirmar(creditoId, null);
     intento.current = null;
@@ -135,7 +165,7 @@ export function CreditosPos({
   async function verificar() {
     if (!elegida || !sin) return;
     setEstado({ t: "verificando" });
-    const r = await existePagoCuota(createClient(), sin.id);
+    const r = await existePagoCuota(createClient(), sin.payload.id);
     if (!r.ok)
       return setEstado({
         t: "rechazada",
@@ -147,13 +177,13 @@ export function CreditosPos({
     cerrarCobro();
     setAviso(
       r.data
-        ? `El cobro de ${bs(aCentavos(sin.efectivo + sin.qr))} a ${nombre} sí quedó registrado.`
+        ? `El cobro de ${bs(aCentavos(sin.payload.efectivo + sin.payload.qr))} a ${nombre} sí quedó registrado.`
         : "No se registró: la cuota no se cobró. Puedes cobrar de nuevo.",
     );
     void cargar(cliente);
   }
 
-  const saldoMax = elegida ? aCentavos(elegida.saldo) : 0;
+  const saldoMax = elegida?.saldo != null ? aCentavos(elegida.saldo) : 0;
   const montoPedido = parsearMonto(montoTexto);
   const montoValido = montoPedido !== null && montoPedido > 0 && montoPedido <= saldoMax;
 
@@ -172,6 +202,44 @@ export function CreditosPos({
           }}
         />
       </div>
+      {pendientes.length > 0 && (
+        <ul
+          aria-label="Cobros sin confirmar"
+          className="border-destructive divide-border bg-card divide-y rounded-xl border"
+        >
+          {pendientes.map((p) => (
+            <li
+              key={p.payload.id}
+              className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm"
+            >
+              <span className="min-w-0 flex-1 basis-56">
+                Cobro sin confirmar de {bs(aCentavos(p.payload.efectivo + p.payload.qr))} a{" "}
+                <span className="font-medium">{p.cliente}</span> ({p.detalle}): no des el recibo por
+                válido hasta saber qué pasó.
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                disabled={!cajaId}
+                onClick={() => {
+                  setAviso(null);
+                  setEstado({ t: "libre" });
+                  setElegida({
+                    creditoId: p.payload.credito_id,
+                    clienteNombre: p.cliente,
+                    etiqueta: p.detalle,
+                    saldo: null,
+                  });
+                  setMonto(aCentavos(p.payload.efectivo + p.payload.qr));
+                }}
+              >
+                Reintentar o verificar
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div role="status" className="flex flex-col gap-3 empty:hidden">
         {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
         {cliente && cuentas === null && !error && (
@@ -218,7 +286,7 @@ export function CreditosPos({
               <p className="text-muted-foreground text-xs tabular-nums">
                 Saldo {formatearBs(c.saldo)}
                 {c.proximaVence &&
-                  ` · próxima cuota ${formatearBs(c.proximoMonto)} (${fechaCorta(c.proximaVence)})`}
+                  ` · próxima cuota ${formatearBs(c.proximoMonto)} (${formatearDia(c.proximaVence)})`}
               </p>
               {c.cuotasVencidas > 0 && (
                 <p className="text-destructive text-xs tabular-nums">
@@ -254,7 +322,7 @@ export function CreditosPos({
             >
               <AlertDialogTitle>Cobrar cuota</AlertDialogTitle>
               <p className="text-sm tabular-nums">
-                {elegida.clienteNombre} · saldo {formatearBs(elegida.saldo)}
+                {elegida.clienteNombre} · saldo {formatearBs(elegida.saldo ?? 0)}
               </p>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="cuota-monto">Monto a cobrar (Bs)</Label>
@@ -270,7 +338,7 @@ export function CreditosPos({
                 />
                 <p role="status" className="text-muted-foreground text-xs empty:hidden">
                   {montoTexto.trim() !== "" && !montoValido
-                    ? `Escribe un monto mayor a 0 y hasta el saldo (${formatearBs(elegida.saldo)}).`
+                    ? `Escribe un monto mayor a 0 y hasta el saldo (${formatearBs(elegida.saldo ?? 0)}).`
                     : "Un pago parcial se aplica a la cuota más vieja."}
                 </p>
               </div>
@@ -292,7 +360,7 @@ export function CreditosPos({
         <Cobro
           total={monto}
           titulo="Cobrar cuota"
-          detalle={`${elegida.clienteNombre} · ${elegida.ventaNumero ? `venta ${elegida.ventaNumero}` : "saldo inicial"} · saldo ${formatearBs(elegida.saldo)}.`}
+          detalle={`${elegida.clienteNombre} · ${elegida.etiqueta}${elegida.saldo !== null ? ` · saldo ${formatearBs(elegida.saldo)}` : ""}.`}
           congelado={congelado}
           alVerificar={() => void verificar()}
           estado={estado}

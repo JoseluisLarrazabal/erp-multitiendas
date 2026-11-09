@@ -136,7 +136,12 @@ export function VentaEnCurso({
         />
       )}
       {verCreditos && (
-        <CreditosPos negocioId={opciones.negocioId} equipoId={equipo.id} cajaId={cajaId} />
+        <CreditosPos
+          negocioId={opciones.negocioId}
+          equipoId={equipo.id}
+          cajaId={cajaId}
+          alCajaCerrada={v.alCajaCerrada}
+        />
       )}
       <div
         hidden={aparte}

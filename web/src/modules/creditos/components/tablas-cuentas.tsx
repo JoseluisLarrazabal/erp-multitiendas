@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { formatearBs } from "@/lib/format/moneda";
 import type { Cuenta, SaldoCliente } from "../domain";
-import { ETIQUETA_ORIGEN, fechaCorta } from "../domain";
+import { formatearDia } from "@/lib/format/fecha";
+import { ETIQUETA_ORIGEN } from "../domain";
 
 const tarjeta = "bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]";
 
@@ -77,7 +78,7 @@ export function TablaVencidas({ cuentas }: { cuentas: readonly Cuenta[] }) {
             vencido {formatearBs(c.montoVencido)} · saldo {formatearBs(c.saldo)}
           </span>
           <span className="text-muted-foreground text-xs tabular-nums">
-            {c.proximaVence ? `Impaga más vieja: ${fechaCorta(c.proximaVence)}` : ""}
+            {c.proximaVence ? `Impaga más vieja: ${formatearDia(c.proximaVence)}` : ""}
           </span>
         </li>
       ))}

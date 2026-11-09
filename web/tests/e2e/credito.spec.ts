@@ -83,7 +83,9 @@ test("E2E-12: venta a crédito, plan imprimible, cuotas por caja, arqueo, saldo 
   await expect(page.getByTestId("total")).toHaveText("Bs 100,00");
 
   // Activar el crédito: las líneas pasan a la lista crédito y se exige cliente.
-  await page.getByRole("checkbox", { name: /Vender a crédito/ }).check();
+  // Se activa al leer los parámetros del servidor, no al instante.
+  await page.getByRole("checkbox", { name: /Vender a crédito/ }).click();
+  await expect(page.getByRole("checkbox", { name: /Vender a crédito/ })).toBeChecked();
   await expect(page.getByTestId("total")).toHaveText("Bs 120,00");
   await expect(page.getByText("El crédito necesita un cliente.")).toBeVisible();
   await elegirCliente(page);
@@ -97,7 +99,7 @@ test("E2E-12: venta a crédito, plan imprimible, cuotas por caja, arqueo, saldo 
   await expect(page.getByRole("button", { name: /^Cobrar/ }).first()).toBeDisabled();
   await page.getByLabel("Inicial (Bs)").fill("");
   await page.getByLabel("Cuotas (1 a 12)").fill("13");
-  await expect(page.getByText(/Las cuotas van de 1 a 12/)).toBeVisible();
+  await expect(page.getByText(/Revisa la inicial y las cuotas \(1 a 12\)/)).toBeVisible();
   await page.getByLabel("Cuotas (1 a 12)").fill("3");
   await page.getByLabel("Cédula de identidad").check();
   await page.getByLabel("Pagaré firmado").check();
@@ -221,6 +223,28 @@ test("E2E-12: venta a crédito, plan imprimible, cuotas por caja, arqueo, saldo 
   expect(todas.find((c) => c.cuotas_vencidas > 0)?.dias_atraso).toBeGreaterThan(0);
   // El saldo inicial no tocó la caja.
   expect((await resumen()).esperado).toBe(100 + 60 + 26.01);
+
+  // Un saldo inicial cargado por error se anula con motivo (solo sin pagos) y sale de las cuentas por cobrar.
+  const errado = crypto.randomUUID();
+  const creado = await apiComo(CUENTA, "rpc/crear_credito_inicial", {
+    metodo: "POST",
+    cuerpo: {
+      p_id: errado,
+      p_negocio_id: tienda,
+      p_cliente_id: clienteId,
+      p_capital: 80,
+      p_cuotas: 2,
+      p_primera: new Date().toISOString().slice(0, 10),
+    },
+  });
+  expect(creado.status, JSON.stringify(creado.json)).toBeLessThan(300);
+  expect(await cuentas()).toHaveLength(3);
+  await page.goto(`/panel/creditos/${errado}`);
+  await page.getByLabel("Motivo de la anulación").fill("cargado dos veces");
+  await page.getByRole("button", { name: "Anular saldo inicial" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Anular saldo inicial" }).click();
+  await expect(page.getByText("Anulado: cargado dos veces")).toBeVisible();
+  expect(await cuentas()).toHaveLength(2);
 });
 
 test("sin conexión no se vende a crédito ni se cobran cuotas", async ({ page }) => {
@@ -247,7 +271,9 @@ test("respuesta perdida: el servidor guarda la venta a crédito pero el cliente 
   const antes = (await cuentas()).length;
   await abrirPos(page);
   await agregar(page, producto.barras, 1);
-  await page.getByRole("checkbox", { name: /Vender a crédito/ }).check();
+  // Se activa al leer los parámetros del servidor, no al instante.
+  await page.getByRole("checkbox", { name: /Vender a crédito/ }).click();
+  await expect(page.getByRole("checkbox", { name: /Vender a crédito/ })).toBeChecked();
   await elegirCliente(page);
   await page
     .getByRole("button", { name: /^Cobrar/ })

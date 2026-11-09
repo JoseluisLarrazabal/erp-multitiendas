@@ -3,6 +3,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { mayorSecuenciaEnCola } from "./cola-ventas";
 import { enviarConReglas } from "./envio-venta";
 import { enviarVenta, existeVenta } from "./queries";
+import { reintentarHastaConfirmar } from "./reintento";
 import type { VentaPayload } from "./schemas";
 
 export const MENSAJE_SIN_CONFIRMAR =
@@ -12,8 +13,6 @@ export type SalidaEnLinea =
   | { t: "ok"; numero: string; payload: VentaPayload }
   | { t: "rechazada"; error: string; codigo: string | null }
   | { t: "sin-confirmar"; payload: VentaPayload };
-
-const ESPERAS_MS = [1000, 2000, 4000];
 
 // Una venta online-only (completar una reserva o vender a crédito) NUNCA entra a la cola offline: va directo al servidor con su id (idempotente por id y huella).
 // Las reglas de envío (duda, número duplicado, operación repetida) son las de la cola: ver enviarConReglas. Ante red
@@ -33,31 +32,34 @@ export async function cobrarEnLinea(
     mayorEnCola?: (dispositivoId: string) => Promise<number>;
   },
 ): Promise<SalidaEnLinea | { t: "no-armada" }> {
-  const esperar = o.esperar ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const mayorEnCola = o.mayorEnCola ?? mayorSecuenciaEnCola;
   let venta = o.previo ?? o.armar(o.primerNumero);
   if (!venta) return { t: "no-armada" };
+  // Un intento anterior sin confirmar ya está en duda: se comprueba antes de renumerar.
   let enDuda = !!o.previo;
-  for (let i = 0; ; i++) {
-    const r = await enviarConReglas(supabase, venta, {
-      enviar: (v) => enviarVenta(supabase, v),
-      enDuda,
-      inesperados: i,
-      dispositivoId: venta.dispositivo_id,
-      mayorEnCola: () => mayorEnCola(venta!.dispositivo_id),
-    });
-    venta = r.venta;
-    if (r.t === "ok") return { t: "ok", numero: r.venta.numero, payload: r.venta };
-    if (r.t === "rechazo") return { t: "rechazada", error: r.error, codigo: r.codigo };
-    // Sin respuesta definitiva: la base pudo guardarla, así que los intentos siguientes van en duda.
-    enDuda = true;
-    o.alVerificar();
-    if (i >= ESPERAS_MS.length) {
-      const existe = await existeVenta(supabase, venta.id);
-      return existe.ok && existe.data
-        ? { t: "ok", numero: venta.numero, payload: venta }
-        : { t: "sin-confirmar", payload: venta };
-    }
-    await esperar(ESPERAS_MS[i]!);
-  }
+  const r = await reintentarHastaConfirmar<SalidaEnLinea>({
+    alDuda: o.alVerificar,
+    esperar: o.esperar,
+    intentar: async (i) => {
+      const x = await enviarConReglas(supabase, venta!, {
+        enviar: (v) => enviarVenta(supabase, v),
+        enDuda,
+        inesperados: i,
+        dispositivoId: venta!.dispositivo_id,
+        mayorEnCola: () => mayorEnCola(venta!.dispositivo_id),
+      });
+      venta = x.venta;
+      if (x.t === "ok")
+        return { t: "hecho", valor: { t: "ok", numero: x.venta.numero, payload: x.venta } };
+      if (x.t === "rechazo")
+        return { t: "definitivo", valor: { t: "rechazada", error: x.error, codigo: x.codigo } };
+      enDuda = true; // sin respuesta definitiva: la base pudo guardarla
+      return { t: "duda" };
+    },
+    existe: async () => {
+      const e = await existeVenta(supabase, venta!.id);
+      return e.ok && e.data ? { t: "ok", numero: venta!.numero, payload: venta! } : null;
+    },
+  });
+  return r.t === "sin-confirmar" ? { t: "sin-confirmar", payload: venta as VentaPayload } : r.valor;
 }

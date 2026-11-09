@@ -8,17 +8,18 @@
 -- Cuotas: plan_cuotas (sistema francés, P-07). "Pagada" y "vencida" se derivan: los pagos cubren las cuotas de la más vieja a la
 -- más nueva (FIFO) y saldo = suma de cuotas - suma de pagos; no se guarda aparte. credito_pagos entra al arqueo (efectivo_esperado,
 -- total_qr_sesion, resumen_caja, reporte_caja).
--- shortcut: frecuencia solo mensual y un solo interés mensual por negocio; el interés de una venta a crédito no entra a
+-- Lectura: las filas de creditos, credito_cuotas y credito_pagos las puede leer por RLS cualquier miembro del negocio (igual que
+-- ventas y clientes: el POS las necesita). El permiso de las RPC de lectura ordena los listados; no es secreto. Riesgo aceptado.
+-- shortcut: frecuencia solo mensual (sin columna: no hay otra) y un solo interés mensual por negocio; el interés de una venta a crédito no entra a
 -- ventas.total (queda en las cuotas); agregar frecuencias o contabilizar el interés cuando el cliente lo pida.
 
 -- Parámetros por negocio. Sin fila rigen los valores por defecto (50 %, 3 cuotas, 2,5 % mensual), ver credito_params.
 create table public.credito_config (
   negocio_id uuid primary key references public.negocios (id),
-  inicial_pct numeric(5,2) not null default 50 check (inicial_pct >= 0 and inicial_pct < 100),
+  inicial_pct numeric(5,2) not null default 50 check (inicial_pct > 0 and inicial_pct < 100),
   plazo_cuotas smallint not null default 3 check (plazo_cuotas between 1 and 36),
   max_cuotas smallint not null default 12 check (max_cuotas between 1 and 36),
   interes_mensual_pct numeric(5,2) not null default 2.5 check (interes_mensual_pct >= 0 and interes_mensual_pct <= 100),
-  frecuencia text not null default 'mensual' check (frecuencia = 'mensual'),
   updated_at timestamptz not null default now(),
   constraint credito_config_plazo_ck check (plazo_cuotas <= max_cuotas)
 );
@@ -39,10 +40,14 @@ create table public.creditos (
   docs_pagare boolean not null default false,
   usuario_id uuid,
   created_at timestamptz not null default now(),
+  anulado_en timestamptz,
+  anulado_por uuid,
+  motivo_anulacion text,
   unique (negocio_id, id),
   foreign key (negocio_id, cliente_id) references public.clientes (negocio_id, id),
   foreign key (negocio_id, venta_id) references public.ventas (negocio_id, id),
-  constraint creditos_origen_ck check ((origen = 'venta') = (venta_id is not null))
+  constraint creditos_origen_ck check ((origen = 'venta') = (venta_id is not null)),
+  constraint creditos_anulacion_ck check ((estado = 'anulado') = (anulado_en is not null and motivo_anulacion is not null))
 );
 create unique index creditos_venta_uq on public.creditos (venta_id) where venta_id is not null;
 create index creditos_negocio_estado_idx on public.creditos (negocio_id, estado, created_at desc);
@@ -177,7 +182,7 @@ set search_path = ''
 as $$
   select coalesce(
     (select c from public.credito_config c where c.negocio_id = p_negocio_id),
-    row(p_negocio_id, 50::numeric(5,2), 3::smallint, 12::smallint, 2.5::numeric(5,2), 'mensual', now())::public.credito_config)
+    row(p_negocio_id, 50::numeric(5,2), 3::smallint, 12::smallint, 2.5::numeric(5,2), now())::public.credito_config)
 $$;
 
 -- Cuotas de un crédito con lo pagado: los pagos cubren de la cuota más vieja a la más nueva (decisión 2). Privada.
@@ -202,7 +207,7 @@ $$;
 
 -- Parámetros vigentes (los de la tabla o los por defecto). Lee quien gestiona o ve reportes.
 create function public.credito_parametros(p_negocio_id uuid)
-returns table (inicial_pct numeric, plazo_cuotas integer, max_cuotas integer, interes_mensual_pct numeric, frecuencia text)
+returns table (inicial_pct numeric, plazo_cuotas integer, max_cuotas integer, interes_mensual_pct numeric)
 language plpgsql
 stable
 security definer
@@ -215,7 +220,7 @@ begin
     raise exception 'ERP_SIN_PERMISO';
   end if;
   v_c := public.credito_params(p_negocio_id);
-  return query select v_c.inicial_pct, v_c.plazo_cuotas::integer, v_c.max_cuotas::integer, v_c.interes_mensual_pct, v_c.frecuencia;
+  return query select v_c.inicial_pct, v_c.plazo_cuotas::integer, v_c.max_cuotas::integer, v_c.interes_mensual_pct;
 end;
 $$;
 
@@ -233,7 +238,7 @@ begin
     raise exception 'ERP_SIN_PERMISO';
   end if;
   if p_inicial_pct is null or p_plazo_cuotas is null or p_max_cuotas is null or p_interes_mensual_pct is null
-     or p_inicial_pct < 0 or p_inicial_pct >= 100 or p_inicial_pct <> round(p_inicial_pct, 2)
+     or p_inicial_pct <= 0 or p_inicial_pct >= 100 or p_inicial_pct <> round(p_inicial_pct, 2)
      or p_interes_mensual_pct < 0 or p_interes_mensual_pct > 100 or p_interes_mensual_pct <> round(p_interes_mensual_pct, 2)
      or p_max_cuotas not between 1 and 36 or p_plazo_cuotas not between 1 and p_max_cuotas then
     raise exception 'ERP_DATOS_INVALIDOS';
@@ -321,7 +326,10 @@ begin
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
   if not public.reclamar_operacion(v_id, v_sesion.negocio_id, md5(p_pago::text)) then
-    return jsonb_build_object('id', v_id);
+    -- Reintento: misma forma que la primera respuesta, con el saldo de ahora.
+    return jsonb_build_object('id', v_id, 'saldo',
+      coalesce((select sum(capital + interes) from public.credito_cuotas where credito_id = v_credito_id), 0)
+      - coalesce((select sum(monto) from public.credito_pagos where credito_id = v_credito_id), 0));
   end if;
 
   -- Mismo orden de bloqueo que cancelar_reserva: sesión, luego el crédito (el saldo se calcula con la fila bloqueada).
@@ -350,46 +358,178 @@ exception
 end;
 $$;
 
--- Créditos activos con saldo: una fila por crédito (tope 5.000), el panel agrupa por cliente. Con p_cliente_id los créditos de ese cliente
--- (también para quien cobra en el POS: `caja`). dias_atraso = hoy menos el vencimiento de la cuota impaga más vieja.
-create function public.cuentas_por_cobrar(p_negocio_id uuid, p_cliente_id uuid default null)
+-- Créditos activos con saldo, una fila por crédito. Privada: la leen cuentas_por_cobrar y nadie más.
+-- dias_atraso = hoy menos el vencimiento de la cuota impaga más vieja; proxima_monto = lo que falta de la primera impaga.
+create function public.cuentas_base(p_negocio_id uuid, p_cliente_id uuid)
 returns table (
   credito_id uuid, cliente_id uuid, cliente_nombre text, cliente_documento text, origen text, venta_numero text,
   creado_en timestamptz, total numeric, pagado numeric, saldo numeric, cuotas_vencidas integer, monto_vencido numeric,
   dias_atraso integer, proxima_vence date, proxima_monto numeric
+)
+language sql
+stable
+set search_path = ''
+as $$
+  select cr.id, cr.cliente_id, cl.nombre, cl.ci_nit, cr.origen, v.numero, cr.created_at,
+         x.total, x.pagado, x.total - x.pagado, x.vencidas::integer, x.monto_vencido, x.dias::integer, x.proxima, x.proximo
+  from public.creditos cr
+  join public.clientes cl on cl.id = cr.cliente_id
+  left join public.ventas v on v.id = cr.venta_id
+  cross join lateral (
+    select coalesce(sum(q.monto), 0) as total, coalesce(sum(q.pagado), 0) as pagado,
+           count(*) filter (where q.pendiente > 0 and q.vence_en < (now() at time zone 'America/La_Paz')::date) as vencidas,
+           coalesce(sum(q.pendiente) filter (where q.vence_en < (now() at time zone 'America/La_Paz')::date), 0) as monto_vencido,
+           coalesce((now() at time zone 'America/La_Paz')::date
+                    - min(q.vence_en) filter (where q.pendiente > 0 and q.vence_en < (now() at time zone 'America/La_Paz')::date), 0) as dias,
+           min(q.vence_en) filter (where q.pendiente > 0) as proxima,
+           (array_agg(q.pendiente order by q.numero) filter (where q.pendiente > 0))[1] as proximo
+    from public.cuotas_con_pago(cr.id) q
+  ) x
+  where cr.negocio_id = p_negocio_id and cr.estado = 'activo' and (p_cliente_id is null or cr.cliente_id = p_cliente_id)
+$$;
+
+-- Cuentas por cobrar paginadas en SQL. La unidad de página es el CLIENTE (con todos sus créditos activos), los más atrasados y de
+-- mayor saldo primero; con p_solo_vencidas, el CRÉDITO con alguna cuota vencida, el más atrasado primero. total_filas = unidades
+-- en total (para el paginador). Con p_cliente_id: los créditos de ese cliente, sin tope ni página (también para quien cobra en
+-- el POS: `caja`). Sin cliente rige el tope de 5.000 créditos activos (ERP_LOTE_GRANDE).
+create function public.cuentas_por_cobrar(
+  p_negocio_id uuid, p_cliente_id uuid default null, p_solo_vencidas boolean default false,
+  p_limite integer default 25, p_offset integer default 0
+)
+returns table (
+  credito_id uuid, cliente_id uuid, cliente_nombre text, cliente_documento text, origen text, venta_numero text,
+  creado_en timestamptz, total numeric, pagado numeric, saldo numeric, cuotas_vencidas integer, monto_vencido numeric,
+  dias_atraso integer, proxima_vence date, proxima_monto numeric, total_filas bigint
 )
 language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-declare
-  v_hoy date := (now() at time zone 'America/La_Paz')::date;
 begin
   if not (public.tiene_permiso(p_negocio_id, 'gestionar_credito') or public.tiene_permiso(p_negocio_id, 'ver_reportes')
           or (p_cliente_id is not null and public.tiene_permiso(p_negocio_id, 'caja'))) then
     raise exception 'ERP_SIN_PERMISO';
   end if;
+  if p_cliente_id is not null then
+    return query
+      select b.*, count(*) over ()::bigint from public.cuentas_base(p_negocio_id, p_cliente_id) b
+      order by b.dias_atraso desc, b.creado_en, b.credito_id;
+    return;
+  end if;
+  if p_limite is null or p_limite not between 1 and 200 or p_offset is null or p_offset < 0 then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
   if (select count(*) from public.creditos c where c.negocio_id = p_negocio_id and c.estado = 'activo') > 5000 then
     raise exception 'ERP_LOTE_GRANDE';
   end if;
+  if p_solo_vencidas then
+    return query
+      select b.*, count(*) over ()::bigint from public.cuentas_base(p_negocio_id, null) b
+      where b.cuotas_vencidas > 0
+      order by b.dias_atraso desc, b.creado_en, b.credito_id
+      limit p_limite offset p_offset;
+    return;
+  end if;
   return query
-    select cr.id, cr.cliente_id, cl.nombre, cl.ci_nit, cr.origen, v.numero, cr.created_at,
-           x.total, x.pagado, x.total - x.pagado, x.vencidas::integer, x.monto_vencido, x.dias::integer, x.proxima, x.proximo
-    from public.creditos cr
-    join public.clientes cl on cl.id = cr.cliente_id
-    left join public.ventas v on v.id = cr.venta_id
-    cross join lateral (
-      select coalesce(sum(q.monto), 0) as total, coalesce(sum(q.pagado), 0) as pagado,
-             count(*) filter (where q.pendiente > 0 and q.vence_en < v_hoy) as vencidas,
-             coalesce(sum(q.pendiente) filter (where q.vence_en < v_hoy), 0) as monto_vencido,
-             coalesce(v_hoy - min(q.vence_en) filter (where q.pendiente > 0 and q.vence_en < v_hoy), 0) as dias,
-             min(q.vence_en) filter (where q.pendiente > 0) as proxima,
-             (array_agg(q.pendiente order by q.numero) filter (where q.pendiente > 0))[1] as proximo
-      from public.cuotas_con_pago(cr.id) q
-    ) x
-    where cr.negocio_id = p_negocio_id and cr.estado = 'activo' and (p_cliente_id is null or cr.cliente_id = p_cliente_id)
-    order by x.dias desc, cr.created_at, cr.id;
+    with b as materialized (select * from public.cuentas_base(p_negocio_id, null)),
+    cli as (
+      select t.cliente_id, max(t.dias_atraso) as dias, sum(t.saldo) as saldo, min(t.cliente_nombre) as nombre
+      from b t group by t.cliente_id
+    ),
+    pag as (
+      select c.*, count(*) over () as total from cli c
+      order by c.dias desc, c.saldo desc, c.nombre, c.cliente_id
+      limit p_limite offset p_offset
+    )
+    select b.credito_id, b.cliente_id, b.cliente_nombre, b.cliente_documento, b.origen, b.venta_numero, b.creado_en, b.total,
+           b.pagado, b.saldo, b.cuotas_vencidas, b.monto_vencido, b.dias_atraso, b.proxima_vence, b.proxima_monto, pag.total
+    from b join pag on pag.cliente_id = b.cliente_id
+    order by pag.dias desc, pag.saldo desc, pag.nombre, b.cliente_id, b.dias_atraso desc, b.creado_en, b.credito_id;
+end;
+$$;
+
+-- Plan de una venta a crédito antes de cobrar (solo lectura): la misma regla que registrar_venta (inicial mínima, cuotas, plan_cuotas
+-- con el interés del negocio), para que la pantalla no recalcule nada. p_inicial y p_cuotas nulos = inicial mínima y plazo por
+-- defecto. Devuelve {error, minimo, inicial, cuotas, financiado, max_cuotas, inicial_pct, plan[{numero, capital, interes, monto,
+-- vence_en}]}; error es null o el código que daría registrar_venta (ERP_INICIAL_INSUFICIENTE, ERP_DATOS_INVALIDOS).
+create function public.simular_credito(p_negocio_id uuid, p_total numeric, p_inicial numeric default null, p_cuotas integer default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_cred public.credito_config;
+  v_hoy date := (now() at time zone 'America/La_Paz')::date;
+  v_min numeric;
+  v_ini numeric;
+  v_n integer;
+  v_plan jsonb;
+  v_err text;
+begin
+  if not public.tiene_permiso(p_negocio_id, 'gestionar_credito') then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if p_total is null or p_total <= 0 or p_total >= 1e10 or p_total <> round(p_total, 2)
+     or (p_inicial is not null and (p_inicial <= 0 or p_inicial >= 1e10 or p_inicial <> round(p_inicial, 2))) then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  v_cred := public.credito_params(p_negocio_id);
+  v_min := ceil(p_total * v_cred.inicial_pct) / 100;
+  v_ini := coalesce(p_inicial, v_min);
+  v_n := coalesce(p_cuotas, v_cred.plazo_cuotas);
+  if v_ini >= p_total or v_n not between 1 and v_cred.max_cuotas then
+    v_err := 'ERP_DATOS_INVALIDOS';
+  elsif v_ini < v_min then
+    v_err := 'ERP_INICIAL_INSUFICIENTE';
+  else
+    begin
+      select jsonb_agg(jsonb_build_object('numero', p.numero, 'capital', p.capital, 'interes', p.interes,
+               'monto', p.capital + p.interes, 'vence_en', (v_hoy + make_interval(months => p.numero))::date) order by p.numero)
+      into v_plan from public.plan_cuotas(p_total - v_ini, v_cred.interes_mensual_pct, v_n) p;
+    exception when others then
+      v_err := 'ERP_DATOS_INVALIDOS'; -- capital demasiado chico para tantas cuotas
+    end;
+  end if;
+  return jsonb_build_object('error', v_err, 'minimo', v_min, 'inicial', v_ini, 'cuotas', v_n,
+    'financiado', p_total - v_ini, 'max_cuotas', v_cred.max_cuotas, 'inicial_pct', v_cred.inicial_pct,
+    'plan', case when v_err is null then v_plan else '[]'::jsonb end);
+end;
+$$;
+
+-- Anula un saldo inicial cargado por error (RF-CRE-06): solo origen saldo_inicial y sin pagos. Es la única transición de estado de
+-- un crédito que hace una RPC además del pago total; el motivo, quién y cuándo quedan en la fila. Idempotente por p_operacion_id.
+create function public.anular_credito_inicial(p_operacion_id uuid, p_credito_id uuid, p_motivo text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := (select auth.uid());
+  v_cr public.creditos;
+  v_motivo text := btrim(p_motivo);
+begin
+  select * into v_cr from public.creditos where id = p_credito_id;
+  if v_cr.id is null or not public.tiene_permiso(v_cr.negocio_id, 'gestionar_credito') then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if p_operacion_id is null or v_motivo is null or v_motivo = '' or length(v_motivo) > 200 or v_cr.origen <> 'saldo_inicial' then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+  if not public.reclamar_operacion(p_operacion_id, v_cr.negocio_id,
+       md5(jsonb_build_array('anular_credito_inicial', p_credito_id, v_motivo)::text)) then
+    return jsonb_build_object('id', p_credito_id, 'estado', 'anulado');
+  end if;
+  select * into v_cr from public.creditos where id = p_credito_id for update;
+  if v_cr.estado <> 'activo' or exists (select 1 from public.credito_pagos where credito_id = p_credito_id) then
+    raise exception 'ERP_CREDITO_CON_PAGOS'; -- ya tiene pagos (o ya no está activo): no se anula
+  end if;
+  update public.creditos set estado = 'anulado', anulado_en = now(), anulado_por = v_uid, motivo_anulacion = v_motivo
+  where id = p_credito_id;
+  return jsonb_build_object('id', p_credito_id, 'estado', 'anulado');
 end;
 $$;
 
@@ -433,7 +573,7 @@ begin
     'id', v_cr.id, 'negocio_id', v_cr.negocio_id, 'cliente_id', v_cr.cliente_id, 'cliente_nombre', v_nombre,
     'cliente_documento', v_doc, 'origen', v_cr.origen, 'venta_id', v_cr.venta_id, 'venta_numero', v_numero,
     'capital', v_cr.capital, 'inicial', v_cr.inicial, 'interes_mensual_pct', v_cr.interes_mensual_pct,
-    'estado', v_cr.estado, 'docs_ci', v_cr.docs_ci, 'docs_domicilio', v_cr.docs_domicilio, 'docs_pagare', v_cr.docs_pagare,
+    'estado', v_cr.estado, 'motivo_anulacion', v_cr.motivo_anulacion, 'docs_ci', v_cr.docs_ci, 'docs_domicilio', v_cr.docs_domicilio, 'docs_pagare', v_cr.docs_pagare,
     'creado_en', v_cr.created_at, 'total', v_total, 'pagado', v_pagado, 'saldo', v_total - v_pagado,
     'cuotas', v_cuotas, 'pagos', v_pagos);
 end;
@@ -446,13 +586,18 @@ revoke all on function public.credito_parametros(uuid) from public, anon, authen
 revoke all on function public.guardar_credito_config(uuid, numeric, integer, integer, numeric) from public, anon, authenticated;
 revoke all on function public.crear_credito_inicial(uuid, uuid, uuid, numeric, integer, date) from public, anon, authenticated;
 revoke all on function public.pagar_cuota(jsonb) from public, anon, authenticated;
-revoke all on function public.cuentas_por_cobrar(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.cuentas_base(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.cuentas_por_cobrar(uuid, uuid, boolean, integer, integer) from public, anon, authenticated;
+revoke all on function public.simular_credito(uuid, numeric, numeric, integer) from public, anon, authenticated;
+revoke all on function public.anular_credito_inicial(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.detalle_credito(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.credito_parametros(uuid) to authenticated;
 grant execute on function public.guardar_credito_config(uuid, numeric, integer, integer, numeric) to authenticated;
 grant execute on function public.crear_credito_inicial(uuid, uuid, uuid, numeric, integer, date) to authenticated;
 grant execute on function public.pagar_cuota(jsonb) to authenticated;
-grant execute on function public.cuentas_por_cobrar(uuid, uuid) to authenticated;
+grant execute on function public.cuentas_por_cobrar(uuid, uuid, boolean, integer, integer) to authenticated;
+grant execute on function public.simular_credito(uuid, numeric, numeric, integer) to authenticated;
+grant execute on function public.anular_credito_inicial(uuid, uuid, text) to authenticated;
 grant execute on function public.detalle_credito(uuid, uuid) to authenticated;
 
 -- registrar_venta, anular_venta, devolver_venta, resumen_caja, reporte_caja, efectivo_esperado y total_qr_sesion: la última
@@ -594,7 +739,10 @@ begin
   v_credito := p_venta -> 'credito';
   if v_es_credito then
     perform public.payload_claves(v_credito, array['cuotas', 'docs_ci', 'docs_domicilio', 'docs_pagare']);
-    v_cuotas := public.payload_numero(v_credito, 'cuotas', 0)::integer;
+    if public.payload_numero(v_credito, 'cuotas', 0) not between 1 and 36 then
+      raise exception 'ERP_DATOS_INVALIDOS';
+    end if;
+    v_cuotas := (v_credito ->> 'cuotas')::integer;
     if jsonb_typeof(v_credito -> 'docs_ci') is distinct from 'boolean'
        or jsonb_typeof(v_credito -> 'docs_domicilio') is distinct from 'boolean'
        or jsonb_typeof(v_credito -> 'docs_pagare') is distinct from 'boolean'
@@ -1332,6 +1480,8 @@ begin
            (x ->> 'devoluciones_efectivo')::numeric as devoluciones_efectivo,
            (x ->> 'anticipos_efectivo')::numeric - (x ->> 'devoluciones_reserva_efectivo')::numeric as reservas_efectivo,
            (x ->> 'cuotas_efectivo')::numeric as cuotas_efectivo,
+           (x ->> 'cuotas_qr')::numeric as cuotas_qr,
+           (x ->> 'anticipos_qr')::numeric - (x ->> 'devoluciones_reserva_qr')::numeric as reservas_qr,
            (x ->> 'esperado')::numeric as esperado,
            s.monto_contado as contado, s.diferencia
     from public.caja_sesiones s
@@ -1346,17 +1496,19 @@ begin
     (select coalesce(jsonb_agg(jsonb_build_object(
         'sesion_id', r.id, 'equipo', r.equipo, 'prefijo', r.prefijo, 'cajero', r.cajero,
         'abierta_en', r.abierta_en, 'cerrada_en', r.cerrada_en, 'monto_inicial', r.monto_inicial,
-        'ventas_efectivo', r.ventas_efectivo, 'ventas_qr', r.qr_neto, 'qr_pendiente', r.qr_pendiente,
+        'ventas_efectivo', r.ventas_efectivo, 'ventas_qr', r.qr_neto - r.reservas_qr - r.cuotas_qr, 'qr_pendiente', r.qr_pendiente,
         'ingresos', r.ingresos, 'egresos', r.egresos, 'devoluciones_efectivo', r.devoluciones_efectivo,
         'reservas_efectivo', r.reservas_efectivo, 'cuotas_efectivo', r.cuotas_efectivo,
+        'reservas_qr', r.reservas_qr, 'cuotas_qr', r.cuotas_qr,
         'esperado', r.esperado, 'contado', r.contado, 'diferencia', r.diferencia)
       order by r.abierta_en, r.id), '[]'::jsonb) from r),
     (select count(*) from r),
     (select jsonb_build_object('sesiones', count(*), 'monto_inicial', coalesce(sum(r.monto_inicial), 0),
-        'ventas_efectivo', coalesce(sum(r.ventas_efectivo), 0), 'ventas_qr', coalesce(sum(r.qr_neto), 0),
+        'ventas_efectivo', coalesce(sum(r.ventas_efectivo), 0), 'ventas_qr', coalesce(sum(r.qr_neto - r.reservas_qr - r.cuotas_qr), 0),
         'qr_pendiente', coalesce(sum(r.qr_pendiente), 0), 'ingresos', coalesce(sum(r.ingresos), 0),
         'egresos', coalesce(sum(r.egresos), 0), 'devoluciones_efectivo', coalesce(sum(r.devoluciones_efectivo), 0),
         'reservas_efectivo', coalesce(sum(r.reservas_efectivo), 0), 'cuotas_efectivo', coalesce(sum(r.cuotas_efectivo), 0),
+        'reservas_qr', coalesce(sum(r.reservas_qr), 0), 'cuotas_qr', coalesce(sum(r.cuotas_qr), 0),
         'esperado', coalesce(sum(r.esperado) filter (where r.cerrada_en is not null), 0),
         'contado', coalesce(sum(r.contado) filter (where r.cerrada_en is not null), 0),
         'diferencia', coalesce(sum(r.diferencia) filter (where r.cerrada_en is not null), 0),

@@ -1,6 +1,8 @@
 import { formatearBs } from "@/lib/format/moneda";
 import { Dato } from "@/modules/catalogo/panel";
-import { ETIQUETA_ORIGEN, fechaCorta } from "../domain";
+import { formatearDia, formatearFechaHora } from "@/lib/format/fecha";
+import { ETIQUETA_ORIGEN } from "../domain";
+import { AnularSaldoInicial } from "./anular-saldo-inicial";
 import type { DetalleCredito } from "../schemas";
 
 const MEDIOS: Record<string, string> = { efectivo: "Efectivo", qr: "QR" };
@@ -19,7 +21,16 @@ export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
           t="Origen"
           d={`${ETIQUETA_ORIGEN[d.origen]}${d.venta_numero ? ` ${d.venta_numero}` : ""}`}
         />
-        <Dato t="Estado" d={d.estado === "pagado" ? "Pagado" : "Activo"} />
+        <Dato
+          t="Estado"
+          d={
+            d.estado === "pagado"
+              ? "Pagado"
+              : d.estado === "anulado"
+                ? `Anulado: ${d.motivo_anulacion ?? ""}`
+                : "Activo"
+          }
+        />
         <Dato t="Interés mensual" d={`${d.interes_mensual_pct} %`} />
         <Dato t="Inicial pagada" d={formatearBs(d.inicial)} />
         <Dato t="Capital financiado" d={formatearBs(d.capital)} />
@@ -32,6 +43,9 @@ export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
           />
         )}
       </dl>
+      {d.origen === "saldo_inicial" && d.estado === "activo" && d.pagos.length === 0 && (
+        <AnularSaldoInicial creditoId={d.id} />
+      )}
       <section aria-label="Cuotas" className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold">Cuotas</h2>
         <div className="bg-card overflow-x-auto rounded-xl border">
@@ -51,7 +65,7 @@ export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
               {d.cuotas.map((c) => (
                 <tr key={c.numero} className="border-b last:border-0">
                   <td className="px-3 py-2">{c.numero}</td>
-                  <td className="px-3 py-2">{fechaCorta(c.vence_en)}</td>
+                  <td className="px-3 py-2">{formatearDia(c.vence_en)}</td>
                   <td className="px-3 py-2 text-right">{formatearBs(c.capital)}</td>
                   <td className="px-3 py-2 text-right">{formatearBs(c.interes)}</td>
                   <td className="px-3 py-2 text-right">{formatearBs(c.monto)}</td>
@@ -84,11 +98,7 @@ export function DetalleCreditoVista({ d }: { d: DetalleCredito }) {
             {d.pagos.map((p, i) => (
               <li key={i} className="flex justify-between gap-3 px-4 py-2.5">
                 <span>
-                  {new Date(p.creado_en).toLocaleString("es-BO", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}{" "}
-                  · {MEDIOS[p.medio] ?? p.medio}
+                  {formatearFechaHora(p.creado_en)} · {MEDIOS[p.medio] ?? p.medio}
                 </span>
                 <span>{formatearBs(p.monto)}</span>
               </li>

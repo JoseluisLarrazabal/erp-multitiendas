@@ -1,23 +1,57 @@
 import { describe, expect, it } from "vitest";
-import type { Parametros } from "@/modules/creditos";
-import { armarCredito, formCreditoInicial, type FormCredito } from "./credito-venta";
+import type { Simulacion } from "@/modules/creditos";
+import { formCreditoInicial, leerPlan, pedirSimulacion, type FormCredito } from "./credito-venta";
 
-const parametros: Parametros = {
-  inicialPct: 50,
-  plazoCuotas: 3,
-  maxCuotas: 12,
-  interesMensualPct: 2.5,
-};
 const activo = (f: Partial<FormCredito> = {}): FormCredito => ({
   ...formCreditoInicial,
   activo: true,
   ...f,
 });
-const base = { parametros, total: 12_000, hayCliente: true, hoy: "2026-11-08" };
 
-describe("armarCredito", () => {
-  it("sin texto usa la inicial mínima y el plazo del negocio", () => {
-    const r = armarCredito({ ...base, form: activo() });
+describe("pedirSimulacion (solo interpreta lo escrito)", () => {
+  it("vacío deja que el servidor use la inicial mínima y el plazo por defecto", () => {
+    expect(pedirSimulacion(activo(), 12_000)).toEqual({
+      ok: true,
+      total: 120,
+      inicial: null,
+      cuotas: null,
+    });
+  });
+  it("convierte la inicial a Bs y las cuotas a entero", () => {
+    expect(pedirSimulacion(activo({ inicialTexto: "59,99", cuotasTexto: "4" }), 12_000)).toEqual({
+      ok: true,
+      total: 120,
+      inicial: 59.99,
+      cuotas: 4,
+    });
+  });
+  it("rechaza texto que no es una inicial o unas cuotas", () => {
+    expect(pedirSimulacion(activo({ inicialTexto: "abc" }), 12_000).ok).toBe(false);
+    expect(pedirSimulacion(activo({ inicialTexto: "0" }), 12_000).ok).toBe(false);
+    expect(pedirSimulacion(activo({ cuotasTexto: "2,5" }), 12_000).ok).toBe(false);
+    expect(pedirSimulacion(activo({ cuotasTexto: "0" }), 12_000).ok).toBe(false);
+    expect(pedirSimulacion(activo(), 0).ok).toBe(false);
+  });
+});
+
+const base: Simulacion = {
+  error: null,
+  minimo: 60,
+  inicial: 60,
+  cuotas: 3,
+  financiado: 60,
+  max_cuotas: 12,
+  inicial_pct: 50,
+  plan: [
+    { numero: 1, capital: 19.51, interes: 1.5, monto: 21.01, vence_en: "2026-12-08" },
+    { numero: 2, capital: 20, interes: 1.01, monto: 21.01, vence_en: "2027-01-08" },
+    { numero: 3, capital: 20.49, interes: 0.51, monto: 21, vence_en: "2027-02-08" },
+  ],
+};
+
+describe("leerPlan (respuesta de simular_credito)", () => {
+  it("pasa el plan del servidor a centavos, sin recalcular", () => {
+    const r = leerPlan(base);
     expect(r.ok && r.plan).toMatchObject({
       inicial: 6_000,
       minimo: 6_000,
@@ -31,36 +65,10 @@ describe("armarCredito", () => {
       "2027-02-08",
     ]);
   });
-  it("rechaza una inicial bajo el mínimo, igual o sobre el total", () => {
-    const motivo = (inicialTexto: string) => {
-      const r = armarCredito({ ...base, form: activo({ inicialTexto }) });
-      return r.ok ? "ok" : r.motivo;
-    };
-    expect(motivo("59,99")).toMatch(/mínima es Bs 60,00/);
-    expect(motivo("120")).toMatch(/menor al total/);
-    expect(motivo("abc")).toMatch(/inválida/);
-    expect(motivo("60")).toBe("ok");
-    expect(motivo("119")).toBe("ok");
-    expect(motivo("119,99")).toMatch(/muy chico/);
-  });
-  it("redondea el mínimo hacia arriba como el servidor", () => {
-    const r = armarCredito({ ...base, total: 3_333, form: activo() });
-    expect(r.ok && r.plan.minimo).toBe(1_667);
-  });
-  it("valida las cuotas contra el máximo del negocio", () => {
-    const motivo = (cuotasTexto: string) => {
-      const r = armarCredito({ ...base, form: activo({ cuotasTexto }) });
-      return r.ok ? "ok" : r.motivo;
-    };
-    expect(motivo("13")).toMatch(/1 a 12/);
-    expect(motivo("0")).toMatch(/1 a 12/);
-    expect(motivo("2,5")).toMatch(/1 a 12/);
-    expect(motivo("12")).toBe("ok");
-  });
-  it("exige cliente y parámetros cargados", () => {
-    const sin = armarCredito({ ...base, hayCliente: false, form: activo() });
-    expect(!sin.ok && sin.motivo).toMatch(/cliente/);
-    const cargando = armarCredito({ ...base, parametros: null, form: activo() });
-    expect(!cargando.ok && cargando.motivo).toMatch(/Cargando/);
+  it("traduce los errores del servidor", () => {
+    const baja = leerPlan({ ...base, error: "ERP_INICIAL_INSUFICIENTE", plan: [] });
+    expect(!baja.ok && baja.motivo).toMatch(/mínima es Bs 60,00 \(50 % del total\)/);
+    const otra = leerPlan({ ...base, error: "ERP_DATOS_INVALIDOS", plan: [] });
+    expect(!otra.ok && otra.motivo).toMatch(/1 a 12/);
   });
 });

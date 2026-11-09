@@ -2,7 +2,7 @@
 -- total; pagar de más se rechaza), arqueo con cuotas, piso de precios en la lista crédito, rechazo offline, idempotencia, equipo
 -- ajeno, aislamiento entre negocios, permisos por rol, anular y devolver rechazados, saldo inicial, FIFO y vencidas.
 begin;
-select plan(178);
+select plan(222);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -85,11 +85,11 @@ $$;
 select ok(has_function_privilege('authenticated', 'public.pagar_cuota(jsonb)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.crear_credito_inicial(uuid, uuid, uuid, numeric, integer, date)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.guardar_credito_config(uuid, numeric, integer, integer, numeric)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.cuentas_por_cobrar(uuid, uuid)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.cuentas_por_cobrar(uuid, uuid, boolean, integer, integer)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.detalle_credito(uuid, uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.credito_parametros(uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.pagar_cuota(jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.cuentas_por_cobrar(uuid, uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.cuentas_por_cobrar(uuid, uuid, boolean, integer, integer)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.plan_cuotas(numeric, numeric, integer)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.cuotas_con_pago(uuid)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.credito_params(uuid)', 'EXECUTE'), 'solo authenticated ejecuta las públicas; las privadas no');
@@ -116,7 +116,7 @@ select throws_ok($$select * from public.plan_cuotas(0.02, 0, 5)$$, 'ERP_DATOS_IN
 -- Parámetros: sin fila rigen los valores por defecto.
 select pg_temp.como(pg_temp.i('e'));
 select is((select to_jsonb(p) from public.credito_parametros(pg_temp.i('T')) p),
-  '{"inicial_pct":50.00,"plazo_cuotas":3,"max_cuotas":12,"interes_mensual_pct":2.50,"frecuencia":"mensual"}'::jsonb, 'parámetros por defecto');
+  '{"inicial_pct":50.00,"plazo_cuotas":3,"max_cuotas":12,"interes_mensual_pct":2.50}'::jsonb, 'parámetros por defecto');
 select pg_temp.como(pg_temp.i('v'));
 select throws_ok($$select * from public.credito_parametros(pg_temp.i('T'))$$, 'ERP_SIN_PERMISO', 'vendedor no lee los parámetros');
 select throws_ok($$select public.guardar_credito_config(pg_temp.i('T'), 30, 3, 12, 2.5)$$, 'ERP_SIN_PERMISO', 'vendedor no guarda parámetros');
@@ -229,7 +229,7 @@ select is((select estado from public.ventas where id = pg_temp.i('V1')), 'comple
 select pg_temp.como(pg_temp.i('e'));
 select lives_ok($$select public.guardar_credito_config(pg_temp.i('T'), 30, 4, 6, 0)$$, 'e guarda 30 % / 4 cuotas / máx 6 / sin interés');
 select is((select to_jsonb(p) from public.credito_parametros(pg_temp.i('T')) p),
-  '{"inicial_pct":30.00,"plazo_cuotas":4,"max_cuotas":6,"interes_mensual_pct":0.00,"frecuencia":"mensual"}'::jsonb, 'parámetros guardados');
+  '{"inicial_pct":30.00,"plazo_cuotas":4,"max_cuotas":6,"interes_mensual_pct":0.00}'::jsonb, 'parámetros guardados');
 select throws_ok($$select public.registrar_venta(pg_temp.vc('Vc1', 'C1-000006', 10, 12, 35.99, 3))$$, 'ERP_INICIAL_INSUFICIENTE', 'mínimo 30 %: 35,99 de 120');
 select throws_ok($$select public.registrar_venta(pg_temp.vc('Vc2', 'C1-000006', 10, 12, 36, 7))$$, 'ERP_DATOS_INVALIDOS', 'máximo 6 cuotas');
 select is(public.registrar_venta(pg_temp.vc('V3', 'C1-000006', 10, 12, 36, 4)) ->> 'numero', 'C1-000006', 'V3: 30 % de inicial y 4 cuotas');
@@ -252,6 +252,8 @@ select is((public.detalle_credito(pg_temp.cred('V1')) -> 'cuotas' -> 1 ->> 'paga
 -- idempotencia
 select is((select public.pagar_cuota(jsonb_build_object('id', pg_temp.i('Q1'), 'credito_id', pg_temp.cred('V1'), 'dispositivo_id', pg_temp.i('D1'),
   'caja_sesion_id', pg_temp.i('S1'), 'efectivo', 10, 'qr', 0))) ->> 'id', pg_temp.i('Q1')::text, 'reintento: devuelve el mismo id');
+select ok(public.pagar_cuota(jsonb_build_object('id', pg_temp.i('Q1'), 'credito_id', pg_temp.cred('V1'), 'dispositivo_id', pg_temp.i('D1'),
+  'caja_sesion_id', pg_temp.i('S1'), 'efectivo', 10, 'qr', 0)) ? 'saldo', 'reintento: la misma forma que la primera respuesta (con saldo)');
 select is((select count(*) from public.credito_pagos where credito_id = pg_temp.cred('V1')), 1::bigint, 'reintento: sin pago duplicado');
 select throws_ok(format($$select public.pagar_cuota(jsonb_build_object('id', %L, 'credito_id', %L, 'dispositivo_id', %L, 'caja_sesion_id', %L, 'efectivo', 11, 'qr', 0))$$,
   pg_temp.i('Q1'), pg_temp.cred('V1'), pg_temp.i('D1'), pg_temp.i('S1')), 'ERP_OPERACION_REPETIDA', 'mismo id con otro monto');
@@ -406,6 +408,77 @@ select is(jsonb_array_length(public.detalle_credito(pg_temp.i('K1')) -> 'cuotas'
 select is(jsonb_array_length(public.detalle_credito(pg_temp.i('K1')) -> 'pagos'), 1, 'detalle: un pago');
 select is((public.detalle_credito(pg_temp.i('K1')) ->> 'saldo')::numeric, 150.00, 'detalle: saldo');
 select throws_ok($$select public.detalle_credito(gen_random_uuid())$$, 'ERP_SIN_PERMISO', 'detalle de un crédito inexistente');
+
+
+-- Revisión: simular_credito (la pantalla no recalcula), anular saldo inicial, paginación SQL, cuotas fuera de rango, reporte QR
+select pg_temp.como(pg_temp.i('e'));
+select is((public.simular_credito(pg_temp.i('T'), 120, null, null) - 'plan'),
+  '{"error":null,"minimo":60.00,"inicial":60.00,"cuotas":3,"financiado":60.00,"max_cuotas":12,"inicial_pct":50.00}'::jsonb, 'simular: valores por defecto');
+select is((select array_agg((e ->> 'monto')::numeric order by (e ->> 'numero')::int) from jsonb_array_elements(public.simular_credito(pg_temp.i('T'), 120, 60, 3) -> 'plan') e),
+  array[21.01, 21.01, 21.00], 'simular: el mismo plan que registrar_venta');
+select is((select array_agg((e ->> 'vence_en')::date order by (e ->> 'numero')::int) from jsonb_array_elements(public.simular_credito(pg_temp.i('T'), 120, 60, 3) -> 'plan') e),
+  (select array_agg(vence_en order by numero) from public.credito_cuotas where credito_id = pg_temp.cred('V1')), 'simular: los mismos vencimientos que el crédito real');
+select is(public.simular_credito(pg_temp.i('T'), 120, 59.99, 3) ->> 'error', 'ERP_INICIAL_INSUFICIENTE', 'simular: inicial bajo el mínimo');
+select is(public.simular_credito(pg_temp.i('T'), 120, 120, 3) ->> 'error', 'ERP_DATOS_INVALIDOS', 'simular: inicial igual al total');
+select is(public.simular_credito(pg_temp.i('T'), 120, 60, 13) ->> 'error', 'ERP_DATOS_INVALIDOS', 'simular: más cuotas que el máximo');
+select is(public.simular_credito(pg_temp.i('T'), 120, 119.99, 3) ->> 'error', 'ERP_DATOS_INVALIDOS', 'simular: saldo muy chico para tantas cuotas');
+select is(jsonb_array_length(public.simular_credito(pg_temp.i('T'), 120, 59, 3) -> 'plan'), 0, 'simular: con error no hay plan');
+select throws_ok($$select public.simular_credito(pg_temp.i('T'), 0, null, null)$$, 'ERP_DATOS_INVALIDOS', 'simular: total cero');
+select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select public.simular_credito(pg_temp.i('T'), 120, null, null)$$, 'ERP_SIN_PERMISO', 'simular: vendedor no');
+select pg_temp.como(pg_temp.i('y'));
+select throws_ok($$select public.simular_credito(pg_temp.i('T'), 120, null, null)$$, 'ERP_SIN_PERMISO', 'simular: otro negocio no');
+
+-- cuotas fuera de rango o no enteras
+select pg_temp.como(pg_temp.i('e'));
+select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr1', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '1000000000000'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas fuera del rango de integer');
+select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr2', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '2.5'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas no entera');
+select throws_ok($$select public.registrar_venta(jsonb_set(pg_temp.vc('Vr3', 'C1-000007', 10, 12, 60, 3), '{credito,cuotas}', '"3"'))$$, 'ERP_DATOS_INVALIDOS', 'cuotas como texto');
+select throws_ok($$select public.guardar_credito_config(pg_temp.i('T'), 0, 3, 12, 2.5)$$, 'ERP_DATOS_INVALIDOS', 'inicial 0 %');
+
+-- anular saldo inicial
+select is(public.crear_credito_inicial(pg_temp.i('K3'), pg_temp.i('T'), pg_temp.i('CL'), 50, 2, pg_temp.hoy()), jsonb_build_object('id', pg_temp.i('K3')), 'K3 creado');
+select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp.i('K3'), 'error de carga')$$, 'ERP_SIN_PERMISO', 'vendedor no anula');
+select pg_temp.como(pg_temp.i('y'));
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp.i('K3'), 'error de carga')$$, 'ERP_SIN_PERMISO', 'otro negocio no anula');
+select pg_temp.como(pg_temp.i('e'));
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp.i('K3'), '  ')$$, 'ERP_DATOS_INVALIDOS', 'anular exige motivo');
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp.cred('V3'), 'x')$$, 'ERP_DATOS_INVALIDOS', 'un crédito de venta no se anula así');
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A1'), pg_temp.i('K1'), 'x')$$, 'ERP_CREDITO_CON_PAGOS', 'con pagos no se anula');
+select is(public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'error de carga'), jsonb_build_object('id', pg_temp.i('K3'), 'estado', 'anulado'), 'K3 anulado');
+select is(public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'error de carga'), jsonb_build_object('id', pg_temp.i('K3'), 'estado', 'anulado'), 'anular es idempotente');
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A2'), pg_temp.i('K3'), 'otro motivo')$$, 'ERP_OPERACION_REPETIDA', 'misma operación con otro motivo');
+select throws_ok($$select public.anular_credito_inicial(pg_temp.i('A3'), pg_temp.i('K3'), 'otra vez')$$, 'ERP_CREDITO_CON_PAGOS', 'un crédito anulado no se anula de nuevo');
+select is((select estado || '/' || motivo_anulacion || '/' || (anulado_por = pg_temp.i('e'))::text || '/' || (anulado_en is not null)::text from public.creditos where id = pg_temp.i('K3')),
+  'anulado/error de carga/true/true', 'quedan estado, motivo, quién y cuándo');
+select is((select count(*) from public.cuentas_por_cobrar(pg_temp.i('T')) where credito_id = pg_temp.i('K3')), 0::bigint, 'el anulado sale de las cuentas por cobrar');
+select throws_ok(format($$select public.pagar_cuota(jsonb_build_object('id', %L, 'credito_id', %L, 'dispositivo_id', %L, 'caja_sesion_id', %L, 'efectivo', 1, 'qr', 0))$$,
+  pg_temp.i('Q10'), pg_temp.i('K3'), pg_temp.i('D1'), pg_temp.i('S1')), 'ERP_PAGO_EXCEDE_SALDO', 'no se cobra un crédito anulado');
+reset role;
+select throws_ok($$update public.credito_pagos set monto = 1$$, null, null, 'sigue siendo append-only');
+
+-- Paginación en SQL: la unidad es el cliente (con todos sus créditos); CL (K2, de enero) es el más atrasado
+select pg_temp.como(pg_temp.i('e'));
+select is((select array_agg(distinct cliente_id) from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 1, 0)), array[pg_temp.i('CL')], 'página 1 de 1 cliente: el más atrasado');
+select is((select max(total_filas) from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 1, 0)), 2::bigint, 'total_filas = clientes con saldo');
+select is((select array_agg(distinct cliente_id) from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 1, 1)), array[pg_temp.i('CL2')], 'página 2: el otro cliente');
+select ok((select count(*) from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 1, 0)) >= 3, 'la página trae todos los créditos del cliente');
+select is((select count(*) from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 1, 2)), 0::bigint, 'más allá de la última página: vacío');
+select is((select array_agg(credito_id order by dias_atraso desc) from public.cuentas_por_cobrar(pg_temp.i('T'), null, true, 1, 0)), array[pg_temp.i('K2')], 'vencidas: el más atrasado primero (K2 de enero)');
+select is((select max(total_filas) from public.cuentas_por_cobrar(pg_temp.i('T'), null, true, 1, 0)), 2::bigint, 'vencidas: total de créditos vencidos');
+select throws_ok($$select * from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 0, 0)$$, 'ERP_DATOS_INVALIDOS', 'límite cero');
+select throws_ok($$select * from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 201, 0)$$, 'ERP_DATOS_INVALIDOS', 'límite sobre el tope');
+select throws_ok($$select * from public.cuentas_por_cobrar(pg_temp.i('T'), null, false, 10, -1)$$, 'ERP_DATOS_INVALIDOS', 'offset negativo');
+select is((select count(*) from public.cuentas_por_cobrar(pg_temp.i('T'), pg_temp.i('CL'), false, 1, 5)), (select count(*) from public.cuentas_por_cobrar(pg_temp.i('T'), pg_temp.i('CL'))),
+  'con cliente no hay página ni tope');
+
+-- reporte_caja: ventas_qr es solo QR de ventas; las cuotas y las reservas tienen su columna
+select pg_temp.como(pg_temp.i('d'));
+select is((select f ->> 'ventas_qr' || '/' || (f ->> 'cuotas_qr') || '/' || (f ->> 'reservas_qr') from jsonb_array_elements(public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'filas') f
+  where f ->> 'sesion_id' = pg_temp.i('S1')::text), '30.00/5.00/0', 'S1: ventas_qr sin la cuota por QR, cuotas_qr aparte');
+select is((public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'totales' ->> 'cuotas_qr')::numeric, 5.00, 'totales: cuotas_qr');
+select is((public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'totales' ->> 'ventas_qr')::numeric, 30.00, 'totales: ventas_qr');
 
 -- Append-only y sin borrar
 reset role;

@@ -4,7 +4,8 @@ import { HandCoins } from "lucide-react";
 import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fechaCorta, type Parametros } from "@/modules/creditos";
+import { formatearDia } from "@/lib/format/fecha";
+import type { Parametros } from "@/modules/creditos";
 import type { FormCredito, PlanVenta } from "../credito-venta";
 import { bs, textoMonto } from "../domain";
 
@@ -111,14 +112,12 @@ export function FormCreditoVenta({
               <ul className="text-muted-foreground mt-1 text-xs">
                 {plan.plan.slice(0, 4).map((p) => (
                   <li key={p.fila.numero}>
-                    Cuota {p.fila.numero}: {bs(p.fila.monto)} · vence {fechaCorta(p.vence)}
+                    Cuota {p.fila.numero}: {bs(p.fila.monto)} · vence {formatearDia(p.vence)}
                   </li>
                 ))}
                 {plan.plan.length > 4 && <li>… {plan.plan.length - 4} cuotas más</li>}
               </ul>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Referencia: el plan definitivo lo fija el servidor al cobrar.
-              </p>
+              <p className="text-muted-foreground mt-1 text-xs">Plan calculado por el servidor.</p>
             </div>
           )}
         </>

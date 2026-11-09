@@ -38,7 +38,7 @@ export function FormConfigCredito({
       const rotos = new Set(r.error.issues.map((i) => String(i.path[0])));
       return setErrores({
         ...(rotos.has("inicialPct") && {
-          inicial: "Un porcentaje de 0 a 99,99 con hasta 2 decimales.",
+          inicial: "Un porcentaje mayor a 0 y hasta 99,99, con hasta 2 decimales.",
         }),
         ...(rotos.has("interesPct") && {
           interes: "Un porcentaje de 0 a 100 con hasta 2 decimales.",

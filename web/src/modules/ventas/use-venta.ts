@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { leerSinRed, useSinRed } from "@/lib/offline/red";
 import type { ClienteElegido } from "@/modules/clientes";
-import { cargarParametros, hoyLaPaz as hoyCredito, type Parametros } from "@/modules/creditos";
+import { cargarParametros, type Parametros } from "@/modules/creditos";
 import { createClient } from "@/lib/supabase/browser";
 import {
   exigeCliente,
@@ -25,13 +25,14 @@ import {
   aCentavos,
   type ProductoPos,
 } from "./domain";
-import { armarCredito, formCreditoInicial, type FormCredito } from "./credito-venta";
+import { formCreditoInicial, type FormCredito } from "./credito-venta";
 import { armarOrden, fichaInicial, hoyLaPaz, type FichaTexto } from "./orden";
 import type { ReservaActiva } from "./reservas";
 import type { DatosNegocio, Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
 import { useAtajos } from "./use-atajos";
 import { useCatalogo } from "./use-catalogo";
+import { useSimulacionCredito } from "./use-simulacion-credito";
 import type { ColaPos } from "./use-cola";
 import { CLAVE_CREDITO, useEnvio } from "./use-envio";
 import { useFocoVenta } from "./use-foco-venta";
@@ -93,6 +94,8 @@ export function useVenta(o: OpcionesVenta) {
   const puedeCredito = !esOrden && o.permisos.includes("gestionar_credito");
   const [formCredito, setFormCredito] = useState<FormCredito>(formCreditoInicial);
   const [parametrosCredito, setParametrosCredito] = useState<Parametros | null>(null);
+  // Sube al recargar los parámetros: obliga a pedir el plan de nuevo al servidor.
+  const [versionCredito, setVersionCredito] = useState(0);
   const listaVenta: Lista = esOrden
     ? express
       ? "express"
@@ -124,15 +127,14 @@ export function useVenta(o: OpcionesVenta) {
     [carrito, descuentoVentaTexto, permisosCarrito],
   );
   const clienteObligatorio = exigeCliente(o.tipoNegocio) || formCredito.activo;
-  const credito = formCredito.activo
-    ? armarCredito({
-        form: formCredito,
-        parametros: parametrosCredito,
-        total: resumen.totales?.total ?? 0,
-        hayCliente: !!cliente,
-        hoy: hoyCredito(),
-      })
-    : null;
+  // El plan, el mínimo y los vencimientos los calcula el servidor (simular_credito), con debounce.
+  const credito = useSimulacionCredito({
+    negocioId,
+    form: formCredito,
+    totalCentavos: resumen.totales?.total ?? 0,
+    hayCliente: !!cliente,
+    version: versionCredito,
+  });
 
   // Precios, tope y permisos pueden haber cambiado: se recarga todo y la validación local con los datos frescos
   // muestra qué falla. El descuento de la venta se conserva; solo se quitan las líneas que ya no se pueden vender.
@@ -170,6 +172,14 @@ export function useVenta(o: OpcionesVenta) {
     },
     [registrarVenta],
   );
+  // Parámetros del crédito cambiados desde que se activó (inicial, cuotas): se releen SIN tocar precios ni descuentos.
+  const refrescarCredito = useCallback(async () => {
+    const r = await cargarParametros(createClient(), negocioId);
+    if (r.ok) {
+      setParametrosCredito(r.data);
+      setVersionCredito((v) => v + 1);
+    } else setAviso(`No se pudieron releer los parámetros del crédito: ${r.error}`);
+  }, [negocioId]);
   const envio = useEnvio({
     negocioId,
     cola: o.cola,
@@ -179,6 +189,7 @@ export function useVenta(o: OpcionesVenta) {
     tipoCambio: catalogoHook.catalogo?.tipoCambio ?? null,
     alErrorPrecios,
     alCajaCerrada,
+    alErrorCredito: refrescarCredito,
     alExito,
     usuarioId: o.usuarioId,
   });
@@ -270,15 +281,18 @@ export function useVenta(o: OpcionesVenta) {
     const faltan = sinPrecioEn(carrito, lista);
     if (faltan.length)
       return setAviso(`${faltan.join(", ")} no tiene precio de ${valor ? "crédito" : "contado"}.`);
+    if (valor) {
+      // Se leen al activar: el negocio pudo cambiar la inicial o el interés. Si no se pueden leer, el crédito no se activa
+      // (nunca se vende con parámetros viejos sin avisar).
+      const r = await cargarParametros(createClient(), negocioId);
+      if (!r.ok)
+        return setAviso(`No se activó el crédito: no se pudieron leer sus parámetros (${r.error})`);
+      setParametrosCredito(r.data);
+      setVersionCredito((v) => v + 1);
+    }
     setAviso(null);
     despachar({ tipo: "listaTodas", lista });
     setFormCredito(valor ? { ...formCreditoInicial, activo: true } : formCreditoInicial);
-    if (valor) {
-      // Se leen al activar: el negocio pudo cambiar la inicial o el interés desde la última vez.
-      const r = await cargarParametros(createClient(), negocioId);
-      if (r.ok) setParametrosCredito(r.data);
-      else setAviso(`No se pudieron leer los parámetros del crédito: ${r.error}`);
-    }
   }
 
   function cambiarExpress(valor: boolean) {
@@ -363,6 +377,7 @@ export function useVenta(o: OpcionesVenta) {
     listaVenta,
     reserva,
     puedeCredito,
+    alCajaCerrada,
     formCredito,
     setFormCredito,
     credito,

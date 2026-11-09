@@ -74,9 +74,9 @@ begin
   for m in select id from public.reservas where created_at < v_desde and cerrada_en >= v_desde limit 1 loop
     raise exception 'ABORTA: la reserva previa % se completó o canceló después de --desde; elegí otro --desde', m.id;
   end loop;
-  -- Un crédito previo con pagos después del corte quedaría con sus pagos borrados (y su estado `pagado` sin respaldo).
+  -- Un crédito previo (de venta o saldo inicial) con pagos después del corte quedaría con sus pagos borrados (y su estado `pagado` sin respaldo).
   for m in select cr.id from public.creditos cr
-           where cr.created_at < v_desde and cr.venta_id is null
+           where cr.created_at < v_desde
              and exists (select 1 from public.credito_pagos p where p.credito_id = cr.id and p.created_at >= v_desde) limit 1 loop
     raise exception 'ABORTA: el crédito previo % recibió pagos después de --desde; elegí otro --desde', m.id;
   end loop;

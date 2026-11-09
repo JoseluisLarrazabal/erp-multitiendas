@@ -9,7 +9,6 @@ export const parametrosSchema = z.object({
   plazo_cuotas: z.number(),
   max_cuotas: z.number(),
   interes_mensual_pct: z.number(),
-  frecuencia: z.string(),
 });
 export type Parametros = {
   inicialPct: number;
@@ -46,27 +45,32 @@ const cuentaSchema = z.object({
   dias_atraso: z.number(),
   proxima_vence: z.string().nullable(),
   proxima_monto: z.number().nullable(),
+  total_filas: z.number(),
 });
-export const leerCuentas = (json: unknown): Cuenta[] | null => {
+// `total` = unidades de la página en total (clientes, o créditos vencidos con p_solo_vencidas), para el paginador.
+export const leerCuentas = (json: unknown): { cuentas: Cuenta[]; total: number } | null => {
   const r = z.array(cuentaSchema).safeParse(json);
   return r.success
-    ? r.data.map((c) => ({
-        creditoId: c.credito_id,
-        clienteId: c.cliente_id,
-        clienteNombre: c.cliente_nombre,
-        clienteDocumento: c.cliente_documento,
-        origen: c.origen,
-        ventaNumero: c.venta_numero,
-        creadoEn: c.creado_en,
-        total: c.total,
-        pagado: c.pagado,
-        saldo: c.saldo,
-        cuotasVencidas: c.cuotas_vencidas,
-        montoVencido: c.monto_vencido,
-        diasAtraso: c.dias_atraso,
-        proximaVence: c.proxima_vence,
-        proximoMonto: c.proxima_monto ?? 0,
-      }))
+    ? {
+        total: r.data[0]?.total_filas ?? 0,
+        cuentas: r.data.map((c) => ({
+          creditoId: c.credito_id,
+          clienteId: c.cliente_id,
+          clienteNombre: c.cliente_nombre,
+          clienteDocumento: c.cliente_documento,
+          origen: c.origen,
+          ventaNumero: c.venta_numero,
+          creadoEn: c.creado_en,
+          total: c.total,
+          pagado: c.pagado,
+          saldo: c.saldo,
+          cuotasVencidas: c.cuotas_vencidas,
+          montoVencido: c.monto_vencido,
+          diasAtraso: c.dias_atraso,
+          proximaVence: c.proxima_vence,
+          proximoMonto: c.proxima_monto ?? 0,
+        })),
+      }
     : null;
 };
 
@@ -80,6 +84,7 @@ const detalleSchema = z.object({
   inicial: z.number(),
   interes_mensual_pct: z.number(),
   estado: z.string(),
+  motivo_anulacion: z.string().nullable(),
   docs_ci: z.boolean(),
   docs_domicilio: z.boolean(),
   docs_pagare: z.boolean(),
@@ -111,16 +116,16 @@ export const leerDetalle = (json: unknown): DetalleCredito | null => {
 export const configSchema = z
   .object({
     negocioId: z.guid(),
-    inicialPct: z.string().refine((t) => pctValido(t, 99.99)),
-    interesPct: z.string().refine((t) => pctValido(t, 100)),
+    inicialPct: z.string().refine((t) => pctValido(t, 99.99, true)),
+    interesPct: z.string().refine((t) => pctValido(t, 100, false)),
     plazoCuotas: z.coerce.number().int().min(1).max(MAX_CUOTAS),
     maxCuotas: z.coerce.number().int().min(1).max(MAX_CUOTAS),
   })
   .refine((d) => d.plazoCuotas <= d.maxCuotas, { path: ["plazoCuotas"] });
 
-function pctValido(texto: string, tope: number) {
+function pctValido(texto: string, tope: number, positivo: boolean) {
   const c = parsearMonto(texto);
-  return c !== null && c <= tope * 100;
+  return c !== null && c <= tope * 100 && (!positivo || c > 0);
 }
 
 export const saldoInicialSchema = z.object({
@@ -146,3 +151,34 @@ export type PagoCuotaPayload = z.infer<typeof pagoCuotaSchema>;
 export const PAGINA_CREDITOS = 25;
 export const leerFiltrosCreditos = (crudo: Parameters<typeof leerFiltros>[2]) =>
   leerFiltros({ pagina: z.coerce.number().int().min(1).max(10_000) }, { pagina: 1 }, crudo);
+
+export const anularInicialSchema = z.object({
+  operacionId: z.guid(),
+  creditoId: z.guid(),
+  motivo: z.string().trim().min(1).max(200),
+});
+
+// Respuesta de simular_credito: el plan, el mínimo y el error los fija Postgres.
+const simulacionSchema = z.object({
+  error: z.string().nullable(),
+  minimo: z.number(),
+  inicial: z.number(),
+  cuotas: z.number(),
+  financiado: z.number(),
+  max_cuotas: z.number(),
+  inicial_pct: z.number(),
+  plan: z.array(
+    z.object({
+      numero: z.number(),
+      capital: z.number(),
+      interes: z.number(),
+      monto: z.number(),
+      vence_en: z.string(),
+    }),
+  ),
+});
+export type Simulacion = z.infer<typeof simulacionSchema>;
+export const leerSimulacion = (json: unknown): Simulacion | null => {
+  const r = simulacionSchema.safeParse(json);
+  return r.success ? r.data : null;
+};

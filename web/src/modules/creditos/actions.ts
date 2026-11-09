@@ -11,7 +11,7 @@ import {
   type Resultado,
 } from "@/modules/usuarios/panel";
 import { mensajeDeCredito } from "./domain";
-import { configSchema, saldoInicialSchema } from "./schemas";
+import { anularInicialSchema, configSchema, saldoInicialSchema } from "./schemas";
 
 const fallo = (codigo?: string): Resultado<never> => ({
   ok: false,
@@ -19,6 +19,7 @@ const fallo = (codigo?: string): Resultado<never> => ({
 });
 const listo = (): Resultado<null> => {
   revalidatePath("/panel/creditos");
+  revalidatePath("/panel/creditos/[id]", "page");
   return { ok: true, data: null };
 };
 
@@ -52,6 +53,19 @@ export async function crearCreditoInicial(entrada: unknown): Promise<Resultado<n
     p_capital: capital / 100,
     p_cuotas: d.cuotas,
     p_primera: d.primera,
+  });
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+}
+
+export async function anularCreditoInicial(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(anularInicialSchema, entrada);
+  if (!d) return fallo("ERP_DATOS_INVALIDOS");
+  const { error } = await (
+    await createClient()
+  ).rpc("anular_credito_inicial", {
+    p_operacion_id: d.operacionId,
+    p_credito_id: d.creditoId,
+    p_motivo: d.motivo,
   });
   return error ? fallo(codigoDeMensaje(error.message)) : listo();
 }

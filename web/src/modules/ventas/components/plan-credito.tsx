@@ -3,9 +3,10 @@
 import { ArrowLeft, Loader2, Plus, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatearDia, formatearFechaHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { createClient } from "@/lib/supabase/browser";
-import { cargarDetalle, fechaCorta, type DetalleCredito } from "@/modules/creditos";
+import { cargarDetalle, type DetalleCredito } from "@/modules/creditos";
 
 // Plan de cuotas imprimible (RF-CRE-02), hermano de NotaVentaVista: A4, con el CSS de impresión de globals.css. Lo
 // que se imprime es lo que fijó el servidor al crear el crédito, no el cálculo de la pantalla.
@@ -101,7 +102,7 @@ export function PlanCreditoVista({
               {estado.d.cliente_documento ? ` · ${estado.d.cliente_documento}` : ""}
             </dd>
             <dt>Fecha:</dt>
-            <dd>{fechaCorta(estado.d.creado_en)}</dd>
+            <dd>{formatearFechaHora(estado.d.creado_en).slice(0, 10)}</dd>
             <dt>Inicial pagada:</dt>
             <dd>{formatearBs(estado.d.inicial)}</dd>
             <dt>Capital financiado:</dt>
@@ -133,7 +134,7 @@ export function PlanCreditoVista({
               {estado.d.cuotas.map((c) => (
                 <tr key={c.numero}>
                   <td className="py-0.5">{c.numero}</td>
-                  <td className="py-0.5">{fechaCorta(c.vence_en)}</td>
+                  <td className="py-0.5">{formatearDia(c.vence_en)}</td>
                   <td className="py-0.5 text-right">{formatearBs(c.capital)}</td>
                   <td className="py-0.5 text-right">{formatearBs(c.interes)}</td>
                   <td className="py-0.5 text-right">{formatearBs(c.monto)}</td>

@@ -8,9 +8,11 @@ import {
   leerCuentas,
   leerDetalle,
   leerParametros,
+  leerSimulacion,
   type DetalleCredito,
   type PagoCuotaPayload,
   type Parametros,
+  type Simulacion,
 } from "./schemas";
 
 type Cliente = SupabaseClient<Database>;
@@ -33,22 +35,49 @@ export async function cargarParametros(
   }
 }
 
-// Créditos activos con saldo; con `clienteId`, los de ese cliente (lo usa quien cobra en el POS).
+// Cuentas por cobrar paginadas en SQL: `total` son las unidades en total. La unidad es el cliente con todos sus créditos o, con
+// `soloVencidas`, el crédito vencido. Con `clienteId`, los créditos de ese cliente (lo usa quien cobra en el POS), sin página.
 export async function cargarCuentas(
   supabase: Cliente,
   negocioId: string,
-  clienteId?: string,
-): Promise<Resultado<Cuenta[]>> {
+  o: { clienteId?: string; soloVencidas?: boolean; limite?: number; desde?: number } = {},
+): Promise<Resultado<{ cuentas: Cuenta[]; total: number }>> {
   try {
     const { data, error } = await supabase
       .rpc("cuentas_por_cobrar", {
         p_negocio_id: negocioId,
-        ...(clienteId ? { p_cliente_id: clienteId } : {}),
+        ...(o.clienteId ? { p_cliente_id: o.clienteId } : {}),
+        p_solo_vencidas: o.soloVencidas ?? false,
+        p_limite: o.limite ?? 25,
+        p_offset: o.desde ?? 0,
       })
       .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS));
     if (error) return errorRpc(error);
     const c = leerCuentas(data);
     return c ? { ok: true, data: c } : falla(ILEGIBLE);
+  } catch {
+    return falla(MENSAJE_RED, true);
+  }
+}
+
+// Plan de una venta a crédito, calculado por el servidor con la misma regla que registrar_venta (totales y montos en Bs).
+export async function simularCredito(
+  supabase: Cliente,
+  negocioId: string,
+  o: { total: number; inicial: number | null; cuotas: number | null },
+): Promise<Resultado<Simulacion>> {
+  try {
+    const { data, error } = await supabase
+      .rpc("simular_credito", {
+        p_negocio_id: negocioId,
+        p_total: o.total,
+        p_inicial: o.inicial ?? undefined,
+        p_cuotas: o.cuotas ?? undefined,
+      })
+      .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS));
+    if (error) return errorRpc(error);
+    const r = leerSimulacion(data);
+    return r ? { ok: true, data: r } : falla(ILEGIBLE);
   } catch {
     return falla(MENSAJE_RED, true);
   }

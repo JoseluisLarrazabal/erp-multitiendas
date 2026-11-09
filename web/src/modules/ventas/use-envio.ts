@@ -83,11 +83,14 @@ export function useEnvio(opts: {
   tipoCambio: number | null;
   alErrorPrecios: () => Promise<void>;
   alCajaCerrada: () => Promise<void>;
+  // Rechazo por los parámetros del crédito (inicial mínima): la pantalla los relee sin tocar el carrito.
+  alErrorCredito: () => Promise<void>;
   alExito: (nota: NotaVenta, items: VentaPayload["items"], enviada: boolean) => void;
   usuarioId: string;
   sesionCaducada: boolean;
 }) {
   const { negocioId, equipo, cajaId, tipoCambio, alErrorPrecios, alCajaCerrada, alExito } = opts;
+  const { alErrorCredito } = opts;
   const { usuarioId, cola } = opts;
   const caducada = useRef(opts.sesionCaducada);
   useEffect(() => {
@@ -171,6 +174,11 @@ export function useEnvio(opts: {
         fijarPendiente(clave, null);
         setEstado({ t: "rechazada", mensaje: salida.error });
         if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
+        else if (
+          c.credito &&
+          (salida.codigo === "ERP_INICIAL_INSUFICIENTE" || salida.codigo === "ERP_DATOS_INVALIDOS")
+        )
+          await alErrorCredito();
         else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
         return;
       }
@@ -180,7 +188,16 @@ export function useEnvio(opts: {
       setEstado({ t: "libre" });
       alExito({ ...armada.nota, numero: salida.numero }, salida.payload.items, true);
     },
-    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito, fijarPendiente],
+    [
+      equipo,
+      cajaId,
+      usuarioId,
+      alCajaCerrada,
+      alErrorCredito,
+      alErrorPrecios,
+      alExito,
+      fijarPendiente,
+    ],
   );
 
   // "Descartar y verificar": pregunta al servidor si el cobro sin confirmar quedó registrado. Si existe, muestra la nota

@@ -12,7 +12,6 @@ import {
   PAGINA_CREDITOS,
   TablaSaldos,
   TablaVencidas,
-  vencidas,
 } from "@/modules/creditos/panel";
 import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 
@@ -29,16 +28,20 @@ export default async function PaginaCreditos({
   const { filtros, invalido } = leerFiltrosCreditos(await searchParams);
   const gestiona = permisos.includes("gestionar_credito");
   const supabase = await createClient();
-  const [cuentas, parametros] = await Promise.all([
-    cargarCuentas(supabase, activo.negocioId),
+  // Paginado en SQL: la página trae solo los clientes que se muestran, con todos sus créditos.
+  const [cuentas, atrasadas, parametros] = await Promise.all([
+    cargarCuentas(supabase, activo.negocioId, {
+      limite: PAGINA_CREDITOS,
+      desde: (filtros.pagina - 1) * PAGINA_CREDITOS,
+    }),
+    cargarCuentas(supabase, activo.negocioId, { soloVencidas: true, limite: PAGINA_CREDITOS }),
     cargarParametros(supabase, activo.negocioId),
   ]);
 
-  const saldos = cuentas.ok ? agruparPorCliente(cuentas.data) : [];
-  const paginas = Math.max(1, Math.ceil(saldos.length / PAGINA_CREDITOS));
+  const saldos = cuentas.ok ? agruparPorCliente(cuentas.data.cuentas) : [];
+  const total = cuentas.ok ? cuentas.data.total : 0;
+  const paginas = Math.max(1, Math.ceil(total / PAGINA_CREDITOS));
   const pagina = Math.min(filtros.pagina, paginas);
-  const visibles = saldos.slice((pagina - 1) * PAGINA_CREDITOS, pagina * PAGINA_CREDITOS);
-  const atrasadas = cuentas.ok ? vencidas(cuentas.data) : [];
 
   return (
     <>
@@ -60,10 +63,22 @@ export default async function PaginaCreditos({
         {cuentas.ok && (
           <>
             <Seccion titulo="Cuotas vencidas">
-              {atrasadas.length === 0 ? (
+              {!atrasadas.ok ? (
+                <p role="alert" className="text-destructive text-sm">
+                  {atrasadas.error}
+                </p>
+              ) : atrasadas.data.cuentas.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No hay cuotas vencidas.</p>
               ) : (
-                <TablaVencidas cuentas={atrasadas} />
+                <>
+                  <TablaVencidas cuentas={atrasadas.data.cuentas} />
+                  {atrasadas.data.total > atrasadas.data.cuentas.length && (
+                    <p className="text-muted-foreground text-xs">
+                      Se muestran los {atrasadas.data.cuentas.length} más atrasados de{" "}
+                      {atrasadas.data.total} créditos con cuotas vencidas.
+                    </p>
+                  )}
+                </>
               )}
             </Seccion>
             <Seccion titulo="Saldo por cliente">
@@ -71,11 +86,11 @@ export default async function PaginaCreditos({
                 <p className={vacio}>Aún no hay créditos con saldo.</p>
               ) : (
                 <>
-                  <TablaSaldos saldos={visibles} creditos={cuentas.data} />
+                  <TablaSaldos saldos={saldos} creditos={cuentas.data.cuentas} />
                   <Paginador
                     pagina={pagina}
                     porPagina={PAGINA_CREDITOS}
-                    total={saldos.length}
+                    total={total}
                     unidad="clientes"
                     hrefDe={(p) => `/panel/creditos${p > 1 ? `?pagina=${p}` : ""}`}
                   />

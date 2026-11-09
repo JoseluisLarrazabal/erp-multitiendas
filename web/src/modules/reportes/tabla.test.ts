@@ -209,6 +209,8 @@ describe("armarTabla caja", () => {
         devoluciones_efectivo: 0,
         reservas_efectivo: 0,
         cuotas_efectivo: 0,
+        reservas_qr: 0,
+        cuotas_qr: 0,
         esperado: 0,
         contado: 0,
         diferencia: 0,

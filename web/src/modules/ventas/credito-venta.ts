@@ -1,14 +1,8 @@
-import {
-  inicialMinima,
-  planCuotas,
-  vencimiento,
-  type CuotaPlan,
-  type Parametros,
-} from "@/modules/creditos";
-import { bs, parsearMonto } from "./domain";
+import type { CuotaPlan, Simulacion } from "@/modules/creditos";
+import { aCentavos, bs, parsearMonto } from "./domain";
 
-// Venta a crédito en el POS (RF-CRE-01): lo que el cajero escribe, validado con las mismas reglas que registrar_venta.
-// Todo en centavos. El servidor decide: esto solo evita viajes inútiles y muestra el plan antes de cobrar.
+// Venta a crédito en el POS (RF-CRE-01): lo que el cajero escribe y lo que devuelve simular_credito. El mínimo, el plan y los
+// vencimientos los calcula Postgres con la misma regla que registrar_venta; aquí solo se interpreta la respuesta (centavos).
 export type FormCredito = {
   activo: boolean;
   inicialTexto: string;
@@ -34,46 +28,58 @@ export type PlanVenta = {
   financiado: number;
   plan: { fila: CuotaPlan; vence: string }[];
 };
+export type ResultadoCredito = { ok: true; plan: PlanVenta } | { ok: false; motivo: string };
 
-// Cuotas en pantalla: vacío = el plazo por defecto del negocio.
-export const cuotasDe = (f: FormCredito, p: Parametros) =>
-  f.cuotasTexto.trim() === "" ? p.plazoCuotas : Number(f.cuotasTexto.trim());
+// Vacío = el valor por defecto del negocio (inicial mínima, plazo por defecto): el servidor lo resuelve (null).
+export function pedirSimulacion(
+  form: FormCredito,
+  totalCentavos: number,
+):
+  | { ok: true; total: number; inicial: number | null; cuotas: number | null }
+  | { ok: false; motivo: string } {
+  if (totalCentavos <= 0) return { ok: false, motivo: "El total debe ser mayor a cero." };
+  const inicial = form.inicialTexto.trim() === "" ? null : parsearMonto(form.inicialTexto);
+  if (form.inicialTexto.trim() !== "" && (inicial === null || inicial <= 0))
+    return { ok: false, motivo: "La inicial es inválida." };
+  const crudo = form.cuotasTexto.trim();
+  const cuotas = crudo === "" ? null : /^\d{1,3}$/.test(crudo) ? Number(crudo) : NaN;
+  if (cuotas !== null && !(cuotas >= 1))
+    return { ok: false, motivo: "Las cuotas deben ser un entero desde 1." };
+  return {
+    ok: true,
+    total: totalCentavos / 100,
+    inicial: inicial === null ? null : inicial / 100,
+    cuotas,
+  };
+}
 
-export function armarCredito(o: {
-  form: FormCredito;
-  parametros: Parametros | null;
-  total: number;
-  hayCliente: boolean;
-  hoy: string;
-}): { ok: true; plan: PlanVenta } | { ok: false; motivo: string } {
-  const { form, parametros, total } = o;
-  if (!parametros) return { ok: false, motivo: "Cargando los parámetros del crédito…" };
-  if (!o.hayCliente) return { ok: false, motivo: "El crédito necesita un cliente." };
-  if (total <= 0) return { ok: false, motivo: "El total debe ser mayor a cero." };
-  const minimo = inicialMinima(total, parametros.inicialPct);
-  const inicial = form.inicialTexto.trim() === "" ? minimo : parsearMonto(form.inicialTexto);
-  if (inicial === null || inicial <= 0) return { ok: false, motivo: "La inicial es inválida." };
-  if (inicial < minimo)
+export function leerPlan(s: Simulacion): ResultadoCredito {
+  if (s.error === "ERP_INICIAL_INSUFICIENTE")
     return {
       ok: false,
-      motivo: `La inicial mínima es ${bs(minimo)} (${String(parametros.inicialPct).replace(".", ",")} % del total).`,
+      motivo: `La inicial mínima es ${bs(aCentavos(s.minimo))} (${String(s.inicial_pct).replace(".", ",")} % del total).`,
     };
-  if (inicial >= total)
-    return { ok: false, motivo: "La inicial debe ser menor al total: no quedaría nada a crédito." };
-  const cuotas = cuotasDe(form, parametros);
-  if (!Number.isInteger(cuotas) || cuotas < 1 || cuotas > parametros.maxCuotas)
-    return { ok: false, motivo: `Las cuotas van de 1 a ${parametros.maxCuotas}.` };
-  const financiado = total - inicial;
-  const filas = planCuotas(financiado, parametros.interesMensualPct, cuotas);
-  if (filas.length === 0) return { ok: false, motivo: "El saldo es muy chico para tantas cuotas." };
+  if (s.error)
+    return {
+      ok: false,
+      motivo: `Revisa la inicial y las cuotas (1 a ${s.max_cuotas}): la inicial debe ser menor al total y el saldo a financiar no muy chico.`,
+    };
   return {
     ok: true,
     plan: {
-      inicial,
-      minimo,
-      cuotas,
-      financiado,
-      plan: filas.map((fila) => ({ fila, vence: vencimiento(o.hoy, fila.numero) })),
+      inicial: aCentavos(s.inicial),
+      minimo: aCentavos(s.minimo),
+      cuotas: s.cuotas,
+      financiado: aCentavos(s.financiado),
+      plan: s.plan.map((p) => ({
+        fila: {
+          numero: p.numero,
+          capital: aCentavos(p.capital),
+          interes: aCentavos(p.interes),
+          monto: aCentavos(p.monto),
+        },
+        vence: p.vence_en,
+      })),
     },
   };
 }

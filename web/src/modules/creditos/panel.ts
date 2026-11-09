@@ -4,6 +4,6 @@ export { DetalleCreditoVista } from "./components/detalle-credito";
 export { FormConfigCredito } from "./components/form-config";
 export { FormSaldoInicial } from "./components/form-saldo-inicial";
 export { TablaSaldos, TablaVencidas } from "./components/tablas-cuentas";
-export { agruparPorCliente, vencidas } from "./domain";
+export { agruparPorCliente } from "./domain";
 export { cargarCuentas, cargarDetalle, cargarParametros } from "./queries";
 export { leerFiltrosCreditos, PAGINA_CREDITOS } from "./schemas";

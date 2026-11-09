@@ -289,7 +289,7 @@ select is(
    where f ->> 'sesion_id' = pg_temp.i('S1')::text),
   jsonb_build_object('equipo', 'Caja 1', 'prefijo', 'C1', 'cajero', 'd', 'cerrada_en', null, 'monto_inicial', 100,
     'ventas_efectivo', 30, 'ventas_qr', 20, 'qr_pendiente', 0, 'ingresos', 25, 'egresos', 19.5, 'devoluciones_efectivo', 10,
-    'reservas_efectivo', 0, 'cuotas_efectivo', 0, 'esperado', 100 + 30 + 25 - 19.5 - 10, 'contado', null, 'diferencia', null),
+    'reservas_efectivo', 0, 'cuotas_efectivo', 0, 'reservas_qr', 0, 'cuotas_qr', 0, 'esperado', 100 + 30 + 25 - 19.5 - 10, 'contado', null, 'diferencia', null),
   'caja: sesión S1 a mano');
 select is(
   (select f ->> 'esperado' from jsonb_array_elements(public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'filas') f
@@ -313,7 +313,7 @@ select is(
   (select jsonb_build_object('c', f -> 'contado', 'd', f -> 'diferencia', 'x', f -> 'cerrada_en' <> 'null'::jsonb)
    from jsonb_array_elements(public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'filas') f where f ->> 'sesion_id' = pg_temp.i('S1')::text),
   '{"c":170,"d":44.5,"x":true}'::jsonb, 'caja: sesión cerrada con contado y diferencia');
-select is((public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'totales') - array['monto_inicial', 'ventas_efectivo', 'ventas_qr', 'qr_pendiente', 'ingresos', 'egresos', 'devoluciones_efectivo', 'reservas_efectivo', 'cuotas_efectivo'],
+select is((public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 'totales') - array['monto_inicial', 'ventas_efectivo', 'ventas_qr', 'qr_pendiente', 'ingresos', 'egresos', 'devoluciones_efectivo', 'reservas_efectivo', 'cuotas_efectivo', 'reservas_qr', 'cuotas_qr'],
   jsonb_build_object('sesiones', 2, 'esperado', 125.5, 'contado', 170, 'diferencia', 44.5, 'sesiones_abiertas', 1,
     'esperado_abiertas', (public.resumen_caja(pg_temp.i('S2')) ->> 'esperado')::numeric),
   'caja: totales de esperado/contado/diferencia solo sobre cerradas; la abierta va aparte');

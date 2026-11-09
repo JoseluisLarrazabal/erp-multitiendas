@@ -2,7 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import type { PagoCuotaPayload } from "@/modules/creditos";
-import { cobrarCuota } from "./cobro-cuota";
+import {
+  cobrarCuota,
+  cuotaSinConfirmar,
+  cuotasSinConfirmar,
+  fijarCuotaSinConfirmar,
+  hayCuotasSinConfirmar,
+} from "./cobro-cuota";
 
 const payload: PagoCuotaPayload = {
   id: "a0000000-0000-4000-8000-000000000001",
@@ -72,5 +78,40 @@ describe("cobrarCuota (sin cola offline)", () => {
     const no = await cobrarCuota(c.supabase, payload, { alVerificar: vi.fn(), esperar: sinEspera });
     expect(no).toEqual({ t: "sin-confirmar" });
     expect(c.llamadas).toHaveLength(4);
+  });
+});
+
+describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
+  function sesion() {
+    const m = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => void m.set(k, v),
+    });
+    return m;
+  }
+  it("se guardan con su payload e id, se leen validados y se borran", () => {
+    sesion();
+    expect(hayCuotasSinConfirmar()).toBe(false);
+    fijarCuotaSinConfirmar(payload.credito_id, {
+      payload,
+      cliente: "Ana",
+      detalle: "venta W2-000001",
+    });
+    expect(hayCuotasSinConfirmar()).toBe(true);
+    expect(cuotaSinConfirmar(payload.credito_id)?.payload).toEqual(payload);
+    expect(cuotasSinConfirmar().map((p) => p.cliente)).toEqual(["Ana"]);
+    fijarCuotaSinConfirmar(payload.credito_id, null);
+    expect(hayCuotasSinConfirmar()).toBe(false);
+  });
+  it("ignora entradas dañadas o con otro formato", () => {
+    const m = sesion();
+    m.set(
+      "erp:cuotas-sin-confirmar",
+      JSON.stringify({ x: { payload: { id: "no" }, cliente: "A", detalle: "d" } }),
+    );
+    expect(cuotasSinConfirmar()).toEqual([]);
+    m.set("erp:cuotas-sin-confirmar", "{no es json");
+    expect(hayCuotasSinConfirmar()).toBe(false);
   });
 });
