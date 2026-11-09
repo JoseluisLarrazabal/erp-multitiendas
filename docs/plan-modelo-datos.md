@@ -162,7 +162,7 @@ Una sola base Postgres (Supabase) para los 3 negocios, aislados por `negocio_id`
 
 | Tabla | Campos clave | Notas |
 |---|---|---|
-| `credito_config` | negocio_id, inicial_pct, plazo_cuotas, interes_mensual_pct, frecuencia | por defecto 50, 3, 2,5, mensual |
+| `credito_config` | negocio_id, inicial_pct, plazo_cuotas, max_cuotas, interes_mensual_pct | por defecto 50, 3, 12, 2,5; frecuencia siempre mensual (sin columna) |
 | `creditos` | id, negocio_id, venta_id, cliente_id, capital, inicial, interes_mensual_pct, estado (`activo`\|`pagado`\|`anulado`), origen (`venta`\|`saldo_inicial`), docs_ci, docs_domicilio, docs_pagare | los parámetros se copian al crear |
 | `credito_cuotas` | id, credito_id, numero, vence_en, capital, interes, pagado | se generan al crear |
 | `credito_pagos` | id (UUID del cliente), credito_id, cuota_id, monto, medio, caja_sesion_id, usuario_id | append-only |

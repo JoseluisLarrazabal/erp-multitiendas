@@ -40,6 +40,9 @@ export const resumenCajaSchema = z.object({
   anticipos_qr: z.number().nullable(),
   devoluciones_reserva_efectivo: z.number().nullable(),
   devoluciones_reserva_qr: z.number().nullable(),
+  // Cuotas de crédito cobradas por caja (RF-CRE-04), por medio. Parte del esperado y del QR neto.
+  cuotas_efectivo: z.number().nullable(),
+  cuotas_qr: z.number().nullable(),
   esperado: z.number().nullable(),
   qr_neto: z.number().nullable(),
   cantidad_ventas: z.number(),

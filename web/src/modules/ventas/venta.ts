@@ -17,6 +17,15 @@ export type DatosEnvio = {
   // Completar una reserva: su id y el anticipo recibido (centavos) como pago `anticipo`.
   reservaId?: string;
   anticipo?: number;
+  // Venta a crédito: efectivo y qr son la inicial; el resto se financia en `cuotas`. Solo en línea.
+  credito?: DatosCredito;
+};
+
+export type DatosCredito = {
+  cuotas: number;
+  docsCi: boolean;
+  docsDomicilio: boolean;
+  docsPagare: boolean;
 };
 
 // Construye y valida el payload. Se llama una vez al confirmar el cobro: los reintentos reenvían este mismo objeto.
@@ -33,6 +42,9 @@ export function construirPayload(resumen: ResumenCarrito, d: DatosEnvio): VentaP
     descuento: aBolivianos(r.entrada?.descuento ?? 0),
     serie_id: r.linea.serieId,
   }));
+  // Crédito: cliente, ninguna reserva y toda línea en la lista `credito` (el servidor lo exige igual).
+  if (d.credito && (d.reservaId || !d.clienteId || items.some((i) => i.lista !== "credito")))
+    return null;
   const pagos: VentaPayload["pagos"] = [];
   if (d.anticipo) pagos.push({ medio: "anticipo", monto: aBolivianos(d.anticipo) });
   if (d.efectivo > 0) pagos.push({ medio: "efectivo", monto: aBolivianos(d.efectivo) });
@@ -44,6 +56,17 @@ export function construirPayload(resumen: ResumenCarrito, d: DatosEnvio): VentaP
     numero: d.numero,
     cliente_id: d.clienteId,
     ...(d.reservaId ? { reserva_id: d.reservaId } : {}),
+    ...(d.credito
+      ? {
+          condicion: "credito",
+          credito: {
+            cuotas: d.credito.cuotas,
+            docs_ci: d.credito.docsCi,
+            docs_domicilio: d.credito.docsDomicilio,
+            docs_pagare: d.credito.docsPagare,
+          },
+        }
+      : {}),
     creada_en_cliente: d.creadaEnCliente,
     descuento: aBolivianos(descuentoVenta),
     total: aBolivianos(resumen.totales.total),
@@ -82,6 +105,8 @@ export type NotaVenta = {
   descuentoVenta: number;
   total: number;
   pagos: { medio: "efectivo" | "qr" | "anticipo"; monto: number; pendiente?: boolean }[];
+  // Venta a crédito: lo financiado (centavos) y en cuántas cuotas. El plan se pide al servidor con `ventaId`.
+  credito?: { ventaId: string; cuotas: number; financiado: number };
   recibido: number;
   vuelto: number;
 };
@@ -98,6 +123,8 @@ export function construirNota(
     | "descuentoVentaTexto"
     | "qrVerificado"
     | "anticipo"
+    | "ventaId"
+    | "credito"
   >,
   contexto: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden"> & { recibido: number },
 ): NotaVenta | null {
@@ -128,6 +155,15 @@ export function construirNota(
     descuentoVenta: resumen.totales.sumaLineas - resumen.totales.total,
     total: resumen.totales.total,
     pagos,
+    ...(d.credito
+      ? {
+          credito: {
+            ventaId: d.ventaId,
+            cuotas: d.credito.cuotas,
+            financiado: resumen.totales.total - d.efectivo - d.qr,
+          },
+        }
+      : {}),
     vuelto: contexto.recibido - d.efectivo,
   };
 }

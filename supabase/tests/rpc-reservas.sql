@@ -1,7 +1,7 @@
 -- Reservas con anticipo (RF-RES-01 a 03): DB-23 (completar no descuenta dos veces), DB-24 (cancelar libera y devuelve),
 -- DB-04 con reservas (stock = kardex), arqueo con anticipos y devoluciones, permisos, idempotencia, rechazos.
 begin;
-select plan(143);
+select plan(144);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -190,6 +190,12 @@ select results_eq($$select cliente_nombre, producto_nombre, cantidad, precio_aco
   $$values ('Cliente'::text, 'P1'::text, 2::numeric, 12::numeric, 10::numeric, 'qr'::text)$$, 'reservas_activas: datos de R2');
 select pg_temp.como(pg_temp.i('d'));
 select is(pg_temp.res_caja('S1', 'anticipos_qr'), 10::numeric, 'resumen: anticipos por QR');
+select ok(pg_temp.res_caja('S1', 'anticipos_qr') > 0
+  and (select (f ->> 'reservas_qr')::numeric from jsonb_array_elements(public.reporte_caja(pg_temp.i('T'), (now() at time zone 'America/La_Paz')::date, (now() at time zone 'America/La_Paz')::date) -> 'filas') f
+       where f ->> 'sesion_id' = pg_temp.i('S1')::text) = pg_temp.res_caja('S1', 'anticipos_qr') - pg_temp.res_caja('S1', 'devoluciones_reserva_qr')
+  and (select (f ->> 'ventas_qr')::numeric + (f ->> 'reservas_qr')::numeric from jsonb_array_elements(public.reporte_caja(pg_temp.i('T'), (now() at time zone 'America/La_Paz')::date, (now() at time zone 'America/La_Paz')::date) -> 'filas') f
+       where f ->> 'sesion_id' = pg_temp.i('S1')::text) = pg_temp.res_caja('S1', 'qr_neto'),
+  'reporte_caja: el QR de reservas va en reservas_qr y no en ventas_qr');
 select is(pg_temp.res_caja('S1', 'qr_neto'), 10::numeric, 'total_qr_sesion suma el anticipo QR');
 select is(pg_temp.res_caja('S1', 'esperado'), 120::numeric, 'el anticipo QR no entra al efectivo esperado');
 select pg_temp.como(pg_temp.i('v'));

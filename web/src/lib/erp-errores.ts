@@ -12,7 +12,8 @@ const MENSAJES: Record<string, string> = {
   ERP_CAJA_CERRADA: "La caja de este equipo está cerrada. Ábrela para vender.",
   ERP_CAJA_ABIERTA: "Este equipo ya tiene una caja abierta.",
   ERP_EFECTIVO_INSUFICIENTE: "No hay efectivo suficiente en la caja para esa operación.",
-  ERP_PRODUCTO_SIN_PRECIO: "Un producto del carrito ya no tiene precio de contado.",
+  ERP_PRODUCTO_SIN_PRECIO:
+    "Un producto del carrito ya no tiene precio en esa lista (contado o crédito).",
   ERP_DESCUENTO_TOPE: "El descuento supera el tope permitido.",
   ERP_NUMERO_DUPLICADO: "El número de nota ya existe.",
   ERP_CLIENTE_DUPLICADO: "Ya existe un cliente con ese documento. Búscalo y selecciónalo.",
@@ -24,6 +25,10 @@ const MENSAJES: Record<string, string> = {
   ERP_RESERVA_NO_ACTIVA: "La reserva ya no está activa: se completó o se canceló.",
   ERP_VENTA_DE_RESERVA:
     "Esa venta completó una reserva: no se puede anular ni devolver desde el sistema.",
+  ERP_VENTA_CON_CREDITO:
+    "Esa venta tiene un crédito: no se puede anular ni devolver desde el sistema.",
+  ERP_INICIAL_INSUFICIENTE: "La inicial es menor al mínimo del negocio. Sube la inicial.",
+  ERP_PAGO_EXCEDE_SALDO: "El pago supera el saldo del crédito.",
   ERP_REQUIERE_CONEXION: "Esta operación necesita conexión. Revisa la red y vuelve a intentar.",
 };
 

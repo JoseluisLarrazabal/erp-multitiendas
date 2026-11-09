@@ -88,6 +88,23 @@ proveedor_pagos a la caja cuando el cliente lo pida.`
    - Exige conexión: la UI no lo permite sin red, y la RPC rechaza `condicion = 'credito'` cuando viene con
      `p_offline`.
    - El plan de cuotas se imprime con un componente hermano de `NotaVentaVista`, con el CSS de impresión que ya existe.
+   - **Ajustes de implementación (PR 4, 2026-11-08):**
+     - `credito_config` agrega `max_cuotas` (por defecto 12); `plazo_cuotas` es solo el valor por defecto de la venta, y la
+       frecuencia es `mensual`. Sin fila rigen 50 %, 3 cuotas y 2,5 % (`credito_params`).
+     - `creditos.capital` es lo financiado (total menos inicial); la inicial pasa por `venta_pagos` y entra al arqueo como
+       cualquier venta. El interés queda en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.
+     - La inicial mínima redondea hacia arriba al centavo, debe ser mayor a 0 y menor al total (`ERP_INICIAL_INSUFICIENTE`
+       bajo el mínimo). Toda línea va en la lista `credito`, con el mismo piso, `descontar` y tope que contado.
+     - `credito_pagos` no lleva `cuota_id` (decisión 2) y sí `operacion_id`: un pago mixto escribe una fila por medio y el
+       reintento no duplica. `pagar_cuota` exige `caja`, la sesión abierta del equipo y `ERP_PAGO_EXCEDE_SALDO` si pasa del saldo.
+     - El saldo inicial se carga sin interés (el monto es lo que se adeuda) y sin tocar caja.
+     - Las cuotas vencen la fecha de la venta más k meses (no encadenado), en hora de La Paz.
+     - Lectura: parámetros y cuentas por cobrar, `gestionar_credito` o `ver_reportes`; las cuentas de un cliente, también
+       `caja` (para cobrar en el POS). La lavandería no tiene `gestionar_credito`: no puede crear créditos.
+     - El cobro online-only de reserva y de crédito comparte `cobro-en-linea.ts`; el cobro de cuota sin confirmar se
+       conserva en memoria por crédito y se verifica con «Descartar y verificar».
+     - Sin recibo imprimible de la cuota cobrada (`shortcut`: el comprobante es el saldo en pantalla; agregarlo si el
+       cliente lo pide). El QR de la cuota se confirma en el mostrador, como el anticipo.
 8. **Saldos iniciales (RF-CRE-06):** un formulario del panel crea un crédito con `origen = 'saldo_inicial'`, sin venta
    ni caja, con capital, cuotas restantes y fecha de la primera cuota. Se usa la carga manual de P-06.
 9. **Anular y devolver:** se rechazan las ventas con crédito (`ERP_VENTA_CON_CREDITO`) y las ventas que completaron una
@@ -147,5 +164,5 @@ después del merge: rutas nuevas abiertas con Playwright con la cuenta del dueñ
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1 compras  | mergeado (#83) y migración aplicada en producción el 2026-11-08; `/panel/proveedores` verificado con Playwright                                                                                                                                                                                                                                                                                                                            |
 | 2 insumos  | mergeado (#86), migración aplicada en producción el 2026-11-08. Cambio sobre la decisión 10: el consumo es un tipo de `ajustar_inventario` (solo insumos activos de lavandería), sin RPC propia. `revertir_consumo` corrige un consumo mal cargado: contra-movimiento sin costo, que no recalcula el costo promedio. `reporte_insumos` cuenta solo consumos vigentes; la cantidad sale solo agrupando por insumo, para no mezclar unidades |
-| 3 reservas | pendiente                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 4 crédito  | pendiente                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 3 reservas | mergeado (#87), migración aplicada en producción el 2026-11-08                                                                                                                                                                                                                                                                                                                                                                             |
+| 4 crédito  | PR abierto (2026-11-08), revisado (code-review ×3, seguridad). Codex: no verificado                                                                                                                                                                                                                                                                                                                               |

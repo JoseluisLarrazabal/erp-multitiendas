@@ -307,6 +307,104 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     }
                   ]
+                },"credito_config": {
+                  Row: {
+                    "inicial_pct": number,"interes_mensual_pct": number,"max_cuotas": number,"negocio_id": string,"plazo_cuotas": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "inicial_pct"?: number,"interes_mensual_pct"?: number,"max_cuotas"?: number,"negocio_id": string,"plazo_cuotas"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "inicial_pct"?: number,"interes_mensual_pct"?: number,"max_cuotas"?: number,"negocio_id"?: string,"plazo_cuotas"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "credito_config_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: true
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"credito_cuotas": {
+                  Row: {
+                    "capital": number,"credito_id": string,"id": string,"interes": number,"negocio_id": string,"numero": number,"vence_en": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "capital": number,"credito_id": string,"id"?: string,"interes": number,"negocio_id": string,"numero": number,"vence_en": string
+                  }
+                  Update: {
+                    "capital"?: number,"credito_id"?: string,"id"?: string,"interes"?: number,"negocio_id"?: string,"numero"?: number,"vence_en"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "credito_cuotas_negocio_id_credito_id_fkey"
+      columns: ["negocio_id","credito_id"]
+isOneToOne: false
+      referencedRelation: "creditos"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"credito_pagos": {
+                  Row: {
+                    "caja_sesion_id": string,"created_at": string,"credito_id": string,"id": string,"medio": string,"monto": number,"negocio_id": string,"operacion_id": string,"usuario_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "caja_sesion_id": string,"created_at"?: string,"credito_id": string,"id"?: string,"medio": string,"monto": number,"negocio_id": string,"operacion_id": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "caja_sesion_id"?: string,"created_at"?: string,"credito_id"?: string,"id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"operacion_id"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "credito_pagos_negocio_id_caja_sesion_id_fkey"
+      columns: ["negocio_id","caja_sesion_id"]
+isOneToOne: false
+      referencedRelation: "caja_sesiones"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "credito_pagos_negocio_id_credito_id_fkey"
+      columns: ["negocio_id","credito_id"]
+isOneToOne: false
+      referencedRelation: "creditos"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
+                },"creditos": {
+                  Row: {
+                    "anulado_en": string | null,"anulado_por": string | null,"capital": number,"cliente_id": string,"created_at": string,"docs_ci": boolean,"docs_domicilio": boolean,"docs_pagare": boolean,"estado": string,"id": string,"inicial": number,"interes_mensual_pct": number,"motivo_anulacion": string | null,"negocio_id": string,"origen": string,"usuario_id": string | null,"venta_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anulado_en"?: string | null,"anulado_por"?: string | null,"capital": number,"cliente_id": string,"created_at"?: string,"docs_ci"?: boolean,"docs_domicilio"?: boolean,"docs_pagare"?: boolean,"estado"?: string,"id"?: string,"inicial"?: number,"interes_mensual_pct": number,"motivo_anulacion"?: string | null,"negocio_id": string,"origen": string,"usuario_id"?: string | null,"venta_id"?: string | null
+                  }
+                  Update: {
+                    "anulado_en"?: string | null,"anulado_por"?: string | null,"capital"?: number,"cliente_id"?: string,"created_at"?: string,"docs_ci"?: boolean,"docs_domicilio"?: boolean,"docs_pagare"?: boolean,"estado"?: string,"id"?: string,"inicial"?: number,"interes_mensual_pct"?: number,"motivo_anulacion"?: string | null,"negocio_id"?: string,"origen"?: string,"usuario_id"?: string | null,"venta_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "creditos_negocio_id_cliente_id_fkey"
+      columns: ["negocio_id","cliente_id"]
+isOneToOne: false
+      referencedRelation: "clientes"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "creditos_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "creditos_negocio_id_venta_id_fkey"
+      columns: ["negocio_id","venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"devolucion_items": {
                   Row: {
                     "cantidad": number,"devolucion_id": string,"id": string,"monto": number,"negocio_id": string,"venta_item_id": string
@@ -1125,6 +1223,9 @@ isOneToOne: false
 "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
+"anular_credito_inicial":
+{ Args: { "p_credito_id": string,"p_motivo": string,"p_operacion_id": string }; Returns: Json
+                           },
 "anular_orden":
 { Args: { "p_motivo": string,"p_orden_id": string }; Returns: Json
                            },
@@ -1192,14 +1293,55 @@ isOneToOne: false
               "costo_promedio": number,"producto_id": string,"ubicacion_id": string
             }[]
                            },
+"crear_credito_inicial":
+{ Args: { "p_capital": number,"p_cliente_id": string,"p_cuotas": number,"p_id": string,"p_negocio_id": string,"p_primera": string }; Returns: Json
+                           },
 "crear_orden":
 { Args: { "p_offline"?: Json,"p_orden": Json,"p_venta": Json }; Returns: Json
                            },
 "crear_reserva":
 { Args: { "p_reserva": Json }; Returns: Json
                            },
+"credito_parametros":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "inicial_pct": number,"interes_mensual_pct": number,"max_cuotas": number,"plazo_cuotas": number
+            }[]
+                           },
+"credito_params":
+{ Args: { "p_negocio_id": string }; Returns: {
+              "inicial_pct": number,
+"interes_mensual_pct": number,
+"max_cuotas": number,
+"negocio_id": string,
+"plazo_cuotas": number,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "credito_config"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"cuentas_base":
+{ Args: { "p_cliente_id": string,"p_negocio_id": string }; Returns: {
+              "cliente_documento": string,"cliente_id": string,"cliente_nombre": string,"creado_en": string,"credito_id": string,"cuotas_vencidas": number,"dias_atraso": number,"monto_vencido": number,"origen": string,"pagado": number,"proxima_monto": number,"proxima_vence": string,"saldo": number,"total": number,"venta_numero": string
+            }[]
+                           },
+"cuentas_por_cobrar":
+{ Args: { "p_cliente_id"?: string,"p_limite"?: number,"p_negocio_id": string,"p_offset"?: number,"p_solo_vencidas"?: boolean }; Returns: {
+              "cliente_documento": string,"cliente_id": string,"cliente_nombre": string,"creado_en": string,"credito_id": string,"cuotas_vencidas": number,"dias_atraso": number,"monto_vencido": number,"origen": string,"pagado": number,"proxima_monto": number,"proxima_vence": string,"saldo": number,"total": number,"total_filas": number,"venta_numero": string
+            }[]
+                           },
+"cuotas_con_pago":
+{ Args: { "p_credito_id": string }; Returns: {
+              "capital": number,"interes": number,"monto": number,"numero": number,"pagado": number,"pendiente": number,"vence_en": string
+            }[]
+                           },
 "desactivar_producto":
 { Args: { "p_activo": boolean,"p_producto_id": string }; Returns: undefined
+                           },
+"detalle_credito":
+{ Args: { "p_credito_id"?: string,"p_venta_id"?: string }; Returns: Json
                            },
 "deuda_proveedor":
 { Args: { "p_proveedor_id": string }; Returns: number
@@ -1233,6 +1375,9 @@ isOneToOne: false
 "guardar_cliente":
 { Args: { "p_datos": Json,"p_negocio_id": string }; Returns: string
                            },
+"guardar_credito_config":
+{ Args: { "p_inicial_pct": number,"p_interes_mensual_pct": number,"p_max_cuotas": number,"p_negocio_id": string,"p_plazo_cuotas": number }; Returns: undefined
+                           },
 "guardar_precios":
 { Args: { "p_items": Json,"p_negocio_id": string }; Returns: number
                            },
@@ -1261,6 +1406,9 @@ isOneToOne: false
               "hora": string,"usuario_id": string
             }[]
                            },
+"pagar_cuota":
+{ Args: { "p_pago": Json }; Returns: Json
+                           },
 "pagar_proveedor":
 { Args: { "p_pago": Json }; Returns: string
                            },
@@ -1278,6 +1426,11 @@ isOneToOne: false
                            },
 "payload_uuid":
 { Args: { "p": Json,"p_clave": string,"p_nulo": boolean }; Returns: string
+                           },
+"plan_cuotas":
+{ Args: { "p_capital": number,"p_interes_pct": number,"p_n": number }; Returns: {
+              "capital": number,"interes": number,"numero": number
+            }[]
                            },
 "precio_bs":
 { Args: { "p_lista": string,"p_producto_id": string }; Returns: number
@@ -1373,6 +1526,12 @@ isOneToOne: false
                            },
 "revisar_venta":
 { Args: { "p_venta_id": string }; Returns: Json
+                           },
+"saldo_credito":
+{ Args: { "p_credito_id": string }; Returns: number
+                           },
+"simular_credito":
+{ Args: { "p_cuotas"?: number,"p_inicial"?: number,"p_negocio_id": string,"p_total": number }; Returns: Json
                            },
 "stock_inconsistente":
 { Args: { "p_negocio_id": string }; Returns: {

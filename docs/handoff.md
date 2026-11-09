@@ -12,12 +12,25 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
 - **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85; migración `20261108130000` aplicada y `/panel/reconciliacion` verificada). Queda el PR `test/brechas-trazabilidad`.
+- **Fase 7, crédito (PR 4) — decisiones para el CTO:**
+  - Cualquier cuenta del negocio puede leer los créditos y saldos de clientes por RLS, igual que ventas y clientes. El permiso de las RPC ordena los listados, no los hace secretos. Si se quiere la deuda reservada, hay que cambiar las políticas.
+  - El saldo inicial se carga sin interés y se puede anular solo si no tiene pagos.
+  - P-07 (interés sobre saldo, sistema francés) sigue siendo un supuesto: cambiarlo solo toca `plan_cuotas`.
+  - No hay recibo imprimible del cobro de cuota (`shortcut`).
 - **Fase 7, reservas (PR 3):** pestaña Reservas del POS, solo con conexión, con anticipo en efectivo o QR. Decisiones:
   - La reserva valida el precio mínimo y exige stock disponible en el equipo.
   - Una venta de reserva nunca se encola: se reintenta en memoria con el mismo id, y si no se confirma se ofrece "Descartar y verificar".
   - Costo de la venta = foto de la reserva. Al completar, la liberación va sin costo; al cancelar reingresa con la foto.
   - Una venta de reserva no se anula ni se devuelve.
   - Para el CTO: el QR del anticipo se confirma en el mostrador y no se puede marcar como rechazado después.
+- **Fase 7, crédito (PR 4, rama `feat/credito`, pendiente de merge):** venta a crédito en el POS (solo con conexión, cliente
+  obligatorio, lista `credito`, inicial mínima por negocio, 1 a N cuotas, 3 casillas de documentos), plan de cuotas imprimible, modo
+  Cuotas para cobrar por caja, y `/panel/creditos` (saldo por cliente, vencidas con días de atraso, detalle, saldos iniciales y
+  parámetros). Decisiones y ajustes en `docs/plan-fase-7.md` (decisión 7). Para el CTO:
+  - El interés vive en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.
+  - Una venta con crédito no se anula ni se devuelve (`ERP_VENTA_CON_CREDITO`).
+  - Los saldos iniciales se cargan sin interés. Falta confirmar P-07 (interés sobre saldo) con el cliente: cambia solo `plan_cuotas`.
+  - Pendiente tras el merge: aplicar la migración `20261108160000` en producción y abrir `/panel/creditos` con Playwright.
 - **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.

@@ -36,10 +36,13 @@ const ID_DE: Record<string, string> = {
   get "inventario/[productoId]"() {
     return ids.producto;
   },
+  get "creditos/[id]"() {
+    return ids.credito;
+  },
 };
 const UBICACION_LAVANDERIA = "b0000000-0000-0000-0000-000000000003";
 // Ids creados en beforeAll, para las rutas con segmento dinámico.
-const ids = { producto: "", venta: "", orden: "", caja: "" };
+const ids = { producto: "", venta: "", orden: "", caja: "", credito: "" };
 const sesiones: string[] = [];
 let ordenLavanderia = "";
 
@@ -121,6 +124,29 @@ test.beforeAll(async () => {
     },
   });
   expect(o.status, JSON.stringify(o.json)).toBeLessThan(300);
+
+  // Saldo inicial (sin venta ni caja) para la página de detalle del crédito.
+  const c = await apiComo("dueno", "rpc/guardar_cliente", {
+    metodo: "POST",
+    cuerpo: {
+      p_negocio_id: NEGOCIOS.tienda.id,
+      p_datos: { nombre: `Cliente responsive ${crypto.randomUUID().slice(0, 8)}` },
+    },
+  });
+  expect(c.status, JSON.stringify(c.json)).toBeLessThan(300);
+  ids.credito = crypto.randomUUID();
+  const cr = await apiComo("dueno", "rpc/crear_credito_inicial", {
+    metodo: "POST",
+    cuerpo: {
+      p_id: ids.credito,
+      p_negocio_id: NEGOCIOS.tienda.id,
+      p_cliente_id: c.json as string,
+      p_capital: 50,
+      p_cuotas: 2,
+      p_primera: new Date().toISOString().slice(0, 10),
+    },
+  });
+  expect(cr.status, JSON.stringify(cr.json)).toBeLessThan(300);
 });
 
 test.afterAll(async () => {
@@ -130,6 +156,15 @@ test.afterAll(async () => {
     await apiComo("dueno", "rpc/anular_orden", {
       metodo: "POST",
       cuerpo: { p_orden_id: ordenLavanderia, p_motivo: "Limpieza de prueba" },
+    });
+  if (ids.credito)
+    await apiComo("dueno", "rpc/anular_credito_inicial", {
+      metodo: "POST",
+      cuerpo: {
+        p_operacion_id: crypto.randomUUID(),
+        p_credito_id: ids.credito,
+        p_motivo: "Limpieza de prueba",
+      },
     });
 });
 

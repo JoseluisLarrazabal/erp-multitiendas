@@ -93,6 +93,10 @@ export function DetalleSesionVista({
             </dd>
           </div>
           <div className={fila}>
+            <dt>Cuotas de crédito en efectivo</dt>
+            <dd>{bs(r.cuotas_efectivo)}</dd>
+          </div>
+          <div className={fila}>
             <dt>Esperado</dt>
             <dd className="font-semibold" data-testid="sesion-esperado">
               {r.esperado === null ? "—" : formatearBs(r.esperado)}
@@ -117,6 +121,10 @@ export function DetalleSesionVista({
           <div className={fila}>
             <dt>Anticipos de reservas por QR (incluidos en el QR)</dt>
             <dd>{bs(r.anticipos_qr)}</dd>
+          </div>
+          <div className={fila}>
+            <dt>Cuotas de crédito por QR (incluidas en el QR)</dt>
+            <dd>{bs(r.cuotas_qr)}</dd>
           </div>
           <div className={fila}>
             <dt>Devoluciones de reservas por QR (incluidas en el QR)</dt>

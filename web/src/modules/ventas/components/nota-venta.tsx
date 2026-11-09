@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, Plus } from "lucide-react";
+import { CalendarDays, Printer, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,11 +16,14 @@ export function NotaVentaVista({
   nota,
   enCola,
   alNueva,
+  alVerPlan,
 }: {
   nota: NotaVenta;
   // La venta aún no llegó al servidor: no se dice "registrada".
   enCola: boolean;
   alNueva: () => void;
+  // Venta a crédito: abre el plan de cuotas imprimible.
+  alVerPlan?: () => void;
 }) {
   const [papel, setPapel] = useState<Papel>("80");
   const orden = nota.orden;
@@ -54,6 +57,11 @@ export function NotaVentaVista({
         <Button type="button" className="h-10" onClick={() => window.print()}>
           <Printer /> Imprimir
         </Button>
+        {alVerPlan && (
+          <Button type="button" variant="outline" className="h-10" onClick={alVerPlan}>
+            <CalendarDays /> Plan de cuotas
+          </Button>
+        )}
         <Button type="button" variant="outline" className="h-10" onClick={alNueva} autoFocus>
           <Plus /> {orden ? "Nueva orden" : "Nueva venta"}
         </Button>
@@ -160,6 +168,14 @@ export function NotaVentaVista({
               <span>{bs(p.monto)}</span>
             </p>
           ))}
+          {nota.credito && (
+            <p className="flex justify-between font-semibold">
+              <span>
+                A crédito en {nota.credito.cuotas} {nota.credito.cuotas === 1 ? "cuota" : "cuotas"}
+              </span>
+              <span>{bs(nota.credito.financiado)}</span>
+            </p>
+          )}
           {nota.vuelto > 0 && (
             <p className="flex justify-between">
               <span>Vuelto</span>

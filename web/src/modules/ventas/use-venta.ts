@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { leerSinRed, useSinRed } from "@/lib/offline/red";
 import type { ClienteElegido } from "@/modules/clientes";
+import { cargarParametros, type Parametros } from "@/modules/creditos";
+import { createClient } from "@/lib/supabase/browser";
 import {
   exigeCliente,
   lineaIgual,
@@ -23,14 +25,16 @@ import {
   aCentavos,
   type ProductoPos,
 } from "./domain";
+import { formCreditoInicial, type FormCredito } from "./credito-venta";
 import { armarOrden, fichaInicial, hoyLaPaz, type FichaTexto } from "./orden";
 import type { ReservaActiva } from "./reservas";
 import type { DatosNegocio, Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
 import { useAtajos } from "./use-atajos";
 import { useCatalogo } from "./use-catalogo";
+import { useSimulacionCredito } from "./use-simulacion-credito";
 import type { ColaPos } from "./use-cola";
-import { useEnvio } from "./use-envio";
+import { CLAVE_CREDITO, useEnvio } from "./use-envio";
 import { useFocoVenta } from "./use-foco-venta";
 import { useVendedor } from "./use-vendedor";
 import type { NotaVenta } from "./venta";
@@ -86,7 +90,19 @@ export function useVenta(o: OpcionesVenta) {
   const esOrden = o.tipoNegocio === "lavanderia";
   const [express, setExpress] = useState(false);
   const [ficha, setFicha] = useState<FichaTexto>(() => fichaInicial());
-  const listaVenta: Lista = esOrden ? (express ? "express" : "normal") : "contado";
+  // Venta a crédito (RF-CRE-01): online-only, con la lista `credito` en todas las líneas y la inicial como cobro.
+  const puedeCredito = !esOrden && o.permisos.includes("gestionar_credito");
+  const [formCredito, setFormCredito] = useState<FormCredito>(formCreditoInicial);
+  const [parametrosCredito, setParametrosCredito] = useState<Parametros | null>(null);
+  // Sube al recargar los parámetros: obliga a pedir el plan de nuevo al servidor.
+  const [versionCredito, setVersionCredito] = useState(0);
+  const listaVenta: Lista = esOrden
+    ? express
+      ? "express"
+      : "normal"
+    : formCredito.activo
+      ? "credito"
+      : "contado";
   const [nota, setNota] = useState<NotaVenta | null>(null);
   // La nota se entregó pero la venta aún no llegó al servidor (queda en la cola).
   const [notaEnCola, setNotaEnCola] = useState(false);
@@ -110,7 +126,15 @@ export function useVenta(o: OpcionesVenta) {
     () => resumirCarrito(carrito, descuentoVentaTexto, permisosCarrito),
     [carrito, descuentoVentaTexto, permisosCarrito],
   );
-  const clienteObligatorio = exigeCliente(o.tipoNegocio);
+  const clienteObligatorio = exigeCliente(o.tipoNegocio) || formCredito.activo;
+  // El plan, el mínimo y los vencimientos los calcula el servidor (simular_credito), con debounce.
+  const { resultado: credito, reintentar: reintentarPlan } = useSimulacionCredito({
+    negocioId,
+    form: formCredito,
+    totalCentavos: resumen.totales?.total ?? 0,
+    hayCliente: !!cliente,
+    version: versionCredito,
+  });
 
   // Precios, tope y permisos pueden haber cambiado: se recarga todo y la validación local con los datos frescos
   // muestra qué falla. El descuento de la venta se conserva; solo se quitan las líneas que ya no se pueden vender.
@@ -139,6 +163,7 @@ export function useVenta(o: OpcionesVenta) {
       setExpress(false);
       setFicha(fichaInicial());
       setReserva(null);
+      setFormCredito(formCreditoInicial);
       setCobrando(false);
       setAviso(null);
       // El carrito queda vacío: un "Agregado: ..." viejo sería un anuncio engañoso al volver a la venta.
@@ -147,6 +172,14 @@ export function useVenta(o: OpcionesVenta) {
     },
     [registrarVenta],
   );
+  // Parámetros del crédito cambiados desde que se activó (inicial, cuotas): se releen SIN tocar precios ni descuentos.
+  const refrescarCredito = useCallback(async () => {
+    const r = await cargarParametros(createClient(), negocioId);
+    if (r.ok) {
+      setParametrosCredito(r.data);
+      setVersionCredito((v) => v + 1);
+    } else setAviso(`No se pudieron releer los parámetros del crédito: ${r.error}`);
+  }, [negocioId]);
   const envio = useEnvio({
     negocioId,
     cola: o.cola,
@@ -156,10 +189,13 @@ export function useVenta(o: OpcionesVenta) {
     tipoCambio: catalogoHook.catalogo?.tipoCambio ?? null,
     alErrorPrecios,
     alCajaCerrada,
+    alErrorCredito: refrescarCredito,
     alExito,
     usuarioId: o.usuarioId,
   });
   const { hayPendiente, limpiarRechazo } = envio;
+  // Cobro a crédito sin confirmar: el carrito, el cliente y las condiciones quedan fijos hasta saber qué pasó.
+  const creditoPendiente = envio.pendientes.has(CLAVE_CREDITO);
 
   const { registrarGuarda } = o;
   useEffect(() => {
@@ -202,7 +238,7 @@ export function useVenta(o: OpcionesVenta) {
   // Carga la reserva en un carrito vacío: un solo ítem al precio acordado, el cliente de la reserva y sin descuentos.
   function cargarReserva(r: ReservaActiva): boolean {
     const producto = catalogoHook.catalogo?.productos.find((p) => p.id === r.productoId);
-    if (carrito.length > 0) {
+    if (carrito.length > 0 || formCredito.activo) {
       setAviso("Termina o vacía la venta en curso antes de completar una reserva.");
       return false;
     }
@@ -238,6 +274,27 @@ export function useVenta(o: OpcionesVenta) {
     setCliente(null);
   }
 
+  // Activar el crédito pasa todas las líneas a la lista `credito` (reinicia precios y descuentos manuales); desactivarlo, a contado.
+  async function alternarCredito(valor: boolean) {
+    if (creditoPendiente || (valor && reserva)) return;
+    const lista: Lista = valor ? "credito" : "contado";
+    const faltan = sinPrecioEn(carrito, lista);
+    if (faltan.length)
+      return setAviso(`${faltan.join(", ")} no tiene precio de ${valor ? "crédito" : "contado"}.`);
+    if (valor) {
+      // Se leen al activar: el negocio pudo cambiar la inicial o el interés. Si no se pueden leer, el crédito no se activa
+      // (nunca se vende con parámetros viejos sin avisar).
+      const r = await cargarParametros(createClient(), negocioId);
+      if (!r.ok)
+        return setAviso(`No se activó el crédito: no se pudieron leer sus parámetros (${r.error})`);
+      setParametrosCredito(r.data);
+      setVersionCredito((v) => v + 1);
+    }
+    setAviso(null);
+    despachar({ tipo: "listaTodas", lista });
+    setFormCredito(valor ? { ...formCreditoInicial, activo: true } : formCreditoInicial);
+  }
+
   function cambiarExpress(valor: boolean) {
     const lista: Lista = valor ? "express" : "normal";
     const faltan = sinPrecioEn(carrito, lista);
@@ -255,6 +312,7 @@ export function useVenta(o: OpcionesVenta) {
     : !(sinRed && clienteObligatorio && !cliente) && (!clienteObligatorio || !!cliente);
   const puedeCobrar =
     !(reserva && sinRed) &&
+    !(formCredito.activo && (sinRed || !credito?.ok)) &&
     !consulta &&
     !!cajaId &&
     clienteListo &&
@@ -284,7 +342,10 @@ export function useVenta(o: OpcionesVenta) {
     descuentoVentaTexto,
     setDescuentoVentaTexto,
     cliente,
-    setCliente,
+    // Con un cobro a crédito sin confirmar el cliente no cambia: el payload pendiente ya lo lleva.
+    setCliente: (c: ClienteElegido | null) => {
+      if (!creditoPendiente) setCliente(c);
+    },
     clienteObligatorio,
     busqueda,
     setBusqueda,
@@ -315,29 +376,49 @@ export function useVenta(o: OpcionesVenta) {
     fichaValida,
     listaVenta,
     reserva,
+    puedeCredito,
+    alCajaCerrada,
+    formCredito,
+    setFormCredito,
+    credito,
+    reintentarPlan,
+    creditoPendiente,
+    parametrosCredito,
+    alternarCredito,
     cargarReserva,
     descartarReserva,
     motivoBloqueo: consulta
       ? null
-      : reserva && sinRed
-        ? "Completar una reserva necesita conexión."
-        : esOrden
-          ? (motivoBloqueo(resumen, {
+      : formCredito.activo
+        ? sinRed
+          ? "Vender a crédito necesita conexión."
+          : (motivoBloqueo(resumen, {
               cajaAbierta: !!cajaId,
-              clienteObligatorio: !sinRed,
-              hayCliente: !!cliente,
-            }) ?? (resumen.lineas.length > 0 && !fichaValida.ok ? fichaValida.motivo : null))
-          : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
-            ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
-            : motivoBloqueo(resumen, {
+              clienteObligatorio: false,
+              hayCliente: true,
+            }) ?? (resumen.lineas.length > 0 && credito && !credito.ok ? credito.motivo : null))
+        : reserva && sinRed
+          ? "Completar una reserva necesita conexión."
+          : esOrden
+            ? (motivoBloqueo(resumen, {
                 cajaAbierta: !!cajaId,
-                clienteObligatorio,
+                clienteObligatorio: !sinRed,
                 hayCliente: !!cliente,
-              }),
+              }) ?? (resumen.lineas.length > 0 && !fichaValida.ok ? fichaValida.motivo : null))
+            : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
+              ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
+              : motivoBloqueo(resumen, {
+                  cajaAbierta: !!cajaId,
+                  clienteObligatorio,
+                  hayCliente: !!cliente,
+                }),
     sinRed,
     // El carrito no se edita mientras la venta viaja al servidor.
     bloqueado:
-      envio.estado.t === "enviando" || envio.estado.t === "verificando" || reserva !== null,
+      envio.estado.t === "enviando" ||
+      envio.estado.t === "verificando" ||
+      reserva !== null ||
+      creditoPendiente,
     // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.
     colaBloquea: o.cola.estado.bloqueaEquipo,
   };

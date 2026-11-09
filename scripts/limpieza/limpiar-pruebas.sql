@@ -74,6 +74,12 @@ begin
   for m in select id from public.reservas where created_at < v_desde and cerrada_en >= v_desde limit 1 loop
     raise exception 'ABORTA: la reserva previa % se completó o canceló después de --desde; elegí otro --desde', m.id;
   end loop;
+  -- Un crédito previo (de venta o saldo inicial) con pagos después del corte quedaría con sus pagos borrados (y su estado `pagado` sin respaldo).
+  for m in select cr.id from public.creditos cr
+           where cr.created_at < v_desde
+             and exists (select 1 from public.credito_pagos p where p.credito_id = cr.id and p.created_at >= v_desde) limit 1 loop
+    raise exception 'ABORTA: el crédito previo % recibió pagos después de --desde; elegí otro --desde', m.id;
+  end loop;
   -- movimientos_inventario no lleva serie_id: el kardex no dice qué serie tocó cada movimiento. Si el producto de una
   -- serie previa tuvo traslado, baja, ajuste o daño dentro del corte, no se puede saber a qué estado o ubicación volver.
   for m in select s.producto_id from public.series s
@@ -97,6 +103,14 @@ begin
     insert into _resumen (tabla, filas) select 'reserva_pagos', count(*) from d;
   with d as (delete from public.reservas where created_at >= v_desde or venta_id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'reservas', count(*) from d;
+  with d as (delete from public.credito_pagos
+             where created_at >= v_desde or caja_sesion_id in (select id from _sesiones) returning 1)
+    insert into _resumen (tabla, filas) select 'credito_pagos', count(*) from d;
+  with d as (delete from public.credito_cuotas where credito_id in
+               (select id from public.creditos where created_at >= v_desde or venta_id in (select id from _ventas)) returning 1)
+    insert into _resumen (tabla, filas) select 'credito_cuotas', count(*) from d;
+  with d as (delete from public.creditos where created_at >= v_desde or venta_id in (select id from _ventas) returning 1)
+    insert into _resumen (tabla, filas) select 'creditos', count(*) from d;
   with d as (delete from public.orden_eventos
              where created_at >= v_desde or orden_id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'orden_eventos', count(*) from d;
@@ -196,6 +210,10 @@ begin
             or id in (select id from _sesiones))
        + (select count(*) from public.caja_movimientos where created_at >= v_desde or sesion_id not in (select id from public.caja_sesiones))
        + (select count(*) from public.clientes where created_at >= v_desde)
+       + (select count(*) from public.credito_pagos where created_at >= v_desde
+            or credito_id not in (select id from public.creditos))
+       + (select count(*) from public.credito_cuotas where credito_id not in (select id from public.creditos))
+       + (select count(*) from public.creditos where created_at >= v_desde)
        + (select count(*) from public.proveedor_pagos where created_at >= v_desde
             or compra_id not in (select id from public.compras))
        + (select count(*) from public.compra_items where compra_id not in (select id from public.compras))

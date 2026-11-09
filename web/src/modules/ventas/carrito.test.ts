@@ -20,7 +20,14 @@ const producto = (extra: Partial<ProductoPos> = {}): ProductoPos => ({
   tipo: "producto",
   controlaSerie: false,
   garantiaMeses: null,
-  precios: { contado: 4000, mayorista: 3600, minimo: 3200, normal: null, express: null },
+  precios: {
+    contado: 4000,
+    credito: null,
+    mayorista: 3600,
+    minimo: 3200,
+    normal: null,
+    express: null,
+  },
   stockPorUbicacion: {},
   stockTotal: 0,
   ...extra,
@@ -108,7 +115,14 @@ describe("carrito", () => {
   it("catálogo recargado: la línea toma el precio nuevo", () => {
     let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
     const nuevo = producto({
-      precios: { contado: 5000, mayorista: null, minimo: null, normal: null, express: null },
+      precios: {
+        contado: 5000,
+        credito: null,
+        mayorista: null,
+        minimo: null,
+        normal: null,
+        express: null,
+      },
     });
     c = reducirCarrito(c, { tipo: "reemplazar", productos: new Map([["p1", nuevo]]) });
     expect(resumirCarrito(c, "", sinPermiso).totales?.total).toBe(5000);
@@ -121,7 +135,14 @@ describe("carrito", () => {
       cambios: { precioTexto: "35,00", descuentoTexto: "1,00" },
     });
     const nuevo = producto({
-      precios: { contado: 5000, mayorista: 3600, minimo: 3200, normal: null, express: null },
+      precios: {
+        contado: 5000,
+        credito: null,
+        mayorista: 3600,
+        minimo: 3200,
+        normal: null,
+        express: null,
+      },
     });
     const mapa = new Map([["p1", nuevo]]);
     const r = reducirCarrito(editado, { tipo: "reemplazar", productos: mapa });
@@ -134,7 +155,14 @@ describe("carrito", () => {
     let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
     c = reducirCarrito(c, { tipo: "lista", id: "l1", lista: "mayorista" });
     const nuevo = producto({
-      precios: { contado: 4000, mayorista: null, minimo: 3200, normal: null, express: null },
+      precios: {
+        contado: 4000,
+        credito: null,
+        mayorista: null,
+        minimo: 3200,
+        normal: null,
+        express: null,
+      },
     });
     c = reducirCarrito(c, { tipo: "reemplazar", productos: new Map([["p1", nuevo]]) });
     expect(c[0]).toMatchObject({ lista: "contado", precioTexto: "40,00" });
@@ -147,7 +175,14 @@ describe("carrito", () => {
     const sinPrecio = producto({
       id: "p2",
       nombre: "Cable",
-      precios: { contado: null, mayorista: 100, minimo: null, normal: null, express: null },
+      precios: {
+        contado: null,
+        credito: null,
+        mayorista: 100,
+        minimo: null,
+        normal: null,
+        express: null,
+      },
     });
     const mapa = new Map([["p2", sinPrecio]]);
     expect(lineasNoVendibles(c, mapa)).toEqual(["Funda", "Cable"]);
@@ -159,7 +194,14 @@ describe("lavandería: lista normal o express", () => {
   const servicio = producto({
     id: "s1",
     tipo: "servicio",
-    precios: { contado: null, mayorista: null, minimo: null, normal: 1500, express: 2500 },
+    precios: {
+      contado: null,
+      credito: null,
+      mayorista: null,
+      minimo: null,
+      normal: 1500,
+      express: 2500,
+    },
   });
   const agregar = (lista: "normal" | "express") =>
     reducirCarrito([], { tipo: "agregar", producto: servicio, id: "l1", lista });

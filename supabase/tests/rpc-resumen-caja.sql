@@ -69,7 +69,8 @@ select lives_ok($$select public.registrar_movimiento_caja(pg_temp.i('M3'), pg_te
 select is(public.resumen_caja(pg_temp.i('S1')) - 'esperado',
   jsonb_build_object('monto_inicial', 100, 'ventas_efectivo', 60, 'ingresos', 25, 'gastos', 7.5, 'retiros', 12,
     'devoluciones_efectivo', 10, 'qr_neto', 30, 'qr_pendiente', 0, 'cantidad_ventas', 4, 'cantidad_movimientos', 3,
-    'anticipos_efectivo', 0, 'anticipos_qr', 0, 'devoluciones_reserva_efectivo', 0, 'devoluciones_reserva_qr', 0), 'sesión abierta: desglose y conteos');
+    'anticipos_efectivo', 0, 'anticipos_qr', 0, 'devoluciones_reserva_efectivo', 0, 'devoluciones_reserva_qr', 0,
+    'cuotas_efectivo', 0, 'cuotas_qr', 0), 'sesión abierta: desglose y conteos');
 select is((public.resumen_caja(pg_temp.i('S1'))->>'esperado')::numeric, 155.5, 'esperado a mano');
 select is((select r->>'monto_inicial' from (select public.resumen_caja(pg_temp.i('S1')) r) q)::numeric
   + (select (r->>'ventas_efectivo')::numeric + (r->>'ingresos')::numeric - (r->>'gastos')::numeric - (r->>'retiros')::numeric

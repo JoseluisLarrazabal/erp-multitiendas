@@ -13,6 +13,7 @@ const marca = String(Number.parseInt(corrida, 16) % 1e8).padStart(8, "0");
 
 export async function crearProductoConPrecio(opts: {
   contado: number;
+  credito?: number;
   minimo?: number;
   stock?: number;
   garantiaMeses?: number;
@@ -52,7 +53,11 @@ export async function crearProductoConPrecio(opts: {
         {
           producto_id: id,
           moneda: "BOB",
-          precios: { contado: opts.contado, minimo: opts.minimo ?? opts.contado },
+          precios: {
+            contado: opts.contado,
+            minimo: opts.minimo ?? opts.contado,
+            ...(opts.credito ? { credito: opts.credito } : {}),
+          },
         },
       ],
     },

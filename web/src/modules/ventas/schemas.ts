@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_CUOTAS } from "@/modules/creditos";
 import { aCentavos, type PreciosCentavos, type ProductoPos } from "./domain";
 
 // Respuesta de catalogo_pos (jsonb): se valida antes de usarla.
@@ -49,6 +50,7 @@ export function leerCatalogo(json: unknown): Catalogo | null {
     productos: r.data.productos.map((p) => {
       const precios: PreciosCentavos = {
         contado: centavosONulo(p.precios.contado),
+        credito: centavosONulo(p.precios.credito),
         mayorista: centavosONulo(p.precios.mayorista),
         minimo: centavosONulo(p.precios.minimo),
         normal: centavosONulo(p.precios.normal),
@@ -72,14 +74,14 @@ export function leerCatalogo(json: unknown): Catalogo | null {
 }
 
 // Payload de registrar_venta. Mismas reglas que el servidor: claves exactas, números JSON con a lo sumo
-// 2 decimales (3 en cantidad), crédito no existe; `anticipo` y `reserva_id` van juntos y solo en línea. QR `verificado: false` (pendiente) solo existe sin conexión y viaja con
+// 2 decimales (3 en cantidad); `anticipo` y `reserva_id` van juntos y solo en línea. QR `verificado: false` (pendiente) solo existe sin conexión y viaja con
 // `p_offline`: el servidor lo rechaza en una venta en línea.
 export const dinero = z.number().refine((n) => n >= 0 && Math.round(n * 100) / 100 === n);
 export const cantidad = z.number().refine((n) => n > 0 && Math.round(n * 1000) / 1000 === n);
 
 export const itemVentaSchema = z.strictObject({
   producto_id: z.guid(),
-  lista: z.enum(["contado", "mayorista", "minimo", "normal", "express"]),
+  lista: z.enum(["contado", "credito", "mayorista", "minimo", "normal", "express"]),
   cantidad,
   precio_unitario: dinero.refine((n) => n > 0),
   descuento: dinero,
@@ -97,22 +99,40 @@ export const pagoVentaSchema = z.discriminatedUnion("medio", [
   z.strictObject({ medio: z.literal("anticipo"), monto: dinero.refine((n) => n > 0) }),
 ]);
 
-export const ventaPayloadSchema = z.strictObject({
-  id: z.guid(),
-  dispositivo_id: z.guid(),
-  caja_sesion_id: z.guid(),
-  numero: z.string().regex(/^[A-Z][0-9]{1,2}-[0-9]{6}$/),
-  cliente_id: z.guid().nullable(),
-  // Solo al completar una reserva (en línea): la venta de siempre no manda la clave.
-  reserva_id: z.guid().optional(),
-  creada_en_cliente: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/),
-  descuento: dinero,
-  total: dinero.refine((n) => n > 0),
-  items: z.array(itemVentaSchema).min(1).max(200),
-  pagos: z.array(pagoVentaSchema).min(1).max(10),
+export const creditoPayloadSchema = z.strictObject({
+  cuotas: z.number().int().min(1).max(MAX_CUOTAS),
+  docs_ci: z.boolean(),
+  docs_domicilio: z.boolean(),
+  docs_pagare: z.boolean(),
 });
+export type CreditoPayload = z.infer<typeof creditoPayloadSchema>;
+
+export const ventaPayloadSchema = z
+  .strictObject({
+    id: z.guid(),
+    dispositivo_id: z.guid(),
+    caja_sesion_id: z.guid(),
+    numero: z.string().regex(/^[A-Z][0-9]{1,2}-[0-9]{6}$/),
+    cliente_id: z.guid().nullable(),
+    // Solo al completar una reserva (en línea): la venta de siempre no manda la clave.
+    reserva_id: z.guid().optional(),
+    // Venta a crédito (RF-CRE-01): solo en línea. Los pagos suman la inicial; las líneas van en la lista `credito`.
+    condicion: z.literal("credito").optional(),
+    credito: creditoPayloadSchema.optional(),
+    creada_en_cliente: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/),
+    descuento: dinero,
+    total: dinero.refine((n) => n > 0),
+    items: z.array(itemVentaSchema).min(1).max(200),
+    pagos: z.array(pagoVentaSchema).min(1).max(10),
+  })
+  .refine(
+    // La lista `credito` y el bloque `credito` van juntos y solo con condicion = credito (mismas reglas que el servidor).
+    (v) =>
+      (v.condicion === "credito") === (v.credito !== undefined) &&
+      v.items.every((i) => (i.lista === "credito") === (v.condicion === "credito")),
+  );
 export type VentaPayload = z.infer<typeof ventaPayloadSchema>;
 
 // Ficha de una orden de lavandería (p_orden de crear_orden). Mismas claves y largos que el servidor; los opcionales
@@ -145,6 +165,8 @@ export const respuestaVentaSchema = z.object({
 // Lo que /pos guarda en IndexedDB para abrir sin red. Sin costos ni clientes: catalogo_pos no los trae.
 const preciosGuardadosSchema = z.object({
   contado: z.number().nullable(),
+  // Catálogos guardados antes del crédito no la traen: sin precio de crédito.
+  credito: z.number().nullable().default(null),
   mayorista: z.number().nullable(),
   minimo: z.number().nullable(),
   normal: z.number().nullable(),

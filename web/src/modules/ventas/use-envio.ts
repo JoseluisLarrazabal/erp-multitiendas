@@ -15,16 +15,23 @@ import {
   TIPO_VENTA,
   mayorSecuenciaEnCola,
 } from "./cola-ventas";
-import { cobrarReserva, MENSAJE_SIN_CONFIRMAR } from "./cobro-reserva";
+import { cobrarEnLinea, MENSAJE_SIN_CONFIRMAR } from "./cobro-en-linea";
+import { alcanceCuotas, hayCuotasSinConfirmar } from "./cobro-cuota";
 import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import { existeVenta, type Equipo } from "./queries";
 import type { OrdenPayload, VentaPayload } from "./schemas";
 
-// Cobro de reserva sin confirmar: lo que se envió y la nota armada con esos datos.
-export type PendienteReserva = { payload: VentaPayload; nota: NotaVenta };
+// Cobro online-only (reserva o crédito) sin confirmar: lo que se envió y la nota armada con esos datos.
+export type PendienteEnLinea = { payload: VentaPayload; nota: NotaVenta };
 import { equipoTieneCola, type ColaPos } from "./use-cola";
-import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from "./venta";
+import {
+  construirNota,
+  construirPayload,
+  type DatosCredito,
+  type DatosEnvio,
+  type NotaVenta,
+} from "./venta";
 
 export type EstadoEnvio =
   | { t: "libre" }
@@ -34,8 +41,10 @@ export type EstadoEnvio =
   | { t: "rechazada"; mensaje: string };
 
 const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_SIN_PRECIO"];
-const MENSAJE_RESERVA_RED =
-  "Completar una reserva necesita conexión: no se cobró. Vuelve a intentar con red.";
+const MENSAJE_EN_LINEA_RED =
+  "Esta venta necesita conexión (reserva o crédito): no se cobró. Vuelve a intentar con red.";
+// Clave del cobro a crédito sin confirmar en `pendientes` (hay una sola venta en curso a la vez).
+export const CLAVE_CREDITO = "credito";
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
   "No se pudo guardar la venta en este equipo, así que no se cobró. Revisa el espacio y los permisos del navegador, o recarga la página.";
@@ -51,6 +60,8 @@ export type ContextoCobro = {
   // Completar una reserva: su id y el anticipo recibido (centavos). Nunca se encola sin conexión.
   reservaId?: string;
   anticipo?: number;
+  // Venta a crédito: efectivo y qr son la inicial. Tampoco se encola jamás.
+  credito?: DatosCredito;
   // Lavandería: la ficha viaja con la venta (crear_orden) y la nota se imprime como boleta.
   orden?: OrdenPayload;
   nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden">;
@@ -72,11 +83,14 @@ export function useEnvio(opts: {
   tipoCambio: number | null;
   alErrorPrecios: () => Promise<void>;
   alCajaCerrada: () => Promise<void>;
+  // Rechazo por los parámetros del crédito (inicial mínima): la pantalla los relee sin tocar el carrito.
+  alErrorCredito: () => Promise<void>;
   alExito: (nota: NotaVenta, items: VentaPayload["items"], enviada: boolean) => void;
   usuarioId: string;
   sesionCaducada: boolean;
 }) {
   const { negocioId, equipo, cajaId, tipoCambio, alErrorPrecios, alCajaCerrada, alExito } = opts;
+  const { alErrorCredito } = opts;
   const { usuarioId, cola } = opts;
   const caducada = useRef(opts.sesionCaducada);
   useEffect(() => {
@@ -89,29 +103,29 @@ export function useEnvio(opts: {
   }, [equipo.id, equipo.ultimoNumero]);
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const ocupado = useRef(false);
-  // Cobros de reserva sin confirmar, por reserva: el payload se reenvía idéntico (mismo id y número) hasta saber qué pasó
+  // Cobros online-only sin confirmar, por reserva (o CLAVE_CREDITO): el payload se reenvía idéntico (mismo id y número) hasta saber qué pasó
   // en el servidor. El mapa vive en estado (la pantalla lo muestra) y en un ref (hayPendiente lo lee sin render).
-  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteReserva>>(new Map());
+  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteEnLinea>>(new Map());
   const pendRef = useRef(pendientes);
-  const fijarPendiente = useCallback((reservaId: string, p: PendienteReserva | null) => {
+  const fijarPendiente = useCallback((clave: string, p: PendienteEnLinea | null) => {
     const m = new Map(pendRef.current);
-    if (p) m.set(reservaId, p);
-    else m.delete(reservaId);
+    if (p) m.set(clave, p);
+    else m.delete(clave);
     pendRef.current = m;
     setPendientes(m);
   }, []);
 
-  // Una reserva nunca pasa por la cola ni por IndexedDB: sin conexión no se cobra.
-  const confirmarReserva = useCallback(
-    async (resumen: ResumenCarrito, c: ContextoCobro & { reservaId: string }) => {
+  // Una reserva o un crédito nunca pasan por la cola ni por IndexedDB: sin conexión no se cobra.
+  const confirmarEnLinea = useCallback(
+    async (resumen: ResumenCarrito, c: ContextoCobro, clave: string) => {
       if (leerSinRed() || (await hayAperturaEnCola(equipo.id)))
-        return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_EN_LINEA_RED });
       const cuenta = caducada.current
         ? "rechazar"
         : await comprobarCuenta(createClient(), usuarioId);
       if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
-      if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
-      const previo = pendRef.current.get(c.reservaId) ?? null;
+      if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_EN_LINEA_RED });
+      const previo = pendRef.current.get(clave) ?? null;
       const armada: { nota?: NotaVenta } = { nota: previo?.nota };
       const ventaId = crypto.randomUUID();
       // Igual que en la venta normal: un QR sin confirmar no viaja en línea.
@@ -123,7 +137,7 @@ export function useEnvio(opts: {
             leerContador(equipo.id),
             await mayorSecuenciaEnCola(equipo.id),
           );
-      const salida = await cobrarReserva(createClient(), {
+      const salida = await cobrarEnLinea(createClient(), {
         previo: previo?.payload,
         primerNumero,
         alVerificar: () => setEstado({ t: "verificando" }),
@@ -141,6 +155,7 @@ export function useEnvio(opts: {
             qrVerificado,
             reservaId: c.reservaId,
             anticipo: c.anticipo,
+            credito: c.credito,
           };
           const payload = construirPayload(resumen, datos);
           const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
@@ -152,30 +167,44 @@ export function useEnvio(opts: {
       if (salida.t === "no-armada" || !armada.nota)
         return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
       if (salida.t === "sin-confirmar") {
-        fijarPendiente(c.reservaId, { payload: salida.payload, nota: armada.nota });
+        fijarPendiente(clave, { payload: salida.payload, nota: armada.nota });
         return setEstado({ t: "rechazada", mensaje: MENSAJE_SIN_CONFIRMAR });
       }
       if (salida.t === "rechazada") {
-        fijarPendiente(c.reservaId, null);
+        fijarPendiente(clave, null);
         setEstado({ t: "rechazada", mensaje: salida.error });
         if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
+        else if (
+          c.credito &&
+          (salida.codigo === "ERP_INICIAL_INSUFICIENTE" || salida.codigo === "ERP_DATOS_INVALIDOS")
+        )
+          await alErrorCredito();
         else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
         return;
       }
-      fijarPendiente(c.reservaId, null);
+      fijarPendiente(clave, null);
       contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
       subirContador(equipo.id, secuenciaDe(salida.numero));
       setEstado({ t: "libre" });
       alExito({ ...armada.nota, numero: salida.numero }, salida.payload.items, true);
     },
-    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito, fijarPendiente],
+    [
+      equipo,
+      cajaId,
+      usuarioId,
+      alCajaCerrada,
+      alErrorCredito,
+      alErrorPrecios,
+      alExito,
+      fijarPendiente,
+    ],
   );
 
   // "Descartar y verificar": pregunta al servidor si el cobro sin confirmar quedó registrado. Si existe, muestra la nota
   // con lo congelado; si no, lo limpia y avisa que el cobro no se hizo. Si no se puede saber, conserva la entrada.
   const descartarYVerificar = useCallback(
-    async (reservaId: string) => {
-      const p = pendRef.current.get(reservaId);
+    async (clave: string) => {
+      const p = pendRef.current.get(clave);
       if (!p || ocupado.current) return;
       ocupado.current = true;
       try {
@@ -186,7 +215,7 @@ export function useEnvio(opts: {
             t: "rechazada",
             mensaje: `No se pudo verificar (${r.error}). No entregues el producto; intenta de nuevo.`,
           });
-        fijarPendiente(reservaId, null);
+        fijarPendiente(clave, null);
         if (!r.data)
           return setEstado({
             t: "rechazada",
@@ -207,10 +236,10 @@ export function useEnvio(opts: {
       if (ocupado.current || !cajaId) return;
       ocupado.current = true;
       try {
-        if (c.reservaId) {
+        if (c.reservaId || c.credito) {
           const fallo = await protegerCobro(async () => {
             setEstado({ t: "enviando" });
-            await confirmarReserva(resumen, { ...c, reservaId: c.reservaId! });
+            await confirmarEnLinea(resumen, c, c.reservaId ?? CLAVE_CREDITO);
           });
           if (fallo) setEstado({ t: "rechazada", mensaje: fallo });
           return;
@@ -320,15 +349,19 @@ export function useEnvio(opts: {
       alErrorPrecios,
       alCajaCerrada,
       alExito,
-      confirmarReserva,
+      confirmarEnLinea,
     ],
   );
 
   // Cola persistente del equipo (pendientes y rechazadas) o un envío en curso.
   const equipoId = equipo.id;
   const hayPendiente = useCallback(
-    async () => ocupado.current || pendRef.current.size > 0 || (await equipoTieneCola(equipoId)),
-    [equipoId],
+    async () =>
+      ocupado.current ||
+      pendRef.current.size > 0 ||
+      hayCuotasSinConfirmar(alcanceCuotas(negocioId, equipoId, usuarioId)) ||
+      (await equipoTieneCola(equipoId)),
+    [equipoId, negocioId, usuarioId],
   );
   const limpiarRechazo = useCallback(
     () => setEstado((e) => (e.t === "rechazada" ? { t: "libre" } : e)),

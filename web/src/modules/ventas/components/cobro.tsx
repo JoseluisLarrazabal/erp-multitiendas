@@ -19,6 +19,8 @@ import type { EstadoEnvio } from "../use-envio";
 // Es un AlertDialog (Escape, foco atrapado, aria-modal). Mientras envía no se cierra.
 export function Cobro({
   total: totalVenta,
+  titulo = "Cobrar venta",
+  detalle,
   anticipo = 0,
   congelado,
   alVerificar,
@@ -27,6 +29,9 @@ export function Cobro({
   alCerrar,
 }: {
   total: number;
+  titulo?: string;
+  // Texto aclaratorio bajo el total (p. ej. el crédito: total de la venta, inicial y cuotas).
+  detalle?: string;
   // Reserva: anticipo ya recibido (centavos). Se cobra solo el saldo.
   anticipo?: number;
   // Cobro de reserva sin confirmar: lo enviado (centavos) queda fijo y solo se puede reintentar idéntico o verificar.
@@ -95,9 +100,12 @@ export function Cobro({
           }}
         >
           <div className="flex items-baseline justify-between">
-            <AlertDialogTitle>Cobrar venta</AlertDialogTitle>
+            <AlertDialogTitle>{titulo}</AlertDialogTitle>
             <p className="text-2xl font-bold tabular-nums">{bs(total)}</p>
           </div>
+          {detalle && (
+            <p className="bg-muted rounded-lg px-3 py-2 text-sm tabular-nums">{detalle}</p>
+          )}
           {anticipo > 0 && (
             <p className="bg-muted rounded-lg px-3 py-2 text-sm tabular-nums">
               Total {bs(totalVenta)} menos el anticipo de la reserva {bs(anticipo)}.

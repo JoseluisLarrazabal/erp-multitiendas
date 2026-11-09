@@ -92,3 +92,42 @@ describe("QR pendiente de verificar", () => {
     ).not.toHaveProperty("pendiente");
   });
 });
+
+describe("venta a crédito", () => {
+  const lineasCredito = {
+    ...resumen,
+    lineas: [{ ...resumen.lineas[0]!, linea: { ...resumen.lineas[0]!.linea, lista: "credito" } }],
+  } as unknown as ResumenCarrito;
+  const credito: DatosEnvio = {
+    ...datos,
+    clienteId: uuid(8),
+    efectivo: 4000,
+    qr: 0,
+    qrVerificado: true,
+    credito: { cuotas: 3, docsCi: true, docsDomicilio: false, docsPagare: true },
+  };
+  it("manda condicion, el bloque credito y la inicial como único pago; el total es el completo", () => {
+    const p = construirPayload(lineasCredito, credito);
+    expect(p).toMatchObject({
+      condicion: "credito",
+      credito: { cuotas: 3, docs_ci: true, docs_domicilio: false, docs_pagare: true },
+      total: 80,
+      pagos: [{ medio: "efectivo", monto: 40 }],
+    });
+  });
+  it("no arma el payload sin cliente, con una línea fuera de la lista crédito o con reserva", () => {
+    expect(construirPayload(lineasCredito, { ...credito, clienteId: null })).toBeNull();
+    expect(construirPayload(resumen, credito)).toBeNull();
+    expect(construirPayload(lineasCredito, { ...credito, reservaId: uuid(7) })).toBeNull();
+  });
+  it("la nota dice cuánto queda a crédito y en cuántas cuotas", () => {
+    const nota = construirNota(lineasCredito, credito, {
+      negocio: { nombre: "N", nit: null, datosNota: null },
+      vendedor: "V",
+      cliente: null,
+      recibido: 4000,
+    });
+    expect(nota?.credito).toEqual({ ventaId: uuid(1), cuotas: 3, financiado: 4000 });
+    expect(nota?.pagos).toEqual([{ medio: "efectivo", monto: 4000 }]);
+  });
+});
