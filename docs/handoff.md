@@ -1,10 +1,26 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-09 (auditoría funcional previa a la entrega).
+Última actualización: 2026-11-09 (plan de cierre de la auditoría previa a la entrega, aprobado).
 
 ## Próxima sesión (arrancar acá)
 
+- **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
+  entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
+  M-17, pruebas y no concluyentes), 4 documentos.
+  - **Hito activo: PR 1, bloqueantes (rama `fix/bloqueantes-preentrega`). Estado: en implementación.**
+  - Decisiones del CTO (2026-11-09): camino de 4 PRs y M-1 con la opción recomendada (`cancelar_reserva` exige
+    `anular`), a cargo del chairman; autorizó la consulta de colisiones de B-1 en producción; rotar credenciales y
+    comprar el dominio quedan para cuando el producto esté listo para entregar (objeción ya dicha).
+  - Consulta de B-1 en producción (solo lectura, 2026-11-09): 597 productos, 330 con código de barras, 0 colisiones.
+    Defecto latente; se arregla igual.
+  - Hallazgo nuevo: los artifacts del backup suman 240 MB y crecen 37 MB por día. Si la cuenta de GitHub es Free
+    (500 MB), el backup falla hacia el 2026-11-16. B-4 se rediseñó para caber: corrida completa con 7 días de
+    retención y corrida solo-base con 30. **Pendiente CTO: mirar plan y cupo (almacenamiento y minutos) en Billing.**
+  - El despliegue a producción tras cada merge con migraciones (backup manual, `db push --dry-run`, `db push`,
+    función `admin-usuarios`) quedó cubierto por la aprobación del plan.
+  - Fuera del plan: M-15 (registro de errores, exige elegir proveedor), M-3 y P-07, P-06, P-12 (cliente), D-01, D-02,
+    D-04 (CTO).
 - **Auditoría funcional previa a la entrega (CTO, 2026-11-09): `docs/auditoria-preentrega.md`.** Veredicto: no está
   listo para firmar el acta; sí para cargar datos una vez cerrados 6 bloqueantes de código. Sin críticos.
   - Evidencia: pasos 1 a 8 del CI en local sobre `a910b49` (Vitest 464, pgTAP 2.186, integración 12, Playwright 237,
