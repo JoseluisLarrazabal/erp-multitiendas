@@ -84,9 +84,9 @@ Bajos:
 | PR | Contenido | Estado |
 |---|---|---|
 | `fix/cola-intentos-red` | WEB-M1 | mergeado (#82) |
-| `fix/auditoria-db` | DB-A2, DB-M3, DB-M4, DB-M5 y los bajos de SQL, en una migración | PR abierto |
+| `fix/auditoria-db` | DB-A2, DB-M3, DB-M4, DB-M5 y los bajos de SQL, en una migración | mergeado (#85) |
 | `fix/auditoria-web` | DB-A1 (alerta), WEB-M2, WEB-M3 y los bajos de web | mergeado (#84) |
-| `test/brechas-trazabilidad` | E2E de filtros, dólar paralelo, "sin recoger" con datos, garantía en la nota, venta en menos de 2 s; axe; Firefox y WebKit; `pnpm audit` semanal; `retries` y el intermitente de `catalogo.spec.ts:195` | pendiente |
+| `test/brechas-trazabilidad` | E2E de filtros, dólar paralelo, "sin recoger" con datos, garantía en la nota, venta en menos de 2 s; axe; Firefox y WebKit; `pnpm audit` semanal; `retries` y el intermitente de `catalogo.spec.ts:195` | mergeado (#91). Firefox reemplazado por Android e iOS emulados (RNF-15) |
 
 Los PRs van intercalados con la fase 7, porque comparten la base local en puertos fijos.
 
