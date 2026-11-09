@@ -12,6 +12,11 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
 - **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85; migración `20261108130000` aplicada y `/panel/reconciliacion` verificada). Queda el PR `test/brechas-trazabilidad`.
+- **Fase 7, crédito (PR 4) — decisiones para el CTO:**
+  - Cualquier cuenta del negocio puede leer los créditos y saldos de clientes por RLS, igual que ventas y clientes. El permiso de las RPC ordena los listados, no los hace secretos. Si se quiere la deuda reservada, hay que cambiar las políticas.
+  - El saldo inicial se carga sin interés y se puede anular solo si no tiene pagos.
+  - P-07 (interés sobre saldo, sistema francés) sigue siendo un supuesto: cambiarlo solo toca `plan_cuotas`.
+  - No hay recibo imprimible del cobro de cuota (`shortcut`).
 - **Fase 7, reservas (PR 3):** pestaña Reservas del POS, solo con conexión, con anticipo en efectivo o QR. Decisiones:
   - La reserva valida el precio mínimo y exige stock disponible en el equipo.
   - Una venta de reserva nunca se encola: se reintenta en memoria con el mismo id, y si no se confirma se ofrece "Descartar y verificar".
