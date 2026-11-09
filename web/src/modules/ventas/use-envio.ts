@@ -13,15 +13,23 @@ import {
   protegerCobro,
   secuenciaDe,
   TIPO_VENTA,
+  mayorSecuenciaEnCola,
 } from "./cola-ventas";
-import { formatearNumero } from "./domain";
+import { cobrarReserva, MENSAJE_SIN_CONFIRMAR } from "./cobro-reserva";
+import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import type { Equipo } from "./queries";
 import type { OrdenPayload, VentaPayload } from "./schemas";
 import { equipoTieneCola, type ColaPos } from "./use-cola";
 import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from "./venta";
+import type { VentaPayload as Payload } from "./schemas";
 
-export type EstadoEnvio = { t: "libre" } | { t: "enviando" } | { t: "rechazada"; mensaje: string };
+export type EstadoEnvio =
+  | { t: "libre" }
+  | { t: "enviando" }
+  // Venta de reserva sin respuesta aún: se reintenta en memoria y el cobro no se puede cerrar ni repetir.
+  | { t: "verificando" }
+  | { t: "rechazada"; mensaje: string };
 
 const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_SIN_PRECIO"];
 const MENSAJE_RESERVA_RED =
@@ -79,12 +87,89 @@ export function useEnvio(opts: {
   }, [equipo.id, equipo.ultimoNumero]);
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const ocupado = useRef(false);
+  // Cobro de reserva sin confirmar: su payload se reenvía idéntico (mismo id y número) hasta saber qué pasó en el servidor.
+  const sinConfirmar = useRef<{ reservaId: string; payload: Payload; nota: NotaVenta } | null>(
+    null,
+  );
+
+  // Una reserva nunca pasa por la cola ni por IndexedDB: sin conexión no se cobra.
+  const confirmarReserva = useCallback(
+    async (resumen: ResumenCarrito, c: ContextoCobro & { reservaId: string }) => {
+      if (leerSinRed() || (await hayAperturaEnCola(equipo.id)))
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
+      const cuenta = caducada.current
+        ? "rechazar"
+        : await comprobarCuenta(createClient(), usuarioId);
+      if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
+      if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
+      const previo = sinConfirmar.current?.reservaId === c.reservaId ? sinConfirmar.current : null;
+      let nota = previo?.nota ?? null;
+      const ventaId = crypto.randomUUID();
+      const primerNumero = previo
+        ? secuenciaDe(previo.payload.numero)
+        : siguienteSecuencia(
+            contador.current,
+            leerContador(equipo.id),
+            await mayorSecuenciaEnCola(equipo.id),
+          );
+      const salida = await cobrarReserva(createClient(), {
+        previo: previo?.payload,
+        primerNumero,
+        alVerificar: () => setEstado({ t: "verificando" }),
+        armar: (seq) => {
+          const datos: DatosEnvio = {
+            ventaId,
+            dispositivoId: equipo.id,
+            cajaId: cajaId!,
+            numero: formatearNumero(equipo.prefijo, seq),
+            clienteId: c.clienteId,
+            creadaEnCliente: new Date().toISOString(),
+            descuentoVentaTexto: c.descuentoVentaTexto,
+            efectivo: c.efectivo,
+            qr: c.qr,
+            qrVerificado: true,
+            reservaId: c.reservaId,
+            anticipo: c.anticipo,
+          };
+          const payload = construirPayload(resumen, datos);
+          nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
+          return payload;
+        },
+      });
+      if (salida.t === "sin-confirmar") {
+        sinConfirmar.current = { reservaId: c.reservaId, payload: salida.payload, nota: nota! };
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_SIN_CONFIRMAR });
+      }
+      sinConfirmar.current = null;
+      if (salida.t === "agotada") return setEstado({ t: "rechazada", mensaje: MENSAJE_AGOTADA });
+      if (salida.t === "no-armada") return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
+      if (salida.t === "rechazada") {
+        setEstado({ t: "rechazada", mensaje: salida.error });
+        if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
+        else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
+        return;
+      }
+      contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
+      subirContador(equipo.id, secuenciaDe(salida.numero));
+      setEstado({ t: "libre" });
+      alExito({ ...nota!, numero: salida.numero }, salida.payload.items, true);
+    },
+    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito],
+  );
 
   const confirmar = useCallback(
     async (resumen: ResumenCarrito, c: ContextoCobro) => {
       if (ocupado.current || !cajaId) return;
       ocupado.current = true;
       try {
+        if (c.reservaId) {
+          const fallo = await protegerCobro(async () => {
+            setEstado({ t: "enviando" });
+            await confirmarReserva(resumen, { ...c, reservaId: c.reservaId! });
+          });
+          if (fallo) setEstado({ t: "rechazada", mensaje: fallo });
+          return;
+        }
         const fallo = await protegerCobro(async () => {
           setEstado({ t: "enviando" });
           // Con red, la cuenta se comprueba antes de cobrar: una sesión caducada o de otra cuenta no cobra ni encola.
@@ -106,9 +191,6 @@ export function useEnvio(opts: {
           if (qrPendiente) enLinea = false;
           // Una orden sin cliente (nombre escrito sin red) tampoco viaja en línea: el servidor la rechaza sin p_offline.
           if (c.orden && !c.clienteId) enLinea = false;
-          // Una reserva exige conexión: sin ella no se cobra ni se encola.
-          if (c.reservaId && !enLinea)
-            return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
           const ventaId = crypto.randomUUID();
           const armada: { nota?: NotaVenta; items?: VentaPayload["items"] } = {};
           cola.enCurso(ventaId);
@@ -129,7 +211,6 @@ export function useEnvio(opts: {
                   efectivo: c.efectivo,
                   qr: c.qr,
                   qrVerificado: !qrPendiente,
-                  ...(c.reservaId ? { reservaId: c.reservaId, anticipo: c.anticipo } : {}),
                 };
                 const payload = construirPayload(resumen, datos);
                 const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
@@ -194,13 +275,15 @@ export function useEnvio(opts: {
       alErrorPrecios,
       alCajaCerrada,
       alExito,
+      confirmarReserva,
     ],
   );
 
   // Cola persistente del equipo (pendientes y rechazadas) o un envío en curso.
   const equipoId = equipo.id;
   const hayPendiente = useCallback(
-    async () => ocupado.current || (await equipoTieneCola(equipoId)),
+    async () =>
+      ocupado.current || sinConfirmar.current !== null || (await equipoTieneCola(equipoId)),
     [equipoId],
   );
   const limpiarRechazo = useCallback(

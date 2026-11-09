@@ -63,6 +63,7 @@ export function lineaIgual(
   const igual = estado.find(
     (l) =>
       l.producto.id === producto.id &&
+      !l.precioFijo &&
       !l.producto.controlaSerie &&
       l.lista === lista &&
       l.descuentoTexto === "" &&
@@ -122,6 +123,7 @@ export function reducirCarrito(estado: readonly Linea[], accion: AccionCarrito):
     // el precio sin tocar, que sigue a su lista, y una lista que ya no tiene precio, que vuelve a contado.
     case "reemplazar":
       return estado.flatMap((l) => {
+        if (l.precioFijo) return [l]; // reserva: precio acordado, ni se reprecia ni se quita
         const producto = accion.productos.get(l.producto.id);
         if (!productoVendible(producto, l.lista)) return [];
         const lista = producto.precios[l.lista] === null ? "contado" : l.lista;

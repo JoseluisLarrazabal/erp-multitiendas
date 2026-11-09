@@ -32,16 +32,18 @@ const form = (extra: Partial<FormReserva> = {}): FormReserva => ({
   precioTexto: "12",
   anticipoTexto: "20",
   medio: "efectivo",
+  qrConfirmado: false,
   ...extra,
 });
 
 describe("armarReserva", () => {
   it("arma el payload en bolivianos con las claves exactas", () => {
-    const r = armarReserva(form(), uuid(9), uuid(3));
+    const r = armarReserva(form(), uuid(9), uuid(8), uuid(3));
     expect(r).toEqual({
       ok: true,
       payload: {
         id: uuid(9),
+        dispositivo_id: uuid(8),
         caja_sesion_id: uuid(3),
         cliente_id: uuid(1),
         producto_id: uuid(2),
@@ -55,7 +57,7 @@ describe("armarReserva", () => {
   });
   it("rechaza lo mismo que el servidor", () => {
     const e = (f: Partial<FormReserva>, caja: string | null = uuid(3)) => {
-      const r = armarReserva(form(f), uuid(9), caja);
+      const r = armarReserva(form(f), uuid(9), uuid(8), caja);
       return r.ok ? null : r.error;
     };
     expect(e({}, null)).toMatch(/caja/);
@@ -68,13 +70,18 @@ describe("armarReserva", () => {
     expect(e({ precioTexto: "0" })).toMatch(/Precio/);
     expect(e({ anticipoTexto: "" })).toMatch(/Anticipo/);
     expect(e({ anticipoTexto: "60,01" })).toMatch(/superar/);
+    expect(e({ medio: "qr" })).toMatch(/QR/);
   });
   it("el anticipo igual al total es válido; kg admite 3 decimales", () => {
-    expect(armarReserva(form({ anticipoTexto: "60" }), uuid(9), uuid(3)).ok).toBe(true);
+    expect(armarReserva(form({ anticipoTexto: "60" }), uuid(9), uuid(8), uuid(3)).ok).toBe(true);
+    expect(
+      armarReserva(form({ medio: "qr", qrConfirmado: true }), uuid(9), uuid(8), uuid(3)).ok,
+    ).toBe(true);
     const kg = producto({ unidad: "kg" });
     const r = armarReserva(
       form({ producto: kg, cantidadTexto: "1,25", precioTexto: "10", anticipoTexto: "12,50" }),
       uuid(9),
+      uuid(8),
       uuid(3),
     );
     expect(r.ok && r.payload.cantidad).toBe(1.25);

@@ -4,6 +4,7 @@ import { cantidad, dinero } from "./schemas";
 // Payload de crear_reserva: mismas claves y reglas que el servidor (RF-RES-01).
 export const reservaPayloadSchema = z.strictObject({
   id: z.guid(),
+  dispositivo_id: z.guid(),
   caja_sesion_id: z.guid(),
   cliente_id: z.guid(),
   producto_id: z.guid(),

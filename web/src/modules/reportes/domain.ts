@@ -109,6 +109,8 @@ export type FilaCaja = {
   ingresos: number;
   egresos: number;
   devoluciones_efectivo: number;
+  // Anticipos menos devoluciones de reservas, en efectivo.
+  reservas_efectivo: number;
   esperado: number;
   contado: number | null;
   diferencia: number | null;
@@ -121,6 +123,8 @@ export type TotalesCaja = {
   ingresos: number;
   egresos: number;
   devoluciones_efectivo: number;
+  // Anticipos menos devoluciones de reservas, en efectivo.
+  reservas_efectivo: number;
   esperado: number;
   contado: number;
   diferencia: number;

@@ -81,6 +81,18 @@ export function DetalleSesionVista({
             </dd>
           </div>
           <div className={fila}>
+            <dt>Anticipos de reservas en efectivo</dt>
+            <dd>{bs(r.anticipos_efectivo)}</dd>
+          </div>
+          <div className={fila}>
+            <dt>Devoluciones de reservas en efectivo</dt>
+            <dd>
+              {r.devoluciones_reserva_efectivo === null
+                ? "—"
+                : `−${formatearBs(r.devoluciones_reserva_efectivo)}`}
+            </dd>
+          </div>
+          <div className={fila}>
             <dt>Esperado</dt>
             <dd className="font-semibold" data-testid="sesion-esperado">
               {r.esperado === null ? "—" : formatearBs(r.esperado)}
@@ -100,6 +112,18 @@ export function DetalleSesionVista({
             <dt>QR (cobrado menos devuelto)</dt>
             <dd className="font-semibold" data-testid="sesion-qr">
               {bs(r.qr_neto)}
+            </dd>
+          </div>
+          <div className={fila}>
+            <dt>Anticipos de reservas por QR (incluidos en el QR)</dt>
+            <dd>{bs(r.anticipos_qr)}</dd>
+          </div>
+          <div className={fila}>
+            <dt>Devoluciones de reservas por QR (incluidas en el QR)</dt>
+            <dd>
+              {r.devoluciones_reserva_qr === null
+                ? "—"
+                : `−${formatearBs(r.devoluciones_reserva_qr)}`}
             </dd>
           </div>
         </dl>

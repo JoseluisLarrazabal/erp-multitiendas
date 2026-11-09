@@ -4,7 +4,7 @@
 -- devolver una venta que completó una reserva), ERP_REQUIERE_CONEXION (registrar_venta con reserva y p_offline).
 -- Stock: crear_reserva escribe `reserva` (-cantidad, costo foto); completar escribe `reserva_liberada` (+) y `venta` (-)
 -- con ref_id distintos (reserva y venta; índice único del kardex); cancelar escribe `reserva_liberada` (+). La liberación
--- va sin costo: con costo el trigger la re-ponderaría como una compra. Series: un producto con serie no se reserva.
+-- reingresa con el costo foto de la reserva (ver abajo). Series: un producto con serie no se reserva.
 -- Caja: reserva_pagos lleva el anticipo (tipo `anticipo`) y la devolución (tipo `devolucion`, P-12: se devuelve por caja, mismo
 -- medio y monto, en la sesión abierta de quien cancela). efectivo_esperado y total_qr_sesion suman los anticipos y restan
 -- las devoluciones por medio; resumen_caja los expone. El pago `anticipo` de la venta no es efectivo de la sesión
@@ -12,7 +12,13 @@
 -- Reservas solo en línea: ni crear ni cancelar tienen p_offline, y registrar_venta lo rechaza con reserva.
 -- shortcut: un producto por reserva y la venta que la completa lleva solo ese ítem, sin descuentos, sin crédito; ampliar si
 -- el cliente reserva varios productos.
--- shortcut: crear_reserva acepta cualquier precio_acordado > 0 (sin piso de lista); lo acuerda quien tiene gestionar_reservas.
+-- Precio acordado: crear_reserva lo valida como una línea de registrar_venta (lista contado): bajo el mínimo exige `descontar`
+-- y la brecha respeta negocios.tope_descuento (ERP_SIN_PERMISO, ERP_DESCUENTO_TOPE). La venta que completa la reserva ya no
+-- re-valida el piso. Exige stock disponible >= cantidad (ERP_STOCK_INSUFICIENTE): la reserva no deja stock negativo.
+-- Costo: reserva_liberada (cancelar y completar) reingresa con el costo foto del movimiento `reserva` original y la línea de
+-- la venta usa esa misma foto como costo_unitario (como devolucion_cliente).
+-- Equipo: crear y cancelar validan que la sesión sea de ese dispositivo y esté abierta (como registrar_venta); la ubicación
+-- de la reserva es la del equipo. cancelar_reserva es idempotente por p_operacion_id.
 
 create table public.reservas (
   id uuid primary key,
@@ -126,7 +132,7 @@ as $$
                 where p.caja_sesion_id = p_sesion_id and p.medio = 'qr'), 0)
 $$;
 
--- p_reserva: id (UUID del cliente), caja_sesion_id (sesión abierta del equipo), cliente_id, producto_id, cantidad,
+-- p_reserva: id (UUID del cliente), dispositivo_id, caja_sesion_id (sesión abierta de ese equipo), cliente_id, producto_id, cantidad,
 -- precio_acordado, anticipo (> 0 y <= cantidad x precio), medio (efectivo | qr). La ubicación es la del equipo.
 -- Idempotente por id (reclamar_operacion + huella). Devuelve {id}.
 create function public.crear_reserva(p_reserva jsonb)
@@ -139,6 +145,7 @@ declare
   v_uid uuid := (select auth.uid());
   v_id uuid;
   v_sesion_id uuid;
+  v_dispositivo_id uuid;
   v_cliente_id uuid;
   v_producto_id uuid;
   v_cant numeric;
@@ -149,10 +156,17 @@ declare
   v_disp public.dispositivos;
   v_producto public.productos;
   v_costo numeric;
+  v_stock numeric;
+  v_srv numeric;
+  v_ref numeric;
+  v_bruto numeric;
+  v_piso numeric;
+  v_negocio public.negocios;
 begin
-  perform public.payload_claves(p_reserva, array['id', 'caja_sesion_id', 'cliente_id', 'producto_id', 'cantidad',
-    'precio_acordado', 'anticipo', 'medio']);
+  perform public.payload_claves(p_reserva, array['id', 'dispositivo_id', 'caja_sesion_id', 'cliente_id', 'producto_id',
+    'cantidad', 'precio_acordado', 'anticipo', 'medio']);
   v_id := public.payload_uuid(p_reserva, 'id', false);
+  v_dispositivo_id := public.payload_uuid(p_reserva, 'dispositivo_id', false);
   v_sesion_id := public.payload_uuid(p_reserva, 'caja_sesion_id', false);
   v_cliente_id := public.payload_uuid(p_reserva, 'cliente_id', false);
   v_producto_id := public.payload_uuid(p_reserva, 'producto_id', false);
@@ -161,7 +175,7 @@ begin
   v_anticipo := public.payload_numero(p_reserva, 'anticipo', 2);
   v_medio := public.payload_texto(p_reserva, 'medio', 10);
 
-  select * into v_sesion from public.caja_sesiones where id = v_sesion_id;
+  select * into v_sesion from public.caja_sesiones where id = v_sesion_id and dispositivo_id = v_dispositivo_id;
   if not found or not public.tiene_permiso(v_sesion.negocio_id, 'gestionar_reservas')
      or not public.tiene_permiso(v_sesion.negocio_id, 'caja') then
     raise exception 'ERP_SIN_PERMISO';
@@ -179,7 +193,7 @@ begin
   if v_sesion.cerrada_en is not null then
     raise exception 'ERP_CAJA_CERRADA';
   end if;
-  select * into v_disp from public.dispositivos where id = v_sesion.dispositivo_id;
+  select * into v_disp from public.dispositivos where id = v_dispositivo_id;
   if not exists (select 1 from public.clientes where id = v_cliente_id and negocio_id = v_sesion.negocio_id) then
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
@@ -188,9 +202,30 @@ begin
     raise exception 'ERP_DATOS_INVALIDOS';
   end if;
 
+  -- Precio acordado como una línea de venta de lista contado (mismo piso y tope que registrar_venta).
+  select * into v_negocio from public.negocios where id = v_sesion.negocio_id;
+  v_srv := public.precio_bs(v_producto_id, 'contado');
+  if v_srv is null or v_srv <= 0 then
+    raise exception 'ERP_PRODUCTO_SIN_PRECIO';
+  end if;
+  v_ref := least(public.precio_bs(v_producto_id, 'minimo'), v_srv);
+  v_bruto := round(v_cant * v_precio, 2);
+  v_piso := round(v_cant * v_ref, 2);
+  if v_precio < v_ref then
+    if not public.tiene_permiso(v_sesion.negocio_id, 'descontar') then
+      raise exception 'ERP_SIN_PERMISO';
+    end if;
+    if v_piso - v_bruto > v_piso * v_negocio.tope_descuento / 100 then
+      raise exception 'ERP_DESCUENTO_TOPE';
+    end if;
+  end if;
+
   perform public.bloquear_stock(v_sesion.negocio_id, v_disp.ubicacion_id, array[v_producto_id]);
-  select costo_promedio into v_costo from public.stock
+  select cantidad, costo_promedio into v_stock, v_costo from public.stock
   where producto_id = v_producto_id and ubicacion_id = v_disp.ubicacion_id;
+  if v_stock < v_cant then
+    raise exception 'ERP_STOCK_INSUFICIENTE';
+  end if;
   insert into public.reservas (id, negocio_id, cliente_id, producto_id, ubicacion_id, cantidad, precio_acordado, usuario_id)
   values (v_id, v_sesion.negocio_id, v_cliente_id, v_producto_id, v_disp.ubicacion_id, v_cant, v_precio, v_uid);
   insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,
@@ -205,10 +240,10 @@ exception
 end;
 $$;
 
--- Cancela una reserva activa: libera el stock y devuelve el anticipo por caja (P-12), mismo medio y monto, en la sesión
+-- Cancela una reserva activa (idempotente por p_operacion_id): libera el stock y devuelve el anticipo por caja (P-12), mismo medio y monto, en la sesión
 -- abierta p_sesion_id. Efectivo mayor que el esperado de esa sesión: ERP_EFECTIVO_INSUFICIENTE (DB-24).
 -- Cancelar o completar una reserva que ya no está activa: ERP_RESERVA_NO_ACTIVA.
-create function public.cancelar_reserva(p_reserva_id uuid, p_sesion_id uuid)
+create function public.cancelar_reserva(p_operacion_id uuid, p_reserva_id uuid, p_sesion_id uuid, p_dispositivo_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -219,14 +254,20 @@ declare
   v_reserva public.reservas;
   v_sesion public.caja_sesiones;
   v_pago public.reserva_pagos;
+  v_costo numeric;
 begin
   select * into v_reserva from public.reservas where id = p_reserva_id;
-  select * into v_sesion from public.caja_sesiones where id = p_sesion_id;
-  if p_reserva_id is null or p_sesion_id is null or v_reserva.id is null or v_sesion.id is null
+  select * into v_sesion from public.caja_sesiones where id = p_sesion_id and dispositivo_id = p_dispositivo_id;
+  if p_operacion_id is null or p_reserva_id is null or p_sesion_id is null or v_reserva.id is null or v_sesion.id is null
      or v_reserva.negocio_id <> v_sesion.negocio_id
      or not public.tiene_permiso(v_reserva.negocio_id, 'gestionar_reservas')
      or not public.tiene_permiso(v_reserva.negocio_id, 'caja') then
     raise exception 'ERP_SIN_PERMISO';
+  end if;
+  -- Reintento de la misma operación: devuelve lo original (la reserva ya está cancelada).
+  if not public.reclamar_operacion(p_operacion_id, v_reserva.negocio_id,
+       md5(jsonb_build_array('cancelar_reserva', p_reserva_id, p_sesion_id, p_dispositivo_id)::text)) then
+    return jsonb_build_object('id', p_reserva_id, 'estado', 'cancelada');
   end if;
   select * into v_sesion from public.caja_sesiones where id = p_sesion_id for update;
   if v_sesion.cerrada_en is not null then
@@ -242,10 +283,11 @@ begin
   end if;
 
   perform public.bloquear_stock(v_reserva.negocio_id, v_reserva.ubicacion_id, array[v_reserva.producto_id]);
+  select costo_unitario into v_costo from public.movimientos_inventario where ref_id = p_reserva_id and tipo = 'reserva';
   insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,
     ref_tipo, ref_id, usuario_id)
   values (v_reserva.negocio_id, v_reserva.ubicacion_id, v_reserva.producto_id, 'reserva_liberada', v_reserva.cantidad,
-    null, 'reserva', p_reserva_id, v_uid);
+    v_costo, 'reserva', p_reserva_id, v_uid);
   insert into public.reserva_pagos (negocio_id, reserva_id, monto, medio, caja_sesion_id, tipo, usuario_id)
   values (v_reserva.negocio_id, p_reserva_id, v_pago.monto, v_pago.medio, p_sesion_id, 'devolucion', v_uid);
   update public.reservas set estado = 'cancelada', cerrada_en = now() where id = p_reserva_id;
@@ -282,10 +324,10 @@ end;
 $$;
 
 revoke all on function public.crear_reserva(jsonb) from public, anon, authenticated;
-revoke all on function public.cancelar_reserva(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.cancelar_reserva(uuid, uuid, uuid, uuid) from public, anon, authenticated;
 revoke all on function public.reservas_activas(uuid) from public, anon, authenticated;
 grant execute on function public.crear_reserva(jsonb) to authenticated;
-grant execute on function public.cancelar_reserva(uuid, uuid) to authenticated;
+grant execute on function public.cancelar_reserva(uuid, uuid, uuid, uuid) to authenticated;
 grant execute on function public.reservas_activas(uuid) to authenticated;
 
 -- registrar_venta, anular_venta, devolver_venta y resumen_caja: la última definición (20261108130000), misma firma, solo con
@@ -353,6 +395,7 @@ declare
   v_anticipo numeric := 0;
   v_n_anticipo integer;
   v_suma_anticipo numeric;
+  v_costo_reserva numeric;
 begin
   -- Forma del payload (sin tocar la base)
   perform public.payload_claves(p_venta, array['id', 'dispositivo_id', 'caja_sesion_id', 'numero', 'cliente_id',
@@ -502,6 +545,8 @@ begin
     end if;
     select coalesce(sum(monto), 0) into v_anticipo from public.reserva_pagos
     where reserva_id = v_reserva_id and tipo = 'anticipo';
+    select costo_unitario into v_costo_reserva from public.movimientos_inventario
+    where ref_id = v_reserva_id and tipo = 'reserva';
   end if;
 
   -- Líneas, ordenadas por producto (mismo orden de bloqueo que trasladar_stock)
@@ -630,7 +675,9 @@ begin
 
   for v_e in select e from jsonb_array_elements(v_lineas) e loop
     v_costo := null;
-    if not (v_e ->> 'servicio')::boolean then
+    if v_reserva_id is not null then
+      v_costo := v_costo_reserva; -- costo foto de la reserva, no el promedio de hoy
+    elsif not (v_e ->> 'servicio')::boolean then
       select costo_promedio into v_costo from public.stock
       where producto_id = (v_e ->> 'producto_id')::uuid and ubicacion_id = v_disp.ubicacion_id;
     end if;
@@ -661,12 +708,12 @@ begin
   from jsonb_array_elements(v_pagos) e;
 
   -- La reserva ya descontó el stock: se libera (+) y la venta lo descuenta (-), con ref_id distintos (índice único del
-  -- kardex). Sin costo: la liberación no re-pondera costo_promedio.
+  -- kardex). La liberación reingresa con el costo foto de la reserva.
   if v_reserva_id is not null then
     insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,
       ref_tipo, ref_id, usuario_id)
     values (v_disp.negocio_id, v_reserva.ubicacion_id, v_reserva.producto_id, 'reserva_liberada', v_reserva.cantidad,
-      null, 'reserva', v_reserva_id, v_uid);
+      v_costo_reserva, 'reserva', v_reserva_id, v_uid);
     update public.reservas set estado = 'completada', venta_id = v_id, cerrada_en = now() where id = v_reserva_id;
   end if;
   insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario,
@@ -1008,5 +1055,70 @@ begin
       'anticipos_efectivo', null, 'anticipos_qr', null, 'devoluciones_reserva_efectivo', null, 'devoluciones_reserva_qr', null);
   end if;
   return v_res;
+end;
+$$;
+
+-- reporte_caja (20261102140000), misma firma: más reservas_efectivo (anticipos menos devoluciones de reserva en efectivo)
+-- para que las columnas sigan sumando al esperado.
+create or replace function public.reporte_caja(p_negocio_id uuid, p_desde date, p_hasta date)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_filas jsonb;
+  v_tot jsonb;
+  v_n integer;
+begin
+  if not public.tiene_permiso(p_negocio_id, 'ver_reportes') then
+    raise exception 'ERP_SIN_PERMISO';
+  end if;
+  if p_desde is null or p_hasta is null or p_desde > p_hasta or p_hasta - p_desde > 365 then
+    raise exception 'ERP_DATOS_INVALIDOS';
+  end if;
+
+  with r as (
+    select s.id, d.nombre as equipo, d.prefijo, coalesce(pe.nombre, 'Sin nombre') as cajero, s.abierta_en, s.cerrada_en, s.monto_inicial,
+           (x ->> 'ventas_efectivo')::numeric as ventas_efectivo, (x ->> 'qr_neto')::numeric as qr_neto,
+           (x ->> 'qr_pendiente')::numeric as qr_pendiente, (x ->> 'ingresos')::numeric as ingresos,
+           (x ->> 'gastos')::numeric + (x ->> 'retiros')::numeric as egresos,
+           (x ->> 'devoluciones_efectivo')::numeric as devoluciones_efectivo,
+           (x ->> 'anticipos_efectivo')::numeric - (x ->> 'devoluciones_reserva_efectivo')::numeric as reservas_efectivo,
+           (x ->> 'esperado')::numeric as esperado,
+           s.monto_contado as contado, s.diferencia
+    from public.caja_sesiones s
+    join public.dispositivos d on d.id = s.dispositivo_id
+    left join public.perfiles pe on pe.id = s.usuario_apertura
+    cross join lateral public.resumen_caja(s.id) x
+    where s.negocio_id = p_negocio_id
+      and s.abierta_en >= p_desde::timestamp at time zone 'America/La_Paz'
+      and s.abierta_en < (p_hasta + 1)::timestamp at time zone 'America/La_Paz'
+  )
+  select
+    (select coalesce(jsonb_agg(jsonb_build_object(
+        'sesion_id', r.id, 'equipo', r.equipo, 'prefijo', r.prefijo, 'cajero', r.cajero,
+        'abierta_en', r.abierta_en, 'cerrada_en', r.cerrada_en, 'monto_inicial', r.monto_inicial,
+        'ventas_efectivo', r.ventas_efectivo, 'ventas_qr', r.qr_neto, 'qr_pendiente', r.qr_pendiente,
+        'ingresos', r.ingresos, 'egresos', r.egresos, 'devoluciones_efectivo', r.devoluciones_efectivo,
+        'reservas_efectivo', r.reservas_efectivo, 'esperado', r.esperado, 'contado', r.contado, 'diferencia', r.diferencia)
+      order by r.abierta_en, r.id), '[]'::jsonb) from r),
+    (select count(*) from r),
+    (select jsonb_build_object('sesiones', count(*), 'monto_inicial', coalesce(sum(r.monto_inicial), 0),
+        'ventas_efectivo', coalesce(sum(r.ventas_efectivo), 0), 'ventas_qr', coalesce(sum(r.qr_neto), 0),
+        'qr_pendiente', coalesce(sum(r.qr_pendiente), 0), 'ingresos', coalesce(sum(r.ingresos), 0),
+        'egresos', coalesce(sum(r.egresos), 0), 'devoluciones_efectivo', coalesce(sum(r.devoluciones_efectivo), 0),
+        'reservas_efectivo', coalesce(sum(r.reservas_efectivo), 0),
+        'esperado', coalesce(sum(r.esperado) filter (where r.cerrada_en is not null), 0),
+        'contado', coalesce(sum(r.contado) filter (where r.cerrada_en is not null), 0),
+        'diferencia', coalesce(sum(r.diferencia) filter (where r.cerrada_en is not null), 0),
+        'sesiones_abiertas', count(*) filter (where r.cerrada_en is null),
+        'esperado_abiertas', coalesce(sum(r.esperado) filter (where r.cerrada_en is null), 0)) from r)
+  into v_filas, v_n, v_tot;
+  if v_n > 5000 then
+    raise exception 'ERP_LOTE_GRANDE';
+  end if;
+  return jsonb_build_object('filas', v_filas, 'totales', v_tot);
 end;
 $$;

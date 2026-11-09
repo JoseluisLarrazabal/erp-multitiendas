@@ -50,7 +50,7 @@ export function Cobro({
   const calculo =
     qr === null || recibido === null ? null : calcularCobro(total, qr, recibido, qrOk || sinRed);
   const aplicado = qr === null ? total : Math.max(total - qr, 0);
-  const ocupado = estado.t === "enviando";
+  const ocupado = estado.t === "enviando" || estado.t === "verificando";
 
   // Otro monto de QR es otro pago: la confirmación de que llegó se pide de nuevo.
   function cambiarQr(v: string) {
@@ -195,7 +195,11 @@ export function Cobro({
               aria-disabled={!calculo?.ok || ocupado}
             >
               {ocupado && <Loader2 className="animate-spin" aria-hidden />}{" "}
-              {ocupado ? "Enviando…" : "Confirmar cobro"}
+              {estado.t === "verificando"
+                ? "Verificando el cobro…"
+                : ocupado
+                  ? "Enviando…"
+                  : "Confirmar cobro"}
             </Button>
           </div>
         </form>

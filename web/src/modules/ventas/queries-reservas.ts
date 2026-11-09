@@ -52,10 +52,22 @@ export async function crearReserva(supabase: Cliente, payload: ReservaPayload) {
 }
 
 // Libera el stock y devuelve el anticipo por la caja abierta `sesionId`.
-export async function cancelarReserva(supabase: Cliente, reservaId: string, sesionId: string) {
+// `operacionId` identifica el intento: repetirlo devuelve el resultado original en vez de ERP_RESERVA_NO_ACTIVA.
+export async function cancelarReserva(
+  supabase: Cliente,
+  operacionId: string,
+  reservaId: string,
+  sesionId: string,
+  dispositivoId: string,
+) {
   return llamar(
     supabase
-      .rpc("cancelar_reserva", { p_reserva_id: reservaId, p_sesion_id: sesionId })
+      .rpc("cancelar_reserva", {
+        p_operacion_id: operacionId,
+        p_reserva_id: reservaId,
+        p_sesion_id: sesionId,
+        p_dispositivo_id: dispositivoId,
+      })
       .abortSignal(AbortSignal.timeout(TIEMPO_ENVIO_MS)),
   );
 }

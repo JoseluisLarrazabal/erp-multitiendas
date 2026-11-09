@@ -1176,7 +1176,7 @@ isOneToOne: false
 { Args: { "p_estado": string,"p_orden_id": string }; Returns: Json
                            },
 "cancelar_reserva":
-{ Args: { "p_reserva_id": string,"p_sesion_id": string }; Returns: Json
+{ Args: { "p_dispositivo_id": string,"p_operacion_id": string,"p_reserva_id": string,"p_sesion_id": string }; Returns: Json
                            },
 "catalogo_pos":
 { Args: { "p_ubicacion_id": string }; Returns: Json

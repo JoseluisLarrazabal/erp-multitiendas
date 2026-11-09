@@ -1,7 +1,7 @@
 -- Reservas con anticipo (RF-RES-01 a 03): DB-23 (completar no descuenta dos veces), DB-24 (cancelar libera y devuelve),
 -- DB-04 con reservas (stock = kardex), arqueo con anticipos y devoluciones, permisos, idempotencia, rechazos.
 begin;
-select plan(104);
+select plan(134);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -46,17 +46,36 @@ insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad, cont
   (pg_temp.i('P1'), pg_temp.i('T'), 'P1', 'P1', 'producto', 'unidad', false),
   (pg_temp.i('P2'), pg_temp.i('T'), 'P2', 'P2', 'producto', 'unidad', false),
   (pg_temp.i('PS'), pg_temp.i('T'), 'PS', 'PS', 'servicio', 'unidad', false),
-  (pg_temp.i('PR'), pg_temp.i('T'), 'PR', 'PR', 'producto', 'unidad', true);
+  (pg_temp.i('PR'), pg_temp.i('T'), 'PR', 'PR', 'producto', 'unidad', true),
+  (pg_temp.i('PF'), pg_temp.i('T'), 'PF', 'PF', 'producto', 'unidad', false),
+  (pg_temp.i('PL'), pg_temp.i('T'), 'PL', 'PL', 'producto', 'unidad', false),
+  (pg_temp.i('PC'), pg_temp.i('T'), 'PC', 'PC', 'producto', 'unidad', false),
+  (pg_temp.i('PD'), pg_temp.i('T'), 'PD', 'PD', 'producto', 'unidad', false),
+  (pg_temp.i('PN'), pg_temp.i('T'), 'PN', 'PN', 'producto', 'unidad', false);
 insert into public.producto_precios (negocio_id, producto_id, lista, monto, moneda) values
-  (pg_temp.i('T'), pg_temp.i('P1'), 'contado', 10, 'BOB'), (pg_temp.i('T'), pg_temp.i('P2'), 'contado', 10, 'BOB');
+  (pg_temp.i('T'), pg_temp.i('P1'), 'contado', 10, 'BOB'), (pg_temp.i('T'), pg_temp.i('P2'), 'contado', 10, 'BOB'),
+  (pg_temp.i('T'), pg_temp.i('PF'), 'contado', 10, 'BOB'), (pg_temp.i('T'), pg_temp.i('PF'), 'minimo', 8, 'BOB'),
+  (pg_temp.i('T'), pg_temp.i('PL'), 'contado', 10, 'BOB'), (pg_temp.i('T'), pg_temp.i('PC'), 'contado', 10, 'BOB'),
+  (pg_temp.i('T'), pg_temp.i('PD'), 'contado', 10, 'BOB');
 insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario) values
   (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('P1'), 'inicial', 100, 4),
   (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('P2'), 'inicial', 100, 4),
-  (pg_temp.i('T'), pg_temp.i('U2'), pg_temp.i('P1'), 'inicial', 100, 4);
+  (pg_temp.i('T'), pg_temp.i('U2'), pg_temp.i('P1'), 'inicial', 100, 4),
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PF'), 'inicial', 50, 4),
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PL'), 'inicial', 3, 4),
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PC'), 'inicial', 5, 4),
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PD'), 'inicial', 5, 4);
 
+create function pg_temp.disp(ses text) returns uuid language sql as $$
+  select pg_temp.i(case ses when 'S1' then 'D1' when 'S2' then 'D2' when 'S4' then 'D4' when 'SX' then 'DX'
+    when 'SL' then 'DL' when 'SC' then 'D3' end)
+$$;
+create function pg_temp.cancelar(op text, r text, ses text, dev text default null) returns jsonb language sql as $$
+  select public.cancelar_reserva(pg_temp.i(op), pg_temp.i(r), pg_temp.i(ses), coalesce(pg_temp.i(dev), pg_temp.disp(ses)))
+$$;
 create function pg_temp.res(o text, ses text, cli text, prod text, cant numeric, precio numeric, ant numeric, med text)
 returns jsonb language sql as $$
-  select jsonb_build_object('id', pg_temp.i(o), 'caja_sesion_id', pg_temp.i(ses), 'cliente_id', pg_temp.i(cli),
+  select jsonb_build_object('id', pg_temp.i(o), 'dispositivo_id', pg_temp.disp(ses), 'caja_sesion_id', pg_temp.i(ses), 'cliente_id', pg_temp.i(cli),
     'producto_id', pg_temp.i(prod), 'cantidad', cant, 'precio_acordado', precio, 'anticipo', ant, 'medio', med)
 $$;
 create function pg_temp.pg(p_medio text, p_monto numeric) returns jsonb language sql as $$
@@ -64,11 +83,11 @@ create function pg_temp.pg(p_medio text, p_monto numeric) returns jsonb language
 $$;
 -- Venta que completa la reserva r (P1, c unidades, precio p). Con r null no lleva reserva_id.
 create function pg_temp.v(p_id text, p_num text, r text, p_cant numeric, p_precio numeric, p_pagos jsonb,
-  p_cli text default 'CL') returns jsonb language sql as $$
+  p_cli text default 'CL', p_prod text default 'P1') returns jsonb language sql as $$
   select jsonb_strip_nulls(jsonb_build_object('id', pg_temp.i(p_id), 'dispositivo_id', pg_temp.i('D1'),
     'caja_sesion_id', pg_temp.i('S1'), 'numero', p_num, 'creada_en_cliente', now(), 'cliente_id', pg_temp.i(p_cli),
     'reserva_id', case when r is null then null else pg_temp.i(r) end, 'total', round(p_cant * p_precio, 2),
-    'items', jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'lista', 'contado', 'cantidad', p_cant,
+    'items', jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i(p_prod), 'lista', 'contado', 'cantidad', p_cant,
       'precio_unitario', p_precio)),
     'pagos', p_pagos))
 $$;
@@ -87,15 +106,22 @@ $$;
 create function pg_temp.item_id(p_venta text) returns uuid language sql security definer as $$
   select id from public.venta_items where venta_id = pg_temp.i(p_venta)
 $$;
+create function pg_temp.costo_prom(p text) returns numeric language sql security definer as $$
+  select round(costo_promedio, 2) from public.stock where producto_id = pg_temp.i(p) and ubicacion_id = pg_temp.i('U1')
+$$;
+create function pg_temp.comprar(p text, c numeric, k numeric) returns void language sql security definer as $$
+  insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario)
+  values (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i(p), 'compra', c, k)
+$$;
 create function pg_temp.res_caja(p_ses text, p_clave text) returns numeric language sql as $$
   select (public.resumen_caja(pg_temp.i(p_ses)) ->> p_clave)::numeric
 $$;
 
 select ok(has_function_privilege('authenticated', 'public.crear_reserva(jsonb)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.cancelar_reserva(uuid, uuid)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.cancelar_reserva(uuid, uuid, uuid, uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.reservas_activas(uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.crear_reserva(jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.cancelar_reserva(uuid, uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.cancelar_reserva(uuid, uuid, uuid, uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.reservas_activas(uuid)', 'EXECUTE'), 'solo authenticated ejecuta');
 select ok(not exists (select 1 from pg_proc p where p.proname in ('registrar_venta', 'efectivo_esperado', 'total_qr_sesion',
     'anular_venta', 'devolver_venta', 'resumen_caja') and p.pronamespace = 'public'::regnamespace
@@ -211,19 +237,19 @@ select throws_ok($$select public.devolver_venta(jsonb_build_object('id', gen_ran
 
 -- Cancelar (DB-24)
 select pg_temp.como(pg_temp.i('c'));
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('S2'))$$, 'ERP_SIN_PERMISO', 'contador no cancela');
+select throws_ok($$select pg_temp.cancelar('OP1', 'R3', 'S2')$$, 'ERP_SIN_PERMISO', 'contador no cancela');
 select pg_temp.como(pg_temp.i('y'));
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('SX'))$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión suya)');
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('S2'))$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión ajena)');
+select throws_ok($$select pg_temp.cancelar('OP2', 'R3', 'SX')$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión suya)');
+select throws_ok($$select pg_temp.cancelar('OP3', 'R3', 'S2')$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión ajena)');
 select pg_temp.como(pg_temp.i('v'));
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('SC'))$$, 'ERP_CAJA_CERRADA', 'sesión cerrada');
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R1'), pg_temp.i('S1'))$$, 'ERP_RESERVA_NO_ACTIVA', 'una reserva completada no se cancela');
-select throws_ok($$select public.cancelar_reserva(gen_random_uuid(), pg_temp.i('S1'))$$, 'ERP_SIN_PERMISO', 'reserva inexistente');
+select throws_ok($$select pg_temp.cancelar('OP4', 'R3', 'SC')$$, 'ERP_CAJA_CERRADA', 'sesión cerrada');
+select throws_ok($$select pg_temp.cancelar('OP5', 'R1', 'S1')$$, 'ERP_RESERVA_NO_ACTIVA', 'una reserva completada no se cancela');
+select throws_ok($$select pg_temp.cancelar('OPn', 'Rnada', 'S1')$$, 'ERP_SIN_PERMISO', 'reserva inexistente');
 -- R3 (anticipo 30 en efectivo, S2). S3 no existe aún: S4 tiene 0 + R4 (20) = 20 < 30 -> efectivo insuficiente
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('S4'))$$, 'ERP_EFECTIVO_INSUFICIENTE', 'DB-24: efectivo esperado insuficiente');
+select throws_ok($$select pg_temp.cancelar('OP6', 'R3', 'S4')$$, 'ERP_EFECTIVO_INSUFICIENTE', 'DB-24: efectivo esperado insuficiente');
 select is(pg_temp.stock('P2'), 97::numeric, 'el rechazo no liberó stock');
 select is((select estado from public.reservas where id = pg_temp.i('R3')), 'activa', 'R3 sigue activa');
-select lives_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('S2'))$$, 'R3 se cancela en S2 (esperado 30)');
+select lives_ok($$select pg_temp.cancelar('OP7', 'R3', 'S2')$$, 'R3 se cancela en S2 (esperado 30)');
 select is(pg_temp.stock('P2'), 100::numeric, 'DB-24: cancelar libera el stock');
 select is(pg_temp.kardex('R3', 'reserva_liberada'), 3::numeric, 'kardex: reserva_liberada +3');
 select results_eq($$select tipo, medio, monto, caja_sesion_id from public.reserva_pagos where reserva_id = pg_temp.i('R3') order by tipo$$,
@@ -233,9 +259,9 @@ select pg_temp.como(pg_temp.i('d'));
 select is(pg_temp.res_caja('S2', 'esperado'), 0::numeric, 'arqueo S2: anticipo 30 - devolución 30');
 select is(pg_temp.res_caja('S2', 'devoluciones_reserva_efectivo'), 30::numeric, 'resumen: devoluciones de reserva');
 select pg_temp.como(pg_temp.i('v'));
-select throws_ok($$select public.cancelar_reserva(pg_temp.i('R3'), pg_temp.i('S2'))$$, 'ERP_RESERVA_NO_ACTIVA', 'doble cancelación rechazada');
+select throws_ok($$select pg_temp.cancelar('OP8', 'R3', 'S2')$$, 'ERP_RESERVA_NO_ACTIVA', 'doble cancelación rechazada');
 -- R2 (QR 10): se cancela en S1 y vuelve por QR
-select lives_ok($$select public.cancelar_reserva(pg_temp.i('R2'), pg_temp.i('S1'))$$, 'R2 se cancela (QR)');
+select lives_ok($$select pg_temp.cancelar('OP9', 'R2', 'S1')$$, 'R2 se cancela (QR)');
 select pg_temp.como(pg_temp.i('d'));
 select is(pg_temp.res_caja('S1', 'qr_neto'), 0::numeric, 'QR neto: anticipo 10 - devolución 10');
 select is(pg_temp.res_caja('S1', 'esperado'), 160::numeric, 'la devolución QR no toca el efectivo');
@@ -247,15 +273,62 @@ select is(pg_temp.stock('P2'), (select sum(cantidad) from public.movimientos_inv
 select is(pg_temp.stock('P1', 'U2'), 95::numeric, 'P1 U2: R4 activa reserva 5');
 select is((select count(*) from public.stock_inconsistente(pg_temp.i('T'))), 0::bigint, 'stock_inconsistente vacío');
 
+-- Precio acordado: mismo piso y tope que una línea de venta (PF: contado 10, mínimo 8; tope 10 %)
+select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select public.crear_reserva(pg_temp.res('Rf1', 'S1', 'CL', 'PF', 1, 7, 5, 'qr'))$$, 'ERP_SIN_PERMISO', 'bajo el mínimo sin descontar');
+select lives_ok($$select public.crear_reserva(pg_temp.res('Rf2', 'S1', 'CL', 'PF', 1, 8, 5, 'qr'))$$, 'en el mínimo no pide permiso');
+select pg_temp.como(pg_temp.i('d'));
+select lives_ok($$select public.crear_reserva(pg_temp.res('Rf3', 'S1', 'CL', 'PF', 1, 7.5, 5, 'qr'))$$, 'con descontar y dentro del tope');
+select throws_ok($$select public.crear_reserva(pg_temp.res('Rf4', 'S1', 'CL', 'PF', 1, 5, 5, 'qr'))$$, 'ERP_DESCUENTO_TOPE', 'con descontar pero sobre el tope');
+select throws_ok($$select public.crear_reserva(pg_temp.res('Rf5', 'S1', 'CL', 'PN', 1, 5, 5, 'qr'))$$, 'ERP_PRODUCTO_SIN_PRECIO', 'producto sin precio de contado');
+
+-- Stock: la reserva exige disponible (PL tiene 3)
+select throws_ok($$select public.crear_reserva(pg_temp.res('Rl1', 'S1', 'CL', 'PL', 4, 10, 5, 'qr'))$$, 'ERP_STOCK_INSUFICIENTE', 'más que el stock disponible');
+select is((select count(*) from public.reservas where id = pg_temp.i('Rl1')), 0::bigint, 'el rechazo no dejó reserva');
+select lives_ok($$select public.crear_reserva(pg_temp.res('Rl2', 'S1', 'CL', 'PL', 3, 10, 5, 'qr'))$$, 'todo el stock disponible se puede reservar');
+select throws_ok($$select public.crear_reserva(pg_temp.res('Rl3', 'S1', 'CL', 'PL', 1, 10, 5, 'qr'))$$, 'ERP_STOCK_INSUFICIENTE', 'lo ya reservado no está disponible');
+
+-- Equipo: la sesión debe ser del dispositivo
+select throws_ok($$select public.crear_reserva(jsonb_set(pg_temp.res('Re1', 'S1', 'CL', 'P1', 1, 10, 5, 'qr'), '{dispositivo_id}', to_jsonb(pg_temp.i('D2')::text)))$$, 'ERP_SIN_PERMISO', 'crear con la sesión de otro equipo');
+select throws_ok($$select pg_temp.cancelar('OPe', 'R4', 'S4', 'D1')$$, 'ERP_SIN_PERMISO', 'cancelar con la sesión de otro equipo');
+select throws_ok($$select pg_temp.cancelar('OPe2', 'Rf2', 'SC')$$, 'ERP_CAJA_CERRADA', 'cancelar en sesión cerrada');
+
+-- Cancelar es idempotente por operación
+select is(pg_temp.cancelar('OPi', 'Rf2', 'S1'), jsonb_build_object('id', pg_temp.i('Rf2'), 'estado', 'cancelada'), 'cancela');
+select is(pg_temp.cancelar('OPi', 'Rf2', 'S1'), jsonb_build_object('id', pg_temp.i('Rf2'), 'estado', 'cancelada'), 'la misma operación repetida devuelve lo original');
+select is((select count(*) from public.reserva_pagos where reserva_id = pg_temp.i('Rf2') and tipo = 'devolucion'), 1::bigint, 'una sola devolución');
+select throws_ok($$select pg_temp.cancelar('OPj', 'Rf2', 'S1')$$, 'ERP_RESERVA_NO_ACTIVA', 'otra operación sobre una reserva cancelada');
+
+-- Costo foto: reservar 5 de PC a 4, comprar 5 a 10, cancelar -> stock 10 con promedio 7
+select lives_ok($$select public.crear_reserva(pg_temp.res('Rc1', 'S1', 'CL', 'PC', 5, 10, 10, 'qr'))$$, 'reserva PC');
+select is(pg_temp.costo_kardex('Rc1', 'reserva'), 4.00, 'foto de la reserva = 4');
+select pg_temp.comprar('PC', 5, 10);
+select is(pg_temp.costo_prom('PC'), 10.00, 'tras la compra el promedio es 10');
+select lives_ok($$select pg_temp.cancelar('OPc', 'Rc1', 'S1')$$, 'cancela PC');
+select is(pg_temp.stock('PC'), 10::numeric, 'cancelar devuelve las 5 unidades');
+select is(pg_temp.costo_kardex('Rc1', 'reserva_liberada'), 4.00, 'la liberación reingresa con el costo foto');
+select is(pg_temp.costo_prom('PC'), 7.00, 'promedio 7 = (5 x 10 + 5 x 4) / 10');
+-- Completar: la venta usa el costo foto aunque el promedio ya sea otro
+select lives_ok($$select public.crear_reserva(pg_temp.res('Rc2', 'S1', 'CL', 'PD', 5, 10, 10, 'qr'))$$, 'reserva PD');
+select pg_temp.comprar('PD', 5, 10);
+select lives_ok($$select public.registrar_venta(pg_temp.v('V3', 'C1-000002', 'Rc2', 5, 10, jsonb_build_array(pg_temp.pg('anticipo', 10), pg_temp.pg('efectivo', 40)), 'CL', 'PD'))$$, 'completa PD');
+select is(pg_temp.costo_item('V3'), 4::numeric, 'la línea de la venta usa el costo foto (4), no el promedio');
+select is(pg_temp.costo_kardex('V3', 'venta'), 4.00, 'el kardex de la venta lleva el costo foto');
+select is(pg_temp.costo_kardex('Rc2', 'reserva_liberada'), 4.00, 'liberación al completar con el costo foto');
+select is(pg_temp.stock('PD'), 5::numeric, 'PD: 5 - 5 + 5 + 5 - 5');
+
+-- Carrito: no hay más reglas de servidor; arqueo y kardex coherentes
+select is((select count(*) from public.stock_inconsistente(pg_temp.i('T'))), 0::bigint, 'stock_inconsistente sigue vacío');
+
 -- Cierre: el esperado congelado es el del resumen
-select is((public.cerrar_caja(pg_temp.i('S1'), 160)->>'monto_esperado')::numeric, 160::numeric, 'cerrar_caja: esperado con anticipos');
+select is((public.cerrar_caja(pg_temp.i('S1'), 200)->>'monto_esperado')::numeric, 200::numeric, 'cerrar_caja: esperado con anticipos');
 
 -- RLS y escritura directa
 select pg_temp.como(pg_temp.i('y'));
 select is((select count(*) from public.reservas), 0::bigint, 'otro negocio no lee reservas');
 select is((select count(*) from public.reserva_pagos), 0::bigint, 'otro negocio no lee reserva_pagos');
 select pg_temp.como(pg_temp.i('d'));
-select is((select count(*) from public.reservas), 4::bigint, 'el dueño lee las reservas de su negocio');
+select is((select count(*) from public.reservas), 9::bigint, 'el dueño lee las reservas de su negocio');
 select throws_ok($$insert into public.reservas (id, negocio_id, cliente_id, producto_id, ubicacion_id, cantidad, precio_acordado)
   values (gen_random_uuid(), pg_temp.i('T'), pg_temp.i('CL'), pg_temp.i('P1'), pg_temp.i('U1'), 1, 1)$$, '42501', null, 'sin insert directo en reservas');
 select throws_ok($$update public.reservas set estado = 'cancelada'$$, '42501', null, 'sin update directo en reservas');
@@ -263,5 +336,6 @@ select throws_ok($$delete from public.reserva_pagos$$, '42501', null, 'sin delet
 select set_config('role', 'postgres', true);
 select throws_ok($$update public.reserva_pagos set monto = 1$$, null, null, 'reserva_pagos es append-only');
 select throws_ok($$delete from public.reservas$$, null, null, 'reservas no se borra');
+
 select * from finish();
 rollback;

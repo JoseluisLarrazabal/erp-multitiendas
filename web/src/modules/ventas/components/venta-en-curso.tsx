@@ -79,6 +79,9 @@ export function VentaEnCurso({
       {verReservas && (
         <ReservasPos
           negocioId={opciones.negocioId}
+          equipoId={equipo.id}
+          ubicacionId={equipo.ubicacionId}
+          ubicaciones={v.catalogo?.ubicaciones ?? []}
           cajaId={cajaId}
           indice={v.indice}
           hayCarrito={v.carrito.length > 0}

@@ -40,7 +40,7 @@ async function reservasDelCliente() {
 }
 
 test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async ({ page }) => {
-  const producto = await crearProductoConPrecio({ contado: 50, stock: 10 });
+  const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
   await fijarEquipo(page, equipoId);
   await page.goto("/pos");
   await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
@@ -59,6 +59,11 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
   await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
   await expect(form.getByRole("alert")).toContainText("no puede superar el total");
   await form.getByLabel("Anticipo (Bs)").fill("30");
+  // El anticipo por QR pide la misma confirmación que el cobro.
+  await form.getByLabel("Anticipo recibido por").selectOption("qr");
+  await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
+  await expect(form.getByRole("alert")).toContainText("Confirma que recibiste el QR");
+  await form.getByLabel("Anticipo recibido por").selectOption("efectivo");
   await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Reserva creada" })).toBeVisible();
   const fila = page.getByRole("listitem", { name: `Reserva de ${nombreCliente}` });
@@ -97,6 +102,7 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
     cuerpo: {
       p_reserva: {
         id: crypto.randomUUID(),
+        dispositivo_id: equipoId,
         caja_sesion_id: cajaId,
         cliente_id: clienteId,
         producto_id: producto.id,

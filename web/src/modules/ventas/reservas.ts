@@ -39,6 +39,8 @@ export type FormReserva = {
   precioTexto: string;
   anticipoTexto: string;
   medio: MedioReserva;
+  // Anticipo por QR: el cajero confirma que llegó, igual que en el cobro de una venta.
+  qrConfirmado: boolean;
 };
 
 // Un producto con serie o un servicio no se reserva (mismas reglas que crear_reserva).
@@ -48,6 +50,7 @@ export const sePuedeReservar = (p: ProductoPos) => p.tipo !== "servicio" && !p.c
 export function armarReserva(
   f: FormReserva,
   id: string,
+  dispositivoId: string,
   cajaId: string | null,
 ): { ok: true; payload: ReservaPayload } | { ok: false; error: string } {
   if (!cajaId) return { ok: false, error: "Abre la caja para registrar el anticipo." };
@@ -68,8 +71,11 @@ export function armarReserva(
   if (anticipo === null || anticipo <= 0) return { ok: false, error: "Anticipo inválido." };
   if (anticipo > brutoLinea(milesimas, precio))
     return { ok: false, error: "El anticipo no puede superar el total." };
+  if (f.medio === "qr" && !f.qrConfirmado)
+    return { ok: false, error: "Confirma que recibiste el QR." };
   const r = reservaPayloadSchema.safeParse({
     id,
+    dispositivo_id: dispositivoId,
     caja_sesion_id: cajaId,
     cliente_id: f.clienteId,
     producto_id: f.producto.id,

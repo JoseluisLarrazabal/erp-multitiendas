@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { formatearBs } from "@/lib/format/moneda";
@@ -16,12 +16,19 @@ import { FormReserva } from "./form-reserva";
 // Necesita conexión: lee y escribe directo contra el servidor, nunca por la cola offline.
 export function ReservasPos({
   negocioId,
+  equipoId,
+  ubicacionId,
+  ubicaciones,
   cajaId,
   indice,
   hayCarrito,
   alCompletar,
 }: {
   negocioId: string;
+  equipoId: string;
+  // Ubicación del equipo y nombres de las del negocio: solo se completa una reserva de esta ubicación.
+  ubicacionId: string;
+  ubicaciones: readonly { id: string; nombre: string }[];
   cajaId: string | null;
   indice: Indice | null;
   hayCarrito: boolean;
@@ -31,6 +38,8 @@ export function ReservasPos({
   const [reservas, setReservas] = useState<ReservaActiva[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Una operación por reserva a cancelar: repetir la confirmación tras un corte de red devuelve lo original.
+  const operaciones = useRef(new Map<string, string>());
 
   const cargar = useCallback(async () => {
     const r = await cargarReservasActivas(createClient(), negocioId);
@@ -63,6 +72,7 @@ export function ReservasPos({
     <section aria-label="Reservas" className="flex flex-col gap-3">
       <FormReserva
         negocioId={negocioId}
+        equipoId={equipoId}
         cajaId={cajaId}
         indice={indice}
         alCrear={() => {
@@ -96,51 +106,79 @@ export function ReservasPos({
         aria-label="Reservas activas"
         className="divide-border bg-card divide-y rounded-xl border empty:hidden"
       >
-        {reservas?.map((r) => (
-          <li
-            key={r.id}
-            aria-label={`Reserva de ${r.clienteNombre}`}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
-          >
-            <div className="min-w-0 flex-1 basis-56">
-              <p className="truncate text-sm font-semibold">{r.clienteNombre}</p>
-              <p className="truncate text-sm">
-                {r.productoNombre} × {formatearCantidad(aMilesimas(r.cantidad))}
-              </p>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                Total {bs(totalReserva(r))} · anticipo {formatearBs(r.anticipo)} (
-                {ETIQUETA_MEDIO[r.medio]}) · saldo {bs(saldoReserva(r))}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                className="h-10"
-                disabled={hayCarrito || !cajaId}
-                title={hayCarrito ? "Termina o vacía la venta en curso" : undefined}
-                aria-label={`Completar reserva de ${r.clienteNombre}`}
-                onClick={() => alCompletar(r)}
-              >
-                Completar venta
-              </Button>
-              <ConfirmarAccion
-                etiqueta="Cancelar"
-                titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
-                descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
-                confirmar="Cancelar reserva"
-                deshabilitado={!cajaId}
-                accion={async () => {
-                  const res = cajaId ? await cancelarReserva(createClient(), r.id, cajaId) : null;
-                  if (!res) return { ok: false, error: "Abre la caja para devolver el anticipo." };
-                  if (!res.ok) return res;
-                  setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
-                  void cargar();
-                  return { ok: true, data: null };
-                }}
-              />
-            </div>
-          </li>
-        ))}
+        {reservas?.map((r) => {
+          const aqui = r.ubicacionId === ubicacionId;
+          const donde = ubicaciones.find((u) => u.id === r.ubicacionId)?.nombre ?? "otra ubicación";
+          return (
+            <li
+              key={r.id}
+              aria-label={`Reserva de ${r.clienteNombre}`}
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
+            >
+              <div className="min-w-0 flex-1 basis-56">
+                <p className="truncate text-sm font-semibold">{r.clienteNombre}</p>
+                <p className="truncate text-sm">
+                  {r.productoNombre} × {formatearCantidad(aMilesimas(r.cantidad))}
+                </p>
+                <p className="text-muted-foreground text-xs tabular-nums">
+                  Total {bs(totalReserva(r))} · anticipo {formatearBs(r.anticipo)} (
+                  {ETIQUETA_MEDIO[r.medio]}) · saldo {bs(saldoReserva(r))}
+                </p>
+                {!aqui && <p className="text-muted-foreground text-xs">Reservada en {donde}</p>}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  className="h-10"
+                  disabled={hayCarrito || !cajaId || !aqui}
+                  title={
+                    !aqui
+                      ? `Se completa en ${donde}`
+                      : hayCarrito
+                        ? "Termina o vacía la venta en curso"
+                        : undefined
+                  }
+                  aria-label={`Completar reserva de ${r.clienteNombre}`}
+                  onClick={() => alCompletar(r)}
+                >
+                  Completar venta
+                </Button>
+                <ConfirmarAccion
+                  etiqueta="Cancelar"
+                  titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
+                  descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
+                  confirmar="Cancelar reserva"
+                  deshabilitado={!cajaId}
+                  accion={async () => {
+                    if (!cajaId)
+                      return { ok: false, error: "Abre la caja para devolver el anticipo." };
+                    const operacion = operaciones.current.get(r.id) ?? crypto.randomUUID();
+                    operaciones.current.set(r.id, operacion);
+                    const res = await cancelarReserva(
+                      createClient(),
+                      operacion,
+                      r.id,
+                      cajaId,
+                      equipoId,
+                    );
+                    if (!res.ok) {
+                      // Ya se completó o canceló en otro equipo: se recarga la lista y se descarta la operación.
+                      if (res.codigo === "ERP_RESERVA_NO_ACTIVA") {
+                        operaciones.current.delete(r.id);
+                        void cargar();
+                      }
+                      return res;
+                    }
+                    operaciones.current.delete(r.id);
+                    setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
+                    void cargar();
+                    return { ok: true, data: null };
+                  }}
+                />
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

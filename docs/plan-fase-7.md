@@ -50,7 +50,7 @@ sin resolver y no frena la fase. La Entrega A sigue bloqueada por el cliente; en
    - **Los pagos a proveedor no pasan por la caja del POS:** son del panel, con medio `efectivo`, `qr` o
      `transferencia`, sin sesión.
    - `shortcut: si se paga a un proveedor con plata del cajón, el encargado registra además un "gasto" de caja; atar
-     proveedor_pagos a la caja cuando el cliente lo pida.`
+proveedor_pagos a la caja cuando el cliente lo pida.`
 5. **Compras:**
    - La deuda con un proveedor es la suma de sus compras menos la suma de sus pagos.
    - Una compra al contado registra en la misma transacción un pago por el total. Así la deuda se calcula igual en los
@@ -69,6 +69,14 @@ sin resolver y no frena la fase. La Entrega A sigue bloqueada por el cliente; en
    - Cancelar genera `reserva_liberada` (+) y, según P-12 (supuesto: se devuelve por caja), una fila `devolucion` en la
      sesión abierta. Con efectivo esperado insuficiente se rechaza con `ERP_EFECTIVO_INSUFICIENTE` (DB-24).
    - Gestionar reservas no existe en lavandería, según la matriz.
+   - **Ajustes de revisión (2026-11-08):**
+     - El precio acordado se valida al crear la reserva como una línea de venta (piso, `descontar`, tope); la venta que la
+       completa ya no re-valida el piso.
+     - La reserva exige stock disponible (`ERP_STOCK_INSUFICIENTE`).
+     - El costo de la venta de una reserva es la foto del movimiento `reserva`; `reserva_liberada` reingresa con esa foto.
+     - El anticipo por QR se confirma en el mostrador (no hay camino de rechazo posterior).
+     - Una venta de reserva no se anula ni se devuelve (decisión 9, `ERP_VENTA_DE_RESERVA`) y nunca pasa por la cola
+       offline: se cobra directo, con reintento en memoria bajo el mismo id.
 7. **Venta a crédito (RF-CRE-01 a 03):**
    - Es una venta del POS con `condicion = 'credito'`, cliente obligatorio y lista de precios `credito`.
    - Los pagos suman la inicial, no el total. La inicial es como mínimo `inicial_pct` del total.
@@ -83,7 +91,7 @@ sin resolver y no frena la fase. La Entrega A sigue bloqueada por el cliente; en
 9. **Anular y devolver:** se rechazan las ventas con crédito (`ERP_VENTA_CON_CREDITO`) y las ventas que completaron una
    reserva (`ERP_VENTA_DE_RESERVA`).
    `shortcut: el dinero ya repartido entre cuotas y anticipos no tiene reverso automático; diseñarlo si el cliente
-   necesita anular esas ventas.`
+necesita anular esas ventas.`
 10. **Insumos (RF-INS):**
     - El alta de insumos es la del catálogo, que ya existe para lavandería. La entrada es una compra o
       `registrar_entrada`.
@@ -97,12 +105,12 @@ sin resolver y no frena la fase. La Entrega A sigue bloqueada por el cliente; en
 
 ## PRs (en serie: los 4 comparten `database.types.ts` y Supabase local en puertos fijos)
 
-| PR | Rama | Contenido | Pruebas |
-|---|---|---|---|
-| 1 | `feat/compras` | Migración `proveedores`, `compras`, `compra_items`, `proveedor_pagos` (RLS, FK compuesta por negocio, append-only en pagos e ítems). RPC `guardar_proveedor`, `registrar_compra` (idempotente por id de compra + huella, movimientos `compra` con costo), `pagar_proveedor`, lectura `deudas_proveedores`. Panel: `/panel/proveedores` (lista, alta y edición, deuda, pagar) y `/panel/compras` (lista, nueva compra con varios ítems usando `SelectorProducto`) | DB-25; promedio recalculado; idempotencia; aislamiento entre negocios; E2E de compra a crédito y pago |
-| 2 | `feat/insumos` | RPC `registrar_consumo`, aviso de stock bajo de insumos, `reporte_insumos` y su pestaña en reportes de lavandería (con Excel como los demás). Panel: `/panel/inventario/consumo` | DB-26; E2E de consumo y reporte |
-| 3 | `feat/reservas` | Migración `reservas` y `reserva_pagos`; RPC `crear_reserva`, `cancelar_reserva`, `reservas_activas`; `registrar_venta` con `reserva_id` y medio `anticipo`; arqueo con anticipos y devoluciones; rechazo de anular y devolver. POS: pestaña "Reservas" (crear, listar, completar cargando el carrito y cancelar) | DB-23, DB-24; arqueo; DB-04 con reservas; E2E-13 |
-| 4 | `feat/credito` | Migración `credito_config`, `creditos`, `credito_cuotas`, `credito_pagos`; `plan_cuotas`; `registrar_venta` con `condicion` y bloque `credito`; `venta_items.lista` con `credito`; RPC `pagar_cuota`, `crear_credito_inicial`, `guardar_credito_config`, lecturas `cuentas_por_cobrar` y `detalle_credito`; arqueo con cuotas. POS: condición crédito en el cobro, plan imprimible, cobro de cuota. Panel: `/panel/creditos` (saldo por cliente, vencidas con días de atraso, detalle, saldos iniciales, configuración) | DB-21, DB-22; arqueo; E2E-12 |
+| PR  | Rama            | Contenido                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Pruebas                                                                                               |
+| --- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | `feat/compras`  | Migración `proveedores`, `compras`, `compra_items`, `proveedor_pagos` (RLS, FK compuesta por negocio, append-only en pagos e ítems). RPC `guardar_proveedor`, `registrar_compra` (idempotente por id de compra + huella, movimientos `compra` con costo), `pagar_proveedor`, lectura `deudas_proveedores`. Panel: `/panel/proveedores` (lista, alta y edición, deuda, pagar) y `/panel/compras` (lista, nueva compra con varios ítems usando `SelectorProducto`)                                                        | DB-25; promedio recalculado; idempotencia; aislamiento entre negocios; E2E de compra a crédito y pago |
+| 2   | `feat/insumos`  | RPC `registrar_consumo`, aviso de stock bajo de insumos, `reporte_insumos` y su pestaña en reportes de lavandería (con Excel como los demás). Panel: `/panel/inventario/consumo`                                                                                                                                                                                                                                                                                                                                        | DB-26; E2E de consumo y reporte                                                                       |
+| 3   | `feat/reservas` | Migración `reservas` y `reserva_pagos`; RPC `crear_reserva`, `cancelar_reserva`, `reservas_activas`; `registrar_venta` con `reserva_id` y medio `anticipo`; arqueo con anticipos y devoluciones; rechazo de anular y devolver. POS: pestaña "Reservas" (crear, listar, completar cargando el carrito y cancelar)                                                                                                                                                                                                        | DB-23, DB-24; arqueo; DB-04 con reservas; E2E-13                                                      |
+| 4   | `feat/credito`  | Migración `credito_config`, `creditos`, `credito_cuotas`, `credito_pagos`; `plan_cuotas`; `registrar_venta` con `condicion` y bloque `credito`; `venta_items.lista` con `credito`; RPC `pagar_cuota`, `crear_credito_inicial`, `guardar_credito_config`, lecturas `cuentas_por_cobrar` y `detalle_credito`; arqueo con cuotas. POS: condición crédito en el cobro, plan imprimible, cobro de cuota. Panel: `/panel/creditos` (saldo por cliente, vencidas con días de atraso, detalle, saldos iniciales, configuración) | DB-21, DB-22; arqueo; E2E-12                                                                          |
 
 Cierre de cada PR: `/code-review`, `/ponytail-review` y `/security-review` (todos tocan RLS y RPC); Codex no verificado
 hasta el 2026-11-16. Después vienen CI verde y merge, `db push --linked` a producción (dry-run primero, verificando
@@ -133,9 +141,9 @@ después del merge: rutas nuevas abiertas con Playwright con la cuenta del dueñ
 
 ## Estado
 
-| PR | Estado |
-|---|---|
-| 1 compras | mergeado (#83) y migración aplicada en producción el 2026-11-08; `/panel/proveedores` verificado con Playwright |
-| 2 insumos | PR abierto (2026-11-08). Cambio sobre la decisión 10: el consumo es un tipo de `ajustar_inventario` (solo insumos activos de lavandería), sin RPC propia. `revertir_consumo` corrige un consumo mal cargado: contra-movimiento sin costo, que no recalcula el costo promedio. `reporte_insumos` cuenta solo consumos vigentes; la cantidad sale solo agrupando por insumo, para no mezclar unidades |
-| 3 reservas | pendiente |
-| 4 crédito | pendiente |
+| PR         | Estado                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 compras  | mergeado (#83) y migración aplicada en producción el 2026-11-08; `/panel/proveedores` verificado con Playwright                                                                                                                                                                                                                                                                                                                            |
+| 2 insumos  | mergeado (#86), migración aplicada en producción el 2026-11-08. Cambio sobre la decisión 10: el consumo es un tipo de `ajustar_inventario` (solo insumos activos de lavandería), sin RPC propia. `revertir_consumo` corrige un consumo mal cargado: contra-movimiento sin costo, que no recalcula el costo promedio. `reporte_insumos` cuenta solo consumos vigentes; la cantidad sale solo agrupando por insumo, para no mezclar unidades |
+| 3 reservas | pendiente                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 4 crédito  | pendiente                                                                                                                                                                                                                                                                                                                                                                                                                                  |

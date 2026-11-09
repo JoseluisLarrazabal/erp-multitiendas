@@ -169,6 +169,8 @@ export function useVenta(o: OpcionesVenta) {
   const resultados = useMemo(() => (indice ? buscar(indice, busqueda) : []), [indice, busqueda]);
 
   function agregar(p: ProductoPos) {
+    if (reserva)
+      return setAviso("Estás completando una reserva: no se pueden agregar más productos.");
     const motivo = motivoNoVendible(p, o.tipoNegocio, listaVenta);
     // Las series se eligen contra el servidor (RF-VEN-14).
     if (p.controlaSerie && leerSinRed())
@@ -330,7 +332,8 @@ export function useVenta(o: OpcionesVenta) {
               }),
     sinRed,
     // El carrito no se edita mientras la venta viaja al servidor.
-    bloqueado: envio.estado.t === "enviando" || reserva !== null,
+    bloqueado:
+      envio.estado.t === "enviando" || envio.estado.t === "verificando" || reserva !== null,
     // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.
     colaBloquea: o.cola.estado.bloqueaEquipo,
   };

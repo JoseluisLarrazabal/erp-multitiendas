@@ -17,11 +17,13 @@ import { armarReserva, sePuedeReservar, type MedioReserva } from "../reservas";
 // El id se fija al abrir el formulario y se conserva en los reintentos (idempotencia); cambia solo tras el éxito.
 export function FormReserva({
   negocioId,
+  equipoId,
   cajaId,
   indice,
   alCrear,
 }: {
   negocioId: string;
+  equipoId: string;
   cajaId: string | null;
   indice: Indice | null;
   alCrear: () => void;
@@ -34,6 +36,7 @@ export function FormReserva({
   const [precioTexto, setPrecioTexto] = useState("");
   const [anticipoTexto, setAnticipoTexto] = useState("");
   const [medio, setMedio] = useState<MedioReserva>("efectivo");
+  const [qrConfirmado, setQrConfirmado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState(false);
   const resultados = indice && !producto ? buscar(indice, busqueda, 6).filter(sePuedeReservar) : [];
@@ -55,8 +58,10 @@ export function FormReserva({
         precioTexto,
         anticipoTexto,
         medio,
+        qrConfirmado,
       },
       id.current,
+      equipoId,
       cajaId,
     );
     if (!r.ok) return setError(r.error);
@@ -71,6 +76,7 @@ export function FormReserva({
       setCantidadTexto("1");
       setPrecioTexto("");
       setAnticipoTexto("");
+      setQrConfirmado(false);
       alCrear();
     } catch {
       setError(MENSAJE_RED);
@@ -149,12 +155,26 @@ export function FormReserva({
         <SelectNativo
           id="reserva-medio"
           value={medio}
-          onChange={(e) => setMedio(e.target.value as MedioReserva)}
+          onChange={(e) => {
+            setMedio(e.target.value as MedioReserva);
+            setQrConfirmado(false);
+          }}
         >
           <option value="efectivo">Efectivo</option>
           <option value="qr">QR</option>
         </SelectNativo>
       </div>
+      {medio === "qr" && (
+        <label className="flex items-start gap-2 text-sm sm:col-span-2">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-5"
+            checked={qrConfirmado}
+            onChange={(e) => setQrConfirmado(e.target.checked)}
+          />
+          <span>Confirmo que recibí el anticipo por QR en mi cuenta.</span>
+        </label>
+      )}
       <p role="alert" className="text-destructive text-sm empty:hidden sm:col-span-2">
         {error}
       </p>
