@@ -253,8 +253,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Recomendación al cliente: un respaldo de internet 4G.** _Vigente (recomendación)_ · H:530
 - **La reimpresión de notas pendientes, clientes sin conexión, series sin conexión y Background Sync están fuera de
   alcance.** Implicancia sobre cuándo se envía la cola con la app cerrada: _no verificado_ (inferencia). _Vigente_ · PF-3:149-151
-- **Firefox, Safari, instalación PWA real, móvil táctil y red intermitente real no se probaron.** _No verificado_ · H:405-406,
-  450; SRS RNF-15
+- **Instalación PWA real, móvil táctil real y red intermitente real no se probaron.** El panel sí se prueba en Android e iOS
+  emulados (#91). Firefox no está soportado. _No verificado_ · H:405-406, 450; SRS RNF-15
 - **Descartes y duplicados.** Reenvío de la misma venta no duplica (20 reenvíos en paralelo = 1 venta). _Vigente_ · H:444-446
 - **Límite aceptado:** si fallan a la vez "quitar" y "marcar rechazada" tras un rechazo en línea, la fila queda pendiente y se
   reenvía. _Riesgo aceptado_ · H:393-394
@@ -505,8 +505,9 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Impresora térmica real, táctil real y Android/Safari reales no se probaron.** _No verificado_ · H:189, 351; AUD:65-74
 - **La app es una PWA instalable (POS y panel por separado); el panel se instala sin service worker, el POS con service worker.**
   Sin conexión el panel muestra "sin conexión", nunca datos viejos. _Vigente_ · H:535-544; PF-5 "PWA"
-- **Compatibilidad objetivo: Chrome y Edge en PC, Chrome en Android, Safari en iOS para el panel.** Solo se probó Chromium.
-  _No verificado (Firefox, Safari, WebKit)_ · SRS RNF-15; `docs/stack.md` "Safari y Firefox"
+- **Navegadores soportados: Chrome y Edge en PC, Chrome en Android, Safari en iOS para el panel.** Firefox no está soportado.
+  Las pruebas automáticas cubren Chromium y el panel en Android e iOS emulados; falta la prueba en los equipos reales.
+  _Vigente (equipos reales no verificados)_ · SRS RNF-15; #91
 - **Tras publicar una versión nueva del POS, el service worker queda en espera: hay que aceptar "Actualización disponible".**
   _Vigente_ · PF-3:124-127; H:190-191
 - **La interfaz está en español de Bolivia: moneda `Bs 1.234,50`, fecha `dd/mm/aaaa`.** _Vigente_ · SRS RNF-13
@@ -593,9 +594,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   H:129-131; SRS:288
 - **Codex (revisión de otro laboratorio) no revisó los PRs de las fases 3 a 7; queda pendiente cuando vuelva la cuota (2026-12-03).**
   _No verificado_ · H:10-11, 49-50
-- **Verificaciones pendientes del PR `test/brechas-trazabilidad`:** E2E de filtros, dólar paralelo, "sin recoger", garantía en la
-  nota, venta menor a 2 s, axe, Firefox, WebKit, `pnpm audit` semanal y el flaky `catalogo.spec.ts:195`. _Pendiente_ · H:12-13;
-  AUD:82-91
+- **Brechas de pruebas de la auditoría:** cerradas en #91 (filtros, dólar paralelo, "sin recoger", garantía, venta < 2 s, axe,
+  Android e iOS emulados, `pnpm audit`, intermitente). Falta el lector de pantalla real (RNF-14). _Vigente_ · AUD:82-91
 
 ## 21. Preguntas abiertas para el cliente (P-xx)
 

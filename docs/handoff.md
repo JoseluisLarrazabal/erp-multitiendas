@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-09.
+Última actualización: 2026-11-09 (#91).
 
 ## Próxima sesión (arrancar acá)
 
@@ -14,12 +14,19 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   compras (#83), insumos (#86), reservas (#87) y crédito (#88). `/panel/creditos` se verificó con Playwright. Plan en
   `docs/plan-fase-7.md`. D-01 sigue sin resolver. Codex no revisó ninguno de los 4: queda pendiente para cuando vuelva
   la cuota (2026-12-03); si encuentra algo, el arreglo va en un PR nuevo.
-- **Siguiente:** el PR `test/brechas-trazabilidad` de la auditoría (E2E de filtros marca/categoría, dólar paralelo, "sin
-  recoger", garantía en la nota, venta < 2 s; axe, Firefox y WebKit; `pnpm audit` semanal; el flaky de `catalogo.spec.ts:195`).
+- **Auditoría de la Entrega A: cerrada el 2026-11-09 con #91 (`test/brechas-trazabilidad`).** E2E de filtro marca/categoría,
+  dólar paralelo, "sin recoger" con datos y venta < 2 s (local ~290 ms); axe sin violaciones serias en 7 pantallas; humo
+  del panel en Android (Pixel 7) e iOS (iPhone 14, WebKit) emulados; `failOnFlakyTests` en CI; `pnpm audit` los lunes y
+  en PRs que tocan dependencias (override de zod 4.6.7). Arreglos de producto: contraste del F2 de Cobrar, foco de la
+  grilla de precios (causa del intermitente), marcas desde la vista `marcas_productos` (migración `20261109120000`
+  aplicada en producción y filtro verificado con Playwright) y scroll del menú lateral en celular. Decisión: Firefox no
+  se prueba, RNF-15 no lo pide. Pendiente: dispositivos reales (RF-TR-07), impresora térmica, lector de pantalla.
+  Codex: no verificado.
+- **Siguiente:** nada de código bloqueante. Lo que sigue depende del cliente (lista de abajo) y de Codex (2026-12-03).
 - **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
-- **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85; migración `20261108130000` aplicada y `/panel/reconciliacion` verificada). Queda el PR `test/brechas-trazabilidad`.
+- **Auditoría de la Entrega A (2026-11-08):** `docs/auditoria-entrega-a.md`. Cerrada en código y en producción (#82, #84, #85, #91).
 - **Fase 7, crédito (PR 4) — decisiones para el CTO:**
   - Cualquier cuenta del negocio puede leer los créditos y saldos de clientes por RLS, igual que ventas y clientes. El permiso de las RPC ordena los listados, no los hace secretos. Si se quiere la deuda reservada, hay que cambiar las políticas.
   - El saldo inicial se carga sin interés y se puede anular solo si no tiene pagos.
