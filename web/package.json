@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:integracion": "vitest run -c vitest.integracion.config.ts",
     "test:e2e": "playwright test",
+    "manual:capturas": "playwright test -c playwright.manual.config.ts",
     "db:start": "supabase start --workdir ..",
     "db:stop": "supabase stop --workdir ..",
     "db:reset": "supabase db reset --workdir ..",
