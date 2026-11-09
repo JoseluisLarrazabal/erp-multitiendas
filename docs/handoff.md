@@ -1,13 +1,16 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-08.
+Última actualización: 2026-11-09.
 
 ## Próxima sesión (arrancar acá)
 
-- **Plan activo: fase 7, Entrega B** (CTO, 2026-11-08: "no nos importa ya el contrato ahora mismo, implementa
-  entrega B"). Plan en `docs/plan-fase-7.md`, con 4 PRs en serie: compras, insumos, reservas y crédito. Estado por PR
-  en la tabla "Estado" del plan. D-01 queda sin resolver y no frena la fase.
+- **Fase 7, Entrega B: cerrada el 2026-11-09.** Los 4 PRs están mergeados y con la migración aplicada en producción:
+  compras (#83), insumos (#86), reservas (#87) y crédito (#88). `/panel/creditos` se verificó con Playwright. Plan en
+  `docs/plan-fase-7.md`. D-01 sigue sin resolver. Codex no revisó ninguno de los 4: queda pendiente para cuando vuelva
+  la cuota (2026-12-03); si encuentra algo, el arreglo va en un PR nuevo.
+- **Siguiente:** el PR `test/brechas-trazabilidad` de la auditoría (E2E de filtros marca/categoría, dólar paralelo, "sin
+  recoger", garantía en la nota, venta < 2 s; axe, Firefox y WebKit; `pnpm audit` semanal; el flaky de `catalogo.spec.ts:195`).
 - **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
@@ -23,14 +26,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Costo de la venta = foto de la reserva. Al completar, la liberación va sin costo; al cancelar reingresa con la foto.
   - Una venta de reserva no se anula ni se devuelve.
   - Para el CTO: el QR del anticipo se confirma en el mostrador y no se puede marcar como rechazado después.
-- **Fase 7, crédito (PR 4, rama `feat/credito`, pendiente de merge):** venta a crédito en el POS (solo con conexión, cliente
+- **Fase 7, crédito (PR 4, #88):** venta a crédito en el POS (solo con conexión, cliente
   obligatorio, lista `credito`, inicial mínima por negocio, 1 a N cuotas, 3 casillas de documentos), plan de cuotas imprimible, modo
   Cuotas para cobrar por caja, y `/panel/creditos` (saldo por cliente, vencidas con días de atraso, detalle, saldos iniciales y
   parámetros). Decisiones y ajustes en `docs/plan-fase-7.md` (decisión 7). Para el CTO:
   - El interés vive en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.
   - Una venta con crédito no se anula ni se devuelve (`ERP_VENTA_CON_CREDITO`).
   - Los saldos iniciales se cargan sin interés. Falta confirmar P-07 (interés sobre saldo) con el cliente: cambia solo `plan_cuotas`.
-  - Pendiente tras el merge: aplicar la migración `20261108160000` en producción y abrir `/panel/creditos` con Playwright.
 - **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
