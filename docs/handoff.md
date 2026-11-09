@@ -1,9 +1,33 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-09 (manual de usuario).
+Última actualización: 2026-11-09 (auditoría funcional previa a la entrega).
 
 ## Próxima sesión (arrancar acá)
+
+- **Auditoría funcional previa a la entrega (CTO, 2026-11-09): `docs/auditoria-preentrega.md`.** Veredicto: no está
+  listo para firmar el acta; sí para cargar datos una vez cerrados 6 bloqueantes de código. Sin críticos.
+  - Evidencia: pasos 1 a 8 del CI en local sobre `a910b49` (Vitest 464, pgTAP 2.186, integración 12, Playwright 237,
+    todo en verde); producción al día (deploy, 38 migraciones, 0 errores de runtime en 7 días); 6 subagentes de
+    lectura y un QA en navegador siguiendo los manuales.
+  - Bloqueantes: B-1 el POS agrega el producto equivocado si un código interno es igual al código de barras de otro;
+    B-2 el conteo ignora lo reservado y crea stock fantasma; B-3 la nota y la boleta salen sin dirección ni teléfono
+    y no hay dónde cargarlos; B-4 el backup corre con hasta 10 h de atraso (27 h entre dos corridas, RNF-09); B-5 no
+    hay cambio ni restablecimiento de contraseña; B-6 una recarga a mitad del cobro deja una venta a crédito
+    registrada y el POS sin rastro.
+  - 16 medios, 40 bajos y las brechas de prueba están en el documento. El paquete de entrega (acta, paralelo,
+    capacitación, manuales) necesita un PR propio.
+  - **Pendiente CTO:**
+    - aprobar el camino de 4 PRs (sección 8) y decidir M-1 (¿el vendedor devuelve anticipos en efectivo?) y M-3
+      (interés en el prepago, con el cliente);
+    - correr o autorizar la consulta de colisiones de B-1 en producción (sección 2): la lectura a producción quedó
+      bloqueada por el clasificador de permisos en esa sesión;
+    - dos objeciones al plan vigente: rotar las credenciales antes de cargar datos reales, y comprar el dominio antes
+      de instalar la app en los equipos (el almacenamiento del POS es por origen).
+  - No verificado: datos reales de producción, hardware real, Codex (sin cuota). Los hallazgos medios sin marca
+    salen de lectura de subagentes.
+  - Este handoff tiene 3 contradicciones por corregir en el PR de documentos: firma del contrato (líneas de "Estado
+    actual" y "Decisiones del CTO (2026-11-01)"), "en curso: fase 6" y la fecha de la cuota de Codex.
 
 - **Manual de usuario y capacitación con la fase 7: hecho el 2026-11-09** (`docs/plan-manual-usuario.md`, aprobado por el
   CTO). Manuales por rol en `docs/manual/`: vendedor, lavandería, encargado y dueño, contador. Llevan 25 capturas
@@ -37,7 +61,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   aplicada en producción y filtro verificado con Playwright) y scroll del menú lateral en celular. Decisión: Firefox no
   se prueba, RNF-15 no lo pide. Pendiente: dispositivos reales (RF-TR-07), impresora térmica, lector de pantalla.
   Codex: no verificado.
-- **Siguiente:** nada de código bloqueante. Lo que sigue depende del cliente (lista de abajo) y de Codex (2026-12-03).
+- **Siguiente:** los 6 bloqueantes de `docs/auditoria-preentrega.md` (reemplaza "nada de código bloqueante", del
+  2026-11-09 por la mañana). Además, lo que depende del cliente (lista de abajo) y de Codex (2026-12-03).
 - **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
