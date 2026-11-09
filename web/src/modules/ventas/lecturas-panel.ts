@@ -135,7 +135,12 @@ export type DetalleVenta = {
   vendedor: string | null;
   cliente: string | null;
   items: ItemVenta[];
-  pagos: { id: string; medio: "efectivo" | "qr"; monto: number; verificacion: string }[];
+  pagos: {
+    id: string;
+    medio: "efectivo" | "qr" | "anticipo";
+    monto: number;
+    verificacion: string;
+  }[];
   devoluciones: {
     id: string;
     creadaEn: string;
@@ -251,7 +256,7 @@ export async function detalleVenta(
       }),
       pagos: pagos.data.map((p) => ({
         id: p.id,
-        medio: p.medio as "efectivo" | "qr", // check de la tabla pagos
+        medio: p.medio as "efectivo" | "qr" | "anticipo", // check de la tabla pagos
         monto: Number(p.monto),
         verificacion: p.verificacion,
       })),

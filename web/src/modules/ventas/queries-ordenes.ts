@@ -69,7 +69,7 @@ export async function cargarOrdenesActivas(
   };
 }
 
-async function llamar(
+export async function llamar(
   pedido: PromiseLike<{ data: unknown; error: Parameters<typeof errorRpc>[0] | null }>,
 ): Promise<Resultado<unknown>> {
   try {

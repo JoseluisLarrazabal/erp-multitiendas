@@ -31,6 +31,40 @@ const datos: DatosEnvio = {
   qrVerificado: false,
 };
 
+describe("completar una reserva", () => {
+  const conReserva: DatosEnvio = {
+    ...datos,
+    qr: 0,
+    efectivo: 5000,
+    qrVerificado: true,
+    reservaId: uuid(7),
+    anticipo: 3000,
+  };
+  it("manda reserva_id y el pago anticipo solo cuando hay reserva", () => {
+    const p = construirPayload(resumen, conReserva);
+    expect(p?.reserva_id).toBe(uuid(7));
+    expect(p?.pagos).toEqual([
+      { medio: "anticipo", monto: 30 },
+      { medio: "efectivo", monto: 50 },
+    ]);
+    const sin = construirPayload(resumen, { ...datos, qr: 8000, qrVerificado: true });
+    expect(sin).not.toHaveProperty("reserva_id");
+    expect(sin?.pagos.map((x) => x.medio)).toEqual(["qr"]);
+  });
+  it("la nota incluye el anticipo como pago", () => {
+    const nota = construirNota(resumen, conReserva, {
+      negocio: { nombre: "N", nit: null, datosNota: null },
+      vendedor: "V",
+      cliente: null,
+      recibido: 5000,
+    });
+    expect(nota?.pagos).toEqual([
+      { medio: "anticipo", monto: 3000 },
+      { medio: "efectivo", monto: 5000 },
+    ]);
+  });
+});
+
 describe("QR pendiente de verificar", () => {
   it("el payload lleva verificado:false y la nota lo marca pendiente", () => {
     expect(construirPayload(resumen, datos)?.pagos).toEqual([

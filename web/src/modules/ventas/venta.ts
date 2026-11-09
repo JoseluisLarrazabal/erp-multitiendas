@@ -14,6 +14,9 @@ export type DatosEnvio = {
   qr: number;
   // false: el QR se cobró sin conexión y queda pendiente de verificar (solo viaja con p_offline).
   qrVerificado: boolean;
+  // Completar una reserva: su id y el anticipo recibido (centavos) como pago `anticipo`.
+  reservaId?: string;
+  anticipo?: number;
 };
 
 // Construye y valida el payload. Se llama una vez al confirmar el cobro: los reintentos reenvían este mismo objeto.
@@ -31,6 +34,7 @@ export function construirPayload(resumen: ResumenCarrito, d: DatosEnvio): VentaP
     serie_id: r.linea.serieId,
   }));
   const pagos: VentaPayload["pagos"] = [];
+  if (d.anticipo) pagos.push({ medio: "anticipo", monto: aBolivianos(d.anticipo) });
   if (d.efectivo > 0) pagos.push({ medio: "efectivo", monto: aBolivianos(d.efectivo) });
   if (d.qr > 0) pagos.push({ medio: "qr", monto: aBolivianos(d.qr), verificado: d.qrVerificado });
   const r = ventaPayloadSchema.safeParse({
@@ -39,6 +43,7 @@ export function construirPayload(resumen: ResumenCarrito, d: DatosEnvio): VentaP
     caja_sesion_id: d.cajaId,
     numero: d.numero,
     cliente_id: d.clienteId,
+    ...(d.reservaId ? { reserva_id: d.reservaId } : {}),
     creada_en_cliente: d.creadaEnCliente,
     descuento: aBolivianos(descuentoVenta),
     total: aBolivianos(resumen.totales.total),
@@ -76,7 +81,7 @@ export type NotaVenta = {
   subtotal: number;
   descuentoVenta: number;
   total: number;
-  pagos: { medio: "efectivo" | "qr"; monto: number; pendiente?: boolean }[];
+  pagos: { medio: "efectivo" | "qr" | "anticipo"; monto: number; pendiente?: boolean }[];
   recibido: number;
   vuelto: number;
 };
@@ -86,12 +91,19 @@ export function construirNota(
   resumen: ResumenCarrito,
   d: Pick<
     DatosEnvio,
-    "numero" | "creadaEnCliente" | "efectivo" | "qr" | "descuentoVentaTexto" | "qrVerificado"
+    | "numero"
+    | "creadaEnCliente"
+    | "efectivo"
+    | "qr"
+    | "descuentoVentaTexto"
+    | "qrVerificado"
+    | "anticipo"
   >,
   contexto: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden"> & { recibido: number },
 ): NotaVenta | null {
   if (!resumen.totales) return null;
   const pagos: NotaVenta["pagos"] = [];
+  if (d.anticipo) pagos.push({ medio: "anticipo", monto: d.anticipo });
   if (d.efectivo > 0) pagos.push({ medio: "efectivo", monto: d.efectivo });
   if (d.qr > 0)
     pagos.push({ medio: "qr", monto: d.qr, ...(d.qrVerificado ? {} : { pendiente: true }) });

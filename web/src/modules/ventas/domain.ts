@@ -81,7 +81,11 @@ export function calcularTotales(
 
 export { parsearMonto } from "@/lib/format/moneda";
 
-export const ETIQUETA_MEDIO: Record<"efectivo" | "qr", string> = { efectivo: "Efectivo", qr: "QR" };
+export const ETIQUETA_MEDIO: Record<"efectivo" | "qr" | "anticipo", string> = {
+  efectivo: "Efectivo",
+  qr: "QR",
+  anticipo: "Anticipo de reserva",
+};
 
 // Entera en `unidad`, hasta 3 decimales en `kg`. Devuelve milésimas, o null si es inválida o cero.
 export function parsearCantidad(texto: string, unidad: Unidad): number | null {

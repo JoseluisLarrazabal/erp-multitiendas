@@ -72,10 +72,10 @@ export function leerCatalogo(json: unknown): Catalogo | null {
 }
 
 // Payload de registrar_venta. Mismas reglas que el servidor: claves exactas, números JSON con a lo sumo
-// 2 decimales (3 en cantidad), crédito no existe. QR `verificado: false` (pendiente) solo existe sin conexión y viaja con
+// 2 decimales (3 en cantidad), crédito no existe; `anticipo` y `reserva_id` van juntos y solo en línea. QR `verificado: false` (pendiente) solo existe sin conexión y viaja con
 // `p_offline`: el servidor lo rechaza en una venta en línea.
-const dinero = z.number().refine((n) => n >= 0 && Math.round(n * 100) / 100 === n);
-const cantidad = z.number().refine((n) => n > 0 && Math.round(n * 1000) / 1000 === n);
+export const dinero = z.number().refine((n) => n >= 0 && Math.round(n * 100) / 100 === n);
+export const cantidad = z.number().refine((n) => n > 0 && Math.round(n * 1000) / 1000 === n);
 
 export const itemVentaSchema = z.strictObject({
   producto_id: z.guid(),
@@ -93,6 +93,8 @@ export const pagoVentaSchema = z.discriminatedUnion("medio", [
     monto: dinero.refine((n) => n > 0),
     verificado: z.boolean(),
   }),
+  // Solo con reserva_id: lo recibido como anticipo, que no es efectivo de la sesión.
+  z.strictObject({ medio: z.literal("anticipo"), monto: dinero.refine((n) => n > 0) }),
 ]);
 
 export const ventaPayloadSchema = z.strictObject({
@@ -101,6 +103,8 @@ export const ventaPayloadSchema = z.strictObject({
   caja_sesion_id: z.guid(),
   numero: z.string().regex(/^[A-Z][0-9]{1,2}-[0-9]{6}$/),
   cliente_id: z.guid().nullable(),
+  // Solo al completar una reserva (en línea): la venta de siempre no manda la clave.
+  reserva_id: z.guid().optional(),
   creada_en_cliente: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/),

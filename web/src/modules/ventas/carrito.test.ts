@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   exigeCliente,
+  lineaIgual,
   lineasNoVendibles,
   motivoBloqueo,
   reducirCarrito,
@@ -38,6 +39,31 @@ describe("carrito", () => {
     c = reducirCarrito(c, { tipo: "agregar", producto: s, id: "l3" });
     c = reducirCarrito(c, { tipo: "agregar", producto: s, id: "l4" });
     expect(c).toHaveLength(3);
+  });
+  it("una línea de reserva (precioFijo) no se bloquea bajo el mínimo y sin permiso", () => {
+    let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
+    c = reducirCarrito(c, {
+      tipo: "cambiar",
+      id: "l1",
+      cambios: { precioTexto: "31", precioFijo: true },
+    });
+    const r = resumirCarrito(c, "", sinPermiso);
+    expect(r.error).toBeNull();
+    expect(r.totales?.total).toBe(3100);
+  });
+  it("una línea de reserva no absorbe el mismo producto y el catálogo nuevo no la toca", () => {
+    let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });
+    c = reducirCarrito(c, {
+      tipo: "cambiar",
+      id: "l1",
+      cambios: { precioTexto: "31", cantidadTexto: "5", precioFijo: true },
+    });
+    expect(lineaIgual(c, producto())).toBeNull();
+    const nuevo = producto({ precios: { ...producto().precios, contado: 9900 } });
+    const r = reducirCarrito(c, { tipo: "reemplazar", productos: new Map([["p1", nuevo]]) });
+    expect(r).toEqual(c);
+    const fuera = reducirCarrito(c, { tipo: "reemplazar", productos: new Map() });
+    expect(fuera).toHaveLength(1);
   });
   it("sin permiso: entre piso y lista pasa; bajo el piso o con descuento se bloquea", () => {
     let c = reducirCarrito([], { tipo: "agregar", producto: producto(), id: "l1" });

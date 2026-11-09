@@ -70,6 +70,10 @@ begin
            where d.venta_id not in (select id from _ventas) and d.created_at >= v_desde limit 1 loop
     raise exception 'ABORTA: la devolución % es sobre una venta previa a --desde; elegí otro --desde', m.id;
   end loop;
+  -- Una reserva previa completada o cancelada después del corte quedaría con su venta o su devolución borradas.
+  for m in select id from public.reservas where created_at < v_desde and cerrada_en >= v_desde limit 1 loop
+    raise exception 'ABORTA: la reserva previa % se completó o canceló después de --desde; elegí otro --desde', m.id;
+  end loop;
   -- movimientos_inventario no lleva serie_id: el kardex no dice qué serie tocó cada movimiento. Si el producto de una
   -- serie previa tuvo traslado, baja, ajuste o daño dentro del corte, no se puede saber a qué estado o ubicación volver.
   for m in select s.producto_id from public.series s
@@ -89,6 +93,10 @@ begin
   with d as (delete from public.devoluciones
              where created_at >= v_desde or venta_id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'devoluciones', count(*) from d;
+  with d as (delete from public.reserva_pagos where created_at >= v_desde or caja_sesion_id in (select id from _sesiones) returning 1)
+    insert into _resumen (tabla, filas) select 'reserva_pagos', count(*) from d;
+  with d as (delete from public.reservas where created_at >= v_desde or venta_id in (select id from _ventas) returning 1)
+    insert into _resumen (tabla, filas) select 'reservas', count(*) from d;
   with d as (delete from public.orden_eventos
              where created_at >= v_desde or orden_id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'orden_eventos', count(*) from d;

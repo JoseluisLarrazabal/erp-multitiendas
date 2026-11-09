@@ -25,6 +25,8 @@ export type Linea = {
   descuentoTexto: string;
   serieId: string | null;
   serieTexto: string | null;
+  // Línea de una reserva: el precio ya se acordó, sin piso ni descuento (igual que en registrar_venta).
+  precioFijo?: boolean;
 };
 
 export type AccionCarrito =
@@ -61,6 +63,7 @@ export function lineaIgual(
   const igual = estado.find(
     (l) =>
       l.producto.id === producto.id &&
+      !l.precioFijo &&
       !l.producto.controlaSerie &&
       l.lista === lista &&
       l.descuentoTexto === "" &&
@@ -120,6 +123,7 @@ export function reducirCarrito(estado: readonly Linea[], accion: AccionCarrito):
     // el precio sin tocar, que sigue a su lista, y una lista que ya no tiene precio, que vuelve a contado.
     case "reemplazar":
       return estado.flatMap((l) => {
+        if (l.precioFijo) return [l]; // reserva: precio acordado, ni se reprecia ni se quita
         const producto = accion.productos.get(l.producto.id);
         if (!productoVendible(producto, l.lista)) return [];
         const lista = producto.precios[l.lista] === null ? "contado" : l.lista;
@@ -168,7 +172,7 @@ export function resolverLinea(l: Linea, permisos: Permisos): LineaResuelta {
   if (precio === null || precio <= 0) return { ...base, error: "Precio inválido" };
   const descuento = l.descuentoTexto.trim() === "" ? 0 : parsearMonto(l.descuentoTexto);
   if (descuento === null) return { ...base, error: "Descuento inválido" };
-  const piso = pisoUnitario(precioDe(l.producto, "minimo"), precioLista);
+  const piso = l.precioFijo ? 0 : pisoUnitario(precioDe(l.producto, "minimo"), precioLista);
   const entrada = { cantidadMilesimas, precio, descuento, pisoUnitario: piso };
   const puedeBajar = permisos.puedeDescontar && permisos.tope > 0;
   if (precio < piso && !puedeBajar)

@@ -13,14 +13,18 @@ import {
   sinPrecioEn,
 } from "./carrito";
 import {
+  aMilesimas,
   buscar,
   formatearCantidad,
   motivoNoVendible,
   type Lista,
   porCodigoExacto,
+  textoMonto,
+  aCentavos,
   type ProductoPos,
 } from "./domain";
 import { armarOrden, fichaInicial, hoyLaPaz, type FichaTexto } from "./orden";
+import type { ReservaActiva } from "./reservas";
 import type { DatosNegocio, Equipo } from "./queries";
 import type { VentaPayload } from "./schemas";
 import { useAtajos } from "./use-atajos";
@@ -76,6 +80,8 @@ export function useVenta(o: OpcionesVenta) {
   const [consulta, setConsulta] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [confirmandoEquipo, setConfirmandoEquipo] = useState(false);
+  // Reserva que esta venta completa (RF-RES-02): carrito fijo, anticipo como pago, solo en línea.
+  const [reserva, setReserva] = useState<ReservaActiva | null>(null);
   // Lavandería: la venta es una orden, con su ficha y la lista normal o express en todas las líneas.
   const esOrden = o.tipoNegocio === "lavanderia";
   const [express, setExpress] = useState(false);
@@ -132,6 +138,7 @@ export function useVenta(o: OpcionesVenta) {
       setCliente(null);
       setExpress(false);
       setFicha(fichaInicial());
+      setReserva(null);
       setCobrando(false);
       setAviso(null);
       // El carrito queda vacío: un "Agregado: ..." viejo sería un anuncio engañoso al volver a la venta.
@@ -162,6 +169,8 @@ export function useVenta(o: OpcionesVenta) {
   const resultados = useMemo(() => (indice ? buscar(indice, busqueda) : []), [indice, busqueda]);
 
   function agregar(p: ProductoPos) {
+    if (reserva)
+      return setAviso("Estás completando una reserva: no se pueden agregar más productos.");
     const motivo = motivoNoVendible(p, o.tipoNegocio, listaVenta);
     // Las series se eligen contra el servidor (RF-VEN-14).
     if (p.controlaSerie && leerSinRed())
@@ -190,6 +199,45 @@ export function useVenta(o: OpcionesVenta) {
       );
   }
 
+  // Carga la reserva en un carrito vacío: un solo ítem al precio acordado, el cliente de la reserva y sin descuentos.
+  function cargarReserva(r: ReservaActiva): boolean {
+    const producto = catalogoHook.catalogo?.productos.find((p) => p.id === r.productoId);
+    if (carrito.length > 0) {
+      setAviso("Termina o vacía la venta en curso antes de completar una reserva.");
+      return false;
+    }
+    if (!producto || producto.controlaSerie) {
+      setAviso(`"${r.productoNombre}" no está disponible en el catálogo de este equipo.`);
+      return false;
+    }
+    siguienteId.current += 1;
+    const id = `l${siguienteId.current}`;
+    despachar({ tipo: "agregar", producto, id, lista: "contado" });
+    despachar({
+      tipo: "cambiar",
+      id,
+      cambios: {
+        cantidadTexto: formatearCantidad(aMilesimas(r.cantidad)),
+        precioTexto: textoMonto(aCentavos(r.precioAcordado)),
+        precioFijo: true,
+      },
+    });
+    setDescuentoVentaTexto("");
+    setCliente({ id: r.clienteId, nombre: r.clienteNombre, documento: null });
+    setReserva(r);
+    setAviso(null);
+    return true;
+  }
+  function descartarReserva() {
+    if (reserva && envio.pendientes.has(reserva.id))
+      return setAviso(
+        "Hay un cobro sin confirmar de esta reserva: abre el cobro y usa «Descartar y verificar».",
+      );
+    setReserva(null);
+    despachar({ tipo: "vaciar" });
+    setCliente(null);
+  }
+
   function cambiarExpress(valor: boolean) {
     const lista: Lista = valor ? "express" : "normal";
     const faltan = sinPrecioEn(carrito, lista);
@@ -206,6 +254,7 @@ export function useVenta(o: OpcionesVenta) {
     ? (!!cliente || sinRed) && fichaValida.ok
     : !(sinRed && clienteObligatorio && !cliente) && (!clienteObligatorio || !!cliente);
   const puedeCobrar =
+    !(reserva && sinRed) &&
     !consulta &&
     !!cajaId &&
     clienteListo &&
@@ -265,24 +314,30 @@ export function useVenta(o: OpcionesVenta) {
     setFicha,
     fichaValida,
     listaVenta,
+    reserva,
+    cargarReserva,
+    descartarReserva,
     motivoBloqueo: consulta
       ? null
-      : esOrden
-        ? (motivoBloqueo(resumen, {
-            cajaAbierta: !!cajaId,
-            clienteObligatorio: !sinRed,
-            hayCliente: !!cliente,
-          }) ?? (resumen.lineas.length > 0 && !fichaValida.ok ? fichaValida.motivo : null))
-        : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
-          ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
-          : motivoBloqueo(resumen, {
+      : reserva && sinRed
+        ? "Completar una reserva necesita conexión."
+        : esOrden
+          ? (motivoBloqueo(resumen, {
               cajaAbierta: !!cajaId,
-              clienteObligatorio,
+              clienteObligatorio: !sinRed,
               hayCliente: !!cliente,
-            }),
+            }) ?? (resumen.lineas.length > 0 && !fichaValida.ok ? fichaValida.motivo : null))
+          : sinRed && clienteObligatorio && !cliente && resumen.lineas.length > 0
+            ? "Esta venta necesita conexión: el negocio exige cliente y no se puede buscar sin red."
+            : motivoBloqueo(resumen, {
+                cajaAbierta: !!cajaId,
+                clienteObligatorio,
+                hayCliente: !!cliente,
+              }),
     sinRed,
     // El carrito no se edita mientras la venta viaja al servidor.
-    bloqueado: envio.estado.t === "enviando",
+    bloqueado:
+      envio.estado.t === "enviando" || envio.estado.t === "verificando" || reserva !== null,
     // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.
     colaBloquea: o.cola.estado.bloqueaEquipo,
   };

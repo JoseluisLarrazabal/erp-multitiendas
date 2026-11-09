@@ -35,6 +35,11 @@ export const resumenCajaSchema = z.object({
   gastos: z.number().nullable(),
   retiros: z.number().nullable(),
   devoluciones_efectivo: z.number().nullable(),
+  // Reservas (RF-RES): lo recibido y devuelto por caja, por medio. Parte del esperado y del QR neto.
+  anticipos_efectivo: z.number().nullable(),
+  anticipos_qr: z.number().nullable(),
+  devoluciones_reserva_efectivo: z.number().nullable(),
+  devoluciones_reserva_qr: z.number().nullable(),
   esperado: z.number().nullable(),
   qr_neto: z.number().nullable(),
   cantidad_ventas: z.number(),

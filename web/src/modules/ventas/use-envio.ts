@@ -13,17 +13,29 @@ import {
   protegerCobro,
   secuenciaDe,
   TIPO_VENTA,
+  mayorSecuenciaEnCola,
 } from "./cola-ventas";
-import { formatearNumero } from "./domain";
+import { cobrarReserva, MENSAJE_SIN_CONFIRMAR } from "./cobro-reserva";
+import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
-import type { Equipo } from "./queries";
+import { existeVenta, type Equipo } from "./queries";
 import type { OrdenPayload, VentaPayload } from "./schemas";
+
+// Cobro de reserva sin confirmar: lo que se envió y la nota armada con esos datos.
+export type PendienteReserva = { payload: VentaPayload; nota: NotaVenta };
 import { equipoTieneCola, type ColaPos } from "./use-cola";
 import { construirNota, construirPayload, type DatosEnvio, type NotaVenta } from "./venta";
 
-export type EstadoEnvio = { t: "libre" } | { t: "enviando" } | { t: "rechazada"; mensaje: string };
+export type EstadoEnvio =
+  | { t: "libre" }
+  | { t: "enviando" }
+  // Venta de reserva sin respuesta aún: se reintenta en memoria y el cobro no se puede cerrar ni repetir.
+  | { t: "verificando" }
+  | { t: "rechazada"; mensaje: string };
 
 const CODIGOS_PRECIO = ["ERP_SIN_PERMISO", "ERP_DESCUENTO_TOPE", "ERP_PRODUCTO_SIN_PRECIO"];
+const MENSAJE_RESERVA_RED =
+  "Completar una reserva necesita conexión: no se cobró. Vuelve a intentar con red.";
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
   "No se pudo guardar la venta en este equipo, así que no se cobró. Revisa el espacio y los permisos del navegador, o recarga la página.";
@@ -36,6 +48,9 @@ export type ContextoCobro = {
   // El cajero confirmó que el QR llegó. Sin conexión no se pide: el pago queda pendiente de verificar.
   qrConfirmado: boolean;
   recibido: number;
+  // Completar una reserva: su id y el anticipo recibido (centavos). Nunca se encola sin conexión.
+  reservaId?: string;
+  anticipo?: number;
   // Lavandería: la ficha viaja con la venta (crear_orden) y la nota se imprime como boleta.
   orden?: OrdenPayload;
   nota: Pick<NotaVenta, "negocio" | "vendedor" | "cliente" | "orden">;
@@ -74,12 +89,132 @@ export function useEnvio(opts: {
   }, [equipo.id, equipo.ultimoNumero]);
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const ocupado = useRef(false);
+  // Cobros de reserva sin confirmar, por reserva: el payload se reenvía idéntico (mismo id y número) hasta saber qué pasó
+  // en el servidor. El mapa vive en estado (la pantalla lo muestra) y en un ref (hayPendiente lo lee sin render).
+  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteReserva>>(new Map());
+  const pendRef = useRef(pendientes);
+  const fijarPendiente = useCallback((reservaId: string, p: PendienteReserva | null) => {
+    const m = new Map(pendRef.current);
+    if (p) m.set(reservaId, p);
+    else m.delete(reservaId);
+    pendRef.current = m;
+    setPendientes(m);
+  }, []);
+
+  // Una reserva nunca pasa por la cola ni por IndexedDB: sin conexión no se cobra.
+  const confirmarReserva = useCallback(
+    async (resumen: ResumenCarrito, c: ContextoCobro & { reservaId: string }) => {
+      if (leerSinRed() || (await hayAperturaEnCola(equipo.id)))
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
+      const cuenta = caducada.current
+        ? "rechazar"
+        : await comprobarCuenta(createClient(), usuarioId);
+      if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
+      if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_RESERVA_RED });
+      const previo = pendRef.current.get(c.reservaId) ?? null;
+      const armada: { nota?: NotaVenta } = { nota: previo?.nota };
+      const ventaId = crypto.randomUUID();
+      // Igual que en la venta normal: un QR sin confirmar no viaja en línea.
+      const qrVerificado = !(c.qr > 0 && !c.qrConfirmado);
+      const primerNumero = previo
+        ? secuenciaDe(previo.payload.numero)
+        : siguienteSecuencia(
+            contador.current,
+            leerContador(equipo.id),
+            await mayorSecuenciaEnCola(equipo.id),
+          );
+      const salida = await cobrarReserva(createClient(), {
+        previo: previo?.payload,
+        primerNumero,
+        alVerificar: () => setEstado({ t: "verificando" }),
+        armar: (seq) => {
+          const datos: DatosEnvio = {
+            ventaId,
+            dispositivoId: equipo.id,
+            cajaId: cajaId!,
+            numero: formatearNumero(equipo.prefijo, seq),
+            clienteId: c.clienteId,
+            creadaEnCliente: new Date().toISOString(),
+            descuentoVentaTexto: c.descuentoVentaTexto,
+            efectivo: c.efectivo,
+            qr: c.qr,
+            qrVerificado,
+            reservaId: c.reservaId,
+            anticipo: c.anticipo,
+          };
+          const payload = construirPayload(resumen, datos);
+          const nota = construirNota(resumen, datos, { ...c.nota, recibido: c.recibido });
+          if (!payload || !nota) return null;
+          armada.nota = nota;
+          return payload;
+        },
+      });
+      if (salida.t === "no-armada" || !armada.nota)
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
+      if (salida.t === "sin-confirmar") {
+        fijarPendiente(c.reservaId, { payload: salida.payload, nota: armada.nota });
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_SIN_CONFIRMAR });
+      }
+      if (salida.t === "rechazada") {
+        fijarPendiente(c.reservaId, null);
+        setEstado({ t: "rechazada", mensaje: salida.error });
+        if (salida.codigo === "ERP_CAJA_CERRADA") await alCajaCerrada();
+        else if (salida.codigo && CODIGOS_PRECIO.includes(salida.codigo)) await alErrorPrecios();
+        return;
+      }
+      fijarPendiente(c.reservaId, null);
+      contador.current = Math.max(contador.current, secuenciaDe(salida.numero));
+      subirContador(equipo.id, secuenciaDe(salida.numero));
+      setEstado({ t: "libre" });
+      alExito({ ...armada.nota, numero: salida.numero }, salida.payload.items, true);
+    },
+    [equipo, cajaId, usuarioId, alCajaCerrada, alErrorPrecios, alExito, fijarPendiente],
+  );
+
+  // "Descartar y verificar": pregunta al servidor si el cobro sin confirmar quedó registrado. Si existe, muestra la nota
+  // con lo congelado; si no, lo limpia y avisa que el cobro no se hizo. Si no se puede saber, conserva la entrada.
+  const descartarYVerificar = useCallback(
+    async (reservaId: string) => {
+      const p = pendRef.current.get(reservaId);
+      if (!p || ocupado.current) return;
+      ocupado.current = true;
+      try {
+        setEstado({ t: "verificando" });
+        const r = await existeVenta(createClient(), p.payload.id);
+        if (!r.ok)
+          return setEstado({
+            t: "rechazada",
+            mensaje: `No se pudo verificar (${r.error}). No entregues el producto; intenta de nuevo.`,
+          });
+        fijarPendiente(reservaId, null);
+        if (!r.data)
+          return setEstado({
+            t: "rechazada",
+            mensaje: "No se registró: el cobro no se hizo. Puedes cobrar de nuevo.",
+          });
+        subirContador(equipo.id, secuenciaDe(p.payload.numero));
+        setEstado({ t: "libre" });
+        alExito({ ...p.nota, numero: p.payload.numero }, p.payload.items, true);
+      } finally {
+        ocupado.current = false;
+      }
+    },
+    [equipo.id, alExito, fijarPendiente],
+  );
 
   const confirmar = useCallback(
     async (resumen: ResumenCarrito, c: ContextoCobro) => {
       if (ocupado.current || !cajaId) return;
       ocupado.current = true;
       try {
+        if (c.reservaId) {
+          const fallo = await protegerCobro(async () => {
+            setEstado({ t: "enviando" });
+            await confirmarReserva(resumen, { ...c, reservaId: c.reservaId! });
+          });
+          if (fallo) setEstado({ t: "rechazada", mensaje: fallo });
+          return;
+        }
         const fallo = await protegerCobro(async () => {
           setEstado({ t: "enviando" });
           // Con red, la cuenta se comprueba antes de cobrar: una sesión caducada o de otra cuenta no cobra ni encola.
@@ -185,13 +320,14 @@ export function useEnvio(opts: {
       alErrorPrecios,
       alCajaCerrada,
       alExito,
+      confirmarReserva,
     ],
   );
 
   // Cola persistente del equipo (pendientes y rechazadas) o un envío en curso.
   const equipoId = equipo.id;
   const hayPendiente = useCallback(
-    async () => ocupado.current || (await equipoTieneCola(equipoId)),
+    async () => ocupado.current || pendRef.current.size > 0 || (await equipoTieneCola(equipoId)),
     [equipoId],
   );
   const limpiarRechazo = useCallback(
@@ -199,5 +335,5 @@ export function useEnvio(opts: {
     [],
   );
 
-  return { estado, confirmar, limpiarRechazo, hayPendiente };
+  return { estado, confirmar, limpiarRechazo, hayPendiente, pendientes, descartarYVerificar };
 }
