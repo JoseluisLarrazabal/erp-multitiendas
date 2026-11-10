@@ -112,7 +112,7 @@ sucia). Cierre de brechas según `docs/handoff.md` (#91 y los PR 1 a 3 de la pre
 | RNF-15, navegadores                                                        | Parcial                  | #91: panel en Android (Pixel 7) e iOS (iPhone 14, WebKit) emulados; Firefox descartado; equipos reales sin probar |
 | `retries: 1` que ocultaba intermitencias                                   | Cerrada                  | #91: `failOnFlakyTests`; el intermitente era el foco de la grilla de precios                                      |
 | Sin `pnpm audit` semanal                                                   | Cerrada                  | #91: los lunes y en PRs que tocan dependencias                                                                    |
-| Venta sin descuento en la nota (observación de la auditoría de preentrega) | Cerrada por los PR 1 y 3 | NIT y texto de la nota desde "Datos del negocio" (PR #95); la línea de descuento sí sale cuando hay descuento     |
+| Nota de venta sin dirección ni NIT (observación de la auditoría previa)    | Cerrada por el PR 1      | NIT y texto de la nota desde "Datos del negocio" (PR #95); la línea de descuento sí sale cuando hay descuento     |
 
 Sigue abierto, sin maquillar:
 

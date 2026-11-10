@@ -674,9 +674,10 @@ de la preentrega (`PP`, `AUDP`): las reglas que cambiaron se corrigieron y las n
   desde el último domingo. Objeción del chairman, dicha una vez: no se puede garantizar que el proyecto de Supabase no se
   borre. _Riesgo aceptado; revisar el 2026-12-01_ cuando se renueva el cupo · H (decisión del CTO, 2026-11-10);
   `docs/backup.md`
-- **Si se pierde la clave privada `age` ningún backup se puede leer;** debe haber copia offline. Tampoco existe todavía un
-  procedimiento de copia periódica fuera de GitHub para el cliente. _Riesgo / pendiente (CTO copiar la clave offline)_ ·
-  `docs/backup.md` "Requisitos"; H:205-206, 212
+- **Si se pierde la clave privada `age` ningún backup se puede leer;** debe haber copia offline. El procedimiento de copia
+  periódica de los backups fuera de GitHub está en `docs/backup.md` ("Copia periódica fuera de GitHub", PR 4); hacerla es
+  tarea de quien custodia la clave. _Riesgo / pendiente (CTO copiar la clave offline)_ · `docs/backup.md` "Requisitos";
+  H:205-206, 212
 - **Si faltan los secretos de fotos, el backup de la base sigue y las fotos se omiten con advertencia amarilla.** _Vigente_ ·
   `docs/backup.md` paso 5
 - **El backup no cubre otros buckets de Storage ni la configuración del proyecto** (auth, Edge Functions): se recrea con
@@ -723,8 +724,8 @@ de la preentrega (`PP`, `AUDP`): las reglas que cambiaron se corrigieron y las n
 - **Producción lista para cargar datos; bloqueado por el cliente en este orden:** precios, servicios de lavandería y catálogo del
   frial, tope de descuento, conteo físico, usuarios, prueba en equipos reales con lector, capacitación. _Pendiente (cliente/CTO)_ ·
   H:37-48
-- **La capacitación (`docs/capacitacion.md`) cubre la Entrega B y el Inicio del panel desde #93;** el PR 4 la pone al día con
-  los cambios de los PR 1 a 3. _Pendiente (documentación)_ · H:274
+- **La capacitación (`docs/capacitacion.md`) cubre la Entrega B y el Inicio del panel desde #93;** el PR 4 la puso al día con
+  los cambios de los PR 1 a 3. _Vigente_ · H:274
 
 ## 20. Contrato, entrega y alcance
 

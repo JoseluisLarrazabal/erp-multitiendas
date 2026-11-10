@@ -756,8 +756,8 @@ equipo lleva su propia numeración de notas (`PREFIJO-000123`).
 El sistema copia la base de datos solo, sin que nadie haga nada, dos veces al día, y guarda cada copia 30 días. Las fotos de
 los productos se copian una vez por semana (los domingos) y se guardan 14 días. Las copias salen cifradas fuera de Supabase.
 
-- **Qué se pierde en el peor caso.** Si Supabase se pierde por completo, se pierden como máximo los datos de las últimas 24
-  horas: en el uso normal, unas 15 horas; hasta unas 27 si el servicio que las corre se salta una corrida. De las fotos se
+- **Qué se pierde en el peor caso.** Si Supabase se pierde por completo, se pierden los datos posteriores a la última copia:
+  en el uso normal, hasta unas 15 horas; hasta unas 27 si el servicio que las corre se salta una corrida. De las fotos se
   pierden las subidas desde el último domingo, hasta 7 días. Con el proyecto funcionando, las fotos no se pierden.
 - **La clave privada.** Las copias se cifran con una clave pública; para leerlas hace falta la clave privada (llamada `age`).
   Vive fuera del sistema, en poder del proveedor. Si se pierde, ningún backup se puede leer. Pida una copia fuera de
@@ -767,7 +767,7 @@ los productos se copian una vez por semana (los domingos) y se guardan 14 días.
 
 ### Riesgos aceptados
 
-Dos riesgos que el cliente conoce y acepta por ahora:
+Dos límites del sistema que el dueño debe conocer:
 
 - Cualquier cuenta del negocio (también la de un vendedor o la del contador) puede leer los créditos, los saldos de los
   clientes y los movimientos de caja si sabe consultar la base de datos. Los permisos ordenan lo que muestran las pantallas;
