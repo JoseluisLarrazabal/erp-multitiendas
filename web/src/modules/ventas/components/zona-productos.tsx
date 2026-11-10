@@ -39,7 +39,13 @@ export function ZonaProductos({
         referencia={campo}
         modoConsulta={consulta}
       />
-      {catalogo && busqueda.trim() === "" && (
+      {catalogo && catalogo.productos.length === 0 && (
+        <p className="text-muted-foreground py-4 text-center text-sm">
+          Este negocio todavía no tiene productos con precio. Pide al encargado que los cargue en el
+          panel.
+        </p>
+      )}
+      {catalogo && catalogo.productos.length > 0 && busqueda.trim() === "" && (
         <p className="text-muted-foreground text-xs tabular-nums">
           {catalogo.productos.length} productos en el catálogo. Escanea o escribe para buscar.
         </p>

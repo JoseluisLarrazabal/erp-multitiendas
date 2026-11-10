@@ -120,6 +120,20 @@ export function useCatalogo(negocioId: string, ubicacionId: string, usuarioId: s
     if (volvio) void recargar();
   }, [sinRed, recargar]);
 
+  // El equipo que queda abierto todo el día: al volver a la pestaña se baja el catálogo si ya pasó el intervalo.
+  useEffect(() => {
+    function alVolver() {
+      if (
+        document.visibilityState === "visible" &&
+        !leerSinRed() &&
+        Date.now() - ultimaCarga.current > REFRESCO_MS
+      )
+        void recargar();
+    }
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, [recargar]);
+
   useEffect(() => {
     let cancelado = false;
     (async () => {

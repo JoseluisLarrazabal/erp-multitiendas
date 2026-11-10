@@ -4,6 +4,7 @@ import {
   costoATexto,
   costoUnico,
   errorDeFoto,
+  FOTO_ORIGINAL_MAX_BYTES,
   formatearFecha,
   hrefConFiltros,
   FILTROS_VACIOS,
@@ -148,6 +149,12 @@ describe("foto", () => {
   it("valida tipo y tamaño", () => {
     expect(errorDeFoto({ type: "image/svg+xml", size: 10 })).toMatch(/JPG, PNG o WebP/);
     expect(errorDeFoto({ type: "image/png", size: 5 * 1024 * 1024 + 1 })).toMatch(/5 MB/);
+    expect(
+      errorDeFoto({ type: "image/png", size: 25 * 1024 * 1024 + 1 }, FOTO_ORIGINAL_MAX_BYTES),
+    ).toMatch(/25 MB/);
+    expect(
+      errorDeFoto({ type: "image/png", size: 6 * 1024 * 1024 }, FOTO_ORIGINAL_MAX_BYTES),
+    ).toBeNull();
     expect(errorDeFoto({ type: "image/webp", size: 1000 })).toBeNull();
   });
   it("ruta <negocio>/<producto>.<ext>", () => {

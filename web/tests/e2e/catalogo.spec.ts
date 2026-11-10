@@ -1,5 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
-import { crearProductosEnLote, ir, NEGOCIOS, rutaAuth, vigilarCsp, worker } from "./helpers";
+import {
+  apiComo,
+  crearProductosEnLote,
+  ir,
+  NEGOCIOS,
+  rutaAuth,
+  vigilarCsp,
+  worker,
+} from "./helpers";
 
 // RF-CAT-01, 03, 04, 11, 12. Cada prueba crea sus propios productos (código y barras únicos por corrida):
 // no depende del orden ni de lo que dejó otra. Reutilizan las sesiones de auth.setup, sin logins nuevos.
@@ -171,6 +179,37 @@ test.describe("dueño: catálogo", () => {
       .poll(() => foto.evaluate((i: HTMLImageElement) => i.naturalWidth))
       .toBeGreaterThan(0);
     verCsp();
+  });
+
+  test("la foto grande se achica a 1.200 px y se sube como WebP", async ({ page }) => {
+    const p = unico();
+    await ir(page, "/panel/productos/nuevo");
+    await page.getByLabel("Código", { exact: true }).fill(p.codigo);
+    await page.getByLabel("Nombre").fill(p.nombre);
+    // PNG de 2.400x1.600 armado en la página y puesto en el input como lo haría el selector de archivos.
+    await page.evaluate(async () => {
+      const lienzo = new OffscreenCanvas(2400, 1600);
+      const ctx = lienzo.getContext("2d")!;
+      const g = ctx.createLinearGradient(0, 0, 2400, 1600);
+      g.addColorStop(0, "#e11");
+      g.addColorStop(1, "#11e");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 2400, 1600);
+      const blob = await lienzo.convertToBlob({ type: "image/png" });
+      const dt = new DataTransfer();
+      dt.items.add(new File([blob], "grande.png", { type: "image/png" }));
+      const input = document.querySelector<HTMLInputElement>("#producto-foto")!;
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await expect(page.getByRole("img", { name: `Foto de ${p.nombre}` })).toBeVisible();
+    await page.getByRole("button", { name: "Crear producto" }).click();
+    await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
+    const id = page.url().split("/").pop();
+    const fila = await apiComo("dueno", `productos?select=foto_path&id=eq.${id}`);
+    expect((fila.json as { foto_path: string }[])[0]!.foto_path).toMatch(/\.webp$/);
+    const foto = page.getByRole("img", { name: `Foto de ${p.nombre}` });
+    await expect.poll(() => foto.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1200);
   });
 
   test("rechaza una foto de tipo no permitido antes de subir", async ({ page }) => {

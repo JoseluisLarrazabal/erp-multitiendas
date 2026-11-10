@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type ChangeEvent } from "react";
 import { ImagePlus, Package } from "lucide-react";
-import { errorDeFoto, FOTO_TIPOS } from "../domain";
+import { errorDeFoto, FOTO_ORIGINAL_MAX_BYTES, FOTO_TIPOS } from "../domain";
+import { comprimirFoto } from "../foto";
 
 type Props = { urlActual: string | null; nombre: string; alElegir: (archivo: File | null) => void };
 
@@ -14,14 +15,21 @@ export function FotoCampo({ urlActual, nombre, alElegir }: Props) {
   // La URL de objeto retiene memoria hasta revocarse: se libera al cambiar la foto o desmontar.
   useEffect(() => () => (vista ? URL.revokeObjectURL(vista) : undefined), [vista]);
 
-  function cambiar(e: ChangeEvent<HTMLInputElement>) {
-    const archivo = e.target.files?.[0] ?? null;
-    const problema = archivo ? errorDeFoto(archivo) : null;
+  async function cambiar(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const original = input.files?.[0] ?? null;
+    // Tipo y tope del original antes de comprimir; el tope del bucket (5 MB), sobre el resultado.
+    let problema = original ? errorDeFoto(original, FOTO_ORIGINAL_MAX_BYTES) : null;
+    let archivo = original;
+    if (original && !problema) {
+      archivo = await comprimirFoto(original);
+      problema = errorDeFoto(archivo);
+    }
     setError(problema);
     if (!archivo || problema) {
       setVista(null);
       alElegir(null);
-      if (problema) e.target.value = "";
+      if (problema) input.value = "";
       return;
     }
     setVista(URL.createObjectURL(archivo));
@@ -64,7 +72,7 @@ export function FotoCampo({ urlActual, nombre, alElegir }: Props) {
             />
           </label>
           <p id="producto-foto-ayuda" className="text-muted-foreground text-xs">
-            JPG, PNG o WebP, hasta 5 MB.
+            JPG, PNG o WebP. Se achica sola antes de subir.
           </p>
         </div>
       </div>

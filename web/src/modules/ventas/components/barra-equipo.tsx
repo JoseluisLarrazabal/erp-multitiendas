@@ -55,7 +55,7 @@ export function BarraEquipo({
       >
         Cambiar equipo
       </Button>
-      <div className="ml-auto flex gap-1" role="group" aria-label="Modo">
+      <div className="ml-auto flex flex-wrap justify-end gap-1" role="group" aria-label="Modo">
         <Button
           type="button"
           variant={modo === "vender" ? "secondary" : "outline"}
