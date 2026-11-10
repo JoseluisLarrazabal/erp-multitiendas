@@ -1,6 +1,6 @@
 -- M-8: registrar_compra en el frial exige lote y vence por línea y crea el lote; fuera del frial no admite lote ni vence.
 begin;
-select plan(22);
+select plan(25);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -65,6 +65,20 @@ select throws_ok($$select public.registrar_compra(pg_temp.compra('O1', jsonb_bui
   'P0001', 'ERP_DATOS_INVALIDOS', 'frial: una línea sin lote rechaza toda la compra');
 select is((select count(id) from public.compras where negocio_id = pg_temp.i('F')) + (select count(*) from public.lotes where negocio_id = pg_temp.i('F')),
   0::bigint, 'los rechazos no dejan compra ni lote');
+reset role;
+select is((select count(*) from public.operaciones_inventario where id = pg_temp.i('O1')), 0::bigint,
+  'los rechazos (también vence ayer en un primer intento) no dejan la operación reclamada');
+-- Reintento pasada la medianoche: la compra ya existe con un vence que hoy ya pasó. Se simula sembrando la compra y su
+-- operación (el reloj no se puede mover): debe devolver la respuesta original, no ERP_DATOS_INVALIDOS.
+insert into public.operaciones_inventario (id, negocio_id, huella)
+  values (pg_temp.i('O5'), pg_temp.i('F'), md5(pg_temp.compra('O5', jsonb_build_array(pg_temp.it('PA', 5, 10, 'L-R', pg_temp.hoy(-1))))::text));
+insert into public.compras (id, negocio_id, proveedor_id, ubicacion_id, total, condicion, usuario_id)
+  values (pg_temp.i('O5'), pg_temp.i('F'), pg_temp.i('VF'), pg_temp.i('UF'), 50, 'credito', pg_temp.i('d'));
+select pg_temp.como(pg_temp.i('d'));
+select is(public.registrar_compra(pg_temp.compra('O5', jsonb_build_array(pg_temp.it('PA', 5, 10, 'L-R', pg_temp.hoy(-1))))),
+  jsonb_build_object('id', pg_temp.i('O5'), 'total', 50, 'condicion', 'credito'),
+  'reintento de una compra ya reclamada con vence ya pasado: devuelve la respuesta original');
+select is((select count(id) from public.compras where id = pg_temp.i('O5')), 1::bigint, 'ese reintento no duplica la compra');
 
 -- Compra válida
 select set_config('t.r2', public.registrar_compra(pg_temp.compra('O2', jsonb_build_array(

@@ -58,6 +58,6 @@ const MENSAJES_COMPRAS: Record<string, string> = {
 export const mensajeDeCompras = (codigo: string | undefined) =>
   codigo ? MENSAJES_COMPRAS[codigo] : undefined;
 
-export type UltimoPago = { id: string; monto: number; creadoEn: string; automatico: boolean };
+export type UltimoPago = { id: string; monto: number; creadoEn: string };
 
 export const aNumero = (texto: string) => Number(texto.trim().replace(",", "."));

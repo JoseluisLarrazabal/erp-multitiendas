@@ -140,6 +140,52 @@ test.describe("dueño: reversos", () => {
     await expect(dialogo).toBeHidden();
     await expect(fila).toContainText("Deuda Bs 30,00");
   });
+
+  test("anular el pago manual aunque haya una compra al contado posterior", async ({ page }) => {
+    const nombre = `Proveedor contado ${corrida}`;
+    const producto = await crearProducto();
+    const proveedorId = await proveedorConCompra(nombre, producto);
+    const pago = await apiComo("dueno", "rpc/pagar_proveedor", {
+      metodo: "POST",
+      cuerpo: {
+        p_pago: {
+          id: randomUUID(),
+          negocio_id: tienda,
+          proveedor_id: proveedorId,
+          monto: 10,
+          medio: "efectivo",
+        },
+      },
+    });
+    expect(pago.status).toBeLessThan(300);
+    const contado = await apiComo("dueno", "rpc/registrar_compra", {
+      metodo: "POST",
+      cuerpo: {
+        p_compra: {
+          id: randomUUID(),
+          negocio_id: tienda,
+          proveedor_id: proveedorId,
+          ubicacion_id: (await ubicaciones()).tienda,
+          condicion: "contado",
+          medio: "efectivo",
+          total: 5,
+          items: [{ producto_id: producto.id, cantidad: 1, costo_unitario: 5 }],
+        },
+      },
+    });
+    expect(contado.status).toBeLessThan(300);
+
+    await ir(page, "/panel/proveedores");
+    const fila = page.getByRole("listitem").filter({ hasText: nombre });
+    await expect(fila).toContainText("Deuda Bs 40,00");
+    await fila.getByRole("button", { name: `Anular el último pago a ${nombre}` }).click();
+    const dialogo = page.getByRole("alertdialog", { name: `Anular el último pago a ${nombre}` });
+    await expect(dialogo).toContainText("Bs 10,00");
+    await dialogo.getByLabel("Motivo").fill("Monto equivocado");
+    await dialogo.getByRole("button", { name: "Anular pago" }).click();
+    await expect(dialogo).toBeHidden();
+    await expect(fila).toContainText("Deuda Bs 50,00");
+  });
 });
 
 // M-8: en el frial cada línea de la compra pide lote y vencimiento, y el lote sale en "Por vencer".

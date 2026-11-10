@@ -28,6 +28,7 @@ export function AnularCompra({ compraId, proveedor }: { compraId: string; provee
         descripcion="Se deshace el stock que entró y se corrige el costo promedio. Si se pagó al contado, el pago también se revierte. No se puede anular si ya hay stock vendido o pagos al proveedor."
         confirmar="Anular compra"
         id={`anular-${compraId}`}
+        focoTrasExito="lista-compras"
         accion={(operacionId, motivo) => anularCompra({ operacionId, compraId, motivo })}
       />
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatearFechaHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
@@ -23,13 +23,18 @@ export function AnularPagoProveedor({
   nombre: string;
 }) {
   const [estado, setEstado] = useState<Estado>({ fase: "cerrado" });
+  // Cuenta las aperturas: una respuesta tardía de una apertura ya cerrada no reabre el diálogo.
+  const apertura = useRef(0);
 
   async function abrir() {
+    const esta = ++apertura.current;
     setEstado({ fase: "cargando" });
     try {
       const r = await ultimoPagoProveedor({ proveedorId });
+      if (esta !== apertura.current) return;
       setEstado(r.ok ? { fase: "listo", pago: r.data } : { fase: "error", mensaje: r.error });
     } catch {
+      if (esta !== apertura.current) return;
       setEstado({
         fase: "error",
         mensaje: "No se pudo consultar el último pago. Intenta de nuevo.",
@@ -45,9 +50,7 @@ export function AnularPagoProveedor({
         ? estado.mensaje
         : !pago
           ? "Este proveedor no tiene pagos para anular."
-          : pago.automatico
-            ? "El último pago es de una compra al contado: se revierte anulando esa compra, no el pago."
-            : `Se anula el pago de ${formatearBs(pago.monto)} del ${formatearFechaHora(pago.creadoEn)} y la deuda de ${nombre} sube ese monto. Solo se puede anular el último pago.`;
+          : `Se anula el pago de ${formatearBs(pago.monto)} del ${formatearFechaHora(pago.creadoEn)} y la deuda de ${nombre} sube ese monto. Solo se puede anular el último pago.`;
 
   return (
     <>
@@ -63,12 +66,16 @@ export function AnularPagoProveedor({
       </Button>
       <DialogoMotivo
         abierto={estado.fase !== "cerrado"}
-        alCambiarAbierto={(abierto) => !abierto && setEstado({ fase: "cerrado" })}
+        alCambiarAbierto={(abierto) => {
+          if (abierto) return;
+          apertura.current++;
+          setEstado({ fase: "cerrado" });
+        }}
         titulo={`Anular el último pago a ${nombre}`}
         descripcion={descripcion}
         confirmar="Anular pago"
-        id={`anular-pago-${proveedorId}`}
-        sinConfirmar={!pago || pago.automatico}
+        id={`anular-pago-${pago?.id ?? proveedorId}`}
+        sinConfirmar={!pago}
         accion={(operacionId, motivo) =>
           anularPagoProveedor({ operacionId, pagoId: pago!.id, motivo })
         }

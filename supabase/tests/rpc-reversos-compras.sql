@@ -1,12 +1,12 @@
 -- M-2: anular_compra, anular_pago_proveedor y ultimo_pago_proveedor (reversos por contraasiento).
 begin;
-select plan(99);
+select plan(119);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
 $$;
 create function pg_temp.i(n text) returns uuid language sql as $$ select md5('t9700' || n)::uuid $$;
--- d dueño de T (tienda) y F (frial) · e encargado de T · v vendedor de T (anular sí, gestionar_compras no) · x dueño de T2
+-- d dueño de T (tienda) y F (frial) · e encargado de T · v vendedor de T (sin anular ni gestionar_compras) · x dueño de T2
 insert into auth.users (id, email, raw_user_meta_data)
   select pg_temp.i(n), n || '@test.local', jsonb_build_object('nombre', n) from (values ('d'), ('e'), ('v'), ('x')) u (n);
 insert into public.negocios (id, nombre, tipo) values
@@ -20,10 +20,13 @@ insert into public.ubicaciones (id, negocio_id, nombre, tipo) values
 insert into public.productos (id, negocio_id, codigo, nombre, tipo, unidad, controla_serie) values
   (pg_temp.i('P1'), pg_temp.i('T'), 'P1', 'P1', 'producto', 'unidad', false),
   (pg_temp.i('PS'), pg_temp.i('T'), 'PS', 'PS', 'producto', 'unidad', true),
-  (pg_temp.i('PF'), pg_temp.i('F'), 'PF', 'PF', 'producto', 'unidad', false);
+  (pg_temp.i('PF'), pg_temp.i('F'), 'PF', 'PF', 'producto', 'unidad', false),
+  (pg_temp.i('P2'), pg_temp.i('T'), 'P2', 'P2', 'producto', 'unidad', false),
+  (pg_temp.i('P3'), pg_temp.i('T'), 'P3', 'P3', 'producto', 'unidad', false);
 insert into public.proveedores (id, negocio_id, nombre) values
   (pg_temp.i('V1'), pg_temp.i('T'), 'V1'), (pg_temp.i('V2'), pg_temp.i('T'), 'V2'),
   (pg_temp.i('V3'), pg_temp.i('T'), 'V3'), (pg_temp.i('V4'), pg_temp.i('T'), 'V4'),
+  (pg_temp.i('V5'), pg_temp.i('T'), 'V5'), (pg_temp.i('V6'), pg_temp.i('T'), 'V6'),
   (pg_temp.i('VF'), pg_temp.i('F'), 'VF');
 
 create function pg_temp.compra(o text, prov text, cond text, prod text, cant numeric, costo numeric, medio text default null,
@@ -129,7 +132,7 @@ select is((select total_pagos from public.deudas_proveedores(pg_temp.i('T')) whe
 select public.registrar_compra(pg_temp.compra('C4', 'V2', 'contado', 'P1', 2, 10, 'efectivo'));
 select throws_ok($$select public.anular_pago_proveedor(pg_temp.i('B0'), pg_temp.pago_de('C4'), 'x')$$, 'P0001', 'ERP_PAGO_AUTOMATICO',
   'el pago automático del contado solo se revierte anulando la compra');
-select is((public.ultimo_pago_proveedor(pg_temp.i('V2')) ->> 'automatico')::boolean, true, 'ultimo_pago_proveedor marca el pago automático');
+select is(public.ultimo_pago_proveedor(pg_temp.i('V2')), null::jsonb, 'ultimo_pago_proveedor no devuelve el pago automático del contado');
 
 -- 4. Crédito con un pago ligado
 select public.registrar_compra(pg_temp.compra('C5', 'V1', 'credito', 'P1', 4, 10));
@@ -176,9 +179,9 @@ select public.pagar_proveedor(pg_temp.pago('Q1', 'V4', 30));
 select public.pagar_proveedor(pg_temp.pago('Q2', 'V4', 20));
 select public.pagar_proveedor(pg_temp.pago('Q3', 'V4', 10));
 select is(pg_temp.deuda('V4'), 140::numeric, 'preparación: V4 debe 140');
-select results_eq($$select (u ->> 'id')::uuid, (u ->> 'monto')::numeric, (u ->> 'automatico')::boolean
+select results_eq($$select (u ->> 'id')::uuid, (u ->> 'monto')::numeric
     from (select public.ultimo_pago_proveedor(pg_temp.i('V4')) u) t$$,
-  $$values (pg_temp.i('Q3'), 10::numeric, false)$$, 'ultimo_pago_proveedor: Q3, monto 10, no automático');
+  $$values (pg_temp.i('Q3'), 10::numeric)$$, 'ultimo_pago_proveedor: Q3, monto 10');
 select throws_ok($$select pg_temp.anular_pago('R0', 'Q1')$$, 'P0001', 'ERP_PAGO_NO_ES_ULTIMO', 'no es el último pago: ERP_PAGO_NO_ES_ULTIMO');
 select throws_ok($$select pg_temp.anular_pago('R0', 'Q2')$$, 'P0001', 'ERP_PAGO_NO_ES_ULTIMO', 'el penúltimo tampoco');
 select throws_ok($$select pg_temp.anular_pago('R0', 'Q3', '   ')$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'motivo vacío');
@@ -202,6 +205,43 @@ select is(public.ultimo_pago_proveedor(pg_temp.i('V4')), null::jsonb, 'sin pagos
 select is((select count(id) from public.proveedor_pagos where proveedor_id = pg_temp.i('V4')), 6::bigint, 'nada se borró: 3 pagos y 3 reversos');
 select lives_ok($$select public.pagar_proveedor(pg_temp.pago('Q4', 'V4', 200))$$, 'se puede pagar de nuevo tras revertir');
 
+-- 7b. Un pago automático de contado posterior no impide anular un pago manual
+select public.registrar_compra(pg_temp.compra('K1', 'V5', 'credito', 'P1', 4, 10));
+select public.pagar_proveedor(pg_temp.pago('M1', 'V5', 15));
+select public.registrar_compra(pg_temp.compra('K2', 'V5', 'contado', 'P1', 2, 10, 'efectivo'));
+select is(pg_temp.deuda('V5'), 25::numeric, 'preparación: V5 debe 25 (el contado no suma deuda)');
+select is((public.ultimo_pago_proveedor(pg_temp.i('V5')) ->> 'id')::uuid, pg_temp.i('M1'), 'ultimo_pago_proveedor devuelve el manual aunque haya un contado posterior');
+select is(pg_temp.anular_pago('N1', 'M1') ->> 'estado', 'anulado', 'el pago manual se anula con un contado posterior');
+select is(pg_temp.deuda('V5'), 40::numeric, 'la deuda se restaura tras anular el manual');
+select throws_ok($$select public.anular_pago_proveedor(pg_temp.i('N0'), pg_temp.pago_de('K2'), 'x')$$, 'P0001', 'ERP_PAGO_AUTOMATICO',
+  'el pago automático pasado por id sigue dando ERP_PAGO_AUTOMATICO');
+-- Crédito con pago ligado y un contado posterior: se anula el pago y luego la compra
+select public.registrar_compra(pg_temp.compra('K3', 'V5', 'credito', 'P1', 3, 10));
+select public.pagar_proveedor(pg_temp.pago('M2', 'V5', 10, 'K3'));
+select public.registrar_compra(pg_temp.compra('K4', 'V5', 'contado', 'P1', 1, 10, 'qr'));
+select is((public.ultimo_pago_proveedor(pg_temp.i('V5')) ->> 'id')::uuid, pg_temp.i('M2'), 'último pago vivo: el ligado a crédito, no el automático posterior');
+select throws_ok($$select pg_temp.anular('N2', 'K3')$$, 'P0001', 'ERP_COMPRA_CON_PAGOS', 'K3 con su pago vivo: ERP_COMPRA_CON_PAGOS');
+select is(pg_temp.anular_pago('N3', 'M2') ->> 'estado', 'anulado', 'el pago ligado se anula pese al contado posterior');
+select is(pg_temp.anular('N4', 'K3') ->> 'estado', 'anulada', 'ahora la compra a crédito se anula');
+select is(pg_temp.deuda('V5'), 40::numeric, 'deuda final de V5: solo K1');
+
+-- 7c. Costo promedio al anular: Q - q = 0 (no hay ajuste) y promedio resultante negativo (no se ajusta)
+select public.registrar_compra(pg_temp.compra('W1', 'V6', 'credito', 'P2', 5, 10));
+select is(pg_temp.anular('W2', 'W1') ->> 'estado', 'anulada', 'Q - q = 0: la compra se anula');
+select is((select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('P2') and tipo = 'ajuste_costo'), 0::bigint,
+  'Q - q = 0: no se inserta ajuste_costo');
+select is(pg_temp.promedio('P2'), 10::numeric, 'Q - q = 0: el promedio queda como estaba');
+select is(pg_temp.stock('P2'), (select sum(cantidad) from public.movimientos_inventario where producto_id = pg_temp.i('P2')), 'Q - q = 0: stock = suma del kardex');
+select public.registrar_entrada(pg_temp.i('E3'), pg_temp.i('T'), pg_temp.i('P3'), pg_temp.i('U'), 10, 10, null);
+select public.registrar_compra(pg_temp.compra('W3', 'V6', 'credito', 'P3', 10, 100));
+select public.fijar_costos(pg_temp.i('T'), jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P3'), 'costo', 5)), 'costo bajo');
+select set_config('t.aj', (select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('P3') and tipo = 'ajuste_costo')::text, true);
+select is(pg_temp.anular('W4', 'W3') ->> 'estado', 'anulada', 'promedio negativo: la compra se anula');
+select is((select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('P3') and tipo = 'ajuste_costo')::text, current_setting('t.aj'),
+  'promedio negativo: no se inserta ajuste_costo');
+select is(pg_temp.promedio('P3'), 5::numeric, 'promedio negativo: el promedio queda como estaba');
+select is(pg_temp.stock('P3'), (select sum(cantidad) from public.movimientos_inventario where producto_id = pg_temp.i('P3')), 'promedio negativo: stock = suma del kardex');
+
 -- 8. Permisos y aislamiento, sin efectos
 select public.registrar_compra(pg_temp.compra('H1', 'V2', 'credito', 'P1', 1, 10));
 select public.pagar_proveedor(pg_temp.pago('Q5', 'V2', 5));
@@ -209,7 +249,7 @@ select set_config('t.n_anul', (select count(compra_id) from public.compra_anulac
 select set_config('t.n_pagos', (select count(id) from public.proveedor_pagos)::text, true);
 select set_config('t.n_mov', (select count(id) from public.movimientos_inventario)::text, true);
 select pg_temp.como(pg_temp.i('v'));
-select throws_ok($$select pg_temp.anular('S1', 'H1')$$, 'P0001', 'ERP_SIN_PERMISO', 'vendedor (anular sí, gestionar_compras no): anular_compra rechazada');
+select throws_ok($$select pg_temp.anular('S1', 'H1')$$, 'P0001', 'ERP_SIN_PERMISO', 'vendedor (sin anular ni gestionar_compras): anular_compra rechazada');
 select throws_ok($$select pg_temp.anular_pago('S2', 'Q5')$$, 'P0001', 'ERP_SIN_PERMISO', 'vendedor: anular_pago_proveedor rechazada');
 select throws_ok($$select public.ultimo_pago_proveedor(pg_temp.i('V2'))$$, 'P0001', 'ERP_SIN_PERMISO', 'vendedor: ultimo_pago_proveedor rechazada');
 select pg_temp.como(pg_temp.i('x'));
@@ -226,7 +266,14 @@ select throws_ok($$select public.anular_compra(null, pg_temp.i('H1'), 'x')$$, 'P
 -- Encargado: tiene gestionar_compras y anular; sin anular queda rechazado
 select pg_temp.como(pg_temp.i('e'));
 select is(pg_temp.anular_pago('S8', 'Q5') ->> 'estado', 'anulado', 'encargado (gestionar_compras + anular): puede anular un pago');
+-- anular sin gestionar_compras: aísla el chequeo de gestionar_compras
 reset role;
+delete from public.rol_permisos where tipo_negocio = 'tienda' and rol = 'encargado' and permiso = 'gestionar_compras';
+select pg_temp.como(pg_temp.i('e'));
+select throws_ok($$select pg_temp.anular('S13', 'H1')$$, 'P0001', 'ERP_SIN_PERMISO', 'anular sin gestionar_compras: anular_compra rechazada');
+select throws_ok($$select pg_temp.anular_pago('S14', 'Q5')$$, 'P0001', 'ERP_SIN_PERMISO', 'anular sin gestionar_compras: anular_pago_proveedor rechazada');
+reset role;
+insert into public.rol_permisos (tipo_negocio, rol, permiso) values ('tienda', 'encargado', 'gestionar_compras');
 delete from public.rol_permisos where tipo_negocio = 'tienda' and rol = 'encargado' and permiso = 'anular';
 select pg_temp.como(pg_temp.i('e'));
 select throws_ok($$select pg_temp.anular('S9', 'H1')$$, 'P0001', 'ERP_SIN_PERMISO', 'gestionar_compras sin anular: anular_compra rechazada');

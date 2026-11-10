@@ -30,6 +30,13 @@ const listo = (): Resultado<null> => {
   return { ok: true, data: null };
 };
 
+// ERP_OPERACION_REPETIDA en una anulación: ese id ya anuló esto (el id va ligado a recurso y motivo). Queda hecho:
+// se cierra el diálogo y la lista se refresca, igual que con ya_anulada / ya_anulado.
+const falloAnulacion = (mensajeRpc: string) => {
+  const codigo = codigoDeMensaje(mensajeRpc);
+  return codigo === "ERP_OPERACION_REPETIDA" ? listo() : fallo(codigo);
+};
+
 export async function guardarProveedor(entrada: unknown): Promise<Resultado<null>> {
   const d = validar(proveedorSchema, entrada);
   if (!d) return invalido();
@@ -102,7 +109,7 @@ export async function anularCompra(entrada: unknown): Promise<Resultado<null>> {
     p_compra_id: d.compraId,
     p_motivo: d.motivo,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? falloAnulacion(error.message) : listo();
 }
 
 export async function anularPagoProveedor(entrada: unknown): Promise<Resultado<null>> {
@@ -115,7 +122,7 @@ export async function anularPagoProveedor(entrada: unknown): Promise<Resultado<n
     p_pago_id: d.pagoId,
     p_motivo: d.motivo,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? falloAnulacion(error.message) : listo();
 }
 
 // El monto del pago no se lee por columna: sale de esta RPC. null = el proveedor no tiene pagos vivos.
@@ -130,11 +137,6 @@ export async function ultimoPagoProveedor(entrada: unknown): Promise<Resultado<U
   if (!p.success) return fallo("ERP_INTERNO");
   return {
     ok: true,
-    data: p.data && {
-      id: p.data.id,
-      monto: p.data.monto,
-      creadoEn: p.data.created_at,
-      automatico: p.data.automatico,
-    },
+    data: p.data && { id: p.data.id, monto: p.data.monto, creadoEn: p.data.created_at },
   };
 }

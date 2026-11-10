@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -14,11 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Campo, propsCampo, type Errores } from "@/components/panel/campo";
-import { useOperacion } from "@/modules/inventario/panel-cliente";
+import { useAccion } from "@/components/panel/use-accion";
 import type { Resultado } from "@/modules/usuarios";
 
 // Diálogo de un reverso: pide el motivo (1 a 200 caracteres) y confirma. Si la acción falla, queda abierto con el
-// error. El id de la operación nace con el diálogo y se conserva en los reintentos (idempotencia de la RPC).
+// error. El id de la operación va ligado a (recurso + motivo): el mismo intento reintenta con el mismo id (idempotencia
+// de la RPC) y otro recurso u otro motivo es otra operación.
 export function DialogoMotivo({
   abierto,
   alCambiarAbierto,
@@ -28,6 +29,7 @@ export function DialogoMotivo({
   id,
   accion,
   sinConfirmar = false,
+  focoTrasExito,
   children,
 }: {
   abierto: boolean;
@@ -39,9 +41,13 @@ export function DialogoMotivo({
   accion: (operacionId: string, motivo: string) => Promise<Resultado<null>>;
   // Sin nada que confirmar (p. ej. el pago no se puede anular): solo Cerrar.
   sinConfirmar?: boolean;
+  // Id de un elemento estable donde cae el foco tras anular (el botón que abrió el diálogo puede desaparecer de la lista).
+  focoTrasExito?: string;
   children?: ReactNode;
 }) {
-  const { pendiente, error, enviar, limpiar } = useOperacion();
+  const { pendiente, error, ejecutar, limpiar } = useAccion();
+  const intento = useRef<{ clave: string; id: string } | null>(null);
+  const huboExito = useRef(false);
   const [motivo, setMotivo] = useState("");
   const [errorMotivo, setErrorMotivo] = useState<string | null>(null);
 
@@ -50,6 +56,7 @@ export function DialogoMotivo({
     if (!valor && pendiente) return;
     alCambiarAbierto(valor);
     if (!valor) {
+      setMotivo("");
       setErrorMotivo(null);
       limpiar();
     }
@@ -63,9 +70,15 @@ export function DialogoMotivo({
       return document.getElementById(`${id}-motivo`)?.focus();
     }
     setErrorMotivo(null);
-    enviar(
-      (operacionId) => accion(operacionId, texto),
+    const clave = `${id}|${texto}`;
+    if (intento.current?.clave !== clave) intento.current = { clave, id: crypto.randomUUID() };
+    const operacionId = intento.current.id;
+    if (pendiente) return;
+    ejecutar(
+      () => accion(operacionId, texto),
       () => {
+        intento.current = null;
+        huboExito.current = true;
         setMotivo("");
         alCambiarAbierto(false);
       },
@@ -76,7 +89,14 @@ export function DialogoMotivo({
 
   return (
     <AlertDialog open={abierto} onOpenChange={cambiarAbierto}>
-      <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <AlertDialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        finalFocus={() => {
+          const exito = huboExito.current;
+          huboExito.current = false;
+          return (exito && focoTrasExito && document.getElementById(focoTrasExito)) || true;
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{titulo}</AlertDialogTitle>
           <AlertDialogDescription>{descripcion}</AlertDialogDescription>

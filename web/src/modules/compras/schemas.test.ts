@@ -113,7 +113,7 @@ describe("reversos", () => {
   });
   it("pagoVivoSchema acepta null y el pago de la RPC, y rechaza otra forma", () => {
     expect(pagoVivoSchema.safeParse(null).success).toBe(true);
-    const pago = { id, monto: 10.5, created_at: "2026-11-10T10:00:00+00:00", automatico: false };
+    const pago = { id, monto: 10.5, created_at: "2026-11-10T10:00:00+00:00" };
     expect(pagoVivoSchema.safeParse(pago).success).toBe(true);
     expect(pagoVivoSchema.safeParse({ ...pago, monto: "10" }).success).toBe(false);
     expect(pagoVivoSchema.safeParse({ id }).success).toBe(false);

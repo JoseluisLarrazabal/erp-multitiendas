@@ -84,9 +84,6 @@ begin
         raise exception 'ERP_DATOS_INVALIDOS';
       end if;
       v_vence := (v_item ->> 'vence')::date;
-      if v_vence < (now() at time zone 'America/La_Paz')::date then
-        raise exception 'ERP_DATOS_INVALIDOS';
-      end if;
     elsif (v_item ? 'lote' and jsonb_typeof(v_item -> 'lote') <> 'null')
        or (v_item ? 'vence' and jsonb_typeof(v_item -> 'vence') <> 'null') then
       raise exception 'ERP_DATOS_INVALIDOS';
@@ -105,6 +102,10 @@ begin
   if not public.reclamar_operacion(v_id, v_negocio_id, md5(p_compra::text)) then
     select * into v_existente from public.compras where id = v_id;
     return jsonb_build_object('id', v_existente.id, 'total', v_existente.total, 'condicion', v_existente.condicion);
+  end if;
+  -- Depende del reloj: va después de reclamar para que un reintento pasada la medianoche devuelva la respuesta original.
+  if exists (select 1 from unnest(v_vences) v where v < (now() at time zone 'America/La_Paz')::date) then
+    raise exception 'ERP_DATOS_INVALIDOS';
   end if;
 
   perform 1 from public.proveedores where id = v_proveedor_id and negocio_id = v_negocio_id and activo for share;

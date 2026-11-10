@@ -107,7 +107,7 @@ revoke all on function public.deudas_proveedores(uuid) from public, anon, authen
 grant execute on function public.deudas_proveedores(uuid) to authenticated;
 
 -- 5. Último pago vivo del proveedor (el monto no se lee por columna). null si no hay.
--- `automatico`: está ligado a una compra al contado, así que solo se revierte con anular_compra.
+-- Los pagos automáticos de compras al contado no cuentan: aportan neto 0 a la deuda y solo se revierten con anular_compra.
 create function public.ultimo_pago_proveedor(p_proveedor_id uuid)
 returns jsonb
 language plpgsql
@@ -124,10 +124,10 @@ begin
   end if;
   return (
     select jsonb_build_object(
-      'id', p.id, 'monto', p.monto, 'created_at', p.created_at, 'compra_id', p.compra_id,
-      'automatico', exists (select 1 from public.compras c where c.id = p.compra_id and c.condicion = 'contado'))
+      'id', p.id, 'monto', p.monto, 'created_at', p.created_at, 'compra_id', p.compra_id)
     from public.proveedor_pagos p
     where p.proveedor_id = p_proveedor_id and p.anula_id is null and p.monto > 0
+      and not exists (select 1 from public.compras c where c.id = p.compra_id and c.condicion = 'contado')
       and not exists (select 1 from public.proveedor_pagos r where r.anula_id = p.id)
     order by p.seq desc
     limit 1
@@ -169,6 +169,7 @@ begin
   end if;
   if exists (select 1 from public.proveedor_pagos p
              where p.proveedor_id = v_pago.proveedor_id and p.seq > v_pago.seq and p.anula_id is null and p.monto > 0
+               and not exists (select 1 from public.compras c where c.id = p.compra_id and c.condicion = 'contado')
                and not exists (select 1 from public.proveedor_pagos r where r.anula_id = p.id)) then
     raise exception 'ERP_PAGO_NO_ES_ULTIMO';
   end if;

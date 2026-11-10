@@ -70,7 +70,7 @@ export const ultimoPagoSchema = z.object({ proveedorId: z.guid() });
 
 // Respuesta de ultimo_pago_proveedor: null si el proveedor no tiene pagos vivos.
 export const pagoVivoSchema = z
-  .object({ id: z.guid(), monto: z.number(), created_at: z.string(), automatico: z.boolean() })
+  .object({ id: z.guid(), monto: z.number(), created_at: z.string() })
   .nullable();
 
 export const PAGINA_COMPRAS = 25;
