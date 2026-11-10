@@ -16,7 +16,34 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     Defecto latente; se arregla igual.
   - Hallazgo nuevo: los artifacts del backup suman 240 MB y crecen 37 MB por día. Si la cuenta de GitHub es Free
     (500 MB), el backup falla hacia el 2026-11-16. B-4 se rediseñó para caber: corrida completa con 7 días de
-    retención y corrida solo-base con 30. **Pendiente CTO: mirar plan y cupo (almacenamiento y minutos) en Billing.**
+    retención y corrida solo-base con 30.
+  - **Cupo de GitHub, respuesta del CTO (2026-11-09):** la cuenta es Free (500 MB de artifacts y 2.000 minutos de
+    Actions al mes en repos privados). Aprobó borrar los backups viejos, con la preferencia de copiarlos antes. Cómo
+    se ejecuta: después del merge del PR 1 y de un backup nuevo verificado, se descargan a una carpeta local fuera
+    del repo (siguen cifrados con `age`) y se borran de GitHub los 4 más viejos de 37 MB (dos del 2026-11-05, 11-06 y
+    11-07); se conservan el del 11-08 y el del 11-09 hasta que venzan. Sin ese borrado, viejos más nuevos rozan los
+    500 MB hacia el 2026-11-17. Del borrado en adelante no hay nada manual: GitHub borra solo al vencer la retención.
+    Para el PR 4: procedimiento de copia periódica fuera de GitHub para el cliente (`docs/backup.md`).
+  - **Minutos de Actions (medido el 2026-11-09 sumando la duración de los jobs por la API, no leído de Billing):**
+    unos 1.667 de 2.000 gastados en 9 días de noviembre; el CI se llevó 1.602 (153 corridas de unos 17 minutos, 71 de
+    ellas en `push` a `main`) y el backup 61. Quedan unos 333 para 21 días. Si se agotan, Actions se detiene hasta el
+    1 de diciembre y **el backup de producción deja de correr**. Recorte decidido por el chairman, dentro del PR 1:
+    quitar la corrida en `push` a `main` (repite el árbol que ya probó el PR), saltar el CI en cambios solo de
+    documentos y mover gitleaks a un workflow propio que corre en todo PR. Con eso el resto del plan más los backups
+    cuesta unos 290 minutos: margen de unos 40. **Pendiente CTO:** poner un método de pago con tope bajo en GitHub para
+    que el backup no dependa de ese margen; sin eso, si el contador se acerca al tope, los PR 3 y 4 esperan a
+    diciembre. Actualización del mismo día: el CTO prefirió no depender de la tarjeta; la verificación completa se
+    corre en local antes de subir y cada PR se sube una sola vez. Si aun así el contador se acerca al tope, se
+    publica con la verificación local (excepción a la regla 4, avisada al CTO, sin objeción hasta ahora) y los
+    minutos que queden son del backup.
+  - **Fotos y cupos (2026-11-09).** Las fotos viven en Supabase Storage (1 GB gratis, unos 36 MB hoy); lo que aprieta
+    es su copia en GitHub. Medido en el código: la subida no comprime (`catalogo/foto.ts`, hasta 5 MB por foto). El
+    CTO espera que el catálogo crezca. Decidido: compresión al subir, en el PR 3 (`docs/plan-preentrega.md`). Límite
+    que queda: con copia completa diaria y 7 días de retención caben unos 62 MB de fotos por copia (cerca de 1.000
+    fotos de 60 KB). Salidas, en orden: copia con fotos semanal en vez de diaria (cambio de dos líneas en
+    `backup.yml`; se pierde hasta una semana de fotos nuevas en una pérdida total) y, si no alcanza, Cloudflare R2 con
+    copia incremental (10 GB gratis, no verificado; exige cuenta y credencial nuevas). Comprimir el archivo del backup
+    no sirve: JPG y WebP ya vienen comprimidos.
   - El despliegue a producción tras cada merge con migraciones (backup manual, `db push --dry-run`, `db push`,
     función `admin-usuarios`) quedó cubierto por la aprobación del plan.
   - Fuera del plan: M-15 (registro de errores, exige elegir proveedor), M-3 y P-07, P-06, P-12 (cliente), D-01, D-02,

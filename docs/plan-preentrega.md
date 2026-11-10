@@ -114,6 +114,13 @@ Opus lo baja a pasos al arrancar. M-9 (texto del criterio en reportes, sin cambi
 camino único de la regla 7), M-17, las pruebas que no discriminan y brechas de la sección 4, y los dos "no
 concluyentes" del QA (service worker con build viejo; refresco del precio de crédito en el POS).
 
+Añadido el 2026-11-09 (pedido del CTO, que espera que el catálogo de fotos crezca): **comprimir la foto en el navegador
+antes de subirla**. Hoy `web/src/modules/catalogo/foto.ts` sube el archivo tal cual, hasta 5 MB; una foto de celular
+pesa de 2 a 5 MB contra los 60 KB de promedio de las 597 importadas. Se redimensiona al lado mayor de 1.200 px y se
+recodifica a WebP con `canvas` (sin dependencia nueva), con salida esperada de 50 a 150 KB; si el navegador no puede,
+se sube el original. Las fotos ya guardadas no se tocan. Alivia a la vez el cupo de Supabase Storage (1 GB), el tamaño
+del backup y la carga de la lista en el celular.
+
 ## PR 4: documentos (`docs/paquete-entrega`)
 
 Los escribe el chairman: acta (punto 6 redactado con los extras; la garantía queda en blanco hasta D-01), paralelo
