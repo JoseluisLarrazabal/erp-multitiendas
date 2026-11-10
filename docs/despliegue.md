@@ -139,7 +139,7 @@ navegador devolvería los números de prueba aunque el servidor quede en 0.
      no se pierde ni se desregistra. El contador se repone desde `ultimo_numero` (0).
 - Comprobar: la primera venta real del equipo debe ser `<prefijo>-000001` (o el siguiente al último previo que quede).
 - La primera actualización del punto de venta tras el PR 3 es a mano: en cada equipo con el POS instalado, cuando sale
-  "Actualización disponible", pulsar "Actualizar ahora" una vez (con caja cerrada y sin operaciones sin enviar o
+  "Actualización disponible", pulsar "Actualizar ahora" una vez (sin venta en curso y sin operaciones sin enviar o
   rechazadas: el botón queda apagado si las hay). Después se actualiza sola al abrirlo, si nadie tocó la pantalla y no
   hay nada pendiente.
 

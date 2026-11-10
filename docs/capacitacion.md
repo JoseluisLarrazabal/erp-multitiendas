@@ -72,7 +72,7 @@ con serie, anular o devolver, crear reservas, vender a crédito, cobrar cuotas, 
 
 **Cerrar caja.** "Caja", contar el efectivo, "Efectivo contado (Bs)", "Cerrar caja" y confirmar. Sale "Sin diferencia",
 "Sobrante" o "Faltante". No cierra si hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar
-en el equipo: primero volver a tener red y resolverlos. Una venta rechazada ya no impide cerrar: la caja avisa "Hay N
+en el equipo: primero volver a tener red y resolverlos. Una venta rechazada no impide cerrar: la caja avisa "Hay N
 operaciones rechazadas sin resolver" (con el monto de las ventas) y que el esperado no las cuenta; también avisa de las
 "de cajas anteriores".
 
@@ -81,7 +81,8 @@ encargado: el cliente ya pagó y descartar no se deshace. Al cerrar la caja con 
 igual y avisa al encargado; este la reintenta o la descarta. El efectivo de esa venta aparece como diferencia del
 cierre.
 
-**Cobro sin confirmar.** Si se recarga la página a mitad de un cobro, queda un aviso fijo "Cobro sin confirmar:
+**Cobro sin confirmar.** Los cobros que necesitan conexión (una reserva, una cuota o una venta a crédito) no pasan
+por la cola. Si se recarga la página a mitad de uno de esos cobros, queda un aviso fijo "Cobro sin confirmar:
 C1-000005, Bs …" con el botón "Verificar cobro". Pulsarlo consulta el estado sin volver a enviar la venta. Mientras
 haya un cobro sin confirmar no se cierra la caja.
 
@@ -175,7 +176,8 @@ Cada persona hace, en su equipo, con productos reales:
 - [ ] (Encargado, lavandería) consumo de un insumo
 - [ ] (Encargado) anular una venta, devolver otra, revisar "Reconciliación"
 - [ ] (Encargado) entrada, traslado y un reporte en Excel
-- [ ] Recargar la página a mitad de un cobro y resolver el aviso "Cobro sin confirmar" con "Verificar cobro"
+- [ ] Recargar la página a mitad del cobro de una reserva o de una cuota y resolver el aviso "Cobro sin confirmar"
+      con "Verificar cobro"
 - [ ] Con una venta rechazada (si la práctica produce una), ver qué avisa al cerrar la caja y que el encargado la
       reintenta o la descarta
 - [ ] Cambiar la propia contraseña con "Cambiar contraseña" y volver a entrar
