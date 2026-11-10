@@ -14,7 +14,9 @@ entre comillas son los que aparecen en pantalla.
 
 ![Pantalla de ingreso con Correo, Contraseña e Ingresar](img/login.png)
 
-Las cuentas las crea el dueño; la contraseña inicial se la entrega en persona. Para salir, pulsar "Cerrar sesión" (hace falta
+Las cuentas las crea el dueño; la contraseña inicial se la entrega en persona. Para cambiarla, pulse "Cambiar contraseña"
+(junto a "Cerrar sesión"): escriba la "Contraseña actual", la "Contraseña nueva" (8 o más caracteres, con letras y números) y
+"Repite la contraseña nueva"; hace falta conexión. Si la olvida, el dueño se la restablece. Para salir, pulsar "Cerrar sesión" (hace falta
 conexión a internet).
 
 ## 2. Qué ve el contador
@@ -24,7 +26,7 @@ El contador ve costos y reportes. En el Inicio aparece un acceso a cada pantalla
 | Pantalla | Qué puede hacer |
 |---|---|
 | "Productos" | Ver el catálogo. No crea ni edita |
-| "Inventario" | Ver el stock por ubicación, el kardex y los vencimientos (frial). No registra entradas, salidas ni conteos |
+| "Inventario" | Ver el stock por ubicación (la búsqueda no distingue tildes), el kardex y los vencimientos (frial). No registra entradas, salidas ni conteos |
 | "Ventas" | Ver cada venta con sus líneas, pagos y devoluciones. No anula ni devuelve |
 | "Reconciliación" | Ver las ventas hechas sin conexión que quedaron por revisar y el stock negativo. Puede "Marcar revisada", "QR cobrado" y "QR no llegó" (ver sección 6) |
 | "Cajas" | Ver los arqueos de cada sesión de caja |
@@ -54,6 +56,16 @@ Reportes de cada negocio:
 - Frial: "Ventas" (por día o por corte, con kilos), "Stock" y "Caja". El botón "Vencimientos" muestra los lotes por vencer.
 - Lavandería: "Ingresos" (por día o por servicio, con kilos), "Insumos" y "Caja".
 
+Bajo cada reporte aparece un texto que dice qué cuenta y por qué día. Ventas cuenta lo vendido; Caja, lo cobrado:
+
+- En "Ventas", una venta a crédito entra entera el día de la venta y una reserva entra cuando se completa. Los anticipos, las
+  cuotas y el interés no entran ahí, sino en "Caja". Por eso "Ventas" y "Caja" no tienen por qué dar lo mismo.
+- En "Caja", cada caja cuenta por el día en que se abrió, y una venta sin conexión cuenta en la caja donde se hizo, aunque
+  llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre; lo que llegó después se ve en el
+  detalle de esa caja.
+- En lavandería, "Ingresos" cuenta las órdenes recibidas, por el día en que llegaron al sistema (la orden se cobra al
+  recibirla; una orden anulada no cuenta), y "Caja" cuenta el efectivo y el QR de las órdenes.
+
 Reglas que conviene saber:
 
 - La fecha de una venta es el día en que llegó al servidor, en hora de La Paz. Una venta hecha sin conexión cuenta el día en que
@@ -79,19 +91,24 @@ otro movimiento que lo compense.
 3. Filtrar por "Ubicación" si hace falta.
 4. Para guardar los movimientos, pulsar "Descargar Excel" (hasta 5.000 movimientos).
 
-El kardex muestra "Fecha", "Movimiento", "Ubicación", "Cantidad", "Usuario" y "Motivo y referencia". El stock siempre es la
-suma de los movimientos.
+El kardex muestra "Fecha", "Movimiento", "Ubicación", "Cantidad", "Usuario" y "Motivo y referencia". La referencia es el documento de origen, por ejemplo "Ref.: Venta C1-000012" o "Ref.: Compra del
+10/11/2026". El stock siempre es la suma de los movimientos.
 
 ## 5. Ventas y cajas
 
 **Ventas.** Se filtran por "Número", "Estado" ("Completada" o "Anulada"), "Equipo", "Desde" y "Hasta". Una venta anulada se
-conserva, marcada "Anulada", con su motivo. Las devoluciones aparecen en el detalle de la venta.
+conserva, marcada "Anulada", con su motivo. Las ventas a crédito salen marcadas "Crédito" y las que completaron una reserva,
+"Reserva": esas no se anulan ni se devuelven, y su detalle lo explica. Las devoluciones aparecen en el detalle de la venta.
 
 **Cajas.** Cada sesión de caja muestra el arqueo: "Efectivo inicial", "Ventas en efectivo", "Ingresos", "Gastos", "Retiros",
 "Devoluciones en efectivo", "Esperado", "Contado" y "Diferencia", más "QR (cobrado menos devuelto)". "Contado" y "Diferencia"
 aparecen cuando el cajero cierra la caja; el cajero no ve el esperado mientras la caja está abierta. La diferencia sale como
 "Sin diferencia", "Sobrante" o "Faltante". Cuando hay reservas o créditos, el desglose suma los anticipos y las cuotas cobradas
-en efectivo. Una venta anulada sale del esperado. En el detalle se muestran las 200 ventas y los 200 movimientos más recientes,
+en efectivo; "Cuotas de crédito en efectivo" puede salir negativo si se anuló un pago de cuota y el efectivo se devolvió desde
+esa caja. En una caja cerrada el esperado se llama "Esperado al cierre". Si después del cierre llegaron ventas hechas sin
+conexión, el arqueo del cierre no cambia: aparece un aviso y una línea aparte, "Esperado con lo que llegó después". Una venta
+anulada sale del esperado. Las ventas rechazadas al enviar no entran en el esperado ni bloquean el cierre: el efectivo que el
+cliente pagó aparece como diferencia hasta que el encargado las reintente o las descarte. En el detalle se muestran las 200 ventas y los 200 movimientos más recientes,
 con el aviso "Mostrando N de M"; los totales no se calculan sobre esa lista cortada.
 
 Los pagos a proveedor no pasan por la caja del punto de venta: aparecen en la caja solo si se registró además un gasto.

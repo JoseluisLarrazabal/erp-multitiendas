@@ -48,10 +48,10 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-TR-01 | Inicio de sesión con correo y contraseña | Sin sesión, `/panel` y `/pos` redirigen al login | CT |
+| RF-TR-01 | Inicio de sesión con correo y contraseña | Sin sesión, `/panel` y `/pos` redirigen al login. Cada usuario cambia su propia contraseña; quien gestiona usuarios restablece la de otro (sin cerrar sus sesiones abiertas) | CT |
 | RF-TR-02 | Selector de negocio | Un usuario con 2 negocios cambia con un botón y solo ve datos del elegido | CT |
 | RF-TR-03 | Aislamiento de datos por negocio | Un usuario sin acceso al negocio B no lee ni escribe sus datos, ni por API | CT, HO |
-| RF-TR-04 | Gestión de usuarios | Con permiso, crea, desactiva y asigna negocio y rol. Un usuario desactivado no entra. Solo el dueño gestiona a los encargados: darles ese rol, cambiárselo, quitarlos, desactivarlos o restablecer su contraseña | CT |
+| RF-TR-04 | Gestión de usuarios | Con permiso, crea, desactiva y asigna negocio y rol, y restablece la contraseña de otra cuenta. Un usuario desactivado no entra. Solo el dueño gestiona a los encargados: darles ese rol, cambiárselo, quitarlos, desactivarlos o restablecer su contraseña | CT |
 | RF-TR-05 | Permisos por rol y tipo de negocio | Sin permiso, la acción no aparece y el servidor la rechaza | RL |
 | RF-TR-06 | Panel protegido para gestionar contenido | Con permiso, crea, edita y consulta productos, precios, servicios y clientes desde celular y PC | CT, HO |
 | RF-TR-07 | Instalable como PWA | Se instala en PC y celular desde el navegador | CT |
@@ -63,9 +63,9 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-CAT-01 | Productos con código interno, código de barras, descripción, marca, modelo, categoría y foto | Se crean y editan. Código repetido en un negocio se rechaza | CT, RL |
+| RF-CAT-01 | Productos con código interno, código de barras, descripción, marca, modelo, categoría y foto | Se crean y editan. Código repetido en un negocio se rechaza. La foto se achica sola (1.200 px, WebP) antes de subir | CT, RL |
 | RF-CAT-02 | Catálogo por categoría y marca | Se filtra por ambas | CT |
-| RF-CAT-03 | Búsqueda por código de barras, código interno o texto | El lector USB encuentra el producto sin clic adicional | RL |
+| RF-CAT-03 | Búsqueda por código de barras, código interno o texto | El lector USB encuentra el producto sin clic adicional. Sin distinguir tildes. Con un código que coincide con varios productos no agrega ninguno y pide elegir | RL |
 | RF-CAT-04 | Listas de precio por negocio | Lider: contado, crédito, mayorista y mínimo | RL |
 | RF-CAT-05 | Precio en USD o Bs por producto | Un producto en USD muestra Bs según el tipo de cambio vigente | RL |
 | RF-CAT-06 | Tipo de cambio con historial | Al registrar uno nuevo, cambian los Bs de los productos en USD sin editarlos | RL |
@@ -81,11 +81,11 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
 | RF-INV-01 | Stock por ubicación | Lider ve tienda y depósito por separado | RL |
-| RF-INV-02 | Kardex de entradas y salidas por producto | Cada movimiento muestra fecha, tipo, cantidad, usuario y referencia. No se edita ni se borra | CT |
+| RF-INV-02 | Kardex de entradas y salidas por producto | Cada movimiento muestra fecha, tipo, cantidad, usuario y referencia (el documento: número de venta o fecha de compra). No se edita ni se borra | CT |
 | RF-INV-03 | Entrada con costo | Actualiza stock y costo promedio | CT, RL |
 | RF-INV-04 | Salidas que no son venta | Dañado, devolución al proveedor y cambio por garantía exigen motivo y permiso | RL |
 | RF-INV-05 | Traslado entre ubicaciones | Tienda y depósito cambian en la misma operación; el total no cambia | RL |
-| RF-INV-06 | Conteo físico | El conteo registra diferencias como ajustes | RL |
+| RF-INV-06 | Conteo físico | El conteo compara lo contado con el stock más lo reservado y registra las diferencias como ajustes | RL |
 | RF-INV-07 | Avisos de stock bajo | Lista los productos bajo su stock mínimo | RL |
 | RF-INV-08 | Consistencia del stock | `stock` coincide con la suma del kardex | HO |
 
@@ -97,12 +97,12 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RF-VEN-02 | Pagos en efectivo Bs y QR, combinables | La suma de pagos iguala el total | RL |
 | RF-VEN-03 | Descuento con tope | Sin permiso se pide autorización. Sobre el tope por negocio se rechaza | RL |
 | RF-VEN-04 | Cliente general o registrado | Lider permite cliente general; lavandería exige datos | RL |
-| RF-VEN-05 | Nota de venta | Se imprime desde el navegador o baja en PDF con negocio, dirección, teléfono y garantía | HO, RL |
+| RF-VEN-05 | Nota de venta | Se imprime desde el navegador o baja en PDF con negocio, NIT, dirección, teléfono y garantía. El NIT y los datos de la nota los carga con el permiso `usuarios` en "Datos del negocio"; si no se cargan, la nota sale sin ellos | HO, RL |
 | RF-VEN-06 | Anular venta | Con conexión y permiso. Genera contramovimientos y conserva la venta | HO |
 | RF-VEN-07 | Devolución | Dentro de 24 h, devuelve dinero por caja y stock por kardex | RL |
 | RF-VEN-08 | Consulta rápida de stock y precio | Desde el POS, buscar un producto muestra precio y stock por ubicación sin iniciar una venta | HO |
-| RF-VEN-09 | Venta sin conexión | Se registra sin internet. Al volver se envía sin duplicarse | HO |
-| RF-VEN-10 | Aviso de pendientes | Se ve "N ventas sin enviar" | HO |
+| RF-VEN-09 | Venta sin conexión | Se registra sin internet. Al volver se envía sin duplicarse. Un cobro en línea cuya respuesta se pierde por una recarga queda como "Cobro sin confirmar" y se verifica sin reenviarlo | HO |
+| RF-VEN-10 | Aviso de pendientes | Se ve "N ventas sin enviar" (y las rechazadas, aparte) | HO |
 | RF-VEN-11 | Numeración por equipo | Formato `C1-000123`, sin choques entre equipos | HO |
 | RF-VEN-12 | QR sin conexión | Queda "pendiente de verificar" | HO |
 | RF-VEN-13 | Reconciliación | Reporte de ventas sin conexión y stock negativo | HO |
@@ -114,14 +114,14 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 |---|---|---|---|
 | RF-CAJ-01 | Apertura con monto inicial | Se permite sin conexión; 1 sesión abierta por equipo | HO |
 | RF-CAJ-02 | Gastos, ingresos y retiros | Exigen motivo y monto | RL |
-| RF-CAJ-03 | Cierre con arqueo | Requiere conexión y cola vacía. El servidor calcula esperado y diferencia | RL, HO |
+| RF-CAJ-03 | Cierre con arqueo | Requiere conexión y sin operaciones sin enviar, apertura rechazada ni cobros sin confirmar en el equipo; una venta o movimiento rechazado no bloquea, se avisa. El servidor calcula esperado y diferencia | RL, HO |
 | RF-CAJ-04 | Caja separada por negocio | Las sesiones de un negocio no afectan a otro | RL |
 
 ### 3.6 Clientes
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-CLI-01 | Registro y consulta | Nombre, CI o NIT, teléfono y dirección; búsqueda por nombre o documento | CT, RL |
+| RF-CLI-01 | Registro y consulta | Nombre, CI o NIT, teléfono y dirección; búsqueda por nombre o documento, sin distinguir tildes | CT, RL |
 | RF-CLI-02 | Clientes por negocio | El cliente de un negocio no aparece en otro | RL |
 
 ### 3.7 Lavandería
@@ -130,7 +130,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 |---|---|---|---|
 | RF-LAV-01 | Servicios y precios | Cada servicio tiene forma de cobro y precios normal y express; la orden toma el que corresponde | RL |
 | RF-LAV-02 | Recepción de orden | Cliente, servicios, peso o cantidad, prendas, casillero y fecha prometida | CT, RL |
-| RF-LAV-03 | Boleta de la orden | Numerada, imprimible o en PDF, con negocio, dirección y teléfono | RL |
+| RF-LAV-03 | Boleta de la orden | Numerada, imprimible o en PDF, con negocio, NIT, dirección y teléfono (los de "Datos del negocio", como la nota de venta) | RL |
 | RF-LAV-04 | Estados | Recibido, En lavado, Listo para entregar, Entregado. Todo cambio queda en historial | CT, RL |
 | RF-LAV-05 | Cobro al recibir | Efectivo o QR, por caja | CT, RL |
 | RF-LAV-06 | Entrega | Con boleta, o con carnet si se perdió. Registra quién recoge | CT, RL |
@@ -155,9 +155,9 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
-| RF-REP-01 | Reportes de Lider | Ventas del día y del mes, por vendedor, por producto, categoría o marca, ganancia, valor del stock, más vendidos, sin movimiento, stock bajo, kardex y caja diaria | CT, RL |
-| RF-REP-02 | Reportes de lavandería | Ingresos del día y del mes, kilos, ingresos por servicio y caja diaria | CT, RL |
-| RF-REP-03 | Reportes de frial | Ventas por día, por corte y kg vendidos, stock y caja diaria | CT |
+| RF-REP-01 | Reportes de Lider | Ventas del día y del mes, por vendedor, por producto, categoría o marca, ganancia, valor del stock, más vendidos, sin movimiento, stock bajo, kardex y caja diaria. Cada reporte dice su criterio: "Ventas" cuenta lo vendido (una venta a crédito entra entera; anticipos y cuotas no) y "Caja", lo cobrado | CT, RL |
+| RF-REP-02 | Reportes de lavandería | Ingresos del día y del mes, kilos, ingresos por servicio y caja diaria, con el mismo criterio escrito en cada reporte | CT, RL |
+| RF-REP-03 | Reportes de frial | Ventas por día, por corte y kg vendidos, stock y caja diaria, con el mismo criterio escrito en cada reporte | CT |
 | RF-REP-04 | Exportación | Cada reporte se ve en pantalla y baja en Excel | RL |
 | RF-REP-05 | Acceso | Dueño, encargado y contador. La ganancia exige `ver_costos` | RL |
 
@@ -245,15 +245,15 @@ que son quienes cubren al personal. Frial usa la grilla de Lider hasta que abra.
 | RNF-05 | Integridad | Reenvíos no duplican; `stock` igual a la suma del kardex | pgTAP |
 | RNF-06 | Seguridad | RLS en toda tabla operativa. Sin escritura directa en tablas contables | pgTAP |
 | RNF-07 | Seguridad | `service_role` nunca llega al navegador. Secretos fuera del repo | Revisión y escaneo en CI |
-| RNF-08 | Respaldo | Backup diario cifrado fuera de Supabase, con restauración probada | Simulacro antes de producción |
-| RNF-09 | Recuperación | Pérdida máxima 24 h de datos. Las fotos de productos se copian una vez por semana: pérdida máxima 7 días de fotos nuevas (decisión del CTO, 2026-11-10, `docs/backup.md`). Restauración en menos de 4 h | Simulacro cronometrado |
+| RNF-08 | Respaldo | Backup cifrado fuera de Supabase: la base dos veces al día y las fotos una vez por semana, con restauración probada | Simulacro antes de producción |
+| RNF-09 | Recuperación | Pérdida máxima 24 h de datos (el hueco real es de 15 h en condiciones normales y de 27 h si GitHub salta una corrida). Las fotos de productos se copian una vez por semana: pérdida máxima 7 días de fotos nuevas (decisión del CTO, 2026-11-10, `docs/backup.md`). Restauración en menos de 4 h | Simulacro cronometrado |
 | RNF-10 | Mantenibilidad | Cumple `docs/estandares-codigo.md`. CI verde para mergear | CI |
 | RNF-11 | Pruebas | Cumple `docs/plan-pruebas.md` | CI |
 | RNF-12 | Portabilidad | Despliegue reproducible, movible de proveedor en horas | Documentado y ensayado |
-| RNF-13 | Usabilidad | Interfaz en español de Bolivia. Moneda `Bs 1.234,50`, fecha `dd/mm/aaaa` | Revisión |
+| RNF-13 | Usabilidad | Interfaz en español de Bolivia. Moneda `Bs 1.234,50`, fecha `dd/mm/aaaa`. No se cumple hoy: la nota imprime la fecha en formato corto (por ejemplo "9/11/26, 5:29 p. m."). Límite conocido de la entrega | Revisión |
 | RNF-14 | Accesibilidad | Navegable por teclado, contraste WCAG AA, POS operable con lector | Auditoría `web-design-guidelines` |
 | RNF-15 | Compatibilidad | Chrome y Edge actuales en PC; Chrome en Android; Safari en iOS para el panel | E2E y prueba manual |
-| RNF-16 | Observabilidad | Errores de RPC registrados, sin datos personales en logs | Revisión |
+| RNF-16 | Observabilidad | Errores de RPC registrados, sin datos personales en logs. No se cumple hoy: no hay registro de errores. Límite conocido de la entrega | Revisión |
 
 ## 6. Restricciones
 
@@ -295,7 +295,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 | D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión, precios en USD y referencia del dólar paralelo (RF-CAT-12) | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
 | D-02 | Entrega de frial sin catálogo | El sistema se entrega preparado para carnes al vacío (RF-FRI-01 a 07) y el cliente carga cortes y precios (CTO, 2026-11-01). Acordarlo por escrito para que no trabe el acta |
 | D-03 | Aviso de que el arranque depende de que el cliente cargue sus datos | Escrito al cliente. El cliente carga precios, servicios, series y tope de descuento desde el panel; no frena el desarrollo ni la importación (CTO, 2026-11-01) |
-| D-04 | Firma del contrato | Firmado (CTO, 2026-11-01). Falta la fecha exacta para contar el plazo |
+| D-04 | Firma del contrato | Firmado; falta la fecha exacta (CTO, 2026-11-01). Hace falta para contar el plazo |
 
 ## 8. Trazabilidad con el contrato
 

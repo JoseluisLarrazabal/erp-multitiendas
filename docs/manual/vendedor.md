@@ -9,9 +9,10 @@ caja, vender, cobrar, imprimir la nota y cerrar la caja. Los textos entre comill
 |---|---|
 | Vender y cobrar en efectivo, QR o mixto | Anular una venta |
 | Abrir y cerrar su caja y registrar ingresos, gastos y retiros | Devolver una venta, ni siquiera el mismo día |
-| Crear, completar y cancelar reservas con anticipo | Bajar el precio por debajo del mínimo o dar descuento |
-| Cobrar cuotas de un crédito por caja | Crear una venta a crédito |
-| Consultar precio y stock | Ver costos ni ganancias |
+| Crear y completar reservas con anticipo | Cancelar una reserva |
+| Cobrar cuotas de un crédito por caja | Bajar el precio por debajo del mínimo o dar descuento |
+| Consultar precio y stock | Crear una venta a crédito |
+| | Ver costos ni ganancias |
 | | Crear usuarios, equipos ni cambiar el tope de descuento |
 
 Si necesita algo de la columna derecha, pídalo al encargado. El encargado lo hace desde su propia sesión. En el
@@ -21,6 +22,9 @@ punto de venta no existe una clave de autorización que el encargado pueda escri
 
 1. Abrir la aplicación instalada, o la dirección web que le entregó el encargado, en Chrome o Edge (en el celular, Chrome en
    Android). Firefox no está soportado.
+   Para instalarla en el equipo, abrir la dirección del punto de venta en Chrome o Edge y usar la opción del navegador
+   "Instalar aplicación" (en el celular, "Agregar a la pantalla principal"). Se instala el punto de venta; el panel del
+   encargado se instala aparte.
 2. Escribir el correo en "Correo" y la contraseña en "Contraseña". Pulsar "Ingresar".
 
 ![Pantalla de ingreso](img/login.png)
@@ -36,6 +40,8 @@ Para cambiar de equipo, pulsar "Cambiar equipo". No se puede cambiar de equipo n
 cuando hay operaciones sin enviar.
 
 **La contraseña.** La contraseña inicial se la entregan en persona y no se vuelve a mostrar. Guárdela y no la comparta.
+Para cambiarla, pulse "Cambiar contraseña" (junto a "Cerrar sesión"), escriba la "Contraseña actual", la "Contraseña nueva"
+y repítala (8 caracteres o más, con letras y números). Si la olvidó, pida al encargado o al dueño que la restablezca.
 
 ## Abrir la caja
 
@@ -56,11 +62,13 @@ La caja se puede abrir sin internet: queda guardada en el equipo y se envía al 
 
 1. **Buscar el producto.** Escanear el código de barras con el lector. También se puede escribir código, nombre o
    marca en "Código, nombre o marca (Enter agrega)" y pulsar Enter. La tecla "/" vuelve a la búsqueda desde cualquier
-   parte de la pantalla.
+   parte de la pantalla. Si el código coincide con más de un producto, no se agrega nada y aparece "Ese código coincide
+   con N productos: elige uno." Elegir el producto de la lista. La búsqueda no distingue tildes.
 2. **Revisar el carrito.** Cada línea muestra "Cantidad", "Precio" y "Lista". Se corrige ahí:
    - Cantidad: entera para productos por unidad.
    - Precio: se puede bajar solo hasta el precio mínimo del producto (ver "Descuentos").
-   - Lista: la lista por defecto es "Contado". Se puede elegir otra por línea: "Crédito", "Mayorista" o "Mínimo".
+   - Lista: la lista por defecto es "Contado". Se puede elegir otra por línea: "Mayorista" o "Mínimo". La lista "Crédito" no se elige por línea: la usa
+     solo la venta a crédito.
    - Para quitar una línea, usar el botón de quitar de esa línea.
 3. **Elegir el cliente** (opcional en tienda y frial). Por defecto es "General". Ver la sección "Cliente".
 4. **Cobrar.** Pulsar "Cobrar" o la tecla F2. Ver "Cobrar".
@@ -72,7 +80,8 @@ servicios de lavandería se ven en la consulta pero no se pueden vender en la ti
 
 **Precio faltante.** Si un producto no tiene precio en la lista elegida, el sistema avisa, por ejemplo: "Un producto
 del carrito ya no tiene precio en esa lista (contado o crédito)." No se puede vender hasta que el encargado cargue el
-precio en el panel.
+precio en el panel. Si el negocio no tiene ningún producto con precio, la pantalla dice "Este negocio todavía no tiene
+productos con precio. Pide al encargado que los cargue en el panel."
 
 **Productos con número de serie.** Cada línea vende una sola unidad y hay que elegir la serie ("Elige la serie").
 Vender un producto con serie necesita internet. Hoy la mayoría de los productos no llevan serie; el encargado le avisa
@@ -108,7 +117,7 @@ Por defecto la venta es para "General". Para poner un cliente:
 El CI o NIT no se repite dentro del negocio. Si aparece "Ya existe un cliente con ese documento. Búscalo y
 selecciónalo.", buscarlo con "Elegir".
 
-Buscar o crear clientes necesita internet. Sin internet, la venta sigue como "General".
+La búsqueda de clientes no distingue tildes: "Jose" encuentra "José". Buscar o crear clientes necesita internet. Sin internet, la venta sigue como "General".
 
 ## Cobrar
 
@@ -130,9 +139,20 @@ Luego pulsar "Confirmar cobro". Si desea corregir algo, "Volver".
 Si el cobro se queda en "Enviando…" o aparece "Cobro sin confirmar", no cobre otra vez al cliente. Pulse "Reintentar
 cobro" o "Descartar y verificar" para saber si la venta quedó registrada.
 
+Una venta normal, en efectivo o QR, se guarda en el equipo y se envía sola: no muestra el aviso que sigue. Algunos
+cobros van directo al servidor y no se guardan para después: el de la venta que completa una reserva y el de una cuota
+(la venta a crédito la cobra el encargado). Si recarga la página a mitad de uno de ellos, arriba queda un aviso fijo: "Cobro sin confirmar: C1-000005, Bs … No
+entregues el producto hasta verificar." Pulse "Verificar cobro": el sistema consulta si la venta quedó registrada, sin
+cobrar de nuevo. Lo mismo pasa con una cuota, en la pantalla "Cuotas". Mientras haya un cobro sin confirmar, no se puede
+cerrar la caja.
+
+Si una venta se envió y no hubo respuesta, queda "en duda": no se borra hasta saber con certeza si se registró, y antes
+de reenviarla el equipo comprueba si ya llegó. Si la sesión caducó, la venta espera hasta que vuelva a iniciar sesión.
+
 ### Imprimir la nota
 
-Al terminar aparece la nota de venta con su número, por ejemplo "C1-000123". El número lleva el prefijo del equipo.
+Al terminar aparece la nota de venta con su número, por ejemplo "C1-000123". El número lleva el prefijo del equipo y seis dígitos. Al llegar a 999999 el equipo avisa "Numeración del equipo agotada,
+avisa al encargado."
 
 ![Nota de venta](img/pos-nota.png)
 
@@ -140,10 +160,13 @@ Al terminar aparece la nota de venta con su número, por ejemplo "C1-000123". El
 2. Pulsar "Imprimir". También se puede guardar como PDF desde la ventana de impresión.
 3. Pulsar "Nueva venta" para seguir.
 
-La nota de venta lleva el nombre del negocio, NIT, dirección, teléfono, número, vendedor, cliente, líneas, garantía,
-descuentos y pagos. No es una factura: el sistema no está conectado a Impuestos Nacionales.
+La nota de venta lleva el nombre del negocio, número, vendedor, cliente, líneas, garantía, descuentos y pagos. El NIT y
+los demás datos del negocio (dirección, teléfono) salen solo si el dueño los cargó en "Datos del negocio"; si no, la
+nota sale sin ellos. La fecha sale como la da el navegador, por ejemplo "9/11/26, 5:29 p. m."; por ahora no se puede
+cambiar. No es una factura: el sistema no está conectado a Impuestos Nacionales.
 
-Por ahora el ticket de 80 mm sale en papel de 80 × 297 mm. Qué impresora usará cada negocio está por confirmar con el
+La nota se imprime por el navegador, o se guarda como PDF; el cajón de dinero no se abre solo al imprimir. Por ahora el
+ticket de 80 mm sale en papel de 80 × 297 mm. Qué impresora usará cada negocio está por confirmar con el
 cliente; mientras tanto la nota se puede guardar como PDF.
 
 ## Descuentos y precio mínimo
@@ -171,7 +194,8 @@ enviará al volver la red. Cerrar sesión necesita conexión."
 ![Barra de sin conexión](img/pos-sin-conexion.png)
 
 Al cobrar, la nota dice "guardada en este equipo. Se enviará al volver la conexión." Arriba se ve "N ventas sin
-enviar". Esas ventas se envían solas al volver la red. No hay que hacer nada.
+enviar". Esas ventas se envían solas al volver la red. No hay que hacer nada. Una nota guardada en el equipo que quedó sin
+imprimir no se puede reimprimir después: imprímala al cobrar.
 
 **Sin internet se puede:**
 - Vender en efectivo y por QR.
@@ -204,8 +228,16 @@ acepta y queda marcada para que el encargado la revise. No venda por debajo del 
 - La primera vez que se usa un equipo hay que abrir la caja con internet, para bajar el catálogo.
 - Si aparece "Tu sesión caducó. La venta en pantalla no se pierde: inicia sesión…", iniciar sesión de nuevo. Lo pendiente
   se conserva.
-- Si aparece "Actualización disponible", se aplica solo cuando no quedan operaciones sin enviar.
+- Actualización del punto de venta: al abrirlo, se actualiza solo si nadie tocó la pantalla y no hay nada pendiente
+  (operaciones sin enviar, cobros sin confirmar ni carrito). Si no, aparece "Actualización disponible" con el botón
+  "Actualizar ahora": púlselo cuando no esté vendiendo. Si hay operaciones sin enviar o rechazadas, el botón no se puede
+  usar hasta resolverlas. La primera vez después de esta entrega, cada equipo necesita pulsar "Actualizar ahora" una vez;
+  desde la siguiente se actualiza solo. Con dos pestañas abiertas, una puede quedar con la versión vieja: recárguela
+  cuando aparezca "La aplicación se actualizó en otra pestaña."
 - Si ve un aviso de operaciones de otro negocio sin enviar, entre con la cuenta y el negocio que las hicieron: solo así se envían.
+- En el cambio de turno, si entra otra cuenta del mismo negocio, lo pendiente del turno anterior se envía igual y queda
+  marcado como "Enviada desde otra cuenta". Lo pendiente de otro negocio no se envía con esta
+  cuenta.
 - Hasta el fin del paralelo, el cuaderno sigue siendo el registro oficial: cada venta se anota también allí.
 
 Se recomienda que el negocio tenga un respaldo de internet por 4G.
@@ -237,11 +269,16 @@ Cerrar la caja necesita internet y que no haya operaciones sin enviar.
 Al cerrar aparece el resultado: "Efectivo esperado", "Efectivo contado" y la diferencia: "Sin diferencia", "Sobrante" o
 "Faltante". También se muestra "Cobrado por QR (neto)". Pulse "Listo".
 
-Después del cierre no se pueden registrar más ventas ni movimientos en esa sesión. El cierre no se puede deshacer.
+Después del cierre no se pueden registrar más ventas ni movimientos en esa sesión. El cierre no se puede deshacer ni
+cambiar: si repite el cierre con el mismo monto da el mismo resultado; con otro monto, da error.
 
-Si aparece "Hay operaciones sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la caja.", volver a
-tener internet, esperar a que se envíen las ventas y reintentar. Si hay operaciones rechazadas, ver la siguiente
-sección.
+Si aparece "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos
+antes de cerrar la caja.", volver a tener internet, esperar a que se envíen las ventas y verificar los cobros sin
+confirmar ("Verificar cobro").
+
+Una venta o un movimiento rechazado no impide cerrar: la pantalla avisa "Hay N operaciones rechazadas sin resolver"
+y, aparte, las "de cajas anteriores". Avise al encargado: él las reintenta o las descarta. El efectivo de una venta
+rechazada no cuenta en el esperado y aparece como diferencia del cierre.
 
 ## Operaciones rechazadas
 
@@ -253,12 +290,15 @@ botón "Reintentar".
 3. Si sigue rechazada, **no la descarte**. Avise al encargado: "Para descartar una operación rechazada avisa al
    encargado." El cliente ya pagó y descartar no se deshace: el stock y la caja no reflejarían la venta.
 
-Solo el encargado o el dueño pueden descartar una operación rechazada.
+Solo el encargado o el dueño pueden descartar una operación rechazada. Pasados 30 días del cierre de esa caja, una venta
+rechazada no se puede reintentar: solo descartar. Mientras haya una operación rechazada, el equipo no se puede
+actualizar (ver "Sin internet").
 
 ## Reservas con anticipo (tienda y frial)
 
 Una reserva aparta un producto para un cliente que deja un anticipo. Solo existe en la tienda y el frial. Necesita
-internet y caja abierta: "Las reservas necesitan conexión: no se pueden crear, cancelar ni completar sin red."
+internet y caja abierta: "Las reservas necesitan conexión: no se pueden crear, cancelar ni completar sin red." Estas
+operaciones, igual que el crédito, nunca se guardan para enviar después.
 
 ![Reservas](img/pos-reserva.png)
 
@@ -285,11 +325,13 @@ Reglas:
 1. Dejar el carrito vacío. Si no, aparece "Termina o vacía la venta en curso".
 2. En "Reservas", pulsar "Completar venta" en la reserva. Se carga el producto en la venta: "Estás completando una
    reserva: no se pueden agregar más productos." Si quiere soltar la reserva sin vender, "Descartar reserva".
-3. Cobrar. El anticipo ya se descuenta: "Total … menos el anticipo de la reserva …".
+3. Cobrar. El anticipo ya se descuenta: "Total … menos el anticipo de la reserva …". Esta venta no admite descuento ni
+   crédito.
 
 Una reserva reservada en otro equipo dice "Reservada en …" y se completa en ese equipo: "Se completa en …".
 
-**Cancelar una reserva.** Pulsar "Cancelar" y confirmar "Cancelar reserva". Se libera el stock y **por ahora** se devuelve
+**Cancelar una reserva.** Lo hace un encargado o el dueño, no el vendedor: el botón "Cancelar" no aparece y dice "Para
+cancelar la reserva, pide a un encargado." El encargado confirma "Cancelar reserva". Se libera el stock y **por ahora** se devuelve
 el anticipo por la caja, en el mismo medio y monto. Si no hay efectivo suficiente en la caja, la cancelación se rechaza. Esta
 regla del anticipo está por confirmar con el cliente.
 
@@ -342,6 +384,7 @@ no dé el recibo por válido hasta saber qué pasó: use "Descartar y verificar"
 - Bajar el precio por debajo del mínimo o dar descuentos.
 - Crear una venta a crédito.
 - Descartar una operación rechazada.
+- Cancelar una reserva.
 - Cambiar productos, precios, inventario o usuarios.
 
 ## Si aparece este mensaje
@@ -366,7 +409,15 @@ no dé el recibo por válido hasta saber qué pasó: use "Descartar y verificar"
 | "Esta operación necesita conexión. Revisa la red y vuelve a intentar." | Esperar a que vuelva internet. Reservas, cuotas, clientes y cierre de caja no se pueden hacer sin red. |
 | "Sin conexión con el servidor. Revisa la red y vuelve a intentar." | Revisar el wifi o los datos del equipo y reintentar. |
 | "No se pudo completar la operación. Intenta de nuevo." | Reintentar. Si se repite, avisar al encargado y no cobrar de nuevo sin verificar. |
-| "Hay operaciones sin enviar o rechazadas en este equipo. Resuélvelas antes de cerrar la caja." | Esperar a que se envíen. Si hay rechazadas, avisar al encargado. |
+| "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja." | Esperar a que se envíen y usar "Verificar cobro" en los cobros sin confirmar. Si hay una apertura rechazada, avisar al encargado. |
+| "Hay N operaciones rechazadas sin resolver…" | No impide cerrar la caja. Avisar al encargado para que las reintente o las descarte. |
+| "Cobro sin confirmar: C1-000005, Bs … No entregues el producto hasta verificar." | No cobrar de nuevo. Pulsar "Verificar cobro". |
+| "Ese código coincide con N productos: elige uno." | Elegir el producto de la lista. |
+| "Para cancelar la reserva, pide a un encargado." | Llamar al encargado: él cancela la reserva. |
+| "La reserva ya quedó registrada con los datos del primer intento; revísala en la lista. Si hace falta otra, envía de nuevo." | No reservar otra vez: ver la lista de "Reservas". |
+| "La cancelación ya quedó registrada con el primer intento; revisa la lista de reservas." | Revisar la lista de "Reservas". |
+| "Ya se registró un cobro con este intento por otro monto; revisa el saldo." | No cobrar otra vez: revisar el saldo del crédito. |
+| "Numeración del equipo agotada, avisa al encargado." | Avisar al encargado. |
 | "Escribe un monto válido, por ejemplo 100 o 100,50." | Escribir solo números, con coma o punto para los centavos. |
 | "Cantidad inválida (hasta 3 decimales)" | En kg, escribir hasta 3 decimales. |
 | "Cantidad entera" | El producto es por unidad: escribir un número entero. |
