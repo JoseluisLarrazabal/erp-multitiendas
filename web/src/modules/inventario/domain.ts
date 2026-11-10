@@ -60,6 +60,7 @@ export const ETIQUETA_MOVIMIENTO: Record<string, string> = {
   reserva_liberada: "Reserva liberada",
   consumo: "Consumo",
   ajuste_costo: "Ajuste de costo",
+  anulacion_compra: "Anulación de compra",
 };
 
 export const etiquetaMovimiento = (tipo: string) => ETIQUETA_MOVIMIENTO[tipo] ?? tipo;

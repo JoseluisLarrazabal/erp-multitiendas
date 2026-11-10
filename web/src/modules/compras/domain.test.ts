@@ -51,6 +51,13 @@ describe("mensajeDeCompras", () => {
     expect(mensajeDeCompras("ERP_SIN_PERMISO")).toContain("compras");
     expect(mensajeDeCompras("ERP_DATOS_INVALIDOS")).toBeDefined();
   });
+  it("traduce los códigos de los reversos con una salida clara", () => {
+    expect(mensajeDeCompras("ERP_PAGO_NO_ES_ULTIMO")).toContain("último pago");
+    expect(mensajeDeCompras("ERP_PAGO_AUTOMATICO")).toContain("anulando la compra");
+    expect(mensajeDeCompras("ERP_COMPRA_CON_SERIES")).toContain("serie");
+    expect(mensajeDeCompras("ERP_COMPRA_CON_PAGOS")).toContain("pagos");
+    expect(mensajeDeCompras("ERP_STOCK_INSUFICIENTE")).toContain("stock");
+  });
   it("deja pasar lo que no es suyo", () => {
     expect(mensajeDeCompras("ERP_INTERNO")).toBeUndefined();
     expect(mensajeDeCompras(undefined)).toBeUndefined();

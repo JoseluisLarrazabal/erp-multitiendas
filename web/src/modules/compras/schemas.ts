@@ -62,6 +62,17 @@ export const compraSchema = z
     path: ["items"],
   });
 
+const motivo = z.string().trim().min(1).max(200);
+
+export const anularCompraSchema = z.object({ operacionId: z.guid(), compraId: z.guid(), motivo });
+export const anularPagoSchema = z.object({ operacionId: z.guid(), pagoId: z.guid(), motivo });
+export const ultimoPagoSchema = z.object({ proveedorId: z.guid() });
+
+// Respuesta de ultimo_pago_proveedor: null si el proveedor no tiene pagos vivos.
+export const pagoVivoSchema = z
+  .object({ id: z.guid(), monto: z.number(), created_at: z.string(), automatico: z.boolean() })
+  .nullable();
+
 export const PAGINA_COMPRAS = 25;
 export type FiltrosCompras = { pagina: number };
 export const leerFiltrosCompras = (crudo: Parameters<typeof leerFiltros>[2]) =>

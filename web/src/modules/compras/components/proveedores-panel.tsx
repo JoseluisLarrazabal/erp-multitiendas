@@ -5,6 +5,7 @@ import { Banknote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatearBs } from "@/lib/format/moneda";
 import type { FilaProveedor } from "../queries";
+import { AnularPagoProveedor } from "./anular-pago-proveedor";
 import { FormPago } from "./form-pago";
 import { FormProveedor } from "./form-proveedor";
 
@@ -32,9 +33,11 @@ export function NuevoProveedor({ negocioId }: { negocioId: string }) {
 export function ListaProveedores({
   negocioId,
   proveedores,
+  puedeAnular,
 }: {
   negocioId: string;
   proveedores: readonly FilaProveedor[];
+  puedeAnular: boolean;
 }) {
   const [abierto, setAbierto] = useState<{ id: string; modo: "editar" | "pagar" } | null>(null);
   const cerrar = () => setAbierto(null);
@@ -81,6 +84,7 @@ export function ListaProveedores({
                 >
                   <Pencil aria-hidden /> Editar
                 </Button>
+                {puedeAnular && <AnularPagoProveedor proveedorId={p.id} nombre={p.nombre} />}
               </div>
             </div>
           )}

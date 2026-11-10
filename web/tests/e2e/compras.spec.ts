@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { apiComo, elegirNegocio, ir, NEGOCIOS, rutaAuth } from "./helpers";
-import { corrida, crearProducto } from "./inventario-helpers";
+import { corrida, crearProducto, tienda, ubicaciones } from "./inventario-helpers";
 
 // RF-COM-01 a 03: proveedor, compra a crédito, deuda y pago. Datos únicos por worker (corrida).
 test.describe("dueño", () => {
@@ -46,6 +47,98 @@ test.describe("dueño", () => {
     await expect(
       page.getByRole("listitem").filter({ hasText: nombre }).filter({ hasText: "Bs 50,00" }),
     ).toBeVisible();
+  });
+});
+
+// M-2: reversos por contraasiento. La compra y los pagos se preparan por RPC; el reverso va por la interfaz.
+async function proveedorConCompra(nombre: string, producto: { id: string }) {
+  const [u, prov] = await Promise.all([
+    ubicaciones(),
+    apiComo("dueno", "rpc/guardar_proveedor", {
+      metodo: "POST",
+      cuerpo: { p_negocio_id: tienda, p_datos: { nombre } },
+    }),
+  ]);
+  expect(prov.status).toBeLessThan(300);
+  const proveedorId = prov.json as string;
+  const compra = await apiComo("dueno", "rpc/registrar_compra", {
+    metodo: "POST",
+    cuerpo: {
+      p_compra: {
+        id: randomUUID(),
+        negocio_id: tienda,
+        proveedor_id: proveedorId,
+        ubicacion_id: u.tienda,
+        condicion: "credito",
+        total: 50,
+        items: [{ producto_id: producto.id, cantidad: 4, costo_unitario: 12.5 }],
+      },
+    },
+  });
+  expect(compra.status).toBeLessThan(300);
+  return proveedorId;
+}
+
+test.describe("dueño: reversos", () => {
+  test.use({ storageState: rutaAuth("dueno") });
+
+  test("anular una compra: queda Anulada, el stock vuelve y la deuda baja", async ({ page }) => {
+    const nombre = `Proveedor anula ${corrida}`;
+    const producto = await crearProducto();
+    await proveedorConCompra(nombre, producto);
+    const stock = () => apiComo("dueno", `stock?select=cantidad&producto_id=eq.${producto.id}`);
+    expect((await stock()).json).toEqual([{ cantidad: 4 }]);
+
+    await ir(page, "/panel/compras");
+    const fila = page.getByRole("listitem").filter({ hasText: nombre });
+    await fila.getByRole("button", { name: `Anular la compra de ${nombre}` }).click();
+    const dialogo = page.getByRole("alertdialog", { name: `Anular la compra de ${nombre}` });
+    await dialogo.getByRole("button", { name: "Anular compra" }).click();
+    await expect(dialogo.getByText("Escribe el motivo")).toBeVisible();
+    await dialogo.getByLabel("Motivo").fill("Se cargó dos veces");
+    await dialogo.getByRole("button", { name: "Anular compra" }).click();
+    await expect(dialogo).toBeHidden();
+
+    await expect(fila).toContainText("Anulada");
+    await expect(fila.getByRole("button", { name: /Anular la compra/ })).toHaveCount(0);
+    expect((await stock()).json).toEqual([{ cantidad: 0 }]);
+
+    await ir(page, "/panel/proveedores");
+    await expect(page.getByRole("listitem").filter({ hasText: nombre })).toContainText(
+      "Deuda Bs 0,00",
+    );
+  });
+
+  test("anular el último pago a un proveedor restaura la deuda", async ({ page }) => {
+    const nombre = `Proveedor pagos ${corrida}`;
+    const producto = await crearProducto();
+    const proveedorId = await proveedorConCompra(nombre, producto);
+    for (const monto of [20, 10]) {
+      const r = await apiComo("dueno", "rpc/pagar_proveedor", {
+        metodo: "POST",
+        cuerpo: {
+          p_pago: {
+            id: randomUUID(),
+            negocio_id: tienda,
+            proveedor_id: proveedorId,
+            monto,
+            medio: "efectivo",
+          },
+        },
+      });
+      expect(r.status).toBeLessThan(300);
+    }
+
+    await ir(page, "/panel/proveedores");
+    const fila = page.getByRole("listitem").filter({ hasText: nombre });
+    await expect(fila).toContainText("Deuda Bs 20,00");
+    await fila.getByRole("button", { name: `Anular el último pago a ${nombre}` }).click();
+    const dialogo = page.getByRole("alertdialog", { name: `Anular el último pago a ${nombre}` });
+    await expect(dialogo).toContainText("Bs 10,00");
+    await dialogo.getByLabel("Motivo").fill("Monto equivocado");
+    await dialogo.getByRole("button", { name: "Anular pago" }).click();
+    await expect(dialogo).toBeHidden();
+    await expect(fila).toContainText("Deuda Bs 30,00");
   });
 });
 

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { compraSchema, pagoSchema, proveedorSchema } from "./schemas";
+import {
+  anularCompraSchema,
+  anularPagoSchema,
+  compraSchema,
+  pagoSchema,
+  pagoVivoSchema,
+  proveedorSchema,
+  ultimoPagoSchema,
+} from "./schemas";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const otro = "22222222-2222-4222-8222-222222222222";
@@ -75,5 +83,39 @@ describe("proveedorSchema", () => {
     const r = proveedorSchema.parse({ negocioId: id, nombre: "Sur", contacto: " " });
     expect(r.contacto).toBeNull();
     expect(r.activo).toBe(true);
+  });
+});
+
+describe("reversos", () => {
+  it("anularCompraSchema recorta el motivo y exige entre 1 y 200 caracteres", () => {
+    const base = { operacionId: id, compraId: otro };
+    expect(anularCompraSchema.parse({ ...base, motivo: "  error de carga " }).motivo).toBe(
+      "error de carga",
+    );
+    expect(anularCompraSchema.safeParse({ ...base, motivo: "   " }).success).toBe(false);
+    expect(anularCompraSchema.safeParse({ ...base, motivo: "x".repeat(201) }).success).toBe(false);
+    expect(anularCompraSchema.safeParse({ ...base, motivo: "x".repeat(200) }).success).toBe(true);
+    expect(anularCompraSchema.safeParse({ ...base, compraId: "no", motivo: "a" }).success).toBe(
+      false,
+    );
+  });
+  it("anularPagoSchema pide ids y motivo", () => {
+    expect(anularPagoSchema.safeParse({ operacionId: id, pagoId: otro, motivo: "a" }).success).toBe(
+      true,
+    );
+    expect(anularPagoSchema.safeParse({ operacionId: id, pagoId: otro, motivo: "" }).success).toBe(
+      false,
+    );
+  });
+  it("ultimoPagoSchema pide el proveedor", () => {
+    expect(ultimoPagoSchema.safeParse({ proveedorId: id }).success).toBe(true);
+    expect(ultimoPagoSchema.safeParse({ proveedorId: "x" }).success).toBe(false);
+  });
+  it("pagoVivoSchema acepta null y el pago de la RPC, y rechaza otra forma", () => {
+    expect(pagoVivoSchema.safeParse(null).success).toBe(true);
+    const pago = { id, monto: 10.5, created_at: "2026-11-10T10:00:00+00:00", automatico: false };
+    expect(pagoVivoSchema.safeParse(pago).success).toBe(true);
+    expect(pagoVivoSchema.safeParse({ ...pago, monto: "10" }).success).toBe(false);
+    expect(pagoVivoSchema.safeParse({ id }).success).toBe(false);
   });
 });

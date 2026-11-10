@@ -39,14 +39,25 @@ export function totalCentavos(
 
 const MENSAJES_COMPRAS: Record<string, string> = {
   ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
-  ERP_OPERACION_REPETIDA: "La compra ya se registró con otros datos; recarga la página.",
+  ERP_OPERACION_REPETIDA: "La operación ya se registró con otros datos; recarga la página.",
   ERP_SIN_PERMISO: "No tienes permiso para gestionar compras.",
   ERP_PAGO_EXCEDE_DEUDA: "El pago supera lo que se le debe al proveedor.",
+  ERP_PAGO_NO_ES_ULTIMO:
+    "Solo se puede anular el último pago del proveedor; ya hay uno más reciente. Recarga la página.",
+  ERP_PAGO_AUTOMATICO:
+    "Ese pago es de una compra al contado: se revierte anulando la compra, no el pago.",
+  ERP_COMPRA_CON_SERIES: "Una compra de productos con serie no se puede anular.",
+  ERP_COMPRA_CON_PAGOS:
+    "La compra tiene pagos al proveedor o la deuda quedaría en negativo. Anula primero el último pago del proveedor.",
+  ERP_STOCK_INSUFICIENTE:
+    "Ya no hay stock suficiente en la ubicación para deshacer la compra: parte se vendió o se movió.",
 };
 
 // Solo los códigos propios de compras; el resto lo traduce usuarios/domain (ERP_INTERNO...). Un fallo de red lo
 // muestra useAccion en el cliente: la action corre en el servidor y no distingue red.
 export const mensajeDeCompras = (codigo: string | undefined) =>
   codigo ? MENSAJES_COMPRAS[codigo] : undefined;
+
+export type UltimoPago = { id: string; monto: number; creadoEn: string; automatico: boolean };
 
 export const aNumero = (texto: string) => Number(texto.trim().replace(",", "."));
