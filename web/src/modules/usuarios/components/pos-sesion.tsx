@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatearHace } from "@/lib/format/fecha";
 import { useSinRed } from "@/lib/offline/red";
+import { BotonCambiarClave } from "./boton-cambiar-clave";
 import { BotonCerrarSesion } from "./boton-cerrar-sesion";
 import { SelectorNegocio } from "./selector-negocio";
 import { tieneAccesoPanel } from "../domain";
@@ -101,7 +102,8 @@ export function PosBarra({
         </div>
       )}
       {sesion.fase !== "verificando" && (
-        <div className="sm:ml-auto">
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <BotonCambiarClave deshabilitado={sinConexion} />
           <BotonCerrarSesion deshabilitado={sinConexion} />
         </div>
       )}

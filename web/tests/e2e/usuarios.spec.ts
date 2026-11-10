@@ -64,6 +64,73 @@ test.describe("dueño administra usuarios", () => {
     await expect(fila).toContainText("Activo");
   });
 
+  test("restablece la contraseña de una cuenta y esa cuenta cambia la suya sin perder la sesión", async ({
+    page,
+    browser,
+  }) => {
+    const nombre = `Clave ${corrida}`;
+    const correo = `${nombre.replace(/\s/g, "-").toLowerCase()}@erp.test`;
+    const restablecida = "Clave-restablecida-2";
+    const propia = "Clave-propia-3";
+    const fila = await crearPersona(page, nombre, "vendedor");
+
+    await fila.getByRole("button", { name: "Restablecer contraseña" }).click();
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toContainText("8 caracteres o más, con letras y números");
+    const enviar = dialogo.getByRole("button", { name: "Restablecer contraseña" });
+    await dialogo.getByLabel("Contraseña nueva").fill(restablecida);
+    await dialogo.getByLabel("Repite la contraseña").fill("otra-Clave-9");
+    await enviar.click();
+    await expect(dialogo.getByText("Las contraseñas no coinciden.")).toBeVisible();
+    await dialogo.getByLabel("Repite la contraseña").fill(restablecida);
+    await enviar.click();
+    await expect(dialogo).toContainText(
+      "Contraseña restablecida. Entrégasela a la persona y pídele que la cambie al entrar.",
+    );
+    await dialogo.getByRole("button", { name: "Cerrar" }).click();
+    await expect(dialogo).toBeHidden();
+
+    // La clave inicial ya no sirve; la restablecida sí.
+    const vieja = await intentarLogin(browser, correo, "Clave-inicial-1");
+    await expect(vieja.page.getByRole("alert").filter({ hasText: /incorrectos/ })).toBeVisible();
+    await vieja.cerrar();
+    const sesion = await intentarLogin(browser, correo, restablecida);
+    const pos = sesion.page;
+    await expect(pos).toHaveURL(/\/pos$/);
+
+    // Con la actual equivocada: error, nada cambia y la sesión sigue en pie.
+    const hayCookieDeSesion = async () =>
+      (await pos.context().cookies()).some((c) => /auth-token/.test(c.name));
+    expect(await hayCookieDeSesion()).toBe(true);
+    await pos.getByRole("button", { name: "Cambiar contraseña" }).click();
+    const cambio = pos.getByRole("alertdialog");
+    await cambio.getByLabel("Contraseña actual").fill("No-es-la-actual-1");
+    await cambio.getByLabel("Contraseña nueva", { exact: true }).fill(propia);
+    await cambio.getByLabel("Repite la contraseña nueva").fill(propia);
+    await cambio.getByRole("button", { name: "Cambiar contraseña" }).click();
+    await expect(cambio.getByRole("alert")).toHaveText("La contraseña actual no es correcta.");
+    expect(await hayCookieDeSesion()).toBe(true);
+    await pos.reload();
+    await expect(pos).toHaveURL(/\/pos$/);
+    expect(await hayCookieDeSesion()).toBe(true);
+
+    // Con la correcta: cambia, y la nueva entra mientras la restablecida ya no.
+    await pos.getByRole("button", { name: "Cambiar contraseña" }).click();
+    await cambio.getByLabel("Contraseña actual").fill(restablecida);
+    await cambio.getByLabel("Contraseña nueva", { exact: true }).fill(propia);
+    await cambio.getByLabel("Repite la contraseña nueva").fill(propia);
+    await cambio.getByRole("button", { name: "Cambiar contraseña" }).click();
+    await expect(cambio).toContainText("Contraseña cambiada.");
+    await sesion.cerrar();
+
+    const anterior = await intentarLogin(browser, correo, restablecida);
+    await expect(anterior.page.getByRole("alert").filter({ hasText: /incorrectos/ })).toBeVisible();
+    await anterior.cerrar();
+    const nueva = await intentarLogin(browser, correo, propia);
+    await expect(nueva.page).toHaveURL(/\/pos$/);
+    await nueva.cerrar();
+  });
+
   test("campos inválidos: error por campo, aria y foco al primero", async ({ page }) => {
     await page.goto("/panel/usuarios");
     await page.getByLabel("Contraseña inicial").fill("corta");

@@ -27,6 +27,7 @@ export const crearUsuarioSchema = z.object({
 export const asignarUsuarioSchema = z.object({ negocioId: id, usuarioId: id, rol });
 export const quitarUsuarioSchema = z.object({ negocioId: id, usuarioId: id });
 export const estadoCuentaSchema = z.object({ usuarioId: id });
+export const restablecerClaveSchema = z.object({ usuarioId: id, clave: claveSchema });
 export const registrarDispositivoSchema = z.object({
   negocioId: id,
   ubicacionId: id,

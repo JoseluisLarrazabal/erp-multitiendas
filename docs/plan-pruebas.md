@@ -105,16 +105,25 @@ La Edge Function `admin-usuarios` cumple los mismos casos 1 a 4, con prueba de i
 
 ## CI
 
-GitHub Actions, en cada PR:
+GitHub Actions. Dos workflows:
 
-1. `pnpm install --frozen-lockfile`.
-2. ESLint, Prettier y `tsc --noEmit`.
-3. gitleaks.
-4. Vitest.
-5. `supabase start`, migraciones desde cero, `supabase test db`.
-6. Tipos generados sin diferencias.
-7. `next build`.
-8. Playwright, con trazas guardadas si falla.
+- `secretos.yml`: gitleaks sobre todo el historial, en **todo** PR, también los que solo cambian documentos.
+- `ci.yml`: los pasos de abajo, en cada PR que toque algo más que documentos (`docs/**` y `*.md` no lo disparan).
+
+No hay corrida en `push` a `main`: el PR ya prueba el resultado del merge y los merges son squash sobre ramas al día.
+Motivo del recorte (2026-11-09): la cuenta de GitHub es Free, con 2.000 minutos de Actions al mes, y el backup de
+producción corre con ese mismo cupo. Si se suma un segundo desarrollador o se deja de hacer squash sobre ramas al día,
+la corrida en `main` vuelve a hacer falta.
+
+Pasos de `ci.yml` (numerados como en el archivo; el 3 era gitleaks):
+
+- Paso 1: `pnpm install --frozen-lockfile`.
+- Paso 2: ESLint, Prettier y `tsc --noEmit`.
+- Paso 4: Vitest.
+- Paso 5: `supabase start`, migraciones desde cero, `supabase test db`.
+- Paso 6: Tipos generados sin diferencias.
+- Paso 7: `next build`.
+- Paso 8: Playwright, con trazas guardadas si falla.
 
 ## Criterios de salida
 

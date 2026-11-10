@@ -50,6 +50,7 @@ const fila = (extra: Partial<FilaUsuario> = {}): FilaUsuario => ({
   activo: true,
   esYo: false,
   puedeAdministrar: true,
+  puedeRestablecer: true,
   ...extra,
 });
 
@@ -73,6 +74,13 @@ describe("accionesDeFila", () => {
       desactivar: false,
       reactivar: false,
     });
+  });
+});
+
+describe("restablecer", () => {
+  it("depende de puede_restablecer_clave, no de puede_administrar_cuenta", () => {
+    expect(accionesDeFila(fila({ puedeRestablecer: false }), false).restablecer).toBe(false);
+    expect(accionesDeFila(fila({ puedeRestablecer: true }), false).restablecer).toBe(true);
   });
 });
 

@@ -84,6 +84,8 @@ export type FilaUsuario = {
   esYo: boolean;
   // Resultado de puede_administrar_cuenta (regla 3): sirve para desactivar y reactivar.
   puedeAdministrar: boolean;
+  // Resultado de puede_restablecer_clave: además, un encargado no restablece a otro encargado.
+  puedeRestablecer: boolean;
 };
 
 export type AccionesFila = {
@@ -91,6 +93,7 @@ export type AccionesFila = {
   quitar: boolean;
   desactivar: boolean;
   reactivar: boolean;
+  restablecer: boolean;
 };
 
 const SIN_ACCIONES: AccionesFila = {
@@ -98,6 +101,7 @@ const SIN_ACCIONES: AccionesFila = {
   quitar: false,
   desactivar: false,
   reactivar: false,
+  restablecer: false,
 };
 
 // Ocultar es comodidad: decide la RPC. Mi fila y la de un dueño (si no soy dueño) no llevan acciones.
@@ -108,6 +112,7 @@ export function accionesDeFila(fila: FilaUsuario, llamadorEsDueno: boolean): Acc
     quitar: true,
     desactivar: fila.activo && fila.puedeAdministrar,
     reactivar: !fila.activo && fila.puedeAdministrar,
+    restablecer: fila.puedeRestablecer,
   };
 }
 

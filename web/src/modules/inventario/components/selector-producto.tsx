@@ -115,11 +115,12 @@ export function SelectorProducto({
       clearTimeout(temporizador.current);
       const filas = await buscar(q);
       const minuscula = q.toLowerCase();
-      const exacta = filas.find(
+      const exactas = filas.filter(
         (p) => p.codigo.toLowerCase() === minuscula || p.codigoBarras === q,
       );
-      const unica = filas.length === 1 ? filas[0] : undefined;
-      if (exacta ?? unica) elegir((exacta ?? unica)!);
+      // Con varias coincidencias exactas no elige: deja la lista abierta.
+      const unica = exactas.length === 1 ? exactas[0] : filas.length === 1 ? filas[0] : undefined;
+      if (unica) elegir(unica);
     }
   }
 

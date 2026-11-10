@@ -1,5 +1,5 @@
 // Crear y desactivar cuentas exige la API admin de Auth. La llaman solo server actions del panel: sin CORS.
-// Dos clientes: el del llamador (JWT) decide permisos por RPC; service_role toca auth.admin y auditar_cuenta.
+// Dos clientes: el del llamador (JWT) decide permisos por RPC; service_role toca auth.admin, auditar_cuenta y auditar_clave.
 // Versiones iguales a web/package.json.
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { z } from "npm:zod@4.6.7";
@@ -23,6 +23,7 @@ const entrada = z.discriminatedUnion("accion", [
     clave,
   }),
   z.object({ accion: z.enum(["desactivar", "reactivar"]), usuario_id: z.guid() }),
+  z.object({ accion: z.literal("restablecer_clave"), usuario_id: z.guid(), clave }),
 ]);
 
 const CODIGOS_RPC = new Set([
@@ -132,12 +133,33 @@ Deno.serve(async (req) => {
       return responder({ ok: true, data: { usuario_id: creada.user.id } });
     }
 
-    const { data: puede, error } = await llamador.rpc("puede_administrar_cuenta", {
+    // Restablecer la clave permite entrar como la otra persona: un encargado no puede hacerlo sobre otro encargado.
+    const permiso = datos.accion === "restablecer_clave" ? "puede_restablecer_clave" : "puede_administrar_cuenta";
+    const { data: puede, error } = await llamador.rpc(permiso, {
       p_usuario_id: datos.usuario_id,
     });
     if (error) return falla("ERP_INTERNO");
     if (puede !== true) return falla("ERP_SIN_PERMISO");
 
+    if (datos.accion === "restablecer_clave") {
+      // La clave no se devuelve ni se registra: ni en la respuesta ni en auditoría.
+      const { error: errorClave } = await admin.updateUserById(datos.usuario_id, {
+        password: datos.clave,
+      });
+      if (errorClave) {
+        return falla(errorClave.code === "weak_password" ? "ERP_CLAVE_DEBIL" : "ERP_INTERNO");
+      }
+      // La clave ya cambió: si la auditoría falla se avisa, no se oculta ni se deshace.
+      const { error: errorAuditoria } = await clienteServicio.rpc("auditar_clave", {
+        p_actor_id: sesion.user.id,
+        p_usuario_id: datos.usuario_id,
+      });
+      if (errorAuditoria) return falla("ERP_AUDITORIA");
+      return responder({ ok: true, data: { usuario_id: datos.usuario_id } });
+    }
+
+    // Solo desactivar y reactivar llegan aquí; una acción nueva no debe caer en el baneo por descuido.
+    if (datos.accion !== "desactivar" && datos.accion !== "reactivar") return falla("ERP_INTERNO");
     const { error: errorBan } = await admin.updateUserById(datos.usuario_id, {
       ban_duration: datos.accion === "desactivar" ? "876000h" : "none",
     });

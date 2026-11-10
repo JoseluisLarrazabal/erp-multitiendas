@@ -13,6 +13,7 @@ import {
   Package,
   Percent,
   Receipt,
+  Store,
   ScanSearch,
   Users,
   WashingMachine,
@@ -102,6 +103,7 @@ export const ITEMS: Item[] = [
     tipos: ["tienda", "frial"],
   },
   { href: "/panel/descuento", etiqueta: "Descuento", icono: Percent, permisos: ["usuarios"] },
+  { href: "/panel/negocio", etiqueta: "Datos del negocio", icono: Store, permisos: ["usuarios"] },
   {
     href: "/panel/ordenes",
     etiqueta: "Órdenes",

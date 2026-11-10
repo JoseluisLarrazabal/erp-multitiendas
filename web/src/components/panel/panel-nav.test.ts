@@ -45,6 +45,8 @@ describe("ítems de la fase 2", () => {
     expect(etiquetas(["ver_reportes"])).not.toContain("Clientes");
     expect(etiquetas(["editar_productos"])).not.toContain("Descuento");
     expect(etiquetas(["usuarios"])).toContain("Descuento");
+    expect(etiquetas(["editar_productos"])).not.toContain("Datos del negocio");
+    expect(etiquetas(["usuarios"])).toContain("Datos del negocio");
   });
 });
 

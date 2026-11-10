@@ -48,6 +48,7 @@ export function ListaConteo({
             />
             <span className="text-muted-foreground text-xs">
               Sistema: {formatearCantidad(p.sistema, p.unidad)}
+              {p.reservado > 0 && ` (${formatearCantidad(p.reservado, p.unidad)} reservadas)`}
             </span>
             {malos.has(p.id) && (
               <span id={`cont-ayuda-${p.id}`} className="text-destructive text-right text-xs">

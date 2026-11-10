@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PanelCaja } from "@/modules/caja";
 import { CLAVE_CREDITO } from "../use-envio";
+import { alcanceCuotas, hayCuotasSinConfirmar } from "../cobro-cuota";
+import { montosCongelados } from "../cobro-pendiente";
 import { aCentavos, bs } from "../domain";
 import { datosBoleta } from "../orden";
 import { useVenta, type OpcionesVenta } from "../use-venta";
@@ -34,6 +36,19 @@ export function VentaEnCurso({
   const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || aparte });
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
+  // Lo que impide cerrar la caja o cambiar de equipo: la cola, un cobro en línea sin confirmar o una cuota sin confirmar.
+  // Las cuotas se leen una vez al montar; después las avisa CreditosPos al fijar o quitar una, y otra pestaña por `storage`.
+  const alcanceCuota = alcanceCuotas(opciones.negocioId, equipo.id);
+  const [hayCuotas, setHayCuotas] = useState(() => hayCuotasSinConfirmar(alcanceCuota));
+  useEffect(() => {
+    const f = (e: StorageEvent) => {
+      if (e.key === alcanceCuota || e.key === null)
+        setHayCuotas(hayCuotasSinConfirmar(alcanceCuota));
+    };
+    window.addEventListener("storage", f);
+    return () => window.removeEventListener("storage", f);
+  }, [alcanceCuota]);
+  const hayPendientes = v.colaBloquea || envio.pendientes.size > 0 || hayCuotas;
 
   if (v.nota) {
     const alNueva = () => {
@@ -61,17 +76,16 @@ export function VentaEnCurso({
   const totales = v.resumen.totales;
   // Cobro online-only (reserva o crédito) sin confirmar: montos fijos (de lo enviado), no los del formulario.
   const clavePendiente = v.reserva ? v.reserva.id : v.formCredito.activo ? CLAVE_CREDITO : null;
-  const pendiente = clavePendiente ? envio.pendientes.get(clavePendiente) : undefined;
-  const montoDe = (medio: string) =>
-    aCentavos(pendiente?.payload.pagos.find((p) => p.medio === medio)?.monto ?? 0);
-  const congelado = pendiente ? { efectivo: montoDe("efectivo"), qr: montoDe("qr") } : undefined;
+  const ajeno = clavePendiente ? envio.pendientes.get(clavePendiente) : undefined;
+  const pendiente = ajeno && envio.esPropio(ajeno.payload.id) ? ajeno : undefined;
+  const congelado = montosCongelados(pendiente, envio.estado);
   const planCredito = v.credito?.ok ? v.credito.plan : null;
   return (
     <div className="flex flex-col gap-3 pb-20 lg:pb-0 print:hidden">
       <BarraEquipo
         equipo={equipo}
         cajaAbierta={!!cajaId}
-        pendiente={v.colaBloquea}
+        pendiente={hayPendientes}
         alCambiarEquipo={() =>
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
@@ -97,6 +111,29 @@ export function VentaEnCurso({
           if (m !== "caja") v.setConsulta(m === "consulta");
         }}
       />
+      {[...envio.pendientes]
+        .filter(([clave]) => !(v.cobrando && clave === clavePendiente))
+        .map(([clave, p]) => (
+          <div
+            key={clave}
+            role="alert"
+            className="border-destructive flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
+          >
+            <p className="text-destructive min-w-0 flex-1">
+              Cobro sin confirmar: {p.nota.numero}, {bs(aCentavos(p.payload.total))}
+              {p.nota.cliente ? `, ${p.nota.cliente.nombre}` : ""}. No entregues el producto hasta
+              verificar.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={envio.estado.t === "enviando" || envio.estado.t === "verificando"}
+              onClick={() => void envio.descartarYVerificar(clave)}
+            >
+              Verificar cobro
+            </Button>
+          </div>
+        ))}
       <AvisosVenta
         anuncio={v.anuncio}
         aviso={v.aviso}
@@ -113,7 +150,7 @@ export function VentaEnCurso({
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
           filas={opciones.cola.filas}
-          ventaPendiente={v.colaBloquea}
+          ventaPendiente={hayPendientes}
           lecturaColaFallida={opciones.cola.estado.lecturaFallida}
           alEncolar={() => opciones.cola.disparar()}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}
@@ -140,7 +177,7 @@ export function VentaEnCurso({
           negocioId={opciones.negocioId}
           equipoId={equipo.id}
           cajaId={cajaId}
-          usuarioId={opciones.usuarioId}
+          alCambiarPendientes={setHayCuotas}
           alCajaCerrada={v.alCajaCerrada}
         />
       )}

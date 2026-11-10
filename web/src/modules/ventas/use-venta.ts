@@ -20,7 +20,7 @@ import {
   formatearCantidad,
   motivoNoVendible,
   type Lista,
-  porCodigoExacto,
+  candidatosExactos,
   textoMonto,
   aCentavos,
   type ProductoPos,
@@ -180,6 +180,10 @@ export function useVenta(o: OpcionesVenta) {
       setVersionCredito((v) => v + 1);
     } else setAviso(`No se pudieron releer los parámetros del crédito: ${r.error}`);
   }, [negocioId]);
+  const alVerificada = useCallback((n: NotaVenta) => {
+    setNota(n);
+    setNotaEnCola(false);
+  }, []);
   const envio = useEnvio({
     negocioId,
     cola: o.cola,
@@ -191,6 +195,7 @@ export function useVenta(o: OpcionesVenta) {
     alCajaCerrada,
     alErrorCredito: refrescarCredito,
     alExito,
+    alVerificada,
     usuarioId: o.usuarioId,
   });
   const { hayPendiente, limpiarRechazo } = envio;
@@ -225,8 +230,10 @@ export function useVenta(o: OpcionesVenta) {
 
   function alEnter() {
     if (consulta || !indice) return;
-    const exacto = porCodigoExacto(indice, busqueda);
-    if (exacto) return agregar(exacto);
+    const exactos = candidatosExactos(indice, busqueda);
+    if (exactos.length === 1) return agregar(exactos[0]!);
+    if (exactos.length > 1)
+      return setAviso(`Ese código coincide con ${exactos.length} productos: elige uno.`);
     const unico = resultados.length === 1 ? resultados[0] : undefined;
     if (unico) return agregar(unico);
     if (busqueda.trim())

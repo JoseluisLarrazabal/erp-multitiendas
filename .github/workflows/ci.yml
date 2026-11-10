@@ -1,9 +1,10 @@
 name: CI
 
+# Sin `push` a main: el PR ya prueba refs/pull/N/merge (squash sobre ramas al día), la corrida en main repetía el mismo árbol.
 on:
   pull_request:
-  push:
-    branches: [main]
+    # Cambios solo de documentación no necesitan los 16 min de CI; el escaneo de secretos vive en secretos.yml y sí corre.
+    paths-ignore: ["docs/**", "**/*.md"]
 
 permissions:
   contents: read
@@ -14,8 +15,6 @@ concurrency:
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
-  GITLEAKS_VERSION: 8.24.3
-  GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
 
 jobs:
   # scripts/importacion/ es un paquete aparte (usa service_role, no entra en web/). Aquí solo tipos y pruebas unitarias:
@@ -58,7 +57,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # gitleaks recorre el historial
           persist-credentials: false
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -79,15 +77,6 @@ jobs:
           pnpm lint
           pnpm format:check
           pnpm typecheck
-
-      - name: 3. gitleaks
-        working-directory: .
-        run: |
-          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
-          tar -xzf gitleaks.tar.gz gitleaks
-          ./gitleaks git --no-banner --redact --verbose .
-          rm gitleaks gitleaks.tar.gz
 
       - name: 4. Vitest
         run: pnpm test

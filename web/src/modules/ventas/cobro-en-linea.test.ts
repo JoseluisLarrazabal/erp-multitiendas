@@ -143,3 +143,50 @@ describe("cobrarEnLinea con una venta a crédito", () => {
     expect(c.llamadas).toHaveLength(1);
   });
 });
+
+describe("cobrarEnLinea guarda el pendiente antes de enviar", () => {
+  it("guarda antes del primer envío", async () => {
+    const orden: string[] = [];
+    const c = cliente([ok("C1-000007")]);
+    const rpc = c.supabase.rpc as unknown as ReturnType<typeof vi.fn>;
+    rpc.mockImplementationOnce(() => {
+      orden.push("rpc");
+      return { abortSignal: () => Promise.resolve(ok("C1-000007")) };
+    });
+    await cobrarEnLinea(c.supabase, {
+      ...base(),
+      guardar: (v) => (orden.push(`guardar ${v.numero}`), true),
+    });
+    expect(orden).toEqual(["guardar C1-000007", "rpc"]);
+  });
+  it("si no se puede guardar, no se envía", async () => {
+    const c = cliente([ok("C1-000007")]);
+    const s = await cobrarEnLinea(c.supabase, { ...base(), guardar: () => false });
+    expect(s).toEqual({ t: "no-guardada" });
+    expect(c.llamadas).toHaveLength(0);
+  });
+  it("vuelve a guardar al renumerar, y si falla ahí no reenvía", async () => {
+    const guardados: string[] = [];
+    const c = cliente([duplicado, ok("C1-000008")]);
+    const s = await cobrarEnLinea(c.supabase, {
+      ...base(),
+      guardar: (v) => (guardados.push(v.numero), true),
+    });
+    expect(s).toMatchObject({ t: "ok", numero: "C1-000008" });
+    expect(guardados).toEqual(["C1-000007", "C1-000008"]);
+    const d = cliente([duplicado, ok("C1-000008")]);
+    let n = 0;
+    const f = await cobrarEnLinea(d.supabase, { ...base(), guardar: () => ++n === 1 });
+    expect(f).toEqual({ t: "no-guardada" });
+    expect(d.llamadas).toHaveLength(1);
+  });
+  it("un previo ya está guardado: no se vuelve a guardar para reenviarlo", async () => {
+    const guardar = vi.fn(() => true);
+    await cobrarEnLinea(cliente([ok("C1-000007")]).supabase, {
+      ...base(),
+      previo: armar(7),
+      guardar,
+    });
+    expect(guardar).not.toHaveBeenCalled();
+  });
+});

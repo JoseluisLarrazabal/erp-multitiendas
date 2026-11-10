@@ -10,6 +10,7 @@ import { mensajeDeVentas, type AccionVentas } from "./domain-panel";
 import { anularOrdenSchema } from "./schemas-ordenes";
 import {
   anularSchema,
+  datosNegocioSchema,
   devolverSchema,
   pagoQrSchema,
   revisarSchema,
@@ -97,6 +98,20 @@ export async function fijarTopeDescuento(entrada: unknown): Promise<Resultado<nu
   });
   if (error) return fallo("tope", error);
   revalidatePath("/panel/descuento");
+  return { ok: true, data: null };
+}
+
+export async function guardarDatosNegocio(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(datosNegocioSchema, entrada);
+  if (!d) return invalido("datos");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("guardar_datos_negocio", {
+    p_negocio_id: d.negocioId,
+    p_nit: d.nit,
+    p_datos_nota: d.datosNota,
+  });
+  if (error) return fallo("datos", error);
+  revalidatePath("/panel/negocio");
   return { ok: true, data: null };
 }
 

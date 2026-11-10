@@ -230,6 +230,44 @@ test("respuesta perdida: el servidor guarda el cobro pero el cliente no lo ve", 
   expect(await ventasDe(r.venta_id!)).toEqual({ ventas: 1, anticipos: 1 });
 });
 
+test("recargar a mitad del cobro de una reserva no la pierde ni la duplica", async ({ page }) => {
+  test.setTimeout(90_000);
+  const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
+  const reservaId = await reservaApi(producto, 1);
+  const cobro = await abrirCobroDeReserva(page);
+
+  // El servidor guarda la venta pero la respuesta nunca llega al cliente.
+  let guardada!: () => void;
+  const llegoAlServidor = new Promise<void>((r) => (guardada = r));
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    await route.fetch();
+    guardada();
+    await route.abort("failed");
+  });
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await llegoAlServidor;
+  await page.reload();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+
+  // El cajero ya arma la venta del siguiente cliente: verificar el cobro viejo no debe vaciarla.
+  const otro = await crearProductoConPrecio({ contado: 30, minimo: 20, stock: 10 });
+  const buscar = page.getByRole("searchbox", { name: "Buscar producto" });
+  await buscar.fill(otro.barras);
+  await page.keyboard.press("Enter");
+  await expect(buscar).toHaveValue("");
+  const aviso = page.getByRole("alert").filter({ hasText: "Cobro sin confirmar" });
+  await expect(aviso).toBeVisible();
+  await aviso.getByRole("button", { name: "Verificar cobro" }).click();
+  await expect(page.getByRole("article", { name: /Nota de venta W1-\d{6}/ })).toBeVisible();
+  const r = await estadoReserva(reservaId);
+  expect(r.estado).toBe("completada");
+  expect(await ventasDe(r.venta_id!)).toEqual({ ventas: 1, anticipos: 1 });
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Venta" }).getByText(otro.nombre),
+  ).toBeVisible();
+});
+
 test("nunca llegó: la verificación dice que no se registró y se cobra de nuevo", async ({
   page,
 }) => {
@@ -241,8 +279,14 @@ test("nunca llegó: la verificación dice que no se registró y se cobra de nuev
   await page.route("**/rest/v1/rpc/registrar_venta", (route) => route.abort("failed"));
   await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
   await expect(cobro).toContainText("No se confirmó el cobro", { timeout: 30_000 });
+  // Recién enviado: aunque el servidor no lo vea, su transacción pudo estar en vuelo. No se descarta todavía.
   await cobro.getByRole("button", { name: "Descartar y verificar" }).click();
-  await expect(cobro).toContainText("No se registró: el cobro no se hizo");
+  await expect(cobro).toContainText("Todavía puede estar registrándose");
+  await expect(cobro.getByRole("button", { name: "Descartar y verificar" })).toBeVisible();
+  // Pasados 60 s sin rastro en el servidor, sí se descarta.
+  await page.clock.setFixedTime(new Date(Date.now() + 120_000));
+  await cobro.getByRole("button", { name: "Descartar y verificar" }).click();
+  await expect(cobro).toContainText("Ese cobro no se registró");
   expect((await estadoReserva(reservaId)).estado).toBe("activa");
 
   // Con la red de vuelta, el cobro normal completa la reserva con una sola venta.

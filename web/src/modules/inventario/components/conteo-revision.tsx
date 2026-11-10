@@ -80,14 +80,21 @@ export function ConteoRevision({
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="font-semibold">{f.producto.nombre}</span>
                 <span className="text-sm tabular-nums">
-                  Sistema {formatearCantidad(f.producto.sistema, f.producto.unidad)} · Contado{" "}
-                  {formatearCantidad(f.contada, f.producto.unidad)} ·{" "}
+                  Sistema {formatearCantidad(f.producto.sistema, f.producto.unidad)}
+                  {f.producto.reservado > 0 &&
+                    ` (${formatearCantidad(f.producto.reservado, f.producto.unidad)} reservadas)`}{" "}
+                  · Contado {formatearCantidad(f.contada, f.producto.unidad)} ·{" "}
                   <strong className={cn(f.diferencia < 0 && "text-destructive")}>
                     {f.diferencia < 0 ? "Faltan " : "Sobran "}
                     {formatearCantidadConSigno(f.diferencia, f.producto.unidad)}
                   </strong>
                 </span>
               </div>
+              {f.contada < f.producto.reservado && (
+                <p role="alert" className="text-destructive text-sm">
+                  Contaste menos de lo reservado: revisa las reservas de este producto.
+                </p>
+              )}
               {exigeSeries(f) && (
                 <SelectorSeries
                   id={`cont-series-${f.producto.id}`}

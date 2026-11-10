@@ -20,13 +20,14 @@ export async function crearProductoConPrecio(opts: {
   controlaSerie?: boolean;
   unidad?: "unidad" | "kg";
   nombre?: string;
+  barras?: string;
 }): Promise<ProductoPos> {
   contador += 1;
   const n = `${corrida}${contador}`;
   const p = {
     codigo: `POS-${n}`,
     nombre: opts.nombre ?? `Producto POS ${n}`,
-    barras: `9${marca}${String(contador).padStart(4, "0")}`,
+    barras: opts.barras ?? `9${marca}${String(contador).padStart(4, "0")}`,
   };
   const r = await apiComo("dueno", "rpc/guardar_producto", {
     metodo: "POST",

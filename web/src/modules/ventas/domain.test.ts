@@ -14,7 +14,7 @@ import {
   parsearCantidad,
   parsearMonto,
   pisoUnitario,
-  porCodigoExacto,
+  candidatosExactos,
   type ProductoPos,
 } from "./domain";
 
@@ -220,9 +220,32 @@ describe("búsqueda", () => {
     expect(buscar(indice, "")).toEqual([]);
   });
   it("código exacto por código o barras", () => {
-    expect(porCodigoExacto(indice, "cel-001")?.id).toBe("1");
-    expect(porCodigoExacto(indice, "7770000000011")?.id).toBe("1");
-    expect(porCodigoExacto(indice, "CEL")).toBeNull();
+    expect(candidatosExactos(indice, "cel-001").map((p) => p.id)).toEqual(["1"]);
+    expect(candidatosExactos(indice, "7770000000011").map((p) => p.id)).toEqual(["1"]);
+    expect(candidatosExactos(indice, "CEL")).toEqual([]);
+  });
+  it("colisión entre el código de un producto y las barras de otro devuelve ambos, barras primero", () => {
+    const ind = crearIndice(
+      [prod("1", "123", "Uno"), prod("2", "B-2", "Dos", "123"), prod("3", "X", "Tres")],
+      new Map(),
+    );
+    expect(candidatosExactos(ind, "123").map((p) => p.id)).toEqual(["2", "1"]);
+  });
+  it("colisión por mayúsculas devuelve ambos", () => {
+    const ind = crearIndice([prod("1", "ABC", "Uno"), prod("2", "abc", "Dos")], new Map());
+    expect(candidatosExactos(ind, "Abc").map((p) => p.id)).toEqual(["1", "2"]);
+  });
+  it("un producto con código y barras iguales no se duplica", () => {
+    const ind = crearIndice([prod("1", "555", "Uno", "555")], new Map());
+    expect(candidatosExactos(ind, "555").map((p) => p.id)).toEqual(["1"]);
+  });
+  it("buscar pone los exactos primero y sin repetir", () => {
+    const ind = crearIndice(
+      [prod("1", "A-1", "Caja 123"), prod("2", "123", "Uno"), prod("3", "B", "Dos", "123")],
+      new Map(),
+    );
+    expect(buscar(ind, "123").map((p) => p.id)).toEqual(["3", "2", "1"]);
+    expect(buscar(ind, "123", 2).map((p) => p.id)).toEqual(["3", "2"]);
   });
   it("2.000 productos buscan en menos de 200 ms", () => {
     const grande = crearIndice(

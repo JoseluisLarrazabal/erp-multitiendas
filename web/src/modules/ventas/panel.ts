@@ -4,6 +4,7 @@ export { AnularVenta } from "./components/anular-venta";
 export { DetalleVentaVista } from "./components/detalle-venta";
 export { FiltrosVentasForm } from "./components/filtros-ventas";
 export { FormDevolucion, type EquipoAbierto } from "./components/form-devolucion";
+export { FormDatosNegocio } from "./components/form-datos-negocio";
 export { FormTope } from "./components/form-tope";
 export { ListaReconciliacion } from "./components/lista-reconciliacion";
 export { ListaVentas } from "./components/lista-ventas";

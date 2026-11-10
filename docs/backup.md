@@ -1,10 +1,29 @@
 # Backup y restauración
 
-Cumple RNF-08 (backup diario fuera de Supabase) y RNF-09 (restauración probada). Plan: `docs/plan-fase-6.md`.
+Cumple RNF-08 (backup diario cifrado fuera de Supabase, con restauración probada) y RNF-09 (pérdida máxima de 24 h).
+Plan: `docs/plan-fase-6.md`.
 
 ## Qué corre cada día
 
-`.github/workflows/backup.yml`, a las 03:00 de La Paz (`0 7 * * *` UTC), y a mano con "Run workflow".
+`.github/workflows/backup.yml` corre dos veces por día y a mano con "Run workflow" (ahí se elige el tipo; por defecto,
+`completo`).
+
+| Corrida | Cron (UTC) | Contenido | Tamaño | Se guarda |
+|---|---|---|---|---|
+| `completo` | `23 5 * * *` | Base de datos y fotos | unos 37 MB | 7 días |
+| `base` | `23 17 * * *` | Solo la base de datos | cerca de 1 MB | 30 días |
+
+**Por qué dos corridas.** GitHub arranca los cron con atraso: las corridas reales salieron entre 6,6 y 10 h después de
+la hora programada, y entre las del 8 y del 9 de noviembre de 2026 pasaron 27 h. Con dos corridas separadas por 12 h
+el hueco máximo queda en unas 15 h con ese atraso. Si GitHub salta una corrida entera, el hueco sube a unas 27 h: el
+workflow no avisa de eso, hay que mirar la lista de corridas.
+
+**Por qué dos retenciones.** Los artifacts de un repo privado cuentan contra el cupo de almacenamiento de Actions (500
+MB en una cuenta Free). Una corrida completa diaria guardada 30 días ocupa 1,1 GB; con 7 días de completas y 30 de
+bases son unos 290 MB. Consecuencia: **el historial de fotos es de 7 días y el de la base, de 30.** Una foto borrada
+por error hace más de 7 días no se recupera.
+
+Los pasos:
 
 1. `scripts/backup/respaldar.sh`: `supabase db dump` en tres archivos, `roles.sql`, `schema.sql` y `data.sql`. `data.sql`
    incluye `auth.users` y `auth.identities`: los usuarios vuelven con el backup.
@@ -23,11 +42,12 @@ Cumple RNF-08 (backup diario fuera de Supabase) y RNF-09 (restauración probada)
    del dump (va en el mismo `.age`). Corre antes del paso 4; rechaza nombres de objeto con `..` o `//`; cualquier error de
    descarga falla el workflow. **Si faltan los secretos `SUPABASE_URL` o `SUPABASE_SERVICE_ROLE_KEY`, el backup de la base
    sigue y este paso se omite con un `::warning::`** (la corrida queda verde pero con anotación amarilla: revisar).
-   `scripts/backup/verificar-fotos.sh` (dentro del paso 4) exige que el número de archivos en `fotos/` sea igual al de
+   Solo corre en la corrida `completo`. `scripts/backup/verificar-fotos.sh` (paso propio, también solo en `completo`) exige que el número de archivos en `fotos/` sea igual al de
    filas de `storage.objects` del bucket `productos` en `data.sql`; si no, el workflow falla. Los logs muestran solo
    cantidades, nunca nombres.
 6. Cifra el dump con `age` y la clave pública `scripts/backup/destinatario-age.txt`. Sube solo el `.age` como artifact
-   `erp-backup-AAAA-MM-DD`, que GitHub guarda 30 días.
+   `erp-backup-AAAA-MM-DDTHHMMZ-<completo|base>` (fecha y hora UTC del cifrado), que GitHub guarda 7 o 30 días según el
+   tipo.
 
 El dump en claro solo existe dentro del runner. Los logs muestran nombres de tabla y números, nunca filas.
 
@@ -55,12 +75,13 @@ falla en el PR.
 Para un simulacro, o para recuperar producción.
 
 ```bash
-# 1. Bajar el artifact (Actions > Backup diario > la corrida > erp-backup-AAAA-MM-DD) y descomprimir el zip.
-gh run download <run-id> -n erp-backup-AAAA-MM-DD -D ~/restauracion
+# 1. Bajar el artifact (Actions > Backup diario > la corrida) y descomprimir el zip. Sin -n baja el único artifact de
+#    la corrida, se llame como se llame; queda en ~/restauracion/erp-backup-<fecha>T<hora>Z-<tipo>/.
+gh run download <run-id> -D ~/restauracion
 
 # 2. Descifrar y desempaquetar.
 cd ~/restauracion
-age -d -i ~/.config/erp-multitiendas/backup-age.key erp-backup-AAAA-MM-DD.tar.age | tar -xf -
+age -d -i ~/.config/erp-multitiendas/backup-age.key erp-backup-*/*.tar.age | tar -xf -
 
 # 3a. Simulacro: restaurar en una Supabase local vacía y verificar contra el dump.
 cd "<repo>"
@@ -73,13 +94,17 @@ scripts/backup/verificar.sh ~/restauracion "$destino"
 #     restaurar con su cadena de conexión y apuntar Vercel a él.
 scripts/backup/restaurar.sh ~/restauracion "<url del proyecto nuevo>"
 
-# 3c. Fotos: con el proyecto ya restaurado, subir los archivos al bucket `productos` (upsert). El bucket lo crean las
+# 3c. Fotos (solo si el backup es `completo`; uno `base` no trae fotos/): con el proyecto ya restaurado, subir los archivos al bucket `productos` (upsert). El bucket lo crean las
 #     migraciones; la clave va por entorno, no por argumento.
 SUPABASE_SERVICE_ROLE_KEY=<service_role del proyecto> scripts/backup/restaurar-fotos.sh ~/restauracion https://<ref>.supabase.co
 
 # 4. Borrar el dump en claro.
 rm -rf ~/restauracion
 ```
+
+Para recuperar producción entera hacen falta dos artifacts cuando el más reciente es `base`: ese para la base de datos
+y el último `completo` (como mucho unas 12 h más viejo en régimen normal) para las fotos. Una foto subida entre los
+dos se pierde; el producto queda sin foto y se vuelve a cargar.
 
 La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca en un chat ni en un archivo del repo.
 
@@ -98,4 +123,4 @@ La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca
 | Paso 10 de CI completo | 38 s | local, simulado |
 | Simulacro con datos reales de producción (backup cifrado de 1,6 MB) | 50 s: descarga 4 s, descifrado menos de 1 s, destino 44 s, restauración 1 s, verificación 1 s | local, 2026-11-04 |
 | Respaldo de fotos (2 archivos de prueba, base local) | menos de 1 s | local |
-| Corrida diaria real con fotos (292 fotos, 37 MB; artifact cifrado 37 MB) | 602 s: dump 88 s, fotos 398 s (descarga de a una), restauración y verificación 77 s, cifrado 1 s, subida 2 s | GitHub Actions, run 41961859964, 2026-11-05 |
+| Corrida `completo` real con fotos (292 fotos, 37 MB; artifact cifrado 37 MB) | 602 s: dump 88 s, fotos 398 s (descarga de a una), restauración y verificación 77 s, cifrado 1 s, subida 2 s | GitHub Actions, run 41961859964, 2026-11-05 |

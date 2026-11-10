@@ -166,17 +166,22 @@ export const normalizar = (s: string) =>
 export type Indice = {
   productos: readonly ProductoPos[];
   textos: readonly string[];
-  exactos: ReadonlyMap<string, number>;
+  exactos: ReadonlyMap<string, number[]>;
 };
 
 export function crearIndice(
   productos: readonly ProductoPos[],
   marcas: ReadonlyMap<string, string>,
 ): Indice {
-  const exactos = new Map<string, number>();
+  const exactos = new Map<string, number[]>();
+  const anotar = (clave: string, i: number) => {
+    const lista = exactos.get(clave);
+    if (!lista) exactos.set(clave, [i]);
+    else if (!lista.includes(i)) lista.push(i);
+  };
   const textos = productos.map((p, i) => {
-    exactos.set(normalizar(p.codigo), i);
-    if (p.codigoBarras) exactos.set(normalizar(p.codigoBarras), i);
+    anotar(normalizar(p.codigo), i);
+    if (p.codigoBarras) anotar(normalizar(p.codigoBarras), i);
     return normalizar(`${p.codigo} ${p.codigoBarras ?? ""} ${p.nombre} ${marcas.get(p.id) ?? ""}`);
   });
   return { productos, textos, exactos };
@@ -191,17 +196,23 @@ export function buscar(
 ): ProductoPos[] {
   const palabras = normalizar(consulta).split(/\s+/).filter(Boolean);
   if (palabras.length === 0) return [];
-  const salida: ProductoPos[] = [];
+  const salida = candidatosExactos(indice, consulta).slice(0, limite);
+  const vistos = new Set(salida);
   for (let i = 0; i < indice.textos.length && salida.length < limite; i++) {
-    const texto = indice.textos[i]!;
-    if (palabras.every((p) => texto.includes(p))) salida.push(indice.productos[i]!);
+    const p = indice.productos[i]!;
+    if (!vistos.has(p) && palabras.every((w) => indice.textos[i]!.includes(w))) salida.push(p);
   }
   return salida;
 }
 
-export function porCodigoExacto(indice: Indice, consulta: string): ProductoPos | null {
-  const i = indice.exactos.get(normalizar(consulta));
-  return i === undefined ? null : (indice.productos[i] ?? null);
+// Todos los productos cuyo código o código de barras es la consulta; primero los que coinciden por barras.
+export function candidatosExactos(indice: Indice, consulta: string): ProductoPos[] {
+  const q = normalizar(consulta);
+  const porBarras = (p: ProductoPos) =>
+    p.codigoBarras && normalizar(p.codigoBarras) === q ? 0 : 1;
+  return (indice.exactos.get(q) ?? [])
+    .map((i) => indice.productos[i]!)
+    .sort((a, b) => porBarras(a) - porBarras(b));
 }
 
 // Lista con la que se vende por defecto: la tienda y el frial venden a contado; la lavandería, por orden, en normal o

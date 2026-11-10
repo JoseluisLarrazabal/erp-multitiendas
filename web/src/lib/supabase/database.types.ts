@@ -1228,6 +1228,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"stock_reservado": {
+                  Row: {
+                    "cantidad": number | null,"negocio_id": string,"producto_id": string,"ubicacion_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 }
           }
           Functions: {
@@ -1254,6 +1286,9 @@ isOneToOne: false
                            },
 "asignar_usuario":
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
+                           },
+"auditar_clave":
+{ Args: { "p_actor_id": string,"p_usuario_id": string }; Returns: undefined
                            },
 "auditar_cuenta":
 { Args: { "p_activo": boolean,"p_actor_id": string,"p_usuario_id": string }; Returns: undefined
@@ -1392,6 +1427,9 @@ isOneToOne: false
 "guardar_credito_config":
 { Args: { "p_inicial_pct": number,"p_interes_mensual_pct": number,"p_max_cuotas": number,"p_negocio_id": string,"p_plazo_cuotas": number }; Returns: undefined
                            },
+"guardar_datos_negocio":
+{ Args: { "p_datos_nota": string,"p_negocio_id": string,"p_nit": string }; Returns: undefined
+                           },
 "guardar_precios":
 { Args: { "p_items": Json,"p_negocio_id": string }; Returns: number
                            },
@@ -1459,6 +1497,9 @@ isOneToOne: false
                            },
 "puede_asignar_rol":
 { Args: { "p_negocio_id": string,"p_rol": string }; Returns: boolean
+                           },
+"puede_restablecer_clave":
+{ Args: { "p_usuario_id": string }; Returns: boolean
                            },
 "quitar_usuario":
 { Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: undefined
