@@ -139,12 +139,15 @@ Luego pulsar "Confirmar cobro". Si desea corregir algo, "Volver".
 Si el cobro se queda en "Enviando…" o aparece "Cobro sin confirmar", no cobre otra vez al cliente. Pulse "Reintentar
 cobro" o "Descartar y verificar" para saber si la venta quedó registrada.
 
-Si recarga la página a mitad de un cobro, arriba queda un aviso fijo: "Cobro sin confirmar: C1-000005, Bs … No entregues
-el producto hasta verificar." Pulse "Verificar cobro": el sistema consulta si la venta quedó registrada, sin cobrar de
-nuevo. Mientras ese aviso esté, no se puede cerrar la caja.
+Una venta normal, en efectivo o QR, se guarda en el equipo y se envía sola: no muestra el aviso que sigue. Los cobros
+que van directo al servidor, sin guardarse para después, son completar una reserva (el crédito lo cobra el encargado).
+Si recarga la página a mitad de uno de ellos, arriba queda un aviso fijo: "Cobro sin confirmar: C1-000005, Bs … No
+entregues el producto hasta verificar." Pulse "Verificar cobro": el sistema consulta si la venta quedó registrada, sin
+cobrar de nuevo. Lo mismo pasa con una cuota, en la pantalla "Cuotas". Mientras haya un cobro sin confirmar, no se puede
+cerrar la caja.
 
-Si la venta se envió y no hubo respuesta, queda "en duda": no se borra hasta saber con certeza si se registró. Si la
-sesión caducó o entró otra cuenta, el equipo no envía, comprueba ni descarta esa venta hasta que entre la cuenta que la hizo.
+Si una venta se envió y no hubo respuesta, queda "en duda": no se borra hasta saber con certeza si se registró, y antes
+de reenviarla el equipo comprueba si ya llegó. Si la sesión caducó, la venta espera hasta que vuelva a iniciar sesión.
 
 ### Imprimir la nota
 
@@ -233,7 +236,8 @@ acepta y queda marcada para que el encargado la revise. No venda por debajo del 
   cuando aparezca "La aplicación se actualizó en otra pestaña."
 - Si ve un aviso de operaciones de otro negocio sin enviar, entre con la cuenta y el negocio que las hicieron: solo así se envían.
 - En el cambio de turno, si entra otra cuenta del mismo negocio, lo pendiente del turno anterior se envía igual y queda
-  marcado como enviado desde otra cuenta.
+  marcado como "Enviada desde otra cuenta". Con esa cuenta no se puede comprobar ni descartar una venta rechazada: hay
+  que entrar con la cuenta que la hizo. Lo pendiente de otro negocio no se envía con esta cuenta.
 - Hasta el fin del paralelo, el cuaderno sigue siendo el registro oficial: cada venta se anota también allí.
 
 Se recomienda que el negocio tenga un respaldo de internet por 4G.
@@ -272,7 +276,7 @@ Si aparece "Hay operaciones sin enviar, una apertura de caja rechazada o cobros 
 antes de cerrar la caja.", volver a tener internet, esperar a que se envíen las ventas y verificar los cobros sin
 confirmar ("Verificar cobro").
 
-Una venta o un movimiento rechazado ya no impide cerrar: la pantalla avisa "Hay N operaciones rechazadas sin resolver"
+Una venta o un movimiento rechazado no impide cerrar: la pantalla avisa "Hay N operaciones rechazadas sin resolver"
 y, aparte, las "de cajas anteriores". Avise al encargado: él las reintenta o las descarta. El efectivo de una venta
 rechazada no cuenta en el esperado y aparece como diferencia del cierre.
 
@@ -287,7 +291,7 @@ botón "Reintentar".
    encargado." El cliente ya pagó y descartar no se deshace: el stock y la caja no reflejarían la venta.
 
 Solo el encargado o el dueño pueden descartar una operación rechazada. Pasados 30 días del cierre de esa caja, una venta
-rechazada ya no se puede reintentar: solo descartar. Mientras haya una operación rechazada, el equipo no se puede
+rechazada no se puede reintentar: solo descartar. Mientras haya una operación rechazada, el equipo no se puede
 actualizar (ver "Sin internet").
 
 ## Reservas con anticipo (tienda y frial)

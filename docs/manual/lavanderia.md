@@ -73,10 +73,6 @@ Se hace en la pestaña "Nueva orden".
    - QR: "Todo QR" y marcar "Confirmo que recibí Bs … por QR en mi cuenta." solo después de ver el pago en su celular.
    - Mixto: escribir el monto QR en "Pago por QR (Bs)". El efectivo se ajusta solo.
    Luego "Confirmar cobro".
-   Si el cobro queda en "Cobro sin confirmar", no cobre otra vez: pulse "Reintentar cobro" o "Descartar y verificar".
-   Si recarga la página a mitad del cobro, arriba queda "Cobro sin confirmar: L1-000123, Bs … No entregues el producto
-   hasta verificar." Pulse "Verificar cobro": el sistema consulta si la orden quedó registrada, sin cobrar de nuevo.
-   Mientras ese aviso esté, no se puede cerrar la caja.
 
 Por ahora la lavandería no maneja saldos por cobrar: se cobra todo al recibir. Esto es un **supuesto**, a confirmar con
 el cliente. Entregar la ropa no revisa el pago.
@@ -193,8 +189,8 @@ después. Mire igual su celular antes de recibir la ropa.
   se puede usar hasta resolverlas. La primera vez después de esta entrega, cada equipo necesita pulsar "Actualizar
   ahora" una vez; desde la siguiente se actualiza sola. Con dos pestañas abiertas, una puede quedar con la versión vieja:
   recárguela si aparece "La aplicación se actualizó en otra pestaña."
-- Si entra otra cuenta del mismo negocio, lo pendiente del turno anterior se envía igual y queda marcado como enviado
-  desde otra cuenta.
+- Si entra otra cuenta del mismo negocio, lo pendiente del turno anterior se envía igual y queda marcado como "Enviada desde otra
+  cuenta". Lo pendiente de otro negocio no se envía con esta cuenta.
 - El número de la boleta puede cambiar al enviarse, si choca con otro. Se conserva la boleta que ya entregó.
 - Hasta el fin del paralelo, el cuaderno sigue siendo el registro oficial: cada orden se anota también allí.
 
@@ -216,10 +212,10 @@ Después del cierre no se pueden registrar más ventas ni movimientos en esa ses
 cambiar: si repite el cierre con el mismo monto da el mismo resultado; con otro monto, da error.
 
 Si aparece "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos
-antes de cerrar la caja.", volver a tener internet, esperar a que se envíen y verificar los cobros sin confirmar
-("Verificar cobro").
+antes de cerrar la caja.", volver a tener internet, esperar a que se envíen. Si hay una apertura rechazada,
+avise al encargado.
 
-Una orden o un movimiento rechazado ya no impide cerrar: la pantalla avisa "Hay N operaciones rechazadas sin resolver"
+Una orden o un movimiento rechazado no impide cerrar: la pantalla avisa "Hay N operaciones rechazadas sin resolver"
 y, aparte, las "de cajas anteriores". Avise al encargado: él las reintenta o las descarta. El efectivo de una orden
 rechazada no cuenta en el esperado y aparece como diferencia del cierre.
 
@@ -227,7 +223,7 @@ rechazada no cuenta en el esperado y aparece como diferencia del cierre.
 
 Si el servidor rechaza una operación enviada desde la cola, aparece "N operaciones rechazadas al enviar" (o "1 operación rechazada al enviar") con el motivo y "Reintentar".
 Pulse "Reintentar" si el problema ya se arregló. Si sigue rechazada, **no la descarte**: "Para descartar una operación
-rechazada avisa al encargado." El cliente ya pagó y descartar no se deshace. Pasados 30 días del cierre de esa caja, una venta rechazada ya no se puede
+rechazada avisa al encargado." El cliente ya pagó y descartar no se deshace. Pasados 30 días del cierre de esa caja, una venta rechazada no se puede
 reintentar: solo descartar. Mientras haya una operación rechazada, el equipo no se puede actualizar.
 
 ## Si aparece este mensaje
@@ -249,8 +245,7 @@ reintentar: solo descartar. Mientras haya una operación rechazada, el equipo no
 | "Esta operación necesita conexión. Revisa la red y vuelve a intentar." | Esperar a que vuelva internet. |
 | "Sin conexión con el servidor. Revisa la red y vuelve a intentar." | Revisar el wifi o los datos del equipo y reintentar. |
 | "No se pudo completar la operación. Intenta de nuevo." | Reintentar. Si se repite, avisar al encargado y no cobrar de nuevo sin verificar. |
-| "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja." | Esperar a que se envíen y usar "Verificar cobro" en los cobros sin confirmar. Si hay una apertura rechazada, avisar al encargado. |
+| "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja." | Esperar a que se envíen. Si hay una apertura rechazada, avisar al encargado. |
 | "Hay N operaciones rechazadas sin resolver…" | No impide cerrar la caja. Avisar al encargado para que las reintente o las descarte. |
-| "Cobro sin confirmar: L1-000123, Bs … No entregues el producto hasta verificar." | No cobrar de nuevo. Pulsar "Verificar cobro". |
 | "Escribe quién retira." / "Escribe el documento de quien retira." | Completar "Quién retira" y, si es con carnet, el "Documento". |
 | "Hace más de 72 horas que este equipo no se conecta…" | Conectar el equipo a internet e iniciar sesión. Lo pendiente no se pierde. |
