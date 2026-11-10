@@ -8,10 +8,21 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
   entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
   M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 3, operación diaria (rama `fix/operacion-diaria-preentrega`, sin empezar).** Opus lo baja a
-    pasos al arrancar. Alcance: M-9 a M-14, M-16, M-17, pruebas de la sección 4, los dos "no concluyentes" del QA,
-    compresión de fotos al subir, y dos cosas que salieron del PR 2: el reporte "sin movimiento" cuenta
-    `anulacion_compra` como salida, y el aviso de actualización del POS (ver "QA autenticado" abajo).
+  - **Hito activo: PR 3, operación diaria (rama `fix/operacion-diaria-preentrega`). Estado (2026-11-10): plan
+    detallado escrito y arbitrado en `docs/plan-preentrega.md` ("Plan detallado del PR 3"); implementación en curso
+    con cinco subagentes (A caja, cola y aviso de actualización; B búsquedas sin tildes, kardex e inactivos; C
+    reportes y arrastres del PR 2; D pruebas de la sección 4 y limpieza; E POS a 390 px, cliente repetido, POS vacío,
+    fotos y refresco del catálogo).** Decisiones del chairman: la actualización del POS se aplica sola al abrir si no
+    hay nada pendiente; con una venta rechazada en la cola la caja se puede cerrar, con aviso; se recortan la prueba
+    de `ERP_ULTIMO_DUENO` en integración y la accesibilidad de las pantallas de la Entrega B. Cuatro migraciones
+    aditivas (`20261110130000` a `130300`), que se aplican antes del merge.
+  - **Decisión pendiente del CTO (2026-11-10): cadencia del backup por el cupo de Actions.** Medido por API: unos
+    1.730 de 2.000 minutos gastados; quedan unos 270 para 20 días. El backup completo tarda de 5 a 13 minutos (el paso
+    de fotos varía de 83 a 521 s) y el de base 4: dos corridas diarias cuestan de 180 a 340 minutos hasta fin de mes,
+    más unos 20 de los PR 3 y 4. Si el completo promedia más de 8 minutos, el cupo se agota antes del 30 y el backup
+    de producción deja de correr. Recomendación del chairman: fotos una vez por semana y base dos veces al día (unos
+    190 minutos); costo: en una pérdida total se pierde hasta una semana de fotos nuevas. Alternativa: método de pago
+    con tope en GitHub. Sin respuesta todavía; no se cambió nada.
   - **PR 2, Entrega B: cerrado el 2026-11-10 (PR #97, squash `426a91d`).**
     - Cierre: CI del PR en verde (16 min 25 s, una sola subida); merge a las 13:06 UTC; deploy de Vercel `READY`
       sobre `426a91d`. Comprobado en producción con la web nueva (sesión del dueño, solo lectura): `/panel/compras`,
