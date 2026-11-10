@@ -100,6 +100,13 @@ Opus lo baja a pasos al arrancar. Decisiones ya tomadas:
 - **M-2**: tres reversos por contraasiento, nunca borrado, con permiso `anular`: `anular_pago_cuota` y
   `anular_pago_proveedor` (solo el último pago, para no reabrir imputaciones) y `anular_compra` (solo sin pagos vivos y
   con stock suficiente en la ubicación). Es el cambio más grande del plan; lleva revisión de Opus y `/security-review`.
+- **Encargados (decisión del CTO, 2026-11-10): solo el dueño gestiona a los encargados.** Asignar el rol
+  `encargado`, cambiar el rol de un encargado, quitarlo, desactivarlo o reactivarlo y restablecer su contraseña exigen
+  ser dueño del negocio. Toca `asignar_usuario`, `quitar_usuario`, `puede_asignar_rol`, `puede_administrar_cuenta`
+  (y con ella `puede_restablecer_clave`), la función `admin-usuarios`, la pantalla de personal (acciones ocultas y
+  opción "Encargado" fuera del selector para quien no es dueño) y la matriz del SRS. Cierra el rodeo que el PR 1 dejó
+  anotado (bajar el rol, restablecer, devolver el rol). pgTAP, integración y E2E. Lleva `/security-review` y revisión
+  de Opus.
 - **M-5**: `/panel/ventas` distingue venta a crédito y de reserva, oculta Anular y Devolver con explicación y enlaza
   los pagos del crédito.
 - **M-6**: reimprimir el plan de cuotas desde el crédito; marcar documentos después de vender.
