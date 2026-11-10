@@ -51,7 +51,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RF-TR-01 | Inicio de sesión con correo y contraseña | Sin sesión, `/panel` y `/pos` redirigen al login | CT |
 | RF-TR-02 | Selector de negocio | Un usuario con 2 negocios cambia con un botón y solo ve datos del elegido | CT |
 | RF-TR-03 | Aislamiento de datos por negocio | Un usuario sin acceso al negocio B no lee ni escribe sus datos, ni por API | CT, HO |
-| RF-TR-04 | Gestión de usuarios | Con permiso, crea, desactiva y asigna negocio y rol. Un usuario desactivado no entra | CT |
+| RF-TR-04 | Gestión de usuarios | Con permiso, crea, desactiva y asigna negocio y rol. Un usuario desactivado no entra. Solo el dueño gestiona a los encargados: darles ese rol, cambiárselo, quitarlos, desactivarlos o restablecer su contraseña | CT |
 | RF-TR-05 | Permisos por rol y tipo de negocio | Sin permiso, la acción no aparece y el servidor la rechaza | RL |
 | RF-TR-06 | Panel protegido para gestionar contenido | Con permiso, crea, edita y consulta productos, precios, servicios y clientes desde celular y PC | CT, HO |
 | RF-TR-07 | Instalable como PWA | Se instala en PC y celular desde el navegador | CT |
@@ -173,17 +173,17 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | ID | Requisito | Criterio de aceptación | Origen |
 |---|---|---|---|
 | RF-CRE-01 | Venta a crédito | Con inicial, plazo, interés y frecuencia parametrizados por negocio; por defecto 50 %, 3 meses, 2,5 %, mensual. Implementado: frecuencia solo mensual (`docs/plan-fase-7.md`, decisión 7) | RL |
-| RF-CRE-02 | Plan de cuotas | Se genera al crear el crédito y se imprime | RL |
-| RF-CRE-03 | Documentos del crédito | Registra CI, comprobante de domicilio y pagaré | RL |
-| RF-CRE-04 | Pago de cuotas | Admite pago parcial, entra por caja y reduce el saldo | RL |
+| RF-CRE-02 | Plan de cuotas | Se genera al crear el crédito y se imprime. Se puede reimprimir desde el crédito | RL |
+| RF-CRE-03 | Documentos del crédito | Registra CI, comprobante de domicilio y pagaré, al vender o después desde el crédito. Cada cambio queda en auditoría | RL |
+| RF-CRE-04 | Pago de cuotas | Admite pago parcial, entra por caja y reduce el saldo. El último pago se revierte con un contraasiento, con permiso `anular` y motivo; el efectivo sale de una caja abierta | RL |
 | RF-CRE-05 | Cuentas por cobrar y cuotas vencidas | Muestra saldo por cliente. Una cuota impaga pasada su fecha aparece vencida, con sus días de atraso | RL |
 | RF-CRE-06 | Saldos iniciales | Permite cargar los créditos activos al arrancar | RL |
 | RF-RES-01 | Reserva con anticipo | Aparta stock y registra el anticipo por caja | RL |
 | RF-RES-02 | Completar reserva | Se convierte en venta y descuenta el anticipo del total | RL |
-| RF-RES-03 | Cancelar reserva | Libera stock y resuelve el anticipo según P-12 | RL |
+| RF-RES-03 | Cancelar reserva | Libera stock y resuelve el anticipo según P-12. Exige además el permiso `anular` | RL |
 | RF-COM-01 | Proveedores | Alta, edición y consulta por negocio | RL |
-| RF-COM-02 | Compras | Cada compra genera entradas y recalcula costo promedio | RL |
-| RF-COM-03 | Deudas a proveedores | Muestra saldo por proveedor y registra pagos | RL |
+| RF-COM-02 | Compras | Cada compra genera entradas y recalcula costo promedio. En el frial cada línea lleva lote y vencimiento. Una compra se anula con un contraasiento, con permiso `anular` y motivo, si no tiene pagos vivos ni series y el stock alcanza | RL |
+| RF-COM-03 | Deudas a proveedores | Muestra saldo por proveedor y registra pagos. El último pago manual se anula con un contraasiento, con permiso `anular` y motivo | RL |
 | RF-INS-01 | Insumos de lavandería | Detergente, bolsas y ganchos con stock, kardex y aviso de stock bajo | RL |
 | RF-INS-02 | Consumo de insumos | Se registra y alimenta "gasto en insumos" | RL |
 
@@ -222,6 +222,14 @@ Datos de `rol_permisos`, editables sin cambiar código. D dueño, E encargado, C
 | `gestionar_credito` | D, E | — |
 | `gestionar_reservas` | D, E, V | — |
 | `gestionar_compras` | D, E | D, E |
+
+Reglas que no caben en la grilla (2026-11-10):
+
+- Gestionar a un encargado exige ser dueño del negocio, aunque el rol tenga `usuarios` (RF-TR-04).
+- Cancelar una reserva exige `gestionar_reservas`, `caja` y `anular`: el vendedor crea y completa reservas, no las
+  cancela.
+- Anular una compra o un pago a proveedor exige `gestionar_compras` y `anular`. Revertir un pago de cuota exige
+  `anular`.
 
 El cliente marcó "Vender" y varias acciones de lavandería solo para vendedor o empleado. Se amplió a dueño y encargado,
 que son quienes cubren al personal. Frial usa la grilla de Lider hasta que abra.
