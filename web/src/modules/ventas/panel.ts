@@ -9,10 +9,12 @@ export { FormTope } from "./components/form-tope";
 export { ListaReconciliacion } from "./components/lista-reconciliacion";
 export { ListaVentas } from "./components/lista-ventas";
 export {
+  EXPLICACION_ESPECIAL,
   fueraDePlazo,
   PAGINA_RECONCILIACION,
   PAGINA_VENTAS,
   PLAZO_HORAS,
+  permiteAnularOdevolver,
   textoPorRevisar,
 } from "./domain-panel";
 export {

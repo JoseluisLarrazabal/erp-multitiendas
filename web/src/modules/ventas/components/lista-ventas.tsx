@@ -3,6 +3,7 @@ import { formatearFechaHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { cn } from "@/lib/utils";
 import type { EquipoPanel, FilaVenta } from "../lecturas-panel";
+import { ETIQUETA_ESPECIAL } from "../domain-panel";
 import { EstadoVenta } from "./estado-venta";
 
 const COLUMNAS = "md:grid-cols-[8rem_9.5rem_minmax(0,1fr)_8rem_7rem]";
@@ -53,8 +54,13 @@ export function ListaVentas({
               <span className="text-right font-semibold tabular-nums max-md:order-2">
                 {formatearBs(v.total)}
               </span>
-              <span className="max-md:order-5 max-md:col-span-2">
+              <span className="flex flex-wrap gap-1.5 max-md:order-5 max-md:col-span-2">
                 <EstadoVenta estado={v.estado} />
+                {v.especial && (
+                  <span className="border-border w-fit rounded-md border px-2 py-0.5 text-xs font-semibold">
+                    {ETIQUETA_ESPECIAL[v.especial]}
+                  </span>
+                )}
               </span>
             </Link>
           </li>
