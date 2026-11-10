@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { leerFiltros } from "@/lib/filtros";
 import { parsearMonto } from "@/lib/format/moneda";
+import { fechaDia } from "@/modules/inventario";
 import { MEDIOS_PAGO, parsearCantidadCompra, parsearCostoCompra } from "./domain";
 
 const textoOpcional = (max: number) =>
@@ -29,11 +30,22 @@ export const pagoSchema = z.object({
   medio,
 });
 
-const itemSchema = z.object({
-  productoId: z.guid(),
-  cantidad: z.string().refine((t) => (parsearCantidadCompra(t) ?? 0n) > 0n),
-  costo: z.string().refine((t) => parsearCostoCompra(t) !== null),
-});
+// Lote y vence (frial, M-8) van juntos: uno solo no sirve. Vacío o ausente = null; la RPC exige ambos en el frial y
+// los rechaza fuera de él.
+const itemSchema = z
+  .object({
+    productoId: z.guid(),
+    cantidad: z.string().refine((t) => (parsearCantidadCompra(t) ?? 0n) > 0n),
+    costo: z.string().refine((t) => parsearCostoCompra(t) !== null),
+    lote: textoOpcional(40)
+      .nullish()
+      .transform((v) => v ?? null),
+    vence: fechaDia.nullish().transform((v) => v ?? null),
+  })
+  .superRefine((d, ctx) => {
+    if (d.lote && !d.vence) ctx.addIssue({ code: "custom", path: ["vence"] });
+    if (d.vence && !d.lote) ctx.addIssue({ code: "custom", path: ["lote"] });
+  });
 
 export const compraSchema = z
   .object({

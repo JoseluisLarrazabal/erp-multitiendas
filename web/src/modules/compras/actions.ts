@@ -76,6 +76,7 @@ export async function registrarCompra(entrada: unknown): Promise<Resultado<null>
         producto_id: i.productoId,
         cantidad: aNumero(i.cantidad),
         costo_unitario: aNumero(i.costo),
+        ...(i.lote && i.vence ? { lote: i.lote, vence: i.vence } : {}),
       })),
     },
   });

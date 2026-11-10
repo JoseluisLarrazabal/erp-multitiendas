@@ -32,6 +32,29 @@ describe("compraSchema", () => {
   });
 });
 
+describe("compraSchema: lote y vence (frial)", () => {
+  const con = (extra: object) =>
+    compraSchema.safeParse({ ...base, items: [{ ...base.items[0], ...extra }] });
+  it("acepta lote y vence juntos y los normaliza", () => {
+    const r = con({ lote: " L-1 ", vence: "2027-03-10" });
+    expect(r.success).toBe(true);
+    expect(r.data?.items[0]).toMatchObject({ lote: "L-1", vence: "2027-03-10" });
+  });
+  it("sin lote ni vence (negocio sin lotes) quedan en null", () => {
+    expect(con({}).data?.items[0]).toMatchObject({ lote: null, vence: null });
+    expect(con({ lote: "", vence: "" }).data?.items[0]).toMatchObject({ lote: null, vence: null });
+  });
+  it("uno solo no sirve", () => {
+    expect(con({ lote: "L-1" }).success).toBe(false);
+    expect(con({ vence: "2027-03-10" }).success).toBe(false);
+  });
+  it("rechaza fecha inexistente, mal formada o lote de más de 40 caracteres", () => {
+    expect(con({ lote: "L", vence: "2027-02-30" }).success).toBe(false);
+    expect(con({ lote: "L", vence: "10/03/2027" }).success).toBe(false);
+    expect(con({ lote: "x".repeat(41), vence: "2027-03-10" }).success).toBe(false);
+  });
+});
+
 describe("pagoSchema", () => {
   const pago = { operacionId: id, negocioId: id, proveedorId: id, monto: "10,50", medio: "qr" };
   it("acepta monto con hasta 2 decimales", () => {
