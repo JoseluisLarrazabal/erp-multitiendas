@@ -10,8 +10,11 @@ Plan: `docs/plan-fase-6.md`.
 
 | Corrida | Cron (UTC) | Contenido | Tamaño | Se guarda |
 |---|---|---|---|---|
-| `completo` | `23 5 * * *` | Base de datos y fotos | unos 37 MB | 7 días |
-| `base` | `23 17 * * *` | Solo la base de datos | cerca de 1 MB | 30 días |
+| `completo` | `23 5 * * 0` (domingo) | Base de datos y fotos | unos 37 MB | 14 días |
+| `base` | `23 5 * * 1-6` (lunes a sábado) | Solo la base de datos | cerca de 2 MB | 30 días |
+| `base` | `23 17 * * *` (todos los días) | Solo la base de datos | cerca de 2 MB | 30 días |
+
+La base se respalda dos veces al día; las fotos, una vez por semana.
 
 **Por qué dos corridas.** GitHub arranca los cron con atraso: las corridas reales salieron entre 6,6 y 10 h después de
 la hora programada, y entre las del 8 y del 9 de noviembre de 2026 pasaron 27 h. Con dos corridas separadas por 12 h
@@ -19,9 +22,19 @@ el hueco máximo queda en unas 15 h con ese atraso. Si GitHub salta una corrida 
 workflow no avisa de eso, hay que mirar la lista de corridas.
 
 **Por qué dos retenciones.** Los artifacts de un repo privado cuentan contra el cupo de almacenamiento de Actions (500
-MB en una cuenta Free). Una corrida completa diaria guardada 30 días ocupa 1,1 GB; con 7 días de completas y 30 de
-bases son unos 290 MB. Consecuencia: **el historial de fotos es de 7 días y el de la base, de 30.** Una foto borrada
-por error hace más de 7 días no se recupera.
+MB en una cuenta Free). Una corrida completa diaria guardada 30 días ocupa 1,1 GB; con las completas semanales
+guardadas 14 días (2 o 3 vivas) y las bases 30 días son unos 210 MB. Consecuencia: **el historial de fotos es de 14
+días y el de la base, de 30.** Una foto borrada por error hace más de 14 días no se recupera.
+
+**Por qué las fotos son semanales (decisión del CTO, 2026-11-10).** La cuenta Free da 2.000 minutos de Actions al mes
+y el backup corre con ese mismo cupo. La corrida completa tarda de 5 a 13 minutos (bajar las fotos de a una varía de
+83 a 521 s); la de base, 4. En noviembre de 2026 el CI gastó unos 1.600 minutos y quedaban unos 270 para 20 días: con
+la completa diaria el cupo podía agotarse antes de fin de mes, y **sin minutos el backup deja de correr**. No se paga
+por minutos. Costo aceptado: en una pérdida total de Supabase se pierden las fotos subidas desde el último domingo
+(hasta 7 días, más el atraso de GitHub); los datos no cambian, se siguen copiando dos veces al día. Las fotos viven
+en Supabase Storage: en el uso normal no se pierde ninguna. Se revisa el 2026-12-01, cuando el cupo se renueva: sin
+el gasto de CI de noviembre la completa diaria cabe (270 a 510 minutos al mes); volver es cambiar los cron y la
+retención en `backup.yml`.
 
 Los pasos:
 
@@ -103,8 +116,8 @@ rm -rf ~/restauracion
 ```
 
 Para recuperar producción entera hacen falta dos artifacts cuando el más reciente es `base`: ese para la base de datos
-y el último `completo` (como mucho unas 12 h más viejo en régimen normal) para las fotos. Una foto subida entre los
-dos se pierde; el producto queda sin foto y se vuelve a cargar.
+y el último `completo` (el del domingo anterior: hasta una semana más viejo) para las fotos. Una foto subida entre
+los dos se pierde; el producto queda sin foto y se vuelve a cargar.
 
 La URL de producción lleva contraseña: el CTO la escribe en su terminal, nunca en un chat ni en un archivo del repo.
 

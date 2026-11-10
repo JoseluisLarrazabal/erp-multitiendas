@@ -16,13 +16,19 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     hay nada pendiente; con una venta rechazada en la cola la caja se puede cerrar, con aviso; se recortan la prueba
     de `ERP_ULTIMO_DUENO` en integración y la accesibilidad de las pantallas de la Entrega B. Cuatro migraciones
     aditivas (`20261110130000` a `130300`), que se aplican antes del merge.
-  - **Decisión pendiente del CTO (2026-11-10): cadencia del backup por el cupo de Actions.** Medido por API: unos
-    1.730 de 2.000 minutos gastados; quedan unos 270 para 20 días. El backup completo tarda de 5 a 13 minutos (el paso
-    de fotos varía de 83 a 521 s) y el de base 4: dos corridas diarias cuestan de 180 a 340 minutos hasta fin de mes,
-    más unos 20 de los PR 3 y 4. Si el completo promedia más de 8 minutos, el cupo se agota antes del 30 y el backup
-    de producción deja de correr. Recomendación del chairman: fotos una vez por semana y base dos veces al día (unos
-    190 minutos); costo: en una pérdida total se pierde hasta una semana de fotos nuevas. Alternativa: método de pago
-    con tope en GitHub. Sin respuesta todavía; no se cambió nada.
+  - **Decisión del CTO (2026-11-10): backup con fotos una vez por semana; no se paga por minutos ni por nada.**
+    Contexto, medido por API: unos 1.730 de 2.000 minutos de Actions gastados; quedaban unos 270 para 20 días. El
+    backup completo tarda de 5 a 13 minutos (el paso de fotos varía de 83 a 521 s) y el de base 4: con la completa
+    diaria se gastaban de 180 a 340 minutos hasta fin de mes, más unos 20 del PR 3, y sin minutos el backup de
+    producción deja de correr. Qué se hace, dentro del PR 3: base dos veces al día como hoy; fotos solo el domingo a
+    las 05:23 UTC, guardadas 14 días (con 7 y una corrida atrasada podía quedar un hueco sin copia de fotos). Costo
+    estimado: unos 190 minutos hasta fin de mes. Costo aceptado: en una pérdida total de Supabase se pierden las
+    fotos subidas desde el último domingo; los datos no cambian. Objeción del chairman, dicha una vez: el CTO dio por
+    hecho que el proyecto de Supabase no se va a borrar; eso no se puede garantizar (cuenta comprometida, borrado
+    por error) y es justo el caso para el que existe el backup. **Revisar el 2026-12-01**, cuando se renueva el
+    cupo: sin el gasto de CI de noviembre la completa diaria cabe; volver es cambiar los cron y la retención en
+    `backup.yml`. Documentado en `docs/backup.md`. Cómo revertir: restaurar los cron `23 5 * * *` y `23 17 * * *` y
+    la retención de 7 días.
   - **PR 2, Entrega B: cerrado el 2026-11-10 (PR #97, squash `426a91d`).**
     - Cierre: CI del PR en verde (16 min 25 s, una sola subida); merge a las 13:06 UTC; deploy de Vercel `READY`
       sobre `426a91d`. Comprobado en producción con la web nueva (sesión del dueño, solo lectura): `/panel/compras`,
