@@ -84,6 +84,8 @@ Con el dueño logueado en el panel:
 2. "Usuarios": las cuentas del personal con su rol.
 3. "Descuento": el tope (con 0 % nadie descuenta).
 4. "Tipo de cambio": si hay precios en USD.
+5. "Datos del negocio": el "NIT" y los "Datos para la nota" (dirección y teléfono) de cada uno de los tres negocios.
+   Sin ellos la nota sale sin NIT ni datos.
 
 Importación de Lider con fotos (`docs/migracion-datos.md`), desde `scripts/importacion`, con `SUPABASE_URL` y
 `SUPABASE_SERVICE_ROLE_KEY` de producción exportadas en la terminal del CTO:
@@ -99,10 +101,18 @@ Los precios los carga el cliente en "Precios".
 ## Limpieza de pruebas antes del paralelo
 
 Se corre una sola vez, después de la capacitación y antes del paralelo (`docs/plan-limpieza-pruebas.md`). Borra todo lo
-transaccional con fecha >= `--desde` (ventas, cajas, órdenes, clientes, kardex, conteos, compras, pagos a proveedores y proveedores creados en la ventana) y recalcula `stock` y la
-numeración; conserva usuarios, productos, precios, fotos y auditoría. `--desde` es el inicio de la capacitación, con zona
+transaccional con fecha >= `--desde`: ventas y sus líneas y pagos, devoluciones, anulaciones de compras, reservas y sus
+pagos, créditos con sus cuotas y pagos, cajas con sus movimientos y revisiones, órdenes de lavandería y sus eventos,
+clientes, kardex, conteos, lotes y series creados en la ventana, compras con sus líneas, pagos a proveedores y
+proveedores creados en la ventana. Recalcula `stock` y la numeración; conserva usuarios, productos, precios, fotos y auditoría. `--desde` es el inicio de la capacitación, con zona
 horaria (`2026-11-10T08:00:00-04:00`). Si el stock inicial de la importación es posterior a ese corte, también se borra:
 el script aborta (también en seco): elegí un `--desde` posterior a la importación.
+
+**Aviso: series.** Si un producto que ya tenía números de serie antes de `--desde` tuvo, dentro del corte, un traslado,
+una baja, un ajuste, un daño, un cambio de garantía, una devolución a proveedor o un consumo, el script aborta (también
+en seco): el kardex no dice qué serie tocó cada movimiento y no se puede reconstruir su estado. Durante la capacitación
+esos productos se venden, pero no se mueven (`docs/capacitacion.md`). Otras reglas de abortar, por ejemplo una venta o
+una compra previas anuladas después del corte, están en `docs/plan-limpieza-pruebas.md`.
 
 ```bash
 # 1. Backup manual en verde justo antes (sección 6). Sin backup en verde no se sigue.
@@ -128,6 +138,10 @@ navegador devolvería los números de prueba aunque el servidor quede en 0.
      elección es `erp:pos:equipo:<negocio>` en localStorage). El equipo es una fila de `dispositivos` en el servidor:
      no se pierde ni se desregistra. El contador se repone desde `ultimo_numero` (0).
 - Comprobar: la primera venta real del equipo debe ser `<prefijo>-000001` (o el siguiente al último previo que quede).
+- La primera actualización del punto de venta tras el PR 3 es a mano: en cada equipo con el POS instalado, cuando sale
+  "Actualización disponible", pulsar "Actualizar ahora" una vez (con caja cerrada y sin operaciones sin enviar o
+  rechazadas: el botón queda apagado si las hay). Después se actualiza sola al abrirlo, si nadie tocó la pantalla y no
+  hay nada pendiente.
 
 **Regla:** backup en verde justo antes, y nunca después de empezar el paralelo: esas ventas son reales.
 
@@ -153,6 +167,18 @@ El backup de fotos necesita además los secretos `SUPABASE_URL` y `SUPABASE_SERV
 - [ ] Una foto importada se ve en la ficha del producto (CSP)
 - [ ] Backup en verde: las dos corridas del día (`base`; la del domingo a las 05:23 UTC es `completo`, con fotos)
 - [ ] Playwright sobre producción sin sesión: `/`, `/panel` y `/pos` llevan a `/login`
+
+## Antes de entregar: rotar credenciales
+
+El CTO difirió la rotación de credenciales al cierre: es un paso pendiente del checklist de entrega. El 2026-11-04 se
+expusieron la contraseña de la base de producción y la `service_role`. Al entregar, en este orden (detalle en
+`docs/handoff.md`):
+
+- [ ] Resetear la contraseña de la base y volver a cargar `SUPABASE_DB_URL` (`gh secret set`, desde una terminal propia)
+- [ ] Rotar las claves de Supabase y actualizar `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Vercel (Production), redesplegar y
+      probar el login; si cambia la `service_role`, actualizar `SUPABASE_SERVICE_ROLE_KEY` en los secretos del backup
+      de fotos
+- [ ] Correr el backup y comprobar `VERIFICACION OK`
 
 ## Dominio (al final)
 
