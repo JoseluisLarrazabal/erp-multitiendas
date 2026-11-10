@@ -61,6 +61,25 @@ export const topeTextoSchema = z
 
 export const topeSchema = z.object({ negocioId: id, tope: topeTextoSchema });
 
+// Mismos límites que guardar_datos_negocio: NIT de una línea (20), nota de hasta 300 caracteres y 6 líneas.
+export const datosNegocioSchema = z.object({
+  negocioId: id,
+  nit: z
+    .string()
+    .trim()
+    .max(20)
+    .regex(/^[^\r\n]*$/),
+  datosNota: z
+    .string()
+    .transform((t) => t.replaceAll("\r\n", "\n").trim())
+    .pipe(
+      z
+        .string()
+        .max(300)
+        .refine((t) => t.split("\n").length <= 6),
+    ),
+});
+
 export function hrefVentas(f: Partial<FiltrosVentas>): string {
   const p = new URLSearchParams();
   if (f.q) p.set("q", f.q);

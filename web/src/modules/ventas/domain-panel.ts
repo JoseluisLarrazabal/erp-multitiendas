@@ -54,7 +54,7 @@ export const fueraDePlazo = (recibidaEn: string, ahora: number) =>
 
 // Códigos de anular_venta, devolver_venta y fijar_tope_descuento, en palabras del panel y según la acción. Los que no
 // estén aquí caen en lib/erp-errores (única fuente de los demás, p. ej. ERP_CLIENTE_DUPLICADO de clientes).
-export type AccionVentas = "anular" | "devolver" | "tope" | "revisar" | "qr";
+export type AccionVentas = "anular" | "devolver" | "tope" | "datos" | "revisar" | "qr";
 
 const COMUNES: Record<string, string> = {
   ERP_SIN_PERMISO:
@@ -84,6 +84,10 @@ const PROPIOS: Record<AccionVentas, Record<string, string>> = {
   },
   tope: {
     ERP_DATOS_INVALIDOS: "El tope debe ser un porcentaje entre 0 y 100 con hasta 2 decimales",
+  },
+  datos: {
+    ERP_DATOS_INVALIDOS:
+      "El NIT admite hasta 20 caracteres en una línea; la nota, hasta 300 caracteres y 6 líneas.",
   },
   revisar: {
     ERP_DATOS_INVALIDOS: "Esta venta no tiene nada que revisar. Recarga la página.",
