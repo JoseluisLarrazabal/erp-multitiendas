@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   alcanceCobros,
+  debeAplicarSola,
   fijarCobroPendiente,
+  hayCobrosGuardados,
   leerCobrosPendientes,
   montosCongelados,
   type PendienteEnLinea,
@@ -115,5 +117,43 @@ describe("cobros en línea pendientes (sobreviven a recargar)", () => {
     expect(leerCobrosPendientes(alcanceCobros("n", "otro-equipo"))).toEqual({});
     expect(leerCobrosPendientes(alcanceCobros("otro-negocio", "e"))).toEqual({});
     expect(Object.keys(leerCobrosPendientes(alcanceCobros("n", "e")))).toEqual(["credito"]);
+  });
+});
+
+describe("hayCobrosGuardados", () => {
+  const almacen = (claves: string[]) =>
+    vi.stubGlobal("localStorage", { length: claves.length, key: (i: number) => claves[i] ?? null });
+
+  it("detecta cobros en línea y cuotas sin confirmar de cualquier alcance, y nada más", () => {
+    almacen([]);
+    expect(hayCobrosGuardados()).toBe(false);
+    almacen(["erp:otra-cosa:x", "erp:cobros-en-linea"]);
+    expect(hayCobrosGuardados()).toBe(false);
+    almacen(["erp:otra-cosa:x", "erp:cobros-en-linea:n:e"]);
+    expect(hayCobrosGuardados()).toBe(true);
+    almacen(["erp:cuotas-sin-confirmar:n:e"]);
+    expect(hayCobrosGuardados()).toBe(true);
+  });
+
+  it("si el almacenamiento no responde, asume que hay", () => {
+    vi.stubGlobal("localStorage", {
+      length: 1,
+      key: () => {
+        throw new Error("bloqueado");
+      },
+    });
+    expect(hayCobrosGuardados()).toBe(true);
+  });
+});
+
+describe("debeAplicarSola", () => {
+  const libre = { interactuo: false, colaVacia: true, cobrosGuardados: false, pendiente: false };
+  it("solo antes de interactuar y sin cola, cobros ni pendientes", () => {
+    expect(debeAplicarSola(libre)).toBe(true);
+    expect(debeAplicarSola({ ...libre, interactuo: true })).toBe(false);
+    expect(debeAplicarSola({ ...libre, colaVacia: false })).toBe(false);
+    expect(debeAplicarSola({ ...libre, colaVacia: null })).toBe(false);
+    expect(debeAplicarSola({ ...libre, cobrosGuardados: true })).toBe(false);
+    expect(debeAplicarSola({ ...libre, pendiente: true })).toBe(false);
   });
 });

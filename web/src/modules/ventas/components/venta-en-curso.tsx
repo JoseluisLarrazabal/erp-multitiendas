@@ -49,6 +49,7 @@ export function VentaEnCurso({
     return () => window.removeEventListener("storage", f);
   }, [alcanceCuota]);
   const hayPendientes = v.colaBloquea || envio.pendientes.size > 0 || hayCuotas;
+  const cierreBloqueado = v.colaBloqueaCierre || envio.pendientes.size > 0 || hayCuotas;
 
   if (v.nota) {
     const alNueva = () => {
@@ -150,7 +151,8 @@ export function VentaEnCurso({
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
           filas={opciones.cola.filas}
-          ventaPendiente={hayPendientes}
+          ventaPendiente={cierreBloqueado}
+          rechazadas={opciones.cola.estado.rechazadasEquipo}
           lecturaColaFallida={opciones.cola.estado.lecturaFallida}
           alEncolar={() => opciones.cola.disparar()}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}

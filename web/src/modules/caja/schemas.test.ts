@@ -70,5 +70,10 @@ describe("resumen de caja", () => {
     expect(resumenCajaSchema.safeParse({ ...ok, cuotas_qr: undefined }).success).toBe(false);
     expect(resumenCajaSchema.parse(ok).anticipos_efectivo).toBe(20);
     expect(resumenCajaSchema.parse(ok).cuotas_efectivo).toBe(8);
+    // Las claves de tardías son opcionales (base anterior) y pueden ir en null (sin ver_reportes).
+    expect(resumenCajaSchema.parse(ok).tardias_ventas).toBeUndefined();
+    const t = { ...ok, tardias_ventas: 1, tardias_ventas_total: 24, tardias_movimientos: 0 };
+    expect(resumenCajaSchema.parse(t).tardias_ventas_total).toBe(24);
+    expect(resumenCajaSchema.safeParse({ ...ok, tardias_ventas: null }).success).toBe(true);
   });
 });

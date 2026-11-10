@@ -47,6 +47,10 @@ export const resumenCajaSchema = z.object({
   qr_neto: z.number().nullable(),
   cantidad_ventas: z.number(),
   cantidad_movimientos: z.number(),
+  // Lo que llegó sin conexión después del cierre (M-10). Opcionales: el POS viejo y la base nueva conviven.
+  tardias_ventas: z.number().nullable().optional(),
+  tardias_ventas_total: z.number().nullable().optional(),
+  tardias_movimientos: z.number().nullable().optional(),
 });
 export type ResumenCaja = z.infer<typeof resumenCajaSchema>;
 

@@ -56,6 +56,41 @@ describe("bloqueo del equipo", () => {
   });
 });
 
+describe("bloqueo del cierre de caja (M-11)", () => {
+  const propia = (extra: Partial<FilaCola>) => fila({ dispositivoId: "e1", ...extra });
+  const cierre = (filas: FilaCola[], ilegibles = 0) =>
+    resumirCola({ ...vacia, filas, ilegibles }, ["n1"], "e1");
+
+  it("una venta o un movimiento rechazado no bloquea el cierre pero sí el equipo", () => {
+    for (const tipo of ["venta", "movimiento"]) {
+      const e = cierre([propia({ tipo, estado: "rechazada" })]);
+      expect(e.bloqueaCierre).toBe(false);
+      expect(e.bloqueaEquipo).toBe(true);
+      expect(e.rechazadasEquipo.cantidad).toBe(1);
+    }
+  });
+
+  it("lo pendiente, una apertura rechazada y lo ilegible bloquean el cierre y el equipo", () => {
+    for (const e of [
+      cierre([propia({ estado: "pendiente" })]),
+      cierre([propia({ tipo: "apertura", estado: "rechazada" })]),
+      cierre([], 1),
+      cierre([propia({ tipo: "venta", estado: "rechazada" }), propia({ orden: 2 })]),
+    ]) {
+      expect(e.bloqueaCierre).toBe(true);
+      expect(e.bloqueaEquipo).toBe(true);
+    }
+  });
+
+  it("sin leer la cola bloquea el cierre; una rechazada de otro equipo no cuenta", () => {
+    expect(resumirCola(null, ["n1"], "e1").bloqueaCierre).toBe(true);
+    expect(resumirCola("error", ["n1"], "e1").bloqueaCierre).toBe(true);
+    const e = cierre([fila({ estado: "rechazada" })]);
+    expect(e.bloqueaCierre).toBe(false);
+    expect(e.rechazadasEquipo.cantidad).toBe(0);
+  });
+});
+
 describe("conteo por tipo", () => {
   it("cuenta ventas, aperturas y movimientos pendientes y lista rechazadas de caja", () => {
     const e = resumirCola(

@@ -31,6 +31,14 @@ export function DetalleSesionVista({
   verVentas: boolean;
 }) {
   const { sesion: s, resumen: r } = d;
+  const cerrada = !!s.cerradaEn;
+  const ventasTardias = r.tardias_ventas ?? 0;
+  const movimientosTardios = r.tardias_movimientos ?? 0;
+  // Lo que llegó sin conexión después del cierre cambia el esperado de ahora, no el arqueo ya guardado.
+  const hayTardias =
+    ventasTardias > 0 ||
+    movimientosTardios > 0 ||
+    (r.esperado !== null && s.montoEsperado !== null && r.esperado !== s.montoEsperado);
   const fila = "flex items-baseline justify-between gap-3 py-2 tabular-nums";
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -96,10 +104,18 @@ export function DetalleSesionVista({
             <dt>Cuotas de crédito en efectivo</dt>
             <dd>{bs(r.cuotas_efectivo)}</dd>
           </div>
+          {cerrada && hayTardias && (
+            <div className={fila}>
+              <dt>Esperado con lo que llegó después</dt>
+              <dd className="font-semibold" data-testid="sesion-esperado-actual">
+                {bs(r.esperado)}
+              </dd>
+            </div>
+          )}
           <div className={fila}>
-            <dt>Esperado</dt>
+            <dt>{cerrada ? "Esperado al cierre" : "Esperado"}</dt>
             <dd className="font-semibold" data-testid="sesion-esperado">
-              {r.esperado === null ? "—" : formatearBs(r.esperado)}
+              {r.esperado === null ? "—" : bs(cerrada ? s.montoEsperado : r.esperado)}
             </dd>
           </div>
           <div className={fila}>
@@ -135,7 +151,15 @@ export function DetalleSesionVista({
             </dd>
           </div>
         </dl>
-        {!s.cerradaEn && (
+        {cerrada && hayTardias && (
+          <p role="status" className="text-muted-foreground text-xs">
+            {ventasTardias + movimientosTardios > 0
+              ? `Después del cierre llegaron ${ventasTardias} ${ventasTardias === 1 ? "venta" : "ventas"} sin conexión por ${formatearBs(r.tardias_ventas_total ?? 0)}${movimientosTardios > 0 ? ` y ${movimientosTardios} ${movimientosTardios === 1 ? "movimiento" : "movimientos"} de caja` : ""}. `
+              : "Después del cierre hubo cambios que modificaron el esperado. "}
+            El arqueo del cierre no cambia.
+          </p>
+        )}
+        {!cerrada && (
           <p className="text-muted-foreground text-xs">
             El esperado es el de ahora; contado y diferencia aparecen al cerrar la caja.
           </p>

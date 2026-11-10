@@ -42,6 +42,10 @@ export type EstadoCola = {
   ordenesIlegibles: number[];
   // El equipo tiene algo en la cola, o no se sabe: no se cierra su caja ni se cambia de negocio (RN-07).
   bloqueaEquipo: boolean;
+  // Como bloqueaEquipo, pero las ventas y movimientos rechazados no bloquean el cierre de caja (M-11): se avisan.
+  bloqueaCierre: boolean;
+  // Ventas y movimientos rechazados de este equipo y, de las ventas, su total en Bs.
+  rechazadasEquipo: { cantidad: number; totalVentas: number };
   // IndexedDB no respondió al leer la cola (distinto de la espera de la primera lectura).
   lecturaFallida: boolean;
 };
@@ -59,6 +63,15 @@ export function resumirCola(
 ): EstadoCola {
   const { filas, ilegibles, ordenesIlegibles } = lectura && lectura !== "error" ? lectura : VACIA;
   const propias = filas.filter((f) => negociosIds.includes(f.negocioId));
+  const delEquipo = filas.filter((f) => f.dispositivoId === equipoId);
+  const rechazadasCaja = delEquipo.filter(
+    (f) => f.estado === "rechazada" && (f.tipo === TIPO_VENTA || f.tipo === TIPO_MOVIMIENTO),
+  );
+  const totalVentasRechazadas = rechazadasCaja.reduce((suma, f) => {
+    if (f.tipo !== TIPO_VENTA) return suma;
+    const p = payloadColaVentaSchema.safeParse(f.payload);
+    return suma + (p.success ? p.data.venta.total : 0);
+  }, 0);
   const pendientesDe = (tipo: string) =>
     propias.filter((f) => f.tipo === tipo && f.estado === "pendiente" && f.id !== enCursoId).length;
   return {
@@ -89,11 +102,10 @@ export function resumirCola(
     ajenas: filas.length - propias.length,
     ilegibles,
     ordenesIlegibles,
-    bloqueaEquipo:
-      !lectura ||
-      lectura === "error" ||
-      ilegibles > 0 ||
-      filas.some((f) => f.dispositivoId === equipoId),
+    bloqueaEquipo: !lectura || lectura === "error" || ilegibles > 0 || delEquipo.length > 0,
+    bloqueaCierre:
+      !lectura || lectura === "error" || ilegibles > 0 || delEquipo.length > rechazadasCaja.length,
+    rechazadasEquipo: { cantidad: rechazadasCaja.length, totalVentas: totalVentasRechazadas },
     lecturaFallida: lectura === "error",
   };
 }

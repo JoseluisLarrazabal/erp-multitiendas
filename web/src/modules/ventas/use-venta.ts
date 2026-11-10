@@ -428,5 +428,7 @@ export function useVenta(o: OpcionesVenta) {
       creditoPendiente,
     // Cola del equipo (pendientes y rechazadas): bloquea cerrar la caja y cambiar de equipo o de negocio.
     colaBloquea: o.cola.estado.bloqueaEquipo,
+    // Como colaBloquea, pero las ventas y movimientos rechazados no impiden cerrar la caja (M-11).
+    colaBloqueaCierre: o.cola.estado.bloqueaCierre,
   };
 }

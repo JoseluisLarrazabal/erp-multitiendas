@@ -75,3 +75,26 @@ export function montosCongelados(p: PendienteEnLinea | undefined, estado: { t: s
     Math.round((p.payload.pagos.find((x) => x.medio === medio)?.monto ?? 0) * 100);
   return { efectivo: de("efectivo"), qr: de("qr") };
 }
+
+// ¿Hay un cobro en línea o una cuota sin confirmar guardados en este navegador (de cualquier equipo o negocio)? Las
+// claves se borran al quedar vacías, así que basta con que exista una. Recargar con ellas perdería el aviso al cajero.
+export function hayCobrosGuardados(): boolean {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) ?? "";
+      if (k.startsWith(`${CLAVE}:`) || k.startsWith("erp:cuotas-sin-confirmar:")) return true;
+    }
+    return false;
+  } catch {
+    // Sin poder leer el almacenamiento no se sabe: se trata como si hubiera.
+    return true;
+  }
+}
+
+// La actualización se aplica sola solo si nadie tocó el POS todavía y no hay nada que se pueda perder.
+export const debeAplicarSola = (e: {
+  interactuo: boolean;
+  colaVacia: boolean | null;
+  cobrosGuardados: boolean;
+  pendiente: boolean;
+}) => !e.interactuo && e.colaVacia === true && !e.cobrosGuardados && !e.pendiente;
