@@ -202,3 +202,65 @@ describe("desactivar y reactivar", () => {
     ]);
   });
 });
+
+describe("restablecer_clave", () => {
+  const NUEVA = "Clave-nueva-2";
+  let objetivo = { correo: "", id: "" };
+  const restablecer = (jwt: string, usuario_id: string, clave = NUEVA) =>
+    invocar(jwt, { accion: "restablecer_clave", usuario_id, clave });
+  beforeAll(async () => {
+    const { correo, peticion } = crear(dueno);
+    objetivo = { correo, id: (await peticion).cuerpo.data?.usuario_id ?? "" };
+    expect(objetivo.id).not.toBe("");
+  });
+
+  it("sin permiso y negocio ajeno: rechazado, la clave vieja sigue sirviendo", async () => {
+    for (const jwt of [encargadoTienda, encargadoLav]) {
+      const r = await restablecer(jwt, objetivo.id);
+      expect(r.status).toBe(403);
+      expect(r.cuerpo.error).toBe("ERP_SIN_PERMISO");
+    }
+    expect((await entrar(objetivo.correo, "Clave-prueba-1")).error).toBeNull();
+    expect((await entrar(objetivo.correo, NUEVA)).error).not.toBeNull();
+  });
+
+  it("un encargado no restablece a un dueño ni nadie a sí mismo; la clave del dueño no cambia", async () => {
+    const sobreDueno = await restablecer(encargadoLav, DUENO);
+    expect(sobreDueno.status).toBe(403);
+    expect(sobreDueno.cuerpo.error).toBe("ERP_SIN_PERMISO");
+    const sobreSi = await restablecer(dueno, DUENO);
+    expect(sobreSi.status).toBe(403);
+    expect(sobreSi.cuerpo.error).toBe("ERP_SIN_PERMISO");
+    expect((await entrar("dueno@erp.test")).error).toBeNull();
+    expect((await entrar("dueno@erp.test", NUEVA)).error).not.toBeNull();
+  });
+
+  it("clave débil o ausente: 400 y no cambia nada", async () => {
+    for (const clave of ["corta1", "sololetrasaqui", "1234567890"]) {
+      const r = await restablecer(dueno, objetivo.id, clave);
+      expect(r.status, clave).toBe(400);
+      expect(r.cuerpo.error, clave).toBe("ERP_CLAVE_DEBIL");
+    }
+    const sinClave = await invocar(dueno, { accion: "restablecer_clave", usuario_id: objetivo.id });
+    expect(sinClave.status).toBe(400);
+    expect((await entrar(objetivo.correo, "Clave-prueba-1")).error).toBeNull();
+  });
+
+  it("ciclo completo: la clave vieja deja de entrar, la nueva entra y queda auditado sin la clave", async () => {
+    const r = await restablecer(dueno, objetivo.id);
+    expect(r.status).toBe(200);
+    expect(r.cuerpo).toEqual({ ok: true, data: { usuario_id: objetivo.id } });
+    expect((await entrar(objetivo.correo, "Clave-prueba-1")).error).not.toBeNull();
+    expect((await entrar(objetivo.correo, NUEVA)).error).toBeNull();
+
+    const { data: filas } = await clienteDueno
+      .from("auditoria")
+      .select("accion, usuario_id, antes, despues")
+      .eq("tabla", "perfiles")
+      .eq("registro_id", objetivo.id)
+      .eq("accion", "restablecer_clave");
+    expect(filas).toEqual([
+      { accion: "restablecer_clave", usuario_id: DUENO, antes: null, despues: null },
+    ]);
+  });
+});

@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { desactivarUsuario, quitarUsuario, reactivarUsuario } from "../actions";
+import { DialogoRestablecerClave } from "./dialogo-restablecer-clave";
 import { type AccionesFila, type FilaUsuario } from "../domain";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { useAccion } from "@/components/panel/use-accion";
@@ -41,6 +42,9 @@ export function AccionesFila({ fila, negocioId, negocioNombre, acciones }: Props
             confirmar="Desactivar cuenta"
             accion={() => desactivarUsuario({ usuarioId })}
           />
+        )}
+        {(acciones.desactivar || acciones.reactivar) && (
+          <DialogoRestablecerClave usuarioId={usuarioId} nombre={nombre} />
         )}
         {acciones.quitar && (
           <ConfirmarAccion

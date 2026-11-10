@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { PanelShell } from "@/components/panel/panel-shell";
-import { BotonCerrarSesion, etiquetaRol, SelectorNegocio } from "@/modules/usuarios";
+import {
+  BotonCambiarClave,
+  BotonCerrarSesion,
+  etiquetaRol,
+  SelectorNegocio,
+} from "@/modules/usuarios";
 import { exigirPanel } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { manifest: "/panel.webmanifest" };
@@ -36,6 +41,7 @@ export default async function PanelLayout({ children }: Readonly<{ children: Rea
               </span>
             </span>
           </div>
+          <BotonCambiarClave />
           <BotonCerrarSesion />
         </div>
       }

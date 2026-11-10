@@ -8,6 +8,7 @@ export {
 } from "./domain";
 export { LoginForm } from "./components/login-form";
 export { BotonCerrarSesion } from "./components/boton-cerrar-sesion";
+export { BotonCambiarClave } from "./components/boton-cambiar-clave";
 export { SelectorNegocio } from "./components/selector-negocio";
 export { PosBarra } from "./components/pos-sesion";
 export { usePosSesion, type SesionPos } from "./use-pos-sesion";

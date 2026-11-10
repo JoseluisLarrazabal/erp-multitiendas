@@ -11,6 +11,7 @@ import {
   crearUsuarioSchema,
   estadoCuentaSchema,
   quitarUsuarioSchema,
+  restablecerClaveSchema,
   registrarDispositivoSchema,
 } from "./schemas";
 
@@ -84,6 +85,12 @@ export async function reactivarUsuario(entrada: unknown): Promise<Resultado<null
   const d = validar(estadoCuentaSchema, entrada);
   if (!d) return fallo("ERP_DATOS_INVALIDOS");
   return invocarAdmin({ accion: "reactivar", usuario_id: d.usuarioId });
+}
+
+export async function restablecerClave(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(restablecerClaveSchema, entrada);
+  if (!d) return fallo("ERP_CLAVE_DEBIL");
+  return invocarAdmin({ accion: "restablecer_clave", usuario_id: d.usuarioId, clave: d.clave });
 }
 
 export async function registrarDispositivo(entrada: unknown): Promise<Resultado<null>> {
