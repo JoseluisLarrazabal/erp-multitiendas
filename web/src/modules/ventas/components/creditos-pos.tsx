@@ -22,7 +22,9 @@ import {
   cobrarCuota,
   cuotaSinConfirmar,
   cuotasSinConfirmar,
+  esCuotaRepetida,
   fijarCuotaSinConfirmar,
+  MENSAJE_CUOTA_REPETIDA,
   MENSAJE_CUOTA_SIN_CONFIRMAR,
   MENSAJE_OTRA_CUOTA,
   puedeDescartarCuota,
@@ -191,6 +193,15 @@ export function CreditosPos({
       // El último envío fue ahora: desde aquí cuenta la espera antes de poder descartar.
       fijar(creditoId, entrada());
       return setEstado({ t: "rechazada", mensaje: MENSAJE_CUOTA_SIN_CONFIRMAR });
+    }
+    if (s.t === "rechazada" && esCuotaRepetida(s.codigo)) {
+      // Un intento anterior con este id SÍ se registró (con otro monto): se trata como cobrado.
+      fijar(creditoId, null, payload.id);
+      intento.current = null;
+      cerrarCobro();
+      setAviso(MENSAJE_CUOTA_REPETIDA);
+      void cargar(cliente);
+      return;
     }
     if (s.t === "rechazada") {
       // Un permiso u otro rechazo no dicen qué pasó con un intento anterior: la entrada pendiente solo sale por la verificación o

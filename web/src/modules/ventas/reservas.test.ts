@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { ProductoPos } from "./domain";
 import {
   armarReserva,
+  MENSAJE_RESERVA_REPETIDA,
+  mensajeSiRepetida,
   saldoReserva,
   sePuedeReservar,
   totalReserva,
@@ -113,5 +115,15 @@ describe("totales de una reserva", () => {
     expect(totalReserva(r)).toBe(6000);
     expect(saldoReserva(r)).toBe(4000);
     expect(sePuedeReservar(producto())).toBe(true);
+  });
+});
+
+describe("mensajeSiRepetida", () => {
+  it("da el texto propio solo para ERP_OPERACION_REPETIDA", () => {
+    expect(mensajeSiRepetida("ERP_OPERACION_REPETIDA", MENSAJE_RESERVA_REPETIDA, "x")).toBe(
+      MENSAJE_RESERVA_REPETIDA,
+    );
+    expect(mensajeSiRepetida("ERP_SIN_PERMISO", MENSAJE_RESERVA_REPETIDA, "x")).toBe("x");
+    expect(mensajeSiRepetida(null, MENSAJE_RESERVA_REPETIDA, "x")).toBe("x");
   });
 });

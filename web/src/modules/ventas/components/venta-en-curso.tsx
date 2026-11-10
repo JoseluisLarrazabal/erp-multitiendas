@@ -167,6 +167,7 @@ export function VentaEnCurso({
           cajaId={cajaId}
           indice={v.indice}
           hayCarrito={v.carrito.length > 0}
+          puedeCancelar={opciones.permisos.includes("anular")}
           alCompletar={(r) => {
             if (v.cargarReserva(r)) setVerReservas(false);
           }}

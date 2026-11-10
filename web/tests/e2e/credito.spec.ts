@@ -452,3 +452,50 @@ test("recargar a mitad del cobro de una cuota no la pierde ni la duplica", async
   ).toBeVisible();
   expect(await saldoTotal()).toBeCloseTo(antes - 1, 2);
 });
+
+// M-7: si un intento anterior con el mismo id SÍ se registró y el reenvío llega con otro monto, el servidor responde
+// ERP_OPERACION_REPETIDA. No se puede cambiar el monto de un cobro pendiente desde la pantalla (queda congelado), así que
+// el segundo envío se reescribe en la red: mismo id, otro monto.
+test("respuesta perdida y reenvío con otro monto: cobrado una vez y con salida", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const saldoTotal = async () => (await cuentas()).reduce((s, c) => s + c.saldo, 0);
+  const antes = await saldoTotal();
+  expect(antes).toBeGreaterThan(2);
+  await abrirPos(page);
+  await page.getByRole("button", { name: "Cuotas" }).click();
+  await elegirCliente(page, page.getByRole("region", { name: "Cobrar cuotas" }));
+  await page
+    .getByRole("listitem", { name: /Crédito/ })
+    .first()
+    .getByRole("button", { name: /Cobrar cuota de/ })
+    .click();
+  await page.getByLabel("Monto a cobrar (Bs)").fill("1");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  const cobro = page.getByRole("alertdialog", { name: "Cobrar cuota" });
+
+  let envios = 0;
+  await page.route("**/rest/v1/rpc/pagar_cuota", async (route) => {
+    envios += 1;
+    if (envios === 1) {
+      await route.fetch();
+      return route.abort("failed");
+    }
+    const cuerpo = route.request().postDataJSON() as { p_pago: { efectivo: number; qr: number } };
+    cuerpo.p_pago.efectivo = 0.5;
+    cuerpo.p_pago.qr = 0;
+    await route.fallback({ postData: JSON.stringify(cuerpo) });
+  });
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Ya se registró un cobro con este intento por otro monto" }),
+  ).toBeVisible({ timeout: 60_000 });
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  // Salida: ningún cobro queda pendiente y se puede seguir operando.
+  await expect(page.getByRole("list", { name: "Cobros sin confirmar" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cambiar equipo" })).toBeEnabled();
+  expect(await saldoTotal()).toBeCloseTo(antes - 1, 2); // exactamente un cobro, el del primer intento
+});

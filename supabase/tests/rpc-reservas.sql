@@ -1,7 +1,7 @@
 -- Reservas con anticipo (RF-RES-01 a 03): DB-23 (completar no descuenta dos veces), DB-24 (cancelar libera y devuelve),
 -- DB-04 con reservas (stock = kardex), arqueo con anticipos y devoluciones, permisos, idempotencia, rechazos.
 begin;
-select plan(144);
+select plan(147);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -252,6 +252,10 @@ select pg_temp.como(pg_temp.i('y'));
 select throws_ok($$select pg_temp.cancelar('OP2', 'R3', 'SX')$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión suya)');
 select throws_ok($$select pg_temp.cancelar('OP3', 'R3', 'S2')$$, 'ERP_SIN_PERMISO', 'otro negocio no cancela (sesión ajena)');
 select pg_temp.como(pg_temp.i('v'));
+select throws_ok($$select pg_temp.cancelar('OPv', 'R3', 'S2')$$, 'ERP_SIN_PERMISO', 'M-1: el vendedor no cancela (falta anular)');
+select is((select estado from public.reservas where id = pg_temp.i('R3')), 'activa', 'M-1: sin efectos, R3 sigue activa');
+select is((select count(*) from public.reserva_pagos where reserva_id = pg_temp.i('R3') and tipo = 'devolucion'), 0::bigint, 'M-1: sin devolución');
+select pg_temp.como(pg_temp.i('d'));
 select throws_ok($$select pg_temp.cancelar('OP4', 'R3', 'SC')$$, 'ERP_CAJA_CERRADA', 'sesión cerrada');
 select throws_ok($$select pg_temp.cancelar('OP5', 'R1', 'S1')$$, 'ERP_RESERVA_NO_ACTIVA', 'una reserva completada no se cancela');
 select throws_ok($$select pg_temp.cancelar('OPn', 'Rnada', 'S1')$$, 'ERP_SIN_PERMISO', 'reserva inexistente');
@@ -268,7 +272,7 @@ select is((select estado from public.reservas where id = pg_temp.i('R3')), 'canc
 select pg_temp.como(pg_temp.i('d'));
 select is(pg_temp.res_caja('S2', 'esperado'), 0::numeric, 'arqueo S2: anticipo 30 - devolución 30');
 select is(pg_temp.res_caja('S2', 'devoluciones_reserva_efectivo'), 30::numeric, 'resumen: devoluciones de reserva');
-select pg_temp.como(pg_temp.i('v'));
+select pg_temp.como(pg_temp.i('d'));
 select throws_ok($$select pg_temp.cancelar('OP8', 'R3', 'S2')$$, 'ERP_RESERVA_NO_ACTIVA', 'doble cancelación rechazada');
 -- R2 (QR 10): se cancela en S1 y vuelve por QR
 select lives_ok($$select pg_temp.cancelar('OP9', 'R2', 'S1')$$, 'R2 se cancela (QR)');
