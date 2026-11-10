@@ -14,7 +14,7 @@ import {
   EXPLICACION_ESPECIAL,
   FormDevolucion,
   listarEquiposPanel,
-  permiteAnularOdevolver,
+  permiteAnularODevolver,
   sesionesAbiertas,
   type EquipoAbierto,
 } from "@/modules/ventas/panel";
@@ -73,7 +73,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
     (i) => Math.round(i.cantidad * 1000) > Math.round(i.devuelta * 1000),
   );
   const completada = v.estado === "completada";
-  const ofreceAcciones = permiteAnularOdevolver(v.especial);
+  const ofreceAcciones = permiteAnularODevolver(v.especial);
   const puedeVerCreditos = itemsVisibles(permisos, activo.tipo).some(
     (i) => i.href === "/panel/creditos",
   );

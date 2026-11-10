@@ -127,19 +127,22 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
   await expect(otra.getByRole("button", { name: "Cancelar", exact: true })).toHaveCount(0);
   // La cancelación la hace un encargado.
   const ctxEncargado = await browser.newContext({ storageState: rutaAuth("encargadoTienda") });
-  const pagina = await ctxEncargado.newPage();
-  await fijarEquipo(pagina, equipoId);
-  await pagina.goto("/pos");
-  await expect(pagina.getByText(/productos en el catálogo/)).toBeVisible();
-  await pagina.getByRole("button", { name: "Reservas" }).click();
-  const deEncargado = pagina.getByRole("listitem", { name: `Reserva de ${nombreCliente}` });
-  await expect(deEncargado).toHaveCount(1);
-  await deEncargado.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await pagina.getByRole("alertdialog").getByRole("button", { name: "Cancelar reserva" }).click();
-  await expect(
-    pagina.getByRole("status").filter({ hasText: "cancelada: anticipo devuelto" }),
-  ).toBeVisible();
-  await ctxEncargado.close();
+  try {
+    const pagina = await ctxEncargado.newPage();
+    await fijarEquipo(pagina, equipoId);
+    await pagina.goto("/pos");
+    await expect(pagina.getByText(/productos en el catálogo/)).toBeVisible();
+    await pagina.getByRole("button", { name: "Reservas" }).click();
+    const deEncargado = pagina.getByRole("listitem", { name: `Reserva de ${nombreCliente}` });
+    await expect(deEncargado).toHaveCount(1);
+    await deEncargado.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await pagina.getByRole("alertdialog").getByRole("button", { name: "Cancelar reserva" }).click();
+    await expect(
+      pagina.getByRole("status").filter({ hasText: "cancelada: anticipo devuelto" }),
+    ).toBeVisible();
+  } finally {
+    await ctxEncargado.close();
+  }
   expect(await stockEn(producto.id)).toBe(8);
   expect((await reservasDelCliente()).map((r) => r.estado)).toEqual(["completada", "cancelada"]);
 

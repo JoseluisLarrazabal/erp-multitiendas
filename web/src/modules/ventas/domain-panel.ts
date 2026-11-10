@@ -124,10 +124,10 @@ export const ETIQUETA_ESPECIAL: Record<VentaEspecial, string> = {
 };
 export const tipoEspecial = (condicion: string, deReserva: boolean): VentaEspecial | null =>
   deReserva ? "reserva" : condicion === "credito" ? "credito" : null;
-export const permiteAnularOdevolver = (tipo: VentaEspecial | null) => tipo === null;
+export const permiteAnularODevolver = (tipo: VentaEspecial | null) => tipo === null;
 export const EXPLICACION_ESPECIAL: Record<VentaEspecial, string> = {
   credito:
-    "Esta venta es a crédito: la inicial y las cuotas ya quedaron registradas, por eso no se puede anular ni devolver desde aquí. Los cobros y el saldo se gestionan en el crédito.",
+    "Esta venta es a crédito: la inicial y las cuotas ya quedaron registradas, por eso el sistema no permite anularla ni devolverla. Los pagos y el saldo se ven en el crédito.",
   reserva:
-    "Esta venta completó una reserva: el anticipo ya está en caja, por eso no se puede anular ni devolver desde aquí. Consulta con el dueño cómo ajustarla.",
+    "Esta venta completó una reserva: el anticipo ya está en caja, por eso el sistema no permite anularla ni devolverla.",
 };

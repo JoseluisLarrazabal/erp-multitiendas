@@ -2,7 +2,7 @@
 -- arqueo (efectivo esperado y QR) en la caja elegida sin tocar el arqueo cerrado, idempotencia, caja cerrada, efectivo
 -- insuficiente, crédito pagado que vuelve a activo, checks del contraasiento y auditoría de documentos.
 begin;
-select plan(81);
+select plan(89);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -24,11 +24,13 @@ insert into public.ubicaciones (id, negocio_id, nombre, tipo) values
 insert into public.dispositivos (id, negocio_id, ubicacion_id, nombre, prefijo) values
   (pg_temp.i('D1'), pg_temp.i('T'), pg_temp.i('U1'), 'D1', 'C1'), (pg_temp.i('D2'), pg_temp.i('T'), pg_temp.i('U1'), 'D2', 'C2'),
   (pg_temp.i('D3'), pg_temp.i('T'), pg_temp.i('U1'), 'D3', 'C3'), (pg_temp.i('D5'), pg_temp.i('T'), pg_temp.i('U1'), 'D5', 'C5'),
+  (pg_temp.i('D6'), pg_temp.i('T'), pg_temp.i('U1'), 'D6', 'C6'), (pg_temp.i('D7'), pg_temp.i('T'), pg_temp.i('U1'), 'D7', 'C7'),
   (pg_temp.i('DX'), pg_temp.i('T2'), pg_temp.i('UX'), 'DX', 'X1');
--- S1 (inicial 100) · S2 (inicial 0) · S5 (inicial 5) abiertas · SC cerrada (D3) · SX de otro negocio
+-- S1 (inicial 100) · S2 (inicial 0) · S5 (inicial 5) · S6 (inicial 100, recibe un reverso sin cuotas propias) · S7 (cobra y se cierra) abiertas · SC cerrada (D3) · SX de otro negocio
 insert into public.caja_sesiones (id, negocio_id, dispositivo_id, usuario_apertura, monto_inicial) values
   (pg_temp.i('S1'), pg_temp.i('T'), pg_temp.i('D1'), pg_temp.i('d'), 100), (pg_temp.i('S2'), pg_temp.i('T'), pg_temp.i('D2'), pg_temp.i('d'), 0),
-  (pg_temp.i('S5'), pg_temp.i('T'), pg_temp.i('D5'), pg_temp.i('d'), 5), (pg_temp.i('SX'), pg_temp.i('T2'), pg_temp.i('DX'), pg_temp.i('y'), 0);
+  (pg_temp.i('S5'), pg_temp.i('T'), pg_temp.i('D5'), pg_temp.i('d'), 5), (pg_temp.i('SX'), pg_temp.i('T2'), pg_temp.i('DX'), pg_temp.i('y'), 0),
+  (pg_temp.i('S6'), pg_temp.i('T'), pg_temp.i('D6'), pg_temp.i('d'), 100), (pg_temp.i('S7'), pg_temp.i('T'), pg_temp.i('D7'), pg_temp.i('d'), 0);
 insert into public.caja_sesiones (id, negocio_id, dispositivo_id, usuario_apertura, monto_inicial, cerrada_en, usuario_cierre,
   monto_contado, monto_esperado, diferencia) values
   (pg_temp.i('SC'), pg_temp.i('T'), pg_temp.i('D3'), pg_temp.i('d'), 0, now(), pg_temp.i('d'), 0, 0, 0);
@@ -184,6 +186,18 @@ select lives_ok($$select pg_temp.ap('RV2', 'P1', 'S1', 'D1', 'se cobró a otro c
 select is((select estado from public.creditos where id = pg_temp.cred('V2')), 'activo', 'V2: vuelve a activo');
 select is(pg_temp.saldo(pg_temp.cred('V2')), 63.02, 'V2: saldo restaurado');
 select is((pg_temp.pc('P2', pg_temp.cred('V2'), 'S1', 'D1', 10, 0)) ->> 'saldo', '53.02', 'V2: admite pagar_cuota otra vez');
+
+-- resumen_caja: el reverso sale de S6 (sin cuotas cobradas) en negativo y la sesión cerrada del cobro (S7) no cambia.
+select pg_temp.hora('P2', 1);
+select is((pg_temp.pc('P3', pg_temp.cred('V2'), 'S7', 'D7', 10, 0)) ->> 'saldo', '43.02', 'V2: P3 de 10 en efectivo en S7');
+select lives_ok($$select public.cerrar_caja(pg_temp.i('S7'), 10)$$, 'se cierra S7, la caja del cobro P3');
+create temp table antes7 as select public.resumen_caja(pg_temp.i('S7')) as r;
+select is(pg_temp.ap('RV3', 'P3', 'S6', 'D6', 'cobro en la caja equivocada') ->> 'saldo', '53.02', 'reverso de P3 en S6');
+select is((public.resumen_caja(pg_temp.i('S6')) ->> 'cuotas_efectivo')::numeric, -10.00, 'resumen_caja S6: cuotas en efectivo en negativo por lo revertido');
+select is((public.resumen_caja(pg_temp.i('S6')) ->> 'esperado')::numeric, 90.00, 'resumen_caja S6: esperado = inicial 100 menos el reverso');
+select is((public.resumen_caja(pg_temp.i('S6')) ->> 'esperado')::numeric, pg_temp.esp('S6'), 'resumen_caja S6: esperado coincide con efectivo_esperado');
+select is((public.resumen_caja(pg_temp.i('S7')) ->> 'cuotas_efectivo')::numeric, 10.00, 'resumen_caja S7 (cerrada): las cuotas cobradas no cambian');
+select is(public.resumen_caja(pg_temp.i('S7')), (select r from antes7), 'resumen_caja S7 (cerrada): el resumen completo no cambia');
 
 -- Checks del contraasiento y unicidad (como superusuario: authenticated no escribe en la tabla).
 reset role;

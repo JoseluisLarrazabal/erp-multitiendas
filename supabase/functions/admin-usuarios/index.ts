@@ -104,7 +104,11 @@ Deno.serve(async (req) => {
         });
         if (errorPermiso) return falla("ERP_INTERNO");
         if (conPermiso !== true) return falla("ERP_SIN_PERMISO");
-        return falla(datos.rol === "dueno" || datos.rol === "encargado" ? "ERP_DUENO_PROTEGIDO" : "ERP_DATOS_INVALIDOS");
+        return falla(
+          datos.rol === "dueno" || datos.rol === "encargado"
+            ? "ERP_DUENO_PROTEGIDO"
+            : "ERP_DATOS_INVALIDOS",
+        );
       }
 
       const { data: creada, error: errorCrear } = await admin.createUser({

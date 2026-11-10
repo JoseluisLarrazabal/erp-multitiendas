@@ -20,8 +20,8 @@ export function DetalleCreditoVista({
   d: DetalleCredito;
   puedeGestionar: boolean;
   puedeAnular: boolean;
-  // Cajas abiertas de donde puede salir el efectivo de un reverso.
-  equipos: readonly EquipoAbierto[];
+  // Cajas abiertas de donde puede salir el efectivo de un reverso; null si no se pudieron leer.
+  equipos: readonly EquipoAbierto[] | null;
   negocio: { nombre: string; nit: string | null; datosNota: string | null };
 }) {
   const si = (v: boolean) => (v ? "Sí" : "No");
@@ -65,7 +65,6 @@ export function DetalleCreditoVista({
         {d.venta_numero && <BotonImprimirPlan />}
         {puedeGestionar && editable && (
           <DocumentosCredito
-            key={`${d.docs_ci}${d.docs_domicilio}${d.docs_pagare}`}
             creditoId={d.id}
             inicial={{ ci: d.docs_ci, domicilio: d.docs_domicilio, pagare: d.docs_pagare }}
           />

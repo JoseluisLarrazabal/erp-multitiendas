@@ -18,20 +18,21 @@ export function AnularPagoCuota({
 }: {
   pagoOperacionId: string;
   descripcionPago: string;
-  equipos: readonly EquipoAbierto[];
+  equipos: readonly EquipoAbierto[] | null;
 }) {
   const [motivo, setMotivo] = useState("");
-  const [equipoId, setEquipoId] = useState(equipos[0]?.dispositivoId ?? "");
+  const [equipoId, setEquipoId] = useState(equipos?.[0]?.dispositivoId ?? "");
   // Un id por intento: repetir la confirmación tras un corte devuelve lo original; cambiar caja o motivo es otro intento.
   const intento = useRef<{ clave: string; id: string } | null>(null);
-  const equipo = equipos.find((e) => e.dispositivoId === equipoId) ?? equipos[0];
+  const equipo = equipos?.find((e) => e.dispositivoId === equipoId) ?? equipos?.[0];
 
   if (!equipo) {
     return (
       <section aria-label="Anular último pago" className="bg-card rounded-xl border p-4 text-sm">
         <p className="text-muted-foreground">
-          Para anular el último pago hace falta una caja abierta: el efectivo sale de ella. Abre una
-          en el punto de venta.
+          {equipos === null
+            ? "No se pudieron leer las cajas abiertas. Recarga la página."
+            : "Para anular el último pago hace falta una caja abierta: el efectivo sale de ella. Abre una en el punto de venta."}
         </p>
       </section>
     );
@@ -67,7 +68,7 @@ export function AnularPagoCuota({
             value={equipo.dispositivoId}
             onChange={(e) => setEquipoId(e.target.value)}
           >
-            {equipos.map((e) => (
+            {equipos?.map((e) => (
               <option key={e.dispositivoId} value={e.dispositivoId}>
                 {e.nombre}
               </option>

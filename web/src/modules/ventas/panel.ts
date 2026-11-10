@@ -14,7 +14,7 @@ export {
   PAGINA_RECONCILIACION,
   PAGINA_VENTAS,
   PLAZO_HORAS,
-  permiteAnularOdevolver,
+  permiteAnularODevolver,
   textoPorRevisar,
 } from "./domain-panel";
 export {

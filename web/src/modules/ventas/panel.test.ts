@@ -4,7 +4,7 @@ import {
   ETIQUETA_MOTIVO,
   fueraDePlazo,
   mensajeDeVentas,
-  permiteAnularOdevolver,
+  permiteAnularODevolver,
   textoMotivo,
   textoPorRevisar,
   tipoEspecial,
@@ -188,8 +188,8 @@ describe("tipoEspecial", () => {
     expect(tipoEspecial("credito", true)).toBe("reserva");
   });
   it("solo la venta normal ofrece anular y devolver", () => {
-    expect(permiteAnularOdevolver(null)).toBe(true);
-    expect(permiteAnularOdevolver("credito")).toBe(false);
-    expect(permiteAnularOdevolver("reserva")).toBe(false);
+    expect(permiteAnularODevolver(null)).toBe(true);
+    expect(permiteAnularODevolver("credito")).toBe(false);
+    expect(permiteAnularODevolver("reserva")).toBe(false);
   });
 });

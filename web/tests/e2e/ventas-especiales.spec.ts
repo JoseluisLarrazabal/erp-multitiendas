@@ -4,7 +4,7 @@ import { corrida, ubicaciones } from "./inventario-helpers";
 import { crearProductoConPrecio, tienda, type ProductoPos } from "./pos-helpers";
 
 // M-5: el panel marca las ventas a crédito y de reserva, no ofrece Anular ni Devolver (el servidor las rechaza) y enlaza
-// los pagos del crédito. Las ventas se crean por RPC con equipo propio (W9); el panel lo mira el dueño.
+// los pagos del crédito. Las ventas se crean por RPC con equipo propio (W6); el panel lo mira el dueño.
 test.use({ storageState: rutaAuth("dueno") });
 test.describe.configure({ mode: "serial" });
 
@@ -16,7 +16,7 @@ const ids = { normal: "", credito: "", reserva: "", creditoId: "" };
 const numeros = { normal: "", credito: "", reserva: "" };
 const nombreCliente = `Cliente especiales ${corrida}`;
 
-const numero = () => `W9-${String(++siguiente).padStart(6, "0")}`;
+const numero = () => `W6-${String(++siguiente).padStart(6, "0")}`;
 function venta(extra: Record<string, unknown>, total: number, pagos: unknown[], n: string) {
   const id = crypto.randomUUID();
   return {
@@ -51,7 +51,7 @@ async function registrar(cuerpo: unknown) {
 
 test.beforeAll(async () => {
   const u = await ubicaciones();
-  const equipo = await equipoPropio(tienda, u.tienda, "W9", "Caja de ventas especiales");
+  const equipo = await equipoPropio(tienda, u.tienda, "W6", "Caja de ventas especiales");
   equipoId = equipo.id;
   siguiente = equipo.ultimo_numero;
   cajaId = await abrirCaja(tienda, equipo);
@@ -130,7 +130,7 @@ test.afterAll(async () => {
 });
 
 test("la lista marca Crédito y Reserva; la venta normal no lleva marca", async ({ page }) => {
-  await page.goto(`/panel/ventas?q=W9-`);
+  await page.goto(`/panel/ventas?q=W6-`);
   const fila = (n: string) => page.getByRole("link", { name: new RegExp(n) });
   await expect(fila(numeros.credito)).toContainText("Crédito");
   await expect(fila(numeros.reserva)).toContainText("Reserva");

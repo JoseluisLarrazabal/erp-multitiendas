@@ -16,6 +16,7 @@ type Docs = { ci: boolean; domicilio: boolean; pagare: boolean };
 // Marca o desmarca los documentos entregados después de vender. Cada cambio queda en la auditoría.
 export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; inicial: Docs }) {
   const [docs, setDocs] = useState(inicial);
+  const [hecho, setHecho] = useState(false);
   const { pendiente, error, ejecutar } = useAccion();
   const cambio = DOCS.some((x) => docs[x.clave] !== inicial[x.clave]);
   return (
@@ -31,7 +32,10 @@ export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; i
               type="checkbox"
               className="size-4"
               checked={docs[x.clave]}
-              onChange={(e) => setDocs({ ...docs, [x.clave]: e.target.checked })}
+              onChange={(e) => {
+                setHecho(false);
+                setDocs({ ...docs, [x.clave]: e.target.checked });
+              }}
             />
             {x.etiqueta}
           </label>
@@ -40,11 +44,19 @@ export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; i
       <p role="alert" className="text-destructive text-sm empty:hidden">
         {error}
       </p>
+      <p role="status" className="text-sm font-medium">
+        {hecho && !error ? "Documentos guardados." : ""}
+      </p>
       <Button
         type="button"
         className="h-10 self-start"
         disabled={!cambio || pendiente}
-        onClick={() => ejecutar(() => marcarDocumentosCredito({ creditoId, ...docs }))}
+        onClick={() =>
+          ejecutar(
+            () => marcarDocumentosCredito({ creditoId, ...docs }),
+            () => setHecho(true),
+          )
+        }
       >
         Guardar documentos
       </Button>

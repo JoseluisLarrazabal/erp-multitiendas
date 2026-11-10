@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { apiComo, abrirCaja, equipoPropio, rutaAuth } from "./helpers";
+import { apiComo, abrirCaja, equipoPropio, ir, rutaAuth } from "./helpers";
 import { corrida, ubicaciones } from "./inventario-helpers";
 import { crearProductoConPrecio, tienda } from "./pos-helpers";
 
 // Reverso del último pago de cuota y documentos del crédito (M-2, M-6). La venta y el cobro se preparan por API; la prueba
-// recorre el detalle del crédito en el panel. Cuenta del encargado (anular, gestionar_credito y caja). Equipo propio (W9).
+// recorre el detalle del crédito en el panel. Cuenta del encargado (anular, gestionar_credito y caja). Equipo propio (W8).
 test.use({ storageState: rutaAuth("encargadoTienda") });
 
 const CUENTA = "encargadoTienda";
@@ -14,7 +14,7 @@ test("E2E-12b: anular el último pago, marcar documentos e imprimir el plan desd
   page,
 }) => {
   const u = await ubicaciones();
-  const equipo = await equipoPropio(tienda, u.tienda, "W9", NOMBRE_CAJA);
+  const equipo = await equipoPropio(tienda, u.tienda, "W8", NOMBRE_CAJA);
   const cajaId = await abrirCaja(tienda, equipo);
   try {
     const cliente = await apiComo("dueno", "rpc/guardar_cliente", {
@@ -37,7 +37,7 @@ test("E2E-12b: anular el último pago, marcar documentos e imprimir el plan desd
           id: crypto.randomUUID(),
           dispositivo_id: equipo.id,
           caja_sesion_id: cajaId,
-          numero: `W9-${String(equipo.ultimo_numero + 1).padStart(6, "0")}`,
+          numero: `W8-${String(equipo.ultimo_numero + 1).padStart(6, "0")}`,
           creada_en_cliente: new Date().toISOString(),
           cliente_id: clienteId,
           descuento: 0,
@@ -88,15 +88,35 @@ test("E2E-12b: anular el último pago, marcar documentos e imprimir el plan desd
     });
     expect(cobro.status, JSON.stringify(cobro.json)).toBeLessThan(300);
     expect(await saldo()).toBe(42.01);
+    // Un segundo cobro: anular el último deja como anulable al anterior, y el motivo escrito no pasa de un pago al otro.
+    const cobro2 = await apiComo(CUENTA, "rpc/pagar_cuota", {
+      metodo: "POST",
+      cuerpo: {
+        p_pago: {
+          id: crypto.randomUUID(),
+          credito_id: creditoId,
+          dispositivo_id: equipo.id,
+          caja_sesion_id: cajaId,
+          efectivo: 10,
+          qr: 0,
+        },
+      },
+    });
+    expect(cobro2.status, JSON.stringify(cobro2.json)).toBeLessThan(300);
+    expect(await saldo()).toBe(32.01);
 
-    await page.goto(`/panel/creditos/${creditoId}`);
+    // Sin esperar la hidratación, un clic en la casilla se pierde y el botón nunca se habilita.
+    await ir(page, `/panel/creditos/${creditoId}`);
     await expect(page.getByRole("button", { name: "Imprimir plan" })).toBeVisible();
     // El plan imprimible está en la página (oculto en pantalla, visible al imprimir).
-    await expect(page.locator('article[aria-label^="Plan de cuotas W9-"]')).toBeAttached();
+    await expect(page.locator('article[aria-label^="Plan de cuotas W8-"]')).toBeAttached();
 
     // Documentos: se marca el domicilio después de vender y queda guardado.
     await page.getByLabel("Comprobante de domicilio").check();
     await page.getByRole("button", { name: "Guardar documentos" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Documentos guardados." }),
+    ).toBeVisible();
     await expect
       .poll(async () => {
         const r = await apiComo(
@@ -116,12 +136,22 @@ test("E2E-12b: anular el último pago, marcar documentos e imprimir el plan desd
       })
       .toBe(false);
 
-    // Anular el último pago, con motivo y la caja que devuelve el efectivo.
+    // Anular el último pago (10), con motivo y la caja que devuelve el efectivo.
     const seccion = page.getByRole("region", { name: "Anular último pago" });
-    await expect(seccion).toContainText("Bs 21,01");
+    await expect(seccion).toContainText("Bs 10,00");
     await page
       .getByLabel("Caja que devuelve el efectivo")
-      .selectOption({ label: `${NOMBRE_CAJA} (W9)` });
+      .selectOption({ label: `${NOMBRE_CAJA} (W8)` });
+    await page.getByLabel("Motivo de la anulación").fill("segundo cobro");
+    await page.getByRole("button", { name: "Anular último pago" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Anular pago" }).click();
+    // Ahora el anulable es el pago de 21,01 y el motivo vuelve en blanco.
+    await expect(seccion).toContainText("Bs 21,01");
+    await expect(page.getByLabel("Motivo de la anulación")).toHaveValue("");
+    expect(await saldo()).toBe(42.01);
+    await page
+      .getByLabel("Caja que devuelve el efectivo")
+      .selectOption({ label: `${NOMBRE_CAJA} (W8)` });
     await page.getByLabel("Motivo de la anulación").fill("cobro duplicado");
     await page.getByRole("button", { name: "Anular último pago" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Anular pago" }).click();

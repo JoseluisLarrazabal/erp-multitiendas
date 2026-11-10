@@ -22,22 +22,24 @@ export default async function PaginaDetalleCredito({
   const { permisos, activo } = await exigirAlgunPermiso(["gestionar_credito", "ver_reportes"]);
   if (!GUID.test(id)) notFound();
   const supabase = await createClient();
+  const puedeAnular = permisos.includes("anular");
   const [detalle, negocio, equipos, abiertas] = await Promise.all([
     cargarDetalle(supabase, { creditoId: id }),
     cargarNegocio(supabase, activo.negocioId),
-    listarEquiposPanel(supabase, activo.negocioId),
-    sesionesAbiertas(supabase, activo.negocioId),
+    // Las cajas solo sirven a quien puede anular: sin el permiso no se leen.
+    puedeAnular ? listarEquiposPanel(supabase, activo.negocioId) : null,
+    puedeAnular ? sesionesAbiertas(supabase, activo.negocioId) : null,
   ]);
-  // Cajas abiertas por equipo: de ahí sale el efectivo de un reverso. Sin lectura, la lista queda vacía y la página lo explica.
+  // Cajas abiertas por equipo: de ahí sale el efectivo de un reverso. `null` = no se pudieron leer (distinto de "no hay").
   const abiertos =
-    equipos.ok && abiertas.ok
+    equipos?.ok && abiertas?.ok
       ? abiertas.data.flatMap((s) => {
           const e = equipos.data.find((x) => x.id === s.dispositivoId);
           return e
             ? [{ dispositivoId: e.id, nombre: `${e.nombre} (${e.prefijo})`, sesionId: s.id }]
             : [];
         })
-      : [];
+      : null;
 
   return (
     <>
@@ -59,7 +61,7 @@ export default async function PaginaDetalleCredito({
         <DetalleCreditoVista
           d={detalle.data}
           puedeGestionar={permisos.includes("gestionar_credito")}
-          puedeAnular={permisos.includes("anular")}
+          puedeAnular={puedeAnular}
           equipos={abiertos}
           negocio={
             negocio.ok
