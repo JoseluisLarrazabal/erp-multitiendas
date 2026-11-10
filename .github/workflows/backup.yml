@@ -1,9 +1,18 @@
 name: Backup diario
 
+# Dos corridas al día: GitHub atrasa los cron entre 6 y 10 h y una sola dejó pasar 27 h (RNF-09 pide 24 h máx.).
+# La completa (base y fotos, ~37 MB) se guarda 7 días; la de base (~1 MB) 30 días, para no agotar el cupo de 500 MB de Actions.
 on:
   schedule:
-    - cron: "0 7 * * *" # 03:00 en La Paz (UTC-4)
+    - cron: "23 5 * * *" # completa
+    - cron: "23 17 * * *" # base
   workflow_dispatch:
+    inputs:
+      tipo:
+        description: "completo = base y fotos; base = solo la base de datos"
+        type: choice
+        options: [completo, base]
+        default: completo
 
 permissions:
   contents: read
@@ -22,6 +31,18 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           [ -n "$SUPABASE_DB_URL" ] || { echo "::error::Falta el secreto SUPABASE_DB_URL (cadena de conexión de Supabase, ver docs/stack.md)"; exit 1; }
+
+      - name: Calcular el tipo de corrida
+        id: tipo
+        env:
+          EVENTO: ${{ github.event_name }}
+          ENTRADA: ${{ inputs.tipo }}
+          CRON: ${{ github.event.schedule }}
+        run: |
+          tipo=base
+          if [ "$EVENTO" = workflow_dispatch ] && [ "$ENTRADA" = completo ]; then tipo=completo; fi
+          if [ "$CRON" = "23 5 * * *" ]; then tipo=completo; fi
+          echo "tipo=$tipo" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,6 +73,7 @@ jobs:
 
       # Sin SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY el backup de la base sigue y las fotos se omiten con un aviso.
       - name: Respaldar fotos (bucket productos)
+        if: steps.tipo.outputs.tipo == 'completo'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -67,12 +89,17 @@ jobs:
           destino=$(scripts/backup/destino-efimero.sh "$RUNNER_TEMP/destino" erp-restauracion 54521)
           scripts/backup/restaurar.sh "$RUNNER_TEMP/dump" "$destino"
           scripts/backup/verificar.sh "$RUNNER_TEMP/dump" "$destino"
-          scripts/backup/verificar-fotos.sh "$RUNNER_TEMP/dump"
+
+      - name: Verificar fotos
+        if: steps.tipo.outputs.tipo == 'completo'
+        run: scripts/backup/verificar-fotos.sh "$RUNNER_TEMP/dump"
 
       - name: Cifrar con age
         id: cifrar
+        env:
+          TIPO: ${{ steps.tipo.outputs.tipo }}
         run: |
-          nombre="erp-backup-$(date -u +%Y-%m-%d).tar.age"
+          nombre="erp-backup-$(date -u +%Y-%m-%dT%H%MZ)-$TIPO.tar.age"
           mkdir "$RUNNER_TEMP/salida"
           tar -C "$RUNNER_TEMP/dump" -cf - . | age -R scripts/backup/destinatario-age.txt -o "$RUNNER_TEMP/salida/$nombre"
           echo "nombre=${nombre%.tar.age}" >> "$GITHUB_OUTPUT"
@@ -84,4 +111,4 @@ jobs:
           name: ${{ steps.cifrar.outputs.nombre }}
           path: ${{ runner.temp }}/salida/*.age
           if-no-files-found: error
-          retention-days: 30
+          retention-days: ${{ steps.tipo.outputs.tipo == 'completo' && 7 || 30 }}
