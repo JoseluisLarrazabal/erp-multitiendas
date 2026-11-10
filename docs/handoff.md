@@ -1,21 +1,78 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (PR 2 del plan de preentrega mergeado y desplegado en producción).
+Última actualización: 2026-11-10 (PR 3 del plan de preentrega: migraciones en producción; PR abierto).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
   entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
   M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 3, operación diaria (rama `fix/operacion-diaria-preentrega`). Estado (2026-11-10): plan
-    detallado escrito y arbitrado en `docs/plan-preentrega.md` ("Plan detallado del PR 3"); implementación en curso
-    con cinco subagentes (A caja, cola y aviso de actualización; B búsquedas sin tildes, kardex e inactivos; C
-    reportes y arrastres del PR 2; D pruebas de la sección 4 y limpieza; E POS a 390 px, cliente repetido, POS vacío,
-    fotos y refresco del catálogo).** Decisiones del chairman: la actualización del POS se aplica sola al abrir si no
-    hay nada pendiente; con una venta rechazada en la cola la caja se puede cerrar, con aviso; se recortan la prueba
-    de `ERP_ULTIMO_DUENO` en integración y la accesibilidad de las pantallas de la Entrega B. Cuatro migraciones
-    aditivas (`20261110130000` a `130300`), que se aplican antes del merge.
+  - **Hito activo: PR 4, documentos (rama `docs/paquete-entrega`, sin empezar).** Los escribe el chairman: acta,
+    paralelo, capacitación, despliegue, las reglas faltantes en `docs/manual/`, SRS, contradicciones del handoff y los
+    límites conocidos de los PR 1 a 3. Lista de lo que los PR 1 a 3 mandan al manual, abajo en cada PR.
+  - **PR 3, operación diaria: código y base desplegados el 2026-11-10 (rama `fix/operacion-diaria-preentrega`).** El
+    número del PR, el squash y la verificación de la web en producción se anotan al mergear.
+    - Qué entró: M-9 (texto del criterio en los reportes, con textos propios para la lavandería), M-10 (una caja
+      cerrada muestra los tres números del cierre y, aparte, lo que llegó sin conexión después; `reporte_caja` usa el
+      esperado guardado), M-11 (una venta o un movimiento rechazado no bloquea el cierre; se avisa, separando los de
+      cajas anteriores), M-12 (búsquedas sin tildes en productos, clientes e inventario), M-13 (el kardex muestra el
+      documento: "Venta C1-000012", "Compra del 10/11/2026"), M-14 (un producto desactivado con stock se puede sacar,
+      trasladar y contar), M-16 (barra de modos del POS a 390 px), M-17 (aviso de cliente repetido), POS sin
+      productos, compresión de fotos al subir (1.200 px, WebP), refresco del catálogo al volver a la pestaña,
+      actualización automática del POS, dos arrastres del PR 2 (`ultima_salida` no cuenta `anulacion_compra`;
+      `pagar_proveedor` solo acepta compras a crédito no anuladas), pruebas de la sección 4 de la auditoría, limpieza
+      de pruebas al día y backup con fotos semanal. Detalle: `docs/plan-preentrega.md`, "Plan detallado del PR 3".
+    - Decisiones del chairman (comunicadas al CTO, sin objeción): la actualización del POS se aplica sola al abrir si
+      nadie tocó la pantalla y no hay cola, cobros, cuotas ni carrito; se recortan la prueba de `ERP_ULTIMO_DUENO` en
+      integración y la accesibilidad de las pantallas de la Entrega B (después de la entrega); la referencia del
+      kardex no nombra al proveedor; un traslado no lleva referencia (el tipo ya lo dice).
+    - Migraciones (4, aditivas): `20261110130000_cierre_caja_tardias`, `130100_busqueda_sin_tildes` (instala
+      `unaccent`), `130200_kardex_referencia` (`drop` y `create` de `kardex_producto`, con una columna más al
+      final), `130300_arrastres_pr2`.
+    - Revisión: `/code-review`, `/ponytail-review`, `/security-review` (sin hallazgos explotables) y Opus sobre
+      dinero, permisos, cierre de caja y actualización automática ("no bloquea"). Una ronda de arreglos: carrera al
+      comprimir la foto, texto de tardías, rechazadas de cajas anteriores, texto del bloqueo del cierre, clave vieja
+      que dejaba "Actualizar ahora" bloqueado para siempre, carrito en la actualización automática, textos de
+      lavandería. **Codex: no verificado (sin cuota hasta el 2026-12-03).**
+    - Verificación local sobre el árbol final (`7ab966a` más documentos): lint, formato y `tsc` en 0; Vitest 515 en
+      56 archivos; pgTAP 2.578 en 58 archivos; tipos sin diferencias; build; integración 19 de 19; Playwright 269 de
+      269. Ensayo de la limpieza sobre la base que dejó Playwright: `docs/plan-limpieza-pruebas.md`.
+    - QA de dos builds seguidos (local, perfil de navegador persistente): con un build nuevo y sin tocar la
+      pantalla, el POS se recarga una sola vez y queda en la versión nueva, sin 404 ni errores de consola; con un
+      cobro guardado en el navegador no se aplica y muestra "Actualización disponible". El 404 de chunk de la
+      auditoría no se reprodujo. El precio de crédito "que no llegaba al POS tras recargar" tampoco se reprodujo
+      (guardado 77 en el panel, el POS recargado muestra 77).
+    - Despliegue (2026-11-10, 14:29 a 14:30 UTC), migraciones antes del merge. **Desvío del plan, para no gastar
+      minutos de Actions:** no se disparó un backup manual; se usó el programado `erp-backup-2026-11-10T1340Z-completo`
+      (corrida 42825897018, en verde, 292 fotos verificadas) tras comprobar que producción no tuvo ningún movimiento,
+      venta, caja ni registro de auditoría desde las 13:35 UTC. `db push --dry-run` listó solo las 4 → `db push`.
+      Comprobado: `migration list` igual en local y remoto (50); las 9 funciones tocadas, ejecutables por
+      `authenticated` y no por `anon`; `unaccent` en el esquema `extensions`; `sin_tildes('María José ÑANDÚ')` da
+      `Maria Jose NANDU`; con la web vieja, inventario, productos, clientes, reportes, cajas y compras cargan sin
+      errores de consola.
+    - **Backup programado nuevo, comprobado:** la primera corrida `completo` arrancó a las 13:35 UTC (8 h 12 min de
+      atraso), tardó 5 min 28 s, artifact de 37 MB que vence a los 7 días. La corrida `base` de las 17:23 UTC queda
+      por comprobar. Desde el merge de este PR el esquema pasa a fotos semanales (ver la decisión abajo).
+    - Límites conocidos (también en el cuerpo del PR): las órdenes de lavandería siguen distinguiendo tildes al buscar
+      por cliente (`ordenes` tiene permisos por columna; se busca por número de boleta); una fila rechazada impide
+      actualizar la app en ese equipo hasta resolverla; pasados 30 días del cierre, una venta rechazada ya no se puede
+      reintentar, solo descartar; el efectivo de una venta rechazada aparece como diferencia del cierre; con dos
+      pestañas del POS, una puede quedar con el código viejo tras actualizar; la actualización automática puede
+      perder un toque dado en el segundo en que recarga (solo el carrito); una foto de 25 MB puede cerrar la pestaña
+      en un celular de gama baja; el kardex muestra número de venta y fechas de compra a quien tiene
+      `ajustar_inventario` sin `ver_reportes`; en `reporte_caja`, una caja cerrada con ventas tardías muestra el
+      esperado del cierre y las columnas de detalle con lo tardío (el texto del criterio lo dice); `ERP_ULTIMO_DUENO`
+      como 409 sin prueba de integración; el prepago total de un crédito cobra el interés completo (M-3, pregunta al
+      cliente).
+    - Para el manual y la capacitación (PR 4): el POS se actualiza solo al abrirlo; si no, "Actualizar ahora" con la
+      caja sin ventas en curso; qué hacer con una venta rechazada al cerrar caja; "cuotas en efectivo" negativo tras
+      un reverso; fotos una vez por semana en el backup; las fotos se achican solas; buscar órdenes por boleta.
+    - No verificado: la compresión en Safari de iPhone y la orientación de fotos verticales (solo Chromium); la
+      carrera de la foto (elegir una y enseguida otra) sin prueba automática; referencias del kardex de devolución,
+      compra, reserva y reversión sin prueba propia; traslado con inactivos sin prueba propia; el refresco del
+      catálogo al volver a la pestaña sin prueba propia; que `github.event.schedule` entregue `23 5 * * 0` el primer
+      domingo (2026-11-15); que la prueba de bloqueos con `dblink` sea estable en el CI; Codex.
   - **Decisión del CTO (2026-11-10): backup con fotos una vez por semana; no se paga por minutos ni por nada.**
     Contexto, medido por API: unos 1.730 de 2.000 minutos de Actions gastados; quedaban unos 270 para 20 días. El
     backup completo tarda de 5 a 13 minutos (el paso de fotos varía de 83 a 521 s) y el de base 4: con la completa
