@@ -1,10 +1,11 @@
 name: Backup diario
 
-# Dos corridas al día: GitHub atrasa los cron entre 6 y 10 h y una sola dejó pasar 27 h (RNF-09 pide 24 h máx.).
-# La completa (base y fotos, ~37 MB) se guarda 7 días; la de base (~1 MB) 30 días, para no agotar el cupo de 500 MB de Actions.
+# Base dos veces al día: GitHub atrasa los cron entre 6 y 10 h y una sola dejó pasar 27 h (RNF-09 pide 24 h máx.). Fotos (completa) una vez por semana, los domingos, guardadas 14 días; la de base se guarda 30.
+# Motivo: el cupo de minutos de Actions de la cuenta Free (completa 5-13 min, base 4) además del de 500 MB de almacenamiento.
 on:
   schedule:
-    - cron: "23 5 * * *" # completa
+    - cron: "23 5 * * 0" # completa (domingo)
+    - cron: "23 5 * * 1-6" # base
     - cron: "23 17 * * *" # base
   workflow_dispatch:
     inputs:
@@ -41,7 +42,7 @@ jobs:
         run: |
           tipo=base
           if [ "$EVENTO" = workflow_dispatch ] && [ "$ENTRADA" = completo ]; then tipo=completo; fi
-          if [ "$CRON" = "23 5 * * *" ]; then tipo=completo; fi
+          if [ "$CRON" = "23 5 * * 0" ]; then tipo=completo; fi
           echo "tipo=$tipo" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -111,4 +112,4 @@ jobs:
           name: ${{ steps.cifrar.outputs.nombre }}
           path: ${{ runner.temp }}/salida/*.age
           if-no-files-found: error
-          retention-days: ${{ steps.tipo.outputs.tipo == 'completo' && 7 || 30 }}
+          retention-days: ${{ steps.tipo.outputs.tipo == 'completo' && 14 || 30 }}
