@@ -5,6 +5,7 @@ reglas del sistema, restricciones, límites, riesgos aceptados y supuestos sin c
 para que el manual de usuario, la capacitación (`docs/capacitacion.md`) y el acta de entrega lo estipulen.
 
 **Cómo se usa:**
+
 - El manual de usuario y todo documento de entrega se escriben a partir de este registro. Cada regla _vigente_ tiene que
   aparecer en el manual del rol al que afecta. Cada _supuesto_ y cada _pendiente_ se confirma con el cliente o el CTO antes
   de la entrega, o se entrega escrito como supuesto.
@@ -12,25 +13,28 @@ para que el manual de usuario, la capacitación (`docs/capacitacion.md`) y el ac
   afectado en `docs/manual/` y su captura (`pnpm manual:capturas`, ver `docs/manual/README.md`).
 - Estados: _vigente_ · _supuesto pendiente de confirmar con el cliente_ · _pendiente de decisión CTO_ · _riesgo aceptado_ ·
   _no verificado_. La fuente va al final de cada ítem: `H` = `docs/handoff.md`, `SRS` = `docs/srs.md`, `PF-N` =
-  `docs/plan-fase-N.md`, `AUD` = `docs/auditoria-entrega-a.md`, `CAP` = `docs/capacitacion.md`, `MIG` =
-  `supabase/migrations/`. Los números de línea son del 2026-11-09 y pueden correrse; algunos planes se citan por sección.
+  `docs/plan-fase-N.md`, `PP` = `docs/plan-preentrega.md`, `AUD` = `docs/auditoria-entrega-a.md`, `AUDP` =
+  `docs/auditoria-preentrega.md`, `CAP` = `docs/capacitacion.md`, `MIG` = `supabase/migrations/`. Los números de línea
+  son del 2026-11-09, antes de los PR 1 a 3: en `H` y en los documentos que esos PR cambiaron quedaron corridos, así que
+  se ubica la fuente por su contenido; algunos planes se citan por sección.
 
 Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración y de los mensajes de
 `web/src/lib/erp-errores.ts`. No incluye `docs/relevamiento.md`, `docs/plan-pruebas.md`, `docs/roadmap.md` ni
-`docs/plan-modelo-datos.md`: revisarlos al escribir el manual.
+`docs/plan-modelo-datos.md`: revisarlos al escribir el manual. Puesto al día el 2026-11-10 con los cambios de los PR 1 a 3
+de la preentrega (`PP`, `AUDP`): las reglas que cambiaron se corrigieron y las nuevas se agregaron en su sección.
 
 ## 0. Contradicciones entre fuentes (2026-11-09)
 
-| Tema | Qué decían las fuentes | Resolución |
-|---|---|---|
-| Vendedor y anulación | `CAP` decía que el vendedor anula dentro del plazo y que la práctica se anula con motivo "Capacitación" | Manda la migración `20261108130000`: el vendedor no anula ni devuelve. `CAP` corregido en este PR |
-| Frecuencia de cuotas | RF-CRE-01 pide frecuencia parametrizada | Implementado solo mensual, con un interés por negocio (`PF-7` decisión 7). Anotado en `SRS` |
-| Lotes del frial | `H` (2026-11-01) los dejaba fuera de la primera versión | Están implementados en la fase 5 (RF-FRI-04 a 07). `H` corregido |
-| Inicio del panel | `CAP` decía que el Inicio no tenía módulos | Corregido en #63. `CAP` corregido; sigue sin cubrir crédito, reservas, compras ni insumos |
-| Reporte de insumos | `H` nombraba solo `ver_costos` | Exige `ver_reportes` y `ver_costos`. `H` corregido |
-| Consumo de insumos | `PF-7` decisión 10 nombra una RPC `registrar_consumo` | Es un tipo de ajuste de inventario (estado de `PF-7`) |
-| Lavandería sin conexión | `H` y `PF-3` decían que la lavandería pide conexión | Superado: la fase 4 crea órdenes sin conexión (RF-LAV-09) |
-| Firma del contrato | `SRS` D-04 lo da por firmado; `H` dice pendiente de firma | Sin resolver: confirmar con el CTO |
+| Tema                    | Qué decían las fuentes                                                                                               | Resolución                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Vendedor y anulación    | `CAP` decía que el vendedor anula dentro del plazo y que la práctica se anula con motivo "Capacitación"              | Manda la migración `20261108130000`: el vendedor no anula ni devuelve. `CAP` corregido en este PR |
+| Frecuencia de cuotas    | RF-CRE-01 pide frecuencia parametrizada                                                                              | Implementado solo mensual, con un interés por negocio (`PF-7` decisión 7). Anotado en `SRS`       |
+| Lotes del frial         | `H` (2026-11-01) los dejaba fuera de la primera versión                                                              | Están implementados en la fase 5 (RF-FRI-04 a 07). `H` corregido                                  |
+| Inicio del panel        | `CAP` decía que el Inicio no tenía módulos                                                                           | Corregido en #63. `CAP` corregido; sigue sin cubrir crédito, reservas, compras ni insumos         |
+| Reporte de insumos      | `H` nombraba solo `ver_costos`                                                                                       | Exige `ver_reportes` y `ver_costos`. `H` corregido                                                |
+| Consumo de insumos      | `PF-7` decisión 10 nombra una RPC `registrar_consumo`                                                                | Es un tipo de ajuste de inventario (estado de `PF-7`)                                             |
+| Lavandería sin conexión | `H` y `PF-3` decían que la lavandería pide conexión                                                                  | Superado: la fase 4 crea órdenes sin conexión (RF-LAV-09)                                         |
+| Firma del contrato      | `SRS` D-04 y la decisión del CTO del 2026-11-01 lo dan por firmado; un renglón viejo de `H` decía pendiente de firma | Resuelto: firmado; falta anotar la fecha exacta (D-04 sigue abierto solo por la fecha)            |
 
 ## 1. Roles y permisos
 
@@ -41,7 +45,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   reportes (no vende ni edita). Vendedor: vender, caja propia y reservas; descontar no. La matriz está en datos y se
   cambia sin tocar código. _Vigente_ · SRS:205-227; MIG 20261101120100
 - **Lavandería.** El empleado vende, cobra, descuenta y mueve estados de órdenes. Dueño y encargado además gestionan
-  usuarios. La lavandería no tiene crédito ni reservas. _Vigente_ · SRS:209-224; MIG 20261101120100
+  usuarios, salvo a los encargados: eso es solo del dueño (ver más abajo). La lavandería no tiene crédito ni reservas.
+  _Vigente_ · SRS:209-224; MIG 20261101120100, 20261110120100
 - **Quién ve los costos.** Solo dueño, encargado y contador (`ver_costos`). Costo, ganancia y valor del stock salen en
   blanco para el resto, también por la API. El vendedor no ve costos. _Vigente_ · SRS:208, RF-REP-05; PF-1 "Decisiones/Datos"; MIG 20261102140000
 - **Un usuario puede tener rol distinto en cada negocio** y cambia con el botón "Negocio activo". Solo ve datos del
@@ -53,8 +58,10 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   cuota lo puede hacer quien tenga `caja` (el vendedor). _Vigente_ · PF-7:40-42; MIG 20261108160000
 - **Compras, proveedores y pagos a proveedor: solo dueño y encargado** (`gestionar_compras`), también en lavandería.
   _Vigente_ · PF-7:44; SRS:224
-- **Reservas: dueño, encargado y vendedor** (más `caja`, porque el anticipo entra y sale del cajón). No existe en
-  lavandería. _Vigente_ · PF-7:43; MIG 20261108150000
+- **Reservas: dueño, encargado y vendedor las crean y las completan** (más `caja`, porque el anticipo entra y sale del
+  cajón). **Cancelar una reserva exige además `anular`** (dueño y encargado): el vendedor no la cancela y el POS le dice
+  "Para cancelar la reserva, pide a un encargado." No existe en lavandería. _Vigente (cambió en el PR 2, M-1)_ · PF-7:43;
+  SRS RF-RES-03, 229; PP "Plan detallado del PR 2" A; MIG 20261108150000, 20261110120000
 - **Consumo de insumos y su reversión: solo quien tiene `ajustar_inventario`** (dueño y encargado). El empleado de
   lavandería no puede registrar consumo. _Supuesto pendiente de confirmar con el cliente_ (si lo quiere el empleado, se
   cambia la matriz) · PF-7:45-46
@@ -74,13 +81,30 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **El dueño de un negocio es protegido.** Solo un dueño asigna o modifica a otro dueño. No se puede dejar el negocio sin
   dueño activo (`ERP_ULTIMO_DUENO`) ni cambiar el propio rol ni quitarse a sí mismo. _Vigente_ · AUD:49;
   `web/src/modules/usuarios/domain.ts:124-128`
+- **Solo el dueño gestiona a los encargados.** Darle a alguien el rol de encargado, cambiarle el rol a un encargado,
+  quitarlo del negocio, desactivarlo o reactivarlo y restablecer su contraseña exigen ser dueño del negocio, aunque quien
+  llama tenga `usuarios` (el encargado de lavandería ya no puede). La pantalla de personal no ofrece "Encargado" en el
+  selector de rol a quien no es dueño y deja sin acciones la fila de un encargado. Costo aceptado: sin el dueño, nadie
+  corrige a un encargado. _Vigente (decisión del CTO, 2026-11-10)_ · SRS RF-TR-04, 228; H (PR 1, decisión del 2026-11-10);
+  PP "Plan detallado del PR 2" B; MIG 20261110120100
 
 ## 2. Cuentas, usuarios y equipos
 
 - **El registro público está cerrado.** Las cuentas las crea quien tiene el permiso `usuarios` (tienda y frial: solo el
-  dueño; lavandería: dueño y encargado). _Vigente_ · H:164-165; SRS:3.1 RF-TR-04
+  dueño; lavandería: dueño y encargado, pero un encargado no crea ni administra a otro encargado). _Vigente_ · H:164-165;
+  SRS:3.1 RF-TR-04
 - **La contraseña inicial de una cuenta nueva no se vuelve a mostrar.** Se entrega en persona. Mínimo 8 caracteres con
-  letras y dígitos. _Vigente_ · CAP:83; `web/src/modules/usuarios/domain.ts:132`
+  letras y dígitos. La persona la puede cambiar después (ver abajo). _Vigente_ · CAP:83;
+  `web/src/modules/usuarios/domain.ts:132`
+- **Cada persona cambia su propia contraseña con "Cambiar contraseña"** (en el panel y en el POS). Pide la contraseña
+  actual y la nueva, que cumple la misma regla de 8 caracteres con letras y dígitos. Verificar la contraseña actual protege
+  la pantalla, no la API. _Vigente (nuevo en el PR 1, B-5)_ · PP "PR 1", (B-5);
+  `boton-cambiar-clave.tsx`; H (PR 1, límites conocidos)
+- **Quien tiene `usuarios` restablece la contraseña de otra cuenta** desde "Usuarios", con el botón "Restablecer
+  contraseña" de la fila: escribe la nueva dos veces y se la entrega a la persona, que debe cambiarla al entrar. Queda
+  auditado (quién, a quién y cuándo; nunca la clave). A un encargado solo lo restablece el dueño. **Restablecer no cierra
+  las sesiones abiertas de esa cuenta:** para cortar el acceso hay que desactivarla. _Vigente (nuevo en el PR 1, B-5)_ ·
+  SRS RF-TR-04; PP "PR 1", (B-5); `dialogo-restablecer-clave.tsx`; H (PR 1, límites conocidos)
 - **Desactivar una cuenta corta el acceso en la base al instante** (aunque el JWT dure 1 h). El POS sin conexión caduca
   a las 72 h sin hablar con el servidor. _Vigente_ · MIG 20261108130000 (cabecera); AUD:35, 57
 - **Un usuario no puede quedarse sin negocio.** Quitar el último negocio de una cuenta se rechaza: hay que desactivarla.
@@ -112,16 +136,34 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   cobrados en efectivo − gastos − retiros − devoluciones en efectivo (y devoluciones de anticipo).** El QR se muestra
   aparte ("QR cobrado menos devuelto"). Una venta anulada sale del esperado. _Vigente_ · PF-2:137-139; PF-7:47-50;
   MIG 20261108150000, 20261108160000
+- **"Cuotas de crédito en efectivo" puede salir negativo en la caja de donde sale el reverso de un pago de cuota** (el
+  último pago de cuota se revierte desde una caja abierta, que puede no ser la que lo cobró). _Vigente (límite conocido)_ ·
+  H (PR 2, límites conocidos); `detalle-sesion.tsx`
 - **La inicial de una venta a crédito entra a caja como cualquier venta; el anticipo aplicado al completar una reserva no
   se cuenta dos veces.** _Vigente_ · PF-7:65-66, 94-95
 - **Arqueo ciego: el POS no muestra el esperado mientras la caja está abierta.** El cajero ve esperado, diferencia (sin
   diferencia / sobrante / faltante) y QR recién al cerrar. _Vigente_ · PF-2:186-187; CAP:48-49
-- **Cerrar caja exige conexión y cola vacía en ese equipo** (sin ventas, aperturas ni movimientos sin enviar ni rechazados,
-  tampoco si la cola no se puede leer). _Vigente_ · SRS RF-CAJ-03, RN-07; PF-3:67-68; H:392-393
+- **Cerrar caja exige conexión y que ese equipo no tenga nada sin enviar:** ventas, aperturas de caja o movimientos
+  pendientes, una apertura de caja rechazada, cobros en línea sin confirmar, ni una cola que no se pueda leer. Si hay algo
+  así el POS dice "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo.
+  Resuélvelos antes de cerrar la caja." _Vigente (cambió en el PR 3, M-11)_ · SRS RF-CAJ-03, RN-07; PF-3:67-68; PP "Plan
+  detallado del PR 3"; `panel-caja.tsx`
+- **Una venta o un movimiento rechazado ya no bloquea el cierre:** el POS avisa "Hay N operaciones rechazadas sin resolver
+  (ventas por Bs …). El esperado no las cuenta. Avisa a un encargado para que las reintente o las descarte." y, aparte,
+  "Además hay N operaciones rechazadas de cajas anteriores sin resolver en este equipo." La resuelve un encargado
+  (reintentar, o descartar con `devolver_fuera_plazo`). Límites conocidos: el efectivo de una venta rechazada aparece como
+  diferencia del cierre; pasados 30 días del cierre una venta rechazada solo se puede descartar, no reintentar; una fila
+  rechazada impide actualizar la app en ese equipo hasta resolverla. _Vigente (nuevo en el PR 3, M-11)_ · SRS RN-07; H (PR
+  3, límites conocidos); `panel-caja.tsx`. _No verificado en producción: sin ventas ni cajas cerradas, solo local_
 - **Cerrar caja con una venta "en duda" (enviada sin respuesta) no está verificado.** _No verificado (solo Vitest)_ ·
   H:194-195
 - **Cerrar una caja repetidas veces con el mismo contado devuelve el mismo resultado; con otro monto da error.** El
   cierre es inmutable. _Vigente_ · PF-2:142-143
+- **Una caja cerrada muestra "Esperado al cierre", "Contado" y "Diferencia", los del momento del cierre, que no cambian.**
+  Si después llegó una venta o un movimiento hecho sin conexión dentro del rango de la caja, aparece además "Esperado con
+  lo que llegó después" y un texto que lo explica; el desglose (ventas, anticipos, cuotas) incluye lo que llegó tarde y
+  por eso no suma al esperado del cierre. _Vigente (nuevo en el PR 3, M-10)_ · PP "Plan detallado del PR 3"; H (PR 3);
+  `detalle-sesion.tsx`. _No verificado en producción: sin cajas cerradas, solo local_
 - **Si otra persona cierra la caja de un equipo, las ventas hechas sin conexión en ese rango horario se aceptan** (marca
   `caja_cerrada`) si el cierre fue hace menos de 30 días; quien tenga `ver_reportes` puede anularlas, sin plazo de 24 h y sin
   mover efectivo. Fuera de ese rango se rechazan. _Vigente_ · AUD:29; MIG 20261108130000 (A2)
@@ -144,6 +186,12 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Un producto sin precio en la lista elegida no se puede vender** (`ERP_PRODUCTO_SIN_PRECIO`). Hoy ningún producto de
   Lider tiene precio: no se puede vender ni capacitar hasta que el cliente los cargue. _Vigente / bloqueado por el cliente_ ·
   H:39-40, 303-304; `erp-errores.ts:15`
+- **Si el negocio no tiene ningún producto con precio, el POS lo dice:** "Este negocio todavía no tiene productos con
+  precio. Pide al encargado que los cargue en el panel." _Vigente (nuevo en el PR 3)_ · H (PR 3); `zona-productos.tsx`
+- **Código repetido: si el código (interno o de barras) escrito o escaneado coincide con más de un producto, Enter no agrega
+  ninguno** y avisa "Ese código coincide con N productos: elige uno." Con una sola coincidencia exacta agrega. Las
+  coincidencias exactas salen primero en la lista y no distinguen mayúsculas. _Vigente (nuevo en el PR 1, B-1)_ · PP
+  "PR 1" (B-1); `use-venta.ts`
 - **El tope de descuento de cada negocio arranca en 0 %: nadie descuenta hasta que se configure** (panel, "Descuento",
   solo con `usuarios`). Lo define el cliente. _Pendiente (cliente, D-03)_ · PF-2:70-71; H:254
 - **Descuento: por línea y por venta, en Bs.** Se rechaza si supera el tope (`ERP_DESCUENTO_TOPE`), medido sobre el
@@ -151,8 +199,9 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Piso de precio = el menor entre el precio `mínimo` y el de la lista elegida.** Hasta el piso se negocia sin permiso;
   por debajo exige `descontar` y cuenta para el tope. El precio final siempre es mayor a 0 y el total de una venta mayor a 0.
   _Vigente_ · PF-2:65-69, 96
-- **Lista por defecto: contado** (tienda y frial). El vendedor puede elegir otra lista por línea (crédito, mayorista,
-  mínimo). En lavandería: normal o express. _Vigente_ · PF-2:60-61; PF-1 "Listas por tipo"
+- **Lista por defecto: contado** (tienda y frial). El vendedor puede elegir otra lista por línea (mayorista, mínimo); la
+  lista "crédito" no se elige por línea: la usa toda una venta a crédito. En lavandería: normal o express. _Vigente_ ·
+  PF-2:60-61; PF-1 "Listas por tipo"; `modules/ventas/domain.ts:7-9`
 - **Cliente general en Lider y frial; en lavandería el cliente es obligatorio.** Sin conexión, la lavandería escribe
   nombre y teléfono a mano. _Vigente_ · SRS RF-VEN-04; PF-4 "Cliente sin conexión"
 - **El sistema deja vender con stock en 0 o insuficiente** (se ve en rojo "Stock aquí: 0"); queda como stock negativo para
@@ -166,13 +215,32 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   _Vigente_ · SRS RN-02
 - **QR en línea: el vendedor debe marcar "Confirmo que recibí Bs … por QR" solo tras verlo en su celular.** Sin eso la
   venta no se registra. _Vigente_ · PF-2:104-107; CAP:32-34
-- **La nota de venta se imprime desde el navegador (Ticket 80 mm o A4) o se guarda como PDF.** Lleva negocio, NIT,
-  dirección, teléfono, número, vendedor, cliente, líneas, garantía, descuentos y pagos. _Vigente_ · PF-2:160-165; SRS RF-VEN-05
-- **Garantía en la nota de venta: parcial, sin confirmar con E2E.** _No verificado_ · AUD:66
-- **Tras una venta el POS descuenta el stock local; el catálogo completo se recarga solo si pasaron más de 5 minutos.** Ante
-  `ERP_SIN_PERMISO`, `ERP_DESCUENTO_TOPE` o `ERP_PRODUCTO_SIN_PRECIO` se recarga el catálogo. _Vigente_ · PF-2:176-180
+- **La nota de venta se imprime desde el navegador (Ticket 80 mm o A4) o se guarda como PDF.** Lleva negocio, número,
+  vendedor, cliente, líneas, garantía, la línea de descuento cuando hay descuento y pagos; lleva el NIT y el "texto de la
+  nota" (dirección, teléfono y lo que el dueño quiera sumar) solo si están cargados en "Datos del negocio". _Vigente
+  (cambió en el PR 1, B-3)_ · PF-2:160-165; SRS RF-VEN-05; `nota-venta.tsx`
+- **"Datos del negocio" (panel):** el NIT (hasta 20 caracteres) y el texto de la nota (hasta 300 caracteres y 6 líneas) se
+  cargan por negocio con el permiso `usuarios` (tienda y frial: solo el dueño; lavandería: dueño y encargado). El teléfono
+  no es un campo propio: va dentro de ese texto. Se audita solo si cambió. **En producción están vacíos** (verificado en
+  Multitienda Lider el 2026-11-10; falta cargarlos en los tres negocios): sin eso la nota sale sin dirección. _Vigente
+  (nuevo en el PR 1, B-3) / pendiente (cliente o CTO: cargar los datos)_ · PP "PR 1", (B-3);
+  `form-datos-negocio.tsx`; H (PR 2, QA en producción)
+- **La fecha de la nota se imprime como "9/11/26, 5:29 p. m.", no como `dd/mm/aaaa`.** No se corrigió en el PR 4. _Límite
+  conocido_ · SRS RNF-13; `nota-venta.tsx:31-34`
+- **Garantía en la nota de venta:** cubierta con E2E en #91. _Vigente_ · AUD:66; H:293-295
+- **Tras una venta el POS descuenta el stock local; el catálogo completo se recarga solo si pasaron más de 5 minutos, y
+  también al volver a la pestaña o a la red pasado ese intervalo.** Ante `ERP_SIN_PERMISO`, `ERP_DESCUENTO_TOPE` o
+  `ERP_PRODUCTO_SIN_PRECIO` se recarga el catálogo. _Vigente (el refresco al volver a la pestaña es del PR 3; sin prueba
+  propia, no verificado)_ · PF-2:176-180; PP "Plan detallado del PR 3"; `use-catalogo.ts`
 - **Una venta enviada sin respuesta queda "en duda"; no se borra hasta un resultado cierto.** Con sesión caducada u otra
   cuenta no se envía, comprueba ni descarta. _Vigente_ · PF-2:169-172
+- **Un cobro en línea (venta a crédito, reserva o cuota) que se corta a mitad no se olvida al recargar.** El cobro se
+  guarda en el equipo antes de enviar; si la respuesta se pierde, el POS muestra un aviso fijo "Cobro sin confirmar:
+  C1-000005, Bs … No entregues el producto hasta verificar." con el botón "Verificar cobro" (en una cuota, "Cobro sin
+  confirmar de Bs …"). Verificar consulta al servidor sin reenviar el cobro: si quedó registrado se da por cobrado y si
+  no se limpia. Mientras haya un cobro sin confirmar no se cierra la caja ni se aplica una actualización. El aviso lo ve
+  también otro cajero del mismo equipo. _Vigente (nuevo en el PR 1, B-6)_ · PP "PR 1", (B-6);
+  `venta-en-curso.tsx:124-134`; `cobro-pendiente.ts`
 - **La numeración de notas es `PREFIJO-000123` por equipo.** El tope es 999999; después el equipo avisa que agotó la
   numeración. _Vigente_ · SRS RF-VEN-11; PF-2:36-45, 174-175
 - **La venta de un producto con serie, consulta de clientes y alta de clientes necesitan conexión.** Ver sección 6.
@@ -198,6 +266,9 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   (`shortcut`: el reverso se diseña si el cliente lo necesita)_ · PF-7:109-113
 - **Una venta con crédito no se anula ni se devuelve** (`ERP_VENTA_CON_CREDITO`). _Vigente (`shortcut`)_ · H:34;
   PF-7:109-113
+- **`/panel/ventas` marca las ventas a crédito y de reserva** ("Crédito", "Reserva"), oculta Anular y Devolver y explica por
+  qué; en una venta a crédito muestra "Inicial" y el enlace "Ver pagos del crédito". _Vigente (nuevo en el PR 2, M-5)_ ·
+  PP "Plan detallado del PR 2" E; `lista-ventas.tsx`
 - **Una venta que es una orden de lavandería se anula desde la orden.** Una orden ya entregada no se anula: se registra
   una devolución. _Vigente_ · PF-4 "Anulación"; MIG 20261108130000; `erp-errores.ts:23`
 - **Descartar una venta rechazada de la cola exige `devolver_fuera_plazo` y confirmación escrita:** el dinero ya se cobró y
@@ -224,6 +295,11 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Reservas y crédito nunca se encolan:** se cobran en línea con reintento en memoria bajo el mismo id, y si no se confirma
   se ofrece "Descartar y verificar". Un reintento con modo sin conexión se rechaza con error claro. _Vigente_ · PF-7:80-81, 88,
   148-149; `use-envio.ts:45`
+- **Un reintento de reserva, cuota o cancelación cuyo primer intento sí se registró no es un fallo:** el POS dice, según el
+  caso, "La reserva ya quedó registrada con los datos del primer intento; revísala en la lista. Si hace falta otra, envía de
+  nuevo.", "Ya se registró un cobro con este intento por otro monto; revisa el saldo." o "La cancelación ya quedó
+  registrada con el primer intento; revisa la lista de reservas." _Vigente (nuevo en el PR 2, M-7)_ · `reservas.ts`,
+  `cobro-cuota.ts`
 - **Cada venta entra primero a una cola guardada en el equipo (IndexedDB) y se envía desde ahí.** Se ve siempre el aviso
   "N ventas sin enviar". Si el navegador no puede guardar, no se cobra y el carrito queda. _Vigente_ · PF-3:75-80; SRS RF-VEN-10
 - **Riesgo: si se borran los datos del navegador, se pierden las ventas sin enviar.** Se mitiga con el aviso visible y
@@ -250,8 +326,15 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Sesión caducada al reconectar: la cola se pausa, pide iniciar sesión y conserva todo.** _Vigente_ · PF-3:112
 - **Primer arranque sin red: sin catálogo guardado no se puede vender.** El equipo tiene que abrir caja con red al menos una
   vez. _Vigente (por diseño)_ · H:448-449
-- **"Actualización disponible" solo se puede aplicar con la cola vacía;** si hay operaciones sin enviar dice que se podrá
-  aplicar cuando se envíen. _Vigente_ · H:402; PF-3:124-127; `aviso-actualizacion.tsx:105`
+- **El POS se actualiza solo al abrirlo si nadie tocó la pantalla y no hay nada que perder:** sin cola de ventas, sin
+  cobros ni cuotas sin confirmar y sin carrito armado; lo hace una sola vez. Si no se cumple, aparece "Actualización
+  disponible" con el botón "Actualizar ahora": con el carrito armado pide confirmar ("Descartar y actualizar"), con un cobro
+  sin confirmar avisa y no actualiza, y con operaciones sin enviar o **rechazadas** dice que se podrá aplicar cuando se
+  resuelvan. _Vigente (cambió en el PR 3)_ · PP "Plan detallado del PR 3"; `aviso-actualizacion.tsx`
+- **La primera actualización tras el PR 3 es a mano, una vez por equipo con el POS instalado ("Actualizar ahora").** El
+  código anterior no sabe aplicarse solo; desde el deploy siguiente se actualiza solo. Con dos pestañas del POS abiertas,
+  una puede quedar con el código viejo; la actualización automática puede perder un toque dado en el segundo en que
+  recarga (solo el carrito). _Vigente / límite conocido_ · H:20-23, 73-74
 - **Recomendación al cliente: un respaldo de internet 4G.** _Vigente (recomendación)_ · H:530
 - **La reimpresión de notas pendientes, clientes sin conexión, series sin conexión y Background Sync están fuera de
   alcance.** Implicancia sobre cuándo se envía la cola con la app cerrada: _no verificado_ (inferencia). _Vigente_ · PF-3:149-151
@@ -299,10 +382,18 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   "597" como código interno. _Vigente / supuesto pendiente de confirmar con el cliente_ · SRS RF-CAT-01; SRS:269 (P-05)
 - **Qué productos llevan serie:** "todos" no coincide con vasos y platos; se marcan en el panel. La importación no activa series.
   _Supuesto pendiente de confirmar con el cliente_ · SRS:265 (P-01)
-- **Fotos de producto: bucket privado, solo JPEG, PNG y WebP, hasta 5 MB.** Sin SVG. _Vigente_ · PF-1 "Fotos"
+- **Fotos de producto: bucket privado, solo JPEG, PNG y WebP, hasta 5 MB.** Sin SVG. Desde el PR 3 se achican solas en el
+  navegador antes de subir (lado mayor de 1.200 px, WebP; JPEG si el navegador no codifica WebP; si ya es chica o falla, sube
+  la original). _Vigente_ · PF-1 "Fotos"; `catalogo/foto.ts`. _No verificado:_ el tope de 5 MB del servidor tras el cambio,
+  la compresión en Safari de iPhone, la orientación de fotos verticales y la carrera de elegir una foto y enseguida otra.
+  Límite conocido: una foto de 25 MB puede cerrar la pestaña en un celular de gama baja
 - **El peso de un paquete cambiado afecta los kilos de ventas pasadas del frial** (el reporte usa el peso actual). Un
   paquete distinto debería ser otro producto. _Riesgo aceptado_ · PF-5 "Paquete al vacío"
-- **Filtro por marca y categoría (RF-CAT-02) y dólar paralelo (RF-CAT-12): sin E2E.** _No verificado_ · AUD:65-67
+- **Filtro por marca y categoría (RF-CAT-02) y dólar paralelo (RF-CAT-12):** con E2E desde #91. _Vigente_ · AUD:65-67; H:293-295
+- **Las búsquedas de productos, clientes e inventario ignoran tildes y mayúsculas** ("cafe" encuentra "Café"; usa la
+  extensión `unaccent`). **Las órdenes de lavandería no:** la búsqueda por cliente en `/panel/ordenes` sigue distinguiendo
+  tildes (la tabla tiene permisos por columna); por número de boleta sí funciona. _Vigente (nuevo en el PR 3, M-12) /
+  límite conocido_ · PP "Plan detallado del PR 3"; H (PR 3, límites conocidos)
 
 ## 9. Inventario y kardex
 
@@ -315,7 +406,17 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   `ajustar_inventario`.** _Vigente_ · SRS RF-INV-04
 - **Traslado entre tienda y depósito:** el total no cambia; con stock insuficiente se permite y la pantalla avisa. _Vigente_ ·
   SRS RF-INV-05; PF-1 "Datos"
-- **Conteo físico:** las diferencias se registran como ajustes. _Vigente_ · SRS RF-INV-06
+- **Conteo físico:** la pantalla muestra "Sistema: N (M reservadas)" y compara lo contado contra el stock más lo reservado
+  por reservas activas; las diferencias se registran como ajustes. Si lo contado es menor que lo reservado, el stock queda
+  negativo (se avisa en pantalla). _Vigente (cambió en el PR 1, B-2)_ · SRS RF-INV-06; PP "PR 1", (B-2);
+  `lista-conteo.tsx`; H (PR 1, límites conocidos)
+- **El kardex muestra el documento de cada movimiento en "Ref.:"** ("Venta C1-000012", "Compra del 10/11/2026"); no nombra
+  al proveedor y un traslado no lleva referencia (el tipo ya lo dice). Quien tiene `ajustar_inventario` sin `ver_reportes`
+  ve el número de venta y la fecha de compra. _Vigente (nuevo en el PR 3, M-13). No verificado:_ las referencias de
+  devolución, compra, reserva y reversión no tienen prueba propia · `lista-kardex.tsx`; H (PR 3)
+- **Un producto desactivado con stock se puede sacar (Salida o ajuste), trasladar y contar;** sale marcado "(inactivo)".
+  Con stock 0 no aparece. _Vigente (nuevo en el PR 3, M-14). No verificado:_ el traslado con inactivos no tiene prueba
+  propia · PP "Plan detallado del PR 3"
 - **Productos "por unidad" aceptan cantidad entera; los de kg, hasta 3 decimales.** _Vigente_ · PF-1; PF-2:94
 - **Stock mínimo:** si es null no avisa; el aviso suma ubicaciones. Hoy no hay stock mínimo cargado. _Vigente / pendiente
   (cliente)_ · PF-1 "Datos"; `docs/migracion-datos.md` "Lo que debe hacer el cliente"
@@ -341,9 +442,11 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **El anticipo entra por caja, en efectivo o QR,** y se suma al arqueo. _Vigente_ · PF-7:48-49, 63; H:23-24
 - **Completar una reserva = venta del POS que carga ese producto;** no se pueden agregar más productos ("Estás completando una
   reserva"). El anticipo se descuenta del total y el stock no se descuenta dos veces. _Vigente_ · PF-7:62-68; `use-venta.ts:209`
-- **Cancelar una reserva libera el stock y devuelve el anticipo por caja** (mismo medio y monto, en la sesión abierta de quien
-  cancela). Con efectivo insuficiente la cancelación se rechaza. _Supuesto pendiente de confirmar con el cliente_ (P-12) ·
-  PF-7:69-71; SRS:276
+- **Cancelar una reserva exige `anular` (dueño y encargado), conexión y una sesión de caja abierta; el vendedor no la
+  cancela** (ve "Para cancelar la reserva, pide a un encargado." y ningún botón). Libera el stock y devuelve el anticipo por
+  caja (mismo medio y monto, en la sesión abierta de quien cancela); con efectivo insuficiente la cancelación se rechaza.
+  _Vigente (permiso nuevo en el PR 2, M-1). La devolución del anticipo: supuesto pendiente de confirmar con el cliente_
+  (P-12) · PP "Plan detallado del PR 2" A; PF-7:69-71; SRS:276
 - **Costo de la venta de una reserva = foto del costo del movimiento `reserva`.** Al cancelar, el stock reingresa con esa
   foto. _Vigente_ · H:26; PF-7:76-78
 - **Una venta de reserva nunca se encola.** Se reintenta en memoria con el mismo id y, si no se confirma, se ofrece "Descartar y
@@ -368,8 +471,11 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **El interés vive en las cuotas: no suma a `ventas.total` ni a los reportes de ventas.** _Vigente (`shortcut`, pendiente de
   decisión CTO si debe contabilizarse)_ · H:33; MIG 20261108160000:13
 - **Documentos del crédito: 3 casillas (CI, comprobante de domicilio, pagaré), no archivos.** Subir escaneos queda para si
-  el cliente lo pide. _Vigente (`shortcut`)_ · PF-7:86-87
-- **Plan de cuotas imprimible** al crear el crédito. _Vigente_ · SRS RF-CRE-02; H:31-32
+  el cliente lo pide. Se marcan al crear el crédito y también después, desde el detalle del crédito (permiso
+  `gestionar_credito`; solo créditos nacidos de una venta y no anulados); se pueden desmarcar. Se audita solo si cambió.
+  _Vigente (cambió en el PR 2, M-6; el desmarcado lo decidió el chairman)_ · PF-7:86-87; PP "Plan detallado del PR 2" C
+- **Plan de cuotas imprimible** al crear el crédito y reimprimible desde el crédito ("Imprimir plan"). _Vigente. No
+  verificado:_ la impresión real en papel · SRS RF-CRE-02; H:31-32; `boton-imprimir-plan.tsx`
 - **El pago de cuotas admite pago parcial, entra por caja (requiere caja abierta del equipo) y cubre las cuotas de la más
   vieja a la más nueva.** Pagar de más se rechaza (`ERP_PAGO_EXCEDE_SALDO`). "Pagada" y "vencida" se calculan, no se guardan. _Vigente_ ·
   PF-7:36-39, 98-99; `erp-errores.ts:31`
@@ -384,8 +490,17 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   108-109; `creditos/domain.ts:83`
 - **Cómo entrega el cliente los saldos de crédito:** carga manual de 1 a 20 créditos. _Supuesto pendiente de confirmar con
   el cliente_ · SRS:270 (P-06)
-- **Una venta con crédito (o una reserva completada) no se anula ni se devuelve.** El dinero repartido entre cuotas no tiene
-  reverso automático. _Vigente (`shortcut`)_ · PF-7:109-113
+- **Una venta con crédito (o una reserva completada) no se anula ni se devuelve:** una venta a crédito o de reserva hecha por
+  error no tiene reverso. El único reverso del crédito es el del último pago de cuota (siguiente ítem). _Vigente
+  (`shortcut`)_ · PF-7:109-113; H (PR 2, límites conocidos)
+- **Se puede anular el último pago de cuota** ("Anular último pago" en el detalle del crédito): exige `anular` y un motivo
+  de 1 a 200 caracteres; solo el último pago vivo del crédito (`ERP_PAGO_NO_ES_ULTIMO`); deja un contraasiento que
+  restituye el saldo y reabre un crédito ya pagado. El efectivo sale de una caja abierta: si la cuota se cobró en una caja
+  ya cerrada, de otra caja abierta; si esa caja no tiene el efectivo se rechaza (`ERP_EFECTIVO_INSUFICIENTE`). Un saldo
+  inicial sin pagos se anula como antes. _Vigente (nuevo en el PR 2, M-2)_ · SRS RF-CRE-04, 231; PP "Plan detallado del PR
+  2" C; `anular-pago-cuota.tsx`
+- **Prepago total de un crédito:** cobra el interés completo. _Supuesto pendiente de confirmar con el cliente_ (M-3; pregunta
+  abierta) · H (PR 3, límites conocidos)
 - **La lavandería no puede crear créditos** (no tiene `gestionar_credito`). _Vigente_ · PF-7:103
 - **El crédito con cuotas, las cuentas por cobrar, las reservas y los proveedores no están en la cláusula tercera:** se
   recomendó cotizarlos aparte (cláusula décima). _Pendiente de decisión CTO (D-01)_ · H:135-136, 144-146
@@ -402,8 +517,22 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   de la compra puntual. _Vigente (`shortcut`)_ · MIG 20261108120000:11
 - **Los pagos a proveedor son del panel (efectivo, QR o transferencia, sin sesión de caja) y no pasan por la caja del POS.**
   _Vigente_ · PF-7:49-53
-- **No hay anulación de compra: un error se corrige con un ajuste de inventario** (tipo `devolucion_proveedor`). _Vigente_ ·
-  PF-7:58; MIG 20261108120000:10
+- **Una compra se anula con un contraasiento** ("Anular compra"): exige `gestionar_compras` y `anular` y un motivo. Se
+  rechaza si la compra tiene series o pagos ligados distintos del pago automático del contado, si la deuda resultante
+  quedaría negativa o si no hay stock suficiente en la ubicación; revierte el pago automático de una compra al contado.
+  Si hubo ventas o traslados después, el costo promedio se recalcula con una aproximación. En el frial valida el stock
+  total, no el saldo del lote. _Vigente (nuevo en el PR 2, M-2; antes no había anulación)_ · SRS RF-COM-02, 231; PP "Plan
+  detallado del PR 2" D; `anular-compra.tsx`
+- **Se puede anular el último pago manual a un proveedor** ("Anular último pago"): mismos permisos y motivo; solo el último
+  pago vivo del proveedor. Desde el PR 3, `pagar_proveedor` solo acepta compras a crédito no anuladas. _Vigente (nuevo en el
+  PR 2, M-2)_ · SRS RF-COM-03; `anular-pago-proveedor.tsx`; H (PR 3)
+- **En el frial, cada línea de una compra exige lote (1 a 40 caracteres) y vencimiento (desde hoy, hora de La Paz); fuera
+  del frial deben ir vacíos.** Con series en el frial se rechaza (`ERP_DATOS_INVALIDOS`). _Vigente (nuevo en el PR 2, M-8)_ ·
+  PP "Plan detallado del PR 2" D; `fila-compra.tsx`
+- **Límites conocidos de los reversos:** `pagar_proveedor` por llamada directa acepta el `compra_id` de una compra al contado
+  y deja a los dos sin poder anularse (la pantalla no lo ofrece); `ERP_OPERACION_REPETIDA` al anular una compra o un pago
+  cierra el diálogo y refresca sin mensaje propio. _No verificado:_ concurrencia real de dos reversos a la vez, foco tras
+  anular · H (PR 2, límites conocidos)
 - **Totales de compras y costos de ítems solo se ven con `ver_costos`;** la deuda por proveedor la ve quien gestiona compras.
   _Vigente_ · MIG 20261108120000:6-9
 
@@ -455,8 +584,10 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **El servicio por kg en la demostración del acta debe verificarse.** _No verificado_ · `docs/acta-entrega.md` §2
 - **El listado `/panel/ordenes` pagina por cursor; un cambio de estado entre páginas puede saltar una orden.** _Riesgo aceptado
   (`shortcut`)_ · H:370-372
-- **Impresión real de la boleta, "sin recoger" con órdenes de más de 30 días, flujo con usuario en producción y móvil real:** _No
-  verificado_ · H:378-379
+- **La búsqueda de órdenes por cliente distingue tildes; por número de boleta no hay problema.** _Vigente (límite conocido
+  del PR 3)_ · H (PR 3, límites conocidos)
+- **Impresión real de la boleta, flujo con usuario en producción y móvil real:** _No verificado_ · H:378-379. "Sin recoger"
+  con órdenes de más de 30 días: probado con datos en E2E (#91); producción sin verificar
 
 ## 15. Frial (carnes al vacío)
 
@@ -465,7 +596,7 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Tipos de producto:** por peso variable (unidad `kg`, el cajero escribe lo que pesa), por unidad, o paquete de peso fijo (se
   cobra por paquete y el stock va en paquetes). _Vigente_ · PF-5 "Paquete al vacío"
 - **Entrada con lote y fecha de vencimiento** (código de 1 a 40 caracteres; vencimiento no anterior a hoy en La Paz; el producto
-  no puede tener series). Solo en frial. _Vigente_ · PF-5 "Lotes"
+  no puede tener series). Solo en frial. Las compras llevan lote y vencimiento por línea (sección 12). _Vigente_ · PF-5 "Lotes"
 - **El saldo de un lote es una estimación FIFO por producto en todo el negocio, no se descuenta en cada venta:** el cajero no
   elige lote al vender. Una entrada sin lote desplaza a los lotes viejos. Una entrada ya registrada sin lote no admite lote después.
   _Vigente (límite aceptado)_ · PF-5 "Lotes"
@@ -485,6 +616,11 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   SRS RF-REP-05
 - **Fecha de una venta = la hora en que llegó al servidor (La Paz):** una venta sin conexión cuenta el día en que se envió.
   Una devolución resta en su propia fecha. _Vigente_ · H:331-332; MIG 20261102140000
+- **Cada reporte dice bajo la barra qué cuenta.** Ventas cuenta lo vendido: una venta a crédito entra entera el día de la
+  venta y una reserva cuando se completa; los anticipos, las cuotas y el interés no entran aquí sino en Caja. Caja cuenta lo
+  cobrado, por el día en que se abrió: efectivo y QR, anticipos y cuotas; en una caja cerrada, esperado, contado y diferencia
+  son los del cierre. La lavandería tiene textos propios (sin crédito ni reservas; la orden se cobra al recibirla).
+  _Vigente (nuevo en el PR 3, M-9)_ · `reportes/domain.ts`; PP "Plan detallado del PR 3"
 - **Ganancia = neto − cantidad × foto del costo;** servicios con costo 0; un producto sin costo queda fuera y se cuenta
   ("ganancia incompleta"). _Vigente_ · MIG 20261102140000; PF-5
 - **Límites:** rango hasta 366 días y hasta 5.000 filas (`ERP_LOTE_GRANDE`); el stock da `ERP_LOTE_GRANDE` con más de 5.000 productos
@@ -510,20 +646,37 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Navegadores soportados: Chrome y Edge en PC, Chrome en Android, Safari en iOS para el panel.** Firefox no está soportado.
   Las pruebas automáticas cubren Chromium y el panel en Android e iOS emulados; falta la prueba en los equipos reales.
   _Vigente (equipos reales no verificados)_ · SRS RNF-15; #91
-- **Tras publicar una versión nueva del POS, el service worker queda en espera: hay que aceptar "Actualización disponible".**
-  _Vigente_ · PF-3:124-127; H:190-191
-- **La interfaz está en español de Bolivia: moneda `Bs 1.234,50`, fecha `dd/mm/aaaa`.** _Vigente_ · SRS RNF-13
+- **Tras publicar una versión nueva del POS, el service worker queda en espera:** el POS se actualiza solo al abrirlo si no hay
+  nada que perder; si no, hay que pulsar "Actualizar ahora" (ver sección 6). _Vigente (cambió en el PR 3)_ · PF-3:124-127;
+  H:190-191
+- **La interfaz está en español de Bolivia: moneda `Bs 1.234,50`, fecha `dd/mm/aaaa`** (salvo la nota impresa, ver sección
+  4). _Vigente_ · SRS RNF-13
 - **Atajos del POS:** "/" vuelve a la búsqueda; F2 cobra; el lector USB busca sin clic extra. _Vigente_ · CAP:29-32
-- **Accesibilidad:** sin axe ni lector de pantalla real. _No verificado_ · AUD:73
+- **Accesibilidad:** axe automático en 7 pantallas desde #91; el lector de pantalla real no se probó. _Vigente / no
+  verificado_ · AUD:73; H:299
+- **No hay registro de errores de las RPC (RNF-16; M-15):** quedó fuera del plan de preentrega porque exige elegir un
+  proveedor. _Límite conocido, sigue abierto_ · SRS RNF-16; PP "Fuera de este plan y no verificado"
+- **`ERP_ULTIMO_DUENO` devuelto como 409 por la función de usuarios no tiene prueba de integración.** _No verificado_ ·
+  H (PR 3, límites conocidos)
 
 ## 18. Respaldo, hosting y plataforma
 
-- **Backup diario cifrado a las 03:00 (hora de La Paz), fuera de Supabase, con restauración probada en cada corrida.** Se guarda 30
-  días como artifact cifrado (`age`). Incluye usuarios y las fotos de productos. _Vigente_ · `docs/backup.md`; SRS RNF-08
-- **Pérdida máxima aceptada: 24 h; restauración objetivo menos de 4 h.** El simulacro con datos reales tardó 50 s. _Vigente_ ·
-  SRS RNF-09; `docs/backup.md` "Tiempos"
-- **Si se pierde la clave privada `age` ningún backup se puede leer;** debe haber copia offline. _Riesgo / pendiente (CTO copiar
-  la clave offline)_ · `docs/backup.md` "Requisitos"; H:205-206
+- **Backup cifrado (`age`) fuera de Supabase, con restauración probada en cada corrida.** La base de datos (incluye usuarios) se
+  respalda dos veces al día (05:23 y 17:23 UTC, 01:23 y 13:23 en La Paz) y se guarda 30 días; las fotos de productos, una vez
+  por semana (domingo 05:23 UTC, corrida "completo") y se guardan 14 días. _Vigente (cambió en los PR 1 y 3)_ ·
+  `docs/backup.md`; SRS RNF-08
+- **Pérdida máxima aceptada: 24 h; restauración objetivo menos de 4 h.** La real es de unas 15 h con el atraso normal de
+  GitHub y de unas 27 h si GitHub salta una corrida (el workflow no avisa: hay que mirar la lista de corridas). De las fotos
+  se pueden perder hasta 7 días de fotos nuevas; una foto borrada por error hace más de 14 días no se recupera. El
+  simulacro con datos reales tardó 50 s. _Vigente_ · SRS RNF-09; `docs/backup.md` "Tiempos"
+- **Fotos semanales por decisión del CTO (2026-11-10):** la cuenta Free de GitHub da 2.000 minutos de Actions al mes y sin
+  minutos el backup deja de correr; no se paga por minutos. En una pérdida total de Supabase se pierden las fotos subidas
+  desde el último domingo. Objeción del chairman, dicha una vez: no se puede garantizar que el proyecto de Supabase no se
+  borre. _Riesgo aceptado; revisar el 2026-12-01_ cuando se renueva el cupo · H (decisión del CTO, 2026-11-10);
+  `docs/backup.md`
+- **Si se pierde la clave privada `age` ningún backup se puede leer;** debe haber copia offline. Tampoco existe todavía un
+  procedimiento de copia periódica fuera de GitHub para el cliente. _Riesgo / pendiente (CTO copiar la clave offline)_ ·
+  `docs/backup.md` "Requisitos"; H:205-206, 212
 - **Si faltan los secretos de fotos, el backup de la base sigue y las fotos se omiten con advertencia amarilla.** _Vigente_ ·
   `docs/backup.md` paso 5
 - **El backup no cubre otros buckets de Storage ni la configuración del proyecto** (auth, Edge Functions): se recrea con
@@ -542,8 +695,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   _Vigente_ · H:218-222
 - **Capacidad estimada: 3 negocios, 15 usuarios, 200 operaciones por día, 5 años de datos dentro del límite vigente.** Sin
   estimación de tamaño hecha. _No verificado_ · SRS RNF-03; AUD:71
-- **Rendimiento objetivo: búsqueda en POS menos de 200 ms con 2.000 productos (medido 33 a 85 ms); venta confirmada menos de 2 s con
-  conexión (sin prueba de tiempo).** _Vigente / no verificado (RNF-02)_ · SRS RNF-01/02; H:467; AUD:62
+- **Rendimiento objetivo: búsqueda en POS menos de 200 ms con 2.000 productos (medido 33 a 85 ms); venta confirmada menos de
+  2 s con conexión (medida en local: unos 290 ms).** _Vigente_ · SRS RNF-01/02; H:467; H:294-295 (#91)
 - **Base centralizada: una sola base para los 3 negocios, datos separados por `negocio_id` y RLS.** _Vigente (decisión CTO)_ ·
   H:505-507
 
@@ -570,8 +723,8 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
 - **Producción lista para cargar datos; bloqueado por el cliente en este orden:** precios, servicios de lavandería y catálogo del
   frial, tope de descuento, conteo físico, usuarios, prueba en equipos reales con lector, capacitación. _Pendiente (cliente/CTO)_ ·
   H:37-48
-- **Capacitación (`docs/capacitacion.md`) no cubre la Entrega B** (crédito, reservas, compras, insumos) y dice que el Inicio del
-  panel no tiene módulos, cosa ya corregida (#63). _Pendiente (documentación)_ · CAP:102-104; H:211
+- **La capacitación (`docs/capacitacion.md`) cubre la Entrega B y el Inicio del panel desde #93;** el PR 4 la pone al día con
+  los cambios de los PR 1 a 3. _Pendiente (documentación)_ · H:274
 
 ## 20. Contrato, entrega y alcance
 
@@ -584,7 +737,7 @@ Armado el 2026-11-09 a partir de esas fuentes, del encabezado de cada migración
   _Vigente (borrador de acta)_ · `docs/acta-entrega.md` §7
 - **El acta no se firma hasta tener dominio propio (cláusula octava), el paralelo cumplido y las observaciones subsanadas.** El
   dominio se compra al final (RF-TR-10 abierto). _Pendiente de decisión CTO_ · `docs/acta-entrega.md`; H:200
-- **D-04: contrato firmado; falta la fecha exacta para contar el plazo.** _Pendiente de decisión CTO_ · H:54-55; SRS:290
+- **D-04: contrato firmado; falta anotar la fecha exacta para contar el plazo.** _Firmado (decisión del CTO, 2026-11-01); falta la fecha_ · H:485; SRS:296
 - **Alcance v1 incluye todo (Entrega A + B).** Se avisó que no entra razonablemente en 30 días ni en Bs 10.000; mitigación: A
   contractual y B extras. Los extras de B (crédito, reservas, proveedores, insumos), el POS sin conexión, los precios en USD y el
   dólar paralelo están fuera de la cláusula tercera; si entran en la garantía de 5 años está sin definir. _Pendiente de decisión CTO
@@ -633,7 +786,8 @@ Todas tienen un supuesto aplicado para no frenar el diseño. No consta en las fu
   parcialmente (2026-11-01); falta el acuerdo por escrito_ · SRS:288
 - **D-03 Aviso de dependencia del cliente:** el cliente carga precios, servicios, series y tope de descuento. _Decidido (no frena el
   desarrollo); falta el aviso escrito_ · SRS:289
-- **D-04 Firma del contrato:** `docs/srs.md` lo da por firmado y `docs/handoff.md` (Estado actual) por pendiente de firma; falta la fecha. _Pendiente: confirmar con el CTO_ · SRS:290; H:54-55
+- **D-04 Firma del contrato:** firmado; falta anotar la fecha exacta (decisión del CTO del 2026-11-01). _Abierto solo por la fecha_ · SRS:296; H:485
 - **Otras pendientes del CTO:** dominio (RF-TR-10), rotación de credenciales en la entrega, copia offline de la clave `age`, compartir
-  planillas con el cliente, y decidir si los saldos de crédito sin reverso o el interés fuera de `ventas.total` necesitan cambio.
+  planillas con el cliente, y decidir si una venta a crédito o de reserva hecha por error necesita reverso (el reverso del último
+  pago de cuota ya existe, PR 2) y si el interés fuera de `ventas.total` necesita cambio.
   _Pendiente de decisión CTO_ · H:48, 70, 238-244; PF-7:109-113
