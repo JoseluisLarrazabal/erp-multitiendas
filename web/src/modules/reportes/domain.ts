@@ -34,7 +34,16 @@ const CAJA: DefReporte = {
   id: "caja",
   etiqueta: "Caja",
   criterio:
-    "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo y QR de ventas, anticipos de reservas y cuotas de crédito. Una venta sin conexión cuenta en la caja donde se hizo, aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre.",
+    "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo y QR de ventas, anticipos de reservas y cuotas de crédito. Una venta sin conexión cuenta en la caja donde se hizo, aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre; lo que llegó después se ve en el detalle de esa caja.",
+};
+// Sin créditos, reservas ni cuotas; la orden se cobra al recibirla. reporte_ventas solo cuenta las completadas: una orden
+// anulada no entra; las devoluciones restan el día en que se hacen.
+const CRITERIO_INGRESOS_LAVANDERIA =
+  "Cuenta las órdenes recibidas, por el día en que la orden llegó al sistema: una orden hecha sin conexión cuenta el día en que se envió. La orden se cobra al recibirla. Una orden anulada no cuenta y las devoluciones restan el día en que se hacen.";
+const CAJA_LAVANDERIA: DefReporte = {
+  ...CAJA,
+  criterio:
+    "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo y QR de las órdenes. Una orden sin conexión cuenta en la caja donde se hizo, aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre; lo que llegó después se ve en el detalle de esa caja.",
 };
 const STOCK: DefReporte = { id: "stock", etiqueta: "Stock" };
 
@@ -46,12 +55,12 @@ export function reportesDe(tipo: string, verCostos: boolean): readonly DefReport
         id: "ingresos",
         etiqueta: "Ingresos",
         agrupar: ["dia", "producto"],
-        criterio: CRITERIO_VENTAS,
+        criterio: CRITERIO_INGRESOS_LAVANDERIA,
       },
       ...(verCostos
         ? [{ id: "insumos", etiqueta: "Insumos", agrupar: AGRUPAR_INSUMOS } as DefReporte]
         : []),
-      CAJA,
+      CAJA_LAVANDERIA,
     ];
   if (tipo === "frial")
     return [

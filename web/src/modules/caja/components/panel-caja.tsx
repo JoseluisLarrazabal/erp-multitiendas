@@ -66,8 +66,8 @@ export function PanelCaja({
   // Contenido de la cola (la suscripción es la del POS).
   filas: readonly FilaCola[];
   ventaPendiente: boolean;
-  // Ventas y movimientos rechazados de este equipo: no bloquean el cierre, se avisan (M-11).
-  rechazadas: { cantidad: number; totalVentas: number };
+  // Ventas y movimientos rechazados de este equipo (de esta caja y de anteriores): no bloquean el cierre, se avisan (M-11).
+  rechazadas: { cantidad: number; totalVentas: number; anteriores: number };
   // No se pudo leer la cola de ventas de este equipo: no se sabe si hay algo sin enviar.
   lecturaColaFallida: boolean;
   // Tras encolar un movimiento: el motor lo envía sin esperar el temporizador.
@@ -352,12 +352,17 @@ export function PanelCaja({
                 <p role="alert" className="text-destructive text-sm">
                   {lecturaColaFallida
                     ? "No se pudo leer la cola de ventas de este equipo, así que no se sabe si hay ventas sin enviar. Recarga la página antes de cerrar la caja."
-                    : "Hay operaciones sin enviar o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja."}
+                    : "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja."}
                 </p>
               )}
               {rechazadas.cantidad > 0 && (
                 <p role="status" className="text-sm">
                   {`Hay ${rechazadas.cantidad} ${rechazadas.cantidad === 1 ? "operación rechazada" : "operaciones rechazadas"} sin resolver${rechazadas.totalVentas > 0 ? ` (ventas por ${formatearBs(rechazadas.totalVentas)})` : ""}. El esperado no las cuenta. Avisa a un encargado para que las reintente o las descarte.`}
+                </p>
+              )}
+              {rechazadas.anteriores > 0 && (
+                <p role="status" className="text-sm">
+                  {`Además hay ${rechazadas.anteriores} ${rechazadas.anteriores === 1 ? "operación rechazada" : "operaciones rechazadas"} de cajas anteriores sin resolver en este equipo.`}
                 </p>
               )}
               {sinRed && (

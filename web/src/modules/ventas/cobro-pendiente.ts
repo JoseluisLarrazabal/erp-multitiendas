@@ -76,13 +76,19 @@ export function montosCongelados(p: PendienteEnLinea | undefined, estado: { t: s
   return { efectivo: de("efectivo"), qr: de("qr") };
 }
 
-// ¿Hay un cobro en línea o una cuota sin confirmar guardados en este navegador (de cualquier equipo o negocio)? Las
-// claves se borran al quedar vacías, así que basta con que exista una. Recargar con ellas perdería el aviso al cajero.
+// ¿Hay un cobro en línea o una cuota sin confirmar guardados en este navegador (de cualquier equipo o negocio)? Cuenta la
+// clave con contenido legible y no vacío: una clave vieja, vacía o con basura no puede bloquear la actualización para siempre.
 export function hayCobrosGuardados(): boolean {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i) ?? "";
-      if (k.startsWith(`${CLAVE}:`) || k.startsWith("erp:cuotas-sin-confirmar:")) return true;
+      if (!k.startsWith(`${CLAVE}:`) && !k.startsWith("erp:cuotas-sin-confirmar:")) continue;
+      try {
+        const v: unknown = JSON.parse(localStorage.getItem(k) ?? "");
+        if (typeof v === "object" && v !== null && Object.keys(v).length > 0) return true;
+      } catch {
+        // ilegible: no cuenta
+      }
     }
     return false;
   } catch {
@@ -97,4 +103,5 @@ export const debeAplicarSola = (e: {
   colaVacia: boolean | null;
   cobrosGuardados: boolean;
   pendiente: boolean;
-}) => !e.interactuo && e.colaVacia === true && !e.cobrosGuardados && !e.pendiente;
+  lineas: number;
+}) => !e.interactuo && e.colaVacia === true && !e.cobrosGuardados && !e.pendiente && e.lineas === 0;

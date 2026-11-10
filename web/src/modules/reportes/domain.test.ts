@@ -17,4 +17,19 @@ describe("criterio de los reportes", () => {
     expect(ventas.criterio).toContain("crédito entra entera");
     expect(ventas.criterio).toContain("los anticipos y las cuotas no entran aquí sino en Caja");
   });
+
+  it("la lavandería no menciona créditos, reservas ni cuotas", () => {
+    for (const def of reportesDe("lavanderia", true)) {
+      expect(def.criterio ?? "", def.id).not.toMatch(/crédito|reserva|cuota|anticipo/i);
+    }
+    const ingresos = reportesDe("lavanderia", false).find((d) => d.id === "ingresos")!;
+    expect(ingresos.criterio).toContain("La orden se cobra al recibirla");
+  });
+
+  it("la caja dice dónde se ve lo que llegó después del cierre", () => {
+    for (const tipo of ["tienda", "frial", "lavanderia"]) {
+      const caja = reportesDe(tipo, false).find((d) => d.id === "caja")!;
+      expect(caja.criterio).toContain("lo que llegó después se ve en el detalle de esa caja");
+    }
+  });
 });

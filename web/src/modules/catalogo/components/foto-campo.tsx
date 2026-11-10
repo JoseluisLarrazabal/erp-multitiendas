@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ImagePlus, Package } from "lucide-react";
 import { errorDeFoto, FOTO_ORIGINAL_MAX_BYTES, FOTO_TIPOS } from "../domain";
 import { comprimirFoto } from "../foto";
 
-type Props = { urlActual: string | null; nombre: string; alElegir: (archivo: File | null) => void };
+type Props = {
+  urlActual: string | null;
+  nombre: string;
+  alElegir: (archivo: File | null) => void;
+  // Avisa al formulario mientras la foto se comprime: no debe guardarse con la foto a medias.
+  alProcesar: (ocupado: boolean) => void;
+};
 
 // Vista previa local (URL de objeto) de la foto elegida; sin elegir, la actual firmada. Valida antes de subir.
-export function FotoCampo({ urlActual, nombre, alElegir }: Props) {
+export function FotoCampo({ urlActual, nombre, alElegir, alProcesar }: Props) {
   const [vista, setVista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [procesando, setProcesando] = useState(false);
+  // Turno de la última elección: el resultado de una compresión que ya no es la última se descarta.
+  const turno = useRef(0);
 
   // La URL de objeto retiene memoria hasta revocarse: se libera al cambiar la foto o desmontar.
   useEffect(() => () => (vista ? URL.revokeObjectURL(vista) : undefined), [vista]);
@@ -18,12 +27,21 @@ export function FotoCampo({ urlActual, nombre, alElegir }: Props) {
   async function cambiar(e: ChangeEvent<HTMLInputElement>) {
     const input = e.target;
     const original = input.files?.[0] ?? null;
+    const mio = ++turno.current;
     // Tipo y tope del original antes de comprimir; el tope del bucket (5 MB), sobre el resultado.
     let problema = original ? errorDeFoto(original, FOTO_ORIGINAL_MAX_BYTES) : null;
     let archivo = original;
     if (original && !problema) {
+      setProcesando(true);
+      alProcesar(true);
       archivo = await comprimirFoto(original);
+      if (mio !== turno.current) return;
+      setProcesando(false);
+      alProcesar(false);
       problema = errorDeFoto(archivo);
+    } else {
+      setProcesando(false);
+      alProcesar(false);
     }
     setError(problema);
     if (!archivo || problema) {
@@ -76,6 +94,9 @@ export function FotoCampo({ urlActual, nombre, alElegir }: Props) {
           </p>
         </div>
       </div>
+      <p role="status" className="text-muted-foreground text-xs empty:hidden">
+        {procesando ? "Preparando la foto…" : ""}
+      </p>
       <p role="alert" className="text-destructive text-xs empty:hidden">
         {error}
       </p>

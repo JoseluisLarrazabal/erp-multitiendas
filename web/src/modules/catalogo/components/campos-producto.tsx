@@ -21,6 +21,7 @@ type Props = {
   alCambiarNombre: (nombre: string) => void;
   fotoUrl: string | null;
   alElegirFoto: (archivo: File | null) => void;
+  alProcesarFoto: (ocupado: boolean) => void;
 };
 
 // Los campos del formulario de producto, en orden de pantalla. Dentro de un grid de 2 columnas.
@@ -34,6 +35,7 @@ export function CamposProducto({
   alCambiarNombre,
   fotoUrl,
   alElegirFoto,
+  alProcesarFoto,
 }: Props) {
   const [unidad, setUnidad] = useState(valores?.unidad ?? "unidad");
   return (
@@ -188,7 +190,12 @@ export function CamposProducto({
         Controla número de serie
       </label>
       <div className="sm:col-span-2">
-        <FotoCampo urlActual={fotoUrl} nombre={nombre} alElegir={alElegirFoto} />
+        <FotoCampo
+          urlActual={fotoUrl}
+          nombre={nombre}
+          alElegir={alElegirFoto}
+          alProcesar={alProcesarFoto}
+        />
       </div>
     </>
   );

@@ -15,13 +15,11 @@ export function medidasDestino(ancho: number, alto: number, ladoMax: number) {
 
 // Achica la foto antes de subir (el celular entrega 4-8 MB). Ante cualquier falla devuelve el original.
 export async function comprimirFoto(archivo: File): Promise<File> {
+  let bmp: ImageBitmap | null = null;
   try {
-    const bmp = await createImageBitmap(archivo);
+    bmp = await createImageBitmap(archivo, { imageOrientation: "from-image" });
     const { ancho, alto } = medidasDestino(bmp.width, bmp.height, LADO_MAX);
-    if (ancho === bmp.width && alto === bmp.height && archivo.size < UMBRAL_BYTES) {
-      bmp.close();
-      return archivo;
-    }
+    if (ancho === bmp.width && alto === bmp.height && archivo.size < UMBRAL_BYTES) return archivo;
     const canvas = document.createElement("canvas");
     canvas.width = ancho;
     canvas.height = alto;
@@ -31,7 +29,6 @@ export async function comprimirFoto(archivo: File): Promise<File> {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, ancho, alto);
     ctx.drawImage(bmp, 0, 0, ancho, alto);
-    bmp.close();
     const aBlob = (tipo: string, calidad: number) =>
       new Promise<Blob | null>((ok) => canvas.toBlob(ok, tipo, calidad));
     let blob = await aBlob("image/webp", 0.8);
@@ -41,6 +38,8 @@ export async function comprimirFoto(archivo: File): Promise<File> {
     return new File([blob], archivo.name, { type: blob.type });
   } catch {
     return archivo;
+  } finally {
+    bmp?.close();
   }
 }
 

@@ -126,24 +126,29 @@ export function AvisoActualizacion({
   useEffect(() => {
     if (!serwist || !enEspera || otraPestana || colaVacia !== true || yaSeAplicoSola()) return;
     let cancelado = false;
-    void hayPendienteRef.current().then((pendiente) => {
-      if (
-        cancelado ||
-        !debeAplicarSola({
-          interactuo: interactuo.current,
-          colaVacia,
-          cobrosGuardados: hayCobrosGuardados(),
-          pendiente,
-        })
-      )
-        return;
-      try {
-        sessionStorage.setItem(CLAVE_AUTO, String(Date.now()));
-      } catch {
-        return;
-      }
-      aplicar();
-    });
+    hayPendienteRef
+      .current()
+      .then((pendiente) => {
+        if (
+          cancelado ||
+          !debeAplicarSola({
+            interactuo: interactuo.current,
+            colaVacia,
+            cobrosGuardados: hayCobrosGuardados(),
+            pendiente,
+            lineas: lineasEnCurso(),
+          })
+        )
+          return;
+        try {
+          sessionStorage.setItem(CLAVE_AUTO, String(Date.now()));
+        } catch {
+          return;
+        }
+        aplicar();
+      })
+      // Sin saber si hay algo pendiente no se aplica sola.
+      .catch(() => undefined);
     return () => {
       cancelado = true;
     };
@@ -151,7 +156,8 @@ export function AvisoActualizacion({
   }, [serwist, enEspera, otraPestana, colaVacia]);
 
   async function alPulsar() {
-    if (hayCobrosGuardados() || (await hayPendiente())) {
+    // Si la comprobación falla no se sabe: se trata como pendiente.
+    if (hayCobrosGuardados() || (await hayPendiente().catch(() => true))) {
       setCobroSinConfirmar(true);
       return;
     }
@@ -194,7 +200,7 @@ export function AvisoActualizacion({
       </div>
       {cobroSinConfirmar && (
         <p role="alert" className="text-destructive text-sm">
-          Hay un cobro o una cuota sin confirmar en este equipo. Verifícalo antes de actualizar.
+          Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de actualizar.
         </p>
       )}
       <ConfirmarDescarte

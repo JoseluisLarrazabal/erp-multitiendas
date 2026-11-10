@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Dato, Seccion } from "@/modules/catalogo/panel";
 import { formatearFechaHora, formatearHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
-import { bsONulo, ETIQUETA_MOVIMIENTO, ETIQUETA_REVISION_MOVIMIENTO } from "../domain";
+import {
+  bsONulo,
+  ETIQUETA_MOVIMIENTO,
+  ETIQUETA_REVISION_MOVIMIENTO,
+  textoTardias,
+} from "../domain";
 import type { DetalleSesion } from "../lecturas-panel";
 
 // `enviadaPor` ya es la etiqueta completa ("Sin conexión, enviada por X"); null si la envió quien la registró.
@@ -153,10 +158,7 @@ export function DetalleSesionVista({
         </dl>
         {cerrada && hayTardias && (
           <p role="status" className="text-muted-foreground text-xs">
-            {ventasTardias + movimientosTardios > 0
-              ? `Después del cierre llegaron ${ventasTardias} ${ventasTardias === 1 ? "venta" : "ventas"} sin conexión por ${formatearBs(r.tardias_ventas_total ?? 0)}${movimientosTardios > 0 ? ` y ${movimientosTardios} ${movimientosTardios === 1 ? "movimiento" : "movimientos"} de caja` : ""}. `
-              : "Después del cierre hubo cambios que modificaron el esperado. "}
-            El arqueo del cierre no cambia.
+            {textoTardias(ventasTardias, r.tardias_ventas_total ?? 0, movimientosTardios)}
           </p>
         )}
         {!cerrada && (

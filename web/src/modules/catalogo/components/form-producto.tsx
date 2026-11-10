@@ -52,12 +52,14 @@ export function FormProducto({
   const [guardado, setGuardado] = useState(false);
   const [nombre, setNombre] = useState(producto?.nombre ?? "");
   const foto = useRef<File | null>(null);
+  const [procesandoFoto, setProcesandoFoto] = useState(false);
   // Si el alta ya creó el producto pero falló la foto, el reintento edita ese producto, no crea otro.
   const idCreado = useRef<string | null>(null);
   const valores = producto;
 
   function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (procesandoFoto) return;
     const f = new FormData(e.currentTarget);
     const texto = (n: string) => String(f.get(n) ?? "");
     setGuardado(false);
@@ -136,6 +138,7 @@ export function FormProducto({
         alCambiarNombre={setNombre}
         fotoUrl={fotoUrl}
         alElegirFoto={(archivo) => (foto.current = archivo)}
+        alProcesarFoto={setProcesandoFoto}
       />
       <div className="flex flex-col gap-2 sm:col-span-2">
         <p role="alert" className="text-destructive text-sm empty:hidden">
@@ -144,7 +147,7 @@ export function FormProducto({
         <p role="status" className="text-sm font-medium">
           {guardado && !mensaje ? "Producto guardado." : ""}
         </p>
-        <Button type="submit" disabled={pendiente} className="h-10 self-start">
+        <Button type="submit" disabled={pendiente || procesandoFoto} className="h-10 self-start">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           {producto ? "Guardar cambios" : "Crear producto"}
         </Button>

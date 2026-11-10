@@ -841,7 +841,9 @@ test("E2E-07: con la cola pendiente el cierre de caja está bloqueado y se habil
   const cerrar = page.getByRole("button", { name: "Cerrar caja" }).first();
   await expect(cerrar).toBeDisabled();
   await expect(
-    page.getByText("Hay operaciones sin enviar o cobros sin confirmar en este equipo"),
+    page.getByText(
+      "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar",
+    ),
   ).toBeVisible();
 
   await context.setOffline(false);
@@ -1799,11 +1801,13 @@ test("actualización disponible: el botón se habilita solo con la cola vacía",
   await expect(boton).toBeEnabled({ timeout: 15_000 });
 
   // Un cobro o una cuota sin confirmar en el navegador impide aplicar aunque la cola esté vacía.
-  await page.evaluate(() => localStorage.setItem("erp:cuotas-sin-confirmar:prueba:prueba", "{}"));
+  await page.evaluate(() =>
+    localStorage.setItem("erp:cuotas-sin-confirmar:prueba:prueba", '{"a":1}'),
+  );
   await boton.click();
   await expect(
     page.getByText(
-      "Hay un cobro o una cuota sin confirmar en este equipo. Verifícalo antes de actualizar.",
+      "Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de actualizar.",
     ),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Actualizar ahora" })).toBeVisible();
