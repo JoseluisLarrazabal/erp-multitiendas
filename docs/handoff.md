@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (PR 3 del plan de preentrega: migraciones en producción; PR abierto).
+Última actualización: 2026-11-10 (PR 3 del plan de preentrega mergeado y desplegado en producción; falta el PR 4).
 
 ## Próxima sesión (arrancar acá)
 
@@ -11,8 +11,20 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Hito activo: PR 4, documentos (rama `docs/paquete-entrega`, sin empezar).** Los escribe el chairman: acta,
     paralelo, capacitación, despliegue, las reglas faltantes en `docs/manual/`, SRS, contradicciones del handoff y los
     límites conocidos de los PR 1 a 3. Lista de lo que los PR 1 a 3 mandan al manual, abajo en cada PR.
-  - **PR 3, operación diaria: código y base desplegados el 2026-11-10 (rama `fix/operacion-diaria-preentrega`).** El
-    número del PR, el squash y la verificación de la web en producción se anotan al mergear.
+  - **PR 3, operación diaria: cerrado el 2026-11-10 (PR #99, squash `2340106`).**
+    - Cierre: CI del PR en verde (17 min 42 s, una sola subida; la prueba de bloqueos con `dblink` pasó en GitHub);
+      merge a las 14:50 UTC; deploy de Vercel en verde sobre `2340106`. Comprobado en producción con la web nueva
+      (sesión del dueño, solo lectura): reportes muestra el texto del criterio; `/panel/productos?q=cafe` devuelve 3
+      productos; clientes, inventario, cajas, compras y datos del negocio cargan; `/panel`, `/pos` y
+      `/panel/reportes` sin sesión llevan a `/login`; 0 errores de consola; 0 errores de runtime en la última hora.
+    - **La primera actualización tras este PR sigue siendo a mano.** El POS abrió con el código anterior, que no
+      sabe aplicarse solo: mostró "Actualización disponible" y quedó en la versión nueva al pulsar "Actualizar
+      ahora", sin errores. Cada equipo con el POS instalado necesita ese botón una vez; desde el deploy siguiente se
+      actualiza solo. Va a la capacitación y al manual (PR 4).
+    - Lo que el QA de producción no pudo ver: no hay ventas, cajas cerradas, clientes ni órdenes en producción. El
+      detalle de una caja con ventas tardías, el cierre con una venta rechazada, la referencia del kardex y la
+      compresión de fotos están probados solo en local. Se ven en el paralelo.
+    - Limpieza: worktrees y ramas temporales del PR 3 borrados.
     - Qué entró: M-9 (texto del criterio en los reportes, con textos propios para la lavandería), M-10 (una caja
       cerrada muestra los tres números del cierre y, aparte, lo que llegó sin conexión después; `reporte_caja` usa el
       esperado guardado), M-11 (una venta o un movimiento rechazado no bloquea el cierre; se avisa, separando los de
