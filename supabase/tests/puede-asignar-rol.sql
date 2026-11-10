@@ -1,6 +1,6 @@
 -- puede_asignar_rol: permiso `usuarios`, rol existente para el tipo de negocio y `dueno` solo por un dueño.
 begin;
-select plan(7);
+select plan(9);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -26,7 +26,9 @@ select ok(not public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', '
 select pg_temp.como('99999999-3000-0000-0000-000000000002');
 select ok(not public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', 'rol_inexistente'), '3: rol que no existe para el tipo');
 select ok(not public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', 'dueno'), '4: encargado no asigna dueno');
+select ok(not public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', 'encargado'), '4b: encargado no asigna encargado');
 select pg_temp.como('99999999-3000-0000-0000-000000000001');
+select ok(public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', 'encargado'), 'dueño sí asigna encargado');
 select ok(public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', 'dueno'), 'dueño sí asigna dueno');
 select ok(not public.puede_asignar_rol('aaaaaaaa-3000-0000-0000-000000000001', null), 'rol nulo: falso, no null');
 reset role;

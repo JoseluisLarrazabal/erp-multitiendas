@@ -63,6 +63,11 @@ describe("accionesDeFila", () => {
     expect(Object.values(accionesDeFila(f, false)).some(Boolean)).toBe(false);
     expect(accionesDeFila(f, true).quitar).toBe(true);
   });
+  it("una fila encargado no tiene acciones si no soy dueño", () => {
+    const f = fila({ rol: "encargado" });
+    expect(Object.values(accionesDeFila(f, false)).some(Boolean)).toBe(false);
+    expect(accionesDeFila(f, true).quitar).toBe(true);
+  });
   it("desactivar y reactivar dependen del estado y de puede_administrar_cuenta", () => {
     expect(accionesDeFila(fila(), false)).toMatchObject({ desactivar: true, reactivar: false });
     expect(accionesDeFila(fila({ activo: false }), false)).toMatchObject({
@@ -86,8 +91,8 @@ describe("restablecer", () => {
 
 describe("rolesOfrecidos", () => {
   const roles = ["empleado", "dueno", "encargado"];
-  it("ofrece dueno solo a un dueño y respeta el orden", () => {
-    expect(rolesOfrecidos(roles, false)).toEqual(["encargado", "empleado"]);
+  it("ofrece dueno y encargado solo a un dueño y respeta el orden", () => {
+    expect(rolesOfrecidos(roles, false)).toEqual(["empleado"]);
     expect(rolesOfrecidos(roles, true)).toEqual(["dueno", "encargado", "empleado"]);
   });
 });

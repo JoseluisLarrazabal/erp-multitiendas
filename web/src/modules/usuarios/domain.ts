@@ -72,9 +72,11 @@ export function destinoInicial(
 
 const ORDEN_ROLES = Object.keys(ETIQUETA_ROL);
 
-// `dueno` solo lo asigna un dueño (regla 1); la RPC lo exige igual, esto solo evita ofrecer lo que se rechazaría.
+// `dueno` y `encargado` solo los asigna un dueño (regla 1); la RPC lo exige igual, esto solo evita ofrecer lo que se rechazaría.
 export const rolesOfrecidos = (roles: readonly string[], llamadorEsDueno: boolean) =>
-  ORDEN_ROLES.filter((r) => roles.includes(r) && (llamadorEsDueno || r !== "dueno"));
+  ORDEN_ROLES.filter(
+    (r) => roles.includes(r) && (llamadorEsDueno || (r !== "dueno" && r !== "encargado")),
+  );
 
 export type FilaUsuario = {
   usuarioId: string;
@@ -104,9 +106,10 @@ const SIN_ACCIONES: AccionesFila = {
   restablecer: false,
 };
 
-// Ocultar es comodidad: decide la RPC. Mi fila y la de un dueño (si no soy dueño) no llevan acciones.
+// Ocultar es comodidad: decide la RPC. Mi fila y la de un dueño o encargado (si no soy dueño) no llevan acciones.
 export function accionesDeFila(fila: FilaUsuario, llamadorEsDueno: boolean): AccionesFila {
-  if (fila.esYo || (fila.rol === "dueno" && !llamadorEsDueno)) return SIN_ACCIONES;
+  if (fila.esYo || (!llamadorEsDueno && (fila.rol === "dueno" || fila.rol === "encargado")))
+    return SIN_ACCIONES;
   return {
     cambiarRol: true,
     quitar: true,
@@ -126,7 +129,8 @@ export const MENSAJES_ERROR: Record<string, string> = {
   ERP_SIN_PERMISO: "No tienes permiso para hacer esto.",
   ERP_SIN_SESION: "Tu sesión terminó. Vuelve a ingresar.",
   ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
-  ERP_DUENO_PROTEGIDO: "Solo un dueño del negocio puede asignar o modificar a un dueño.",
+  ERP_DUENO_PROTEGIDO:
+    "Solo un dueño del negocio puede asignar o modificar a un dueño o a un encargado.",
   ERP_ULTIMO_DUENO:
     "Es el único dueño activo de uno de sus negocios: nombra o reactiva a otro dueño antes de desactivarlo.",
   ERP_AUTOGESTION: "No puedes cambiar tu propio rol ni quitarte a ti mismo.",
