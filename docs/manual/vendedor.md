@@ -139,9 +139,9 @@ Luego pulsar "Confirmar cobro". Si desea corregir algo, "Volver".
 Si el cobro se queda en "Enviando…" o aparece "Cobro sin confirmar", no cobre otra vez al cliente. Pulse "Reintentar
 cobro" o "Descartar y verificar" para saber si la venta quedó registrada.
 
-Una venta normal, en efectivo o QR, se guarda en el equipo y se envía sola: no muestra el aviso que sigue. Los cobros
-que van directo al servidor, sin guardarse para después, son completar una reserva (el crédito lo cobra el encargado).
-Si recarga la página a mitad de uno de ellos, arriba queda un aviso fijo: "Cobro sin confirmar: C1-000005, Bs … No
+Una venta normal, en efectivo o QR, se guarda en el equipo y se envía sola: no muestra el aviso que sigue. Algunos
+cobros van directo al servidor y no se guardan para después: el de la venta que completa una reserva y el de una cuota
+(la venta a crédito la cobra el encargado). Si recarga la página a mitad de uno de ellos, arriba queda un aviso fijo: "Cobro sin confirmar: C1-000005, Bs … No
 entregues el producto hasta verificar." Pulse "Verificar cobro": el sistema consulta si la venta quedó registrada, sin
 cobrar de nuevo. Lo mismo pasa con una cuota, en la pantalla "Cuotas". Mientras haya un cobro sin confirmar, no se puede
 cerrar la caja.
@@ -236,8 +236,8 @@ acepta y queda marcada para que el encargado la revise. No venda por debajo del 
   cuando aparezca "La aplicación se actualizó en otra pestaña."
 - Si ve un aviso de operaciones de otro negocio sin enviar, entre con la cuenta y el negocio que las hicieron: solo así se envían.
 - En el cambio de turno, si entra otra cuenta del mismo negocio, lo pendiente del turno anterior se envía igual y queda
-  marcado como "Enviada desde otra cuenta". Con esa cuenta no se puede comprobar ni descartar una venta rechazada: hay
-  que entrar con la cuenta que la hizo. Lo pendiente de otro negocio no se envía con esta cuenta.
+  marcado como "Enviada desde otra cuenta". Lo pendiente de otro negocio no se envía con esta
+  cuenta.
 - Hasta el fin del paralelo, el cuaderno sigue siendo el registro oficial: cada venta se anota también allí.
 
 Se recomienda que el negocio tenga un respaldo de internet por 4G.
