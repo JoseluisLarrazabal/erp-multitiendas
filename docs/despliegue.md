@@ -31,6 +31,10 @@ pnpm exec supabase --workdir .. config push                    # usa el bloque [
 pnpm exec supabase --workdir .. functions deploy admin-usuarios
 ```
 
+En una actualización el orden importa: primero las migraciones, después la función `admin-usuarios` y al final la web
+(Vercel despliega sola al mergear). La función y la web nuevas llaman a objetos que crean las migraciones; mientras
+no se aplican, las pantallas nuevas fallan. Antes de `db push` en producción: backup manual en verde.
+
 - Las migraciones traen la matriz de permisos (`rol_permisos`) y el bucket privado `productos`.
 - `config.toml` tiene `site_url` localhost para el entorno local. El bloque `[remotes.produccion]`, con el ref de
   producción, lo reemplaza por la URL pública al hacer `config push`. Sin ese bloque, producción queda con localhost
@@ -128,7 +132,11 @@ gh workflow run backup.yml
 gh run watch
 ```
 
-Debe terminar con `VERIFICACION OK` y el artifact `erp-backup-<fecha>`. Simulacro a mano en `docs/backup.md`.
+`gh workflow run backup.yml` corre el tipo `completo` (base y fotos); con `-f tipo=base` respalda solo la base. Debe
+terminar con `VERIFICACION OK` y el artifact `erp-backup-<fecha>T<hora>Z-<tipo>`. Simulacro a mano en `docs/backup.md`.
+
+El backup de fotos necesita además los secretos `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (`docs/backup.md`,
+"Requisitos"); sin ellos la corrida queda verde con un aviso y las fotos no se respaldan.
 
 ## 7. Verificación
 
@@ -136,7 +144,7 @@ Debe terminar con `VERIFICACION OK` y el artifact `erp-backup-<fecha>`. Simulacr
 - [ ] El vendedor entra directo al punto de venta
 - [ ] Abrir caja, vender y cerrar caja en un equipo real
 - [ ] Una foto importada se ve en la ficha del producto (CSP)
-- [ ] Backup diario en verde
+- [ ] Backup en verde: las dos corridas del día (`completo` y `base`)
 - [ ] Playwright sobre producción sin sesión: `/`, `/panel` y `/pos` llevan a `/login`
 
 ## Dominio (al final)
