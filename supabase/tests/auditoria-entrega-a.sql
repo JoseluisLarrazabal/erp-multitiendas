@@ -165,12 +165,13 @@ select throws_ok($$select public.devolver_venta(jsonb_build_object('id', pg_temp
     'venta_item_id', (select id from public.venta_items where venta_id = pg_temp.i('Q1')), 'cantidad', 1))))$$,
   'P0001', 'ERP_QR_RECHAZADO', 'devolver_venta: no devuelve lo cobrado por un QR rechazado (nunca entró)');
 
--- Bajos: bloqueos por uuid (el mismo orden que bloquear_stock)
+-- Bajos: bloqueos por uuid (el mismo orden que bloquear_stock). Esta búsqueda de texto NO discrimina (un order by roto
+-- con otro texto, o sin efecto, pasaría): el orden de bloquear_stock y registrar_conteo lo prueba de verdad bloqueos-orden.sql.
 select is((select count(*) from pg_proc where pronamespace = 'public'::regnamespace
-  and proname in ('registrar_venta', 'guardar_precios', 'registrar_conteo', 'fijar_costos')
+  and proname in ('guardar_precios', 'fijar_costos')
   and prosrc like '%(%->> ''producto_id'')::uuid%'
-  and prosrc not like '%order by e ->> ''producto_id''%' and prosrc not like '%order by t.e ->> ''producto_id''%')::integer, 4,
-  'bloqueos: las 4 RPC ordenan por producto_id como uuid');
+  and prosrc not like '%order by e ->> ''producto_id''%' and prosrc not like '%order by t.e ->> ''producto_id''%')::integer, 2,
+  'bloqueos: guardar_precios y fijar_costos ordenan por producto_id como uuid (búsqueda de texto)');
 
 -- Bajos: guardar_producto no activa series con stock
 select pg_temp.como(pg_temp.i('d'));
