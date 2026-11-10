@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (PR 2 del plan de preentrega: migraciones y función en producción; PR abierto).
+Última actualización: 2026-11-10 (PR 2 del plan de preentrega mergeado y desplegado en producción).
 
 ## Próxima sesión (arrancar acá)
 
@@ -12,8 +12,19 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     pasos al arrancar. Alcance: M-9 a M-14, M-16, M-17, pruebas de la sección 4, los dos "no concluyentes" del QA,
     compresión de fotos al subir, y dos cosas que salieron del PR 2: el reporte "sin movimiento" cuenta
     `anulacion_compra` como salida, y el aviso de actualización del POS (ver "QA autenticado" abajo).
-  - **PR 2, Entrega B: código y base desplegados el 2026-11-10 (rama `fix/entrega-b-preentrega`).** El número del PR,
-    el squash y la verificación de la web en producción se anotan al mergear.
+  - **PR 2, Entrega B: cerrado el 2026-11-10 (PR #97, squash `426a91d`).**
+    - Cierre: CI del PR en verde (16 min 25 s, una sola subida); merge a las 13:06 UTC; deploy de Vercel `READY`
+      sobre `426a91d`. Comprobado en producción con la web nueva (sesión del dueño, solo lectura): `/panel/compras`,
+      `/panel/compras/nueva`, `/panel/ventas`, `/panel/usuarios`, `/panel/creditos`, `/panel/proveedores`,
+      `/panel/inventario` y `/pos` cargan; `/panel`, `/pos` y `/panel/compras` sin sesión llevan a `/login`; 0 errores
+      de consola del producto; 0 errores de runtime en la última hora. Entre el `db push` (12:47 UTC) y el merge, la
+      web vieja convivió 19 minutos con la base nueva: `/panel/compras` cargó sin errores.
+    - **Lo que el QA de producción no pudo ver:** Multitienda Lider no tiene ventas, compras, proveedores, créditos,
+      reservas ni otra persona que el dueño. Los reversos, los documentos del crédito, el lote en las compras del
+      frial y las acciones sobre encargados están probados solo en local (pgTAP y Playwright), no con datos de
+      producción. Se ven en el paralelo.
+    - Limpieza: worktrees y ramas temporales del PR 2 borrados; quedan `wt-push` y tres ramas `worktree-agent-*` de
+      sesiones anteriores, sin tocar.
     - Qué entró: M-1 (`cancelar_reserva` exige además `anular`), M-2 (reversos por contraasiento:
       `anular_pago_cuota`, `anular_pago_proveedor`, `anular_compra`), M-5 (`/panel/ventas` distingue ventas a crédito
       y de reserva, sin Anular ni Devolver, con explicación), M-6 (reimprimir el plan de cuotas y marcar documentos
@@ -60,8 +71,9 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       rechazadas por la RPC: 0 compras y 0 encargados en producción).
     - No verificado: concurrencia real de dos reversos a la vez (hay bloqueos, no hay prueba con dos sesiones); la
       impresión real del plan de cuotas en papel; el foco tras anular; el reintento del frial tras medianoche contra
-      el código viejo; la primera corrida programada del backup nuevo (a las 12:41 UTC la de las 05:23 UTC no había
-      arrancado; GitHub ya atrasaba 6 a 10 h); Codex.
+      el código viejo; la primera corrida programada del backup nuevo (a las 13:10 UTC la de las 05:23 UTC no había
+      arrancado; GitHub ya atrasaba 6 a 10 h; hay dos backups manuales del día, completo de las 04:39 y base de las
+      12:45 UTC); Codex.
   - **PR 1, bloqueantes: cerrado el 2026-11-10 (PR #95, squash `46b7ecd`).**
     - Qué entró: B-1 a B-6, más los arreglos de tres rondas de revisión (dos pestañas, cuotas guardadas antes de
       enviar, espera de 60 s en cuotas, pendiente ajeno que no se reenvía, encargado que no restablece a otro
