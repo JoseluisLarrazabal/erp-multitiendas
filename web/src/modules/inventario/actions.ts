@@ -161,7 +161,7 @@ export async function buscarProductosAccion(
 ): Promise<Resultado<ProductoElegible[]>> {
   const d = validar(busquedaSchema, entrada);
   if (!d) return { ok: true, data: [] };
-  return buscarProductos(await createClient(), d.negocioId, d.q);
+  return buscarProductos(await createClient(), d.negocioId, d.q, { conInactivos: d.conInactivos });
 }
 
 export async function stockProductoAccion(

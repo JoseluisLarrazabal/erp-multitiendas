@@ -62,7 +62,7 @@ export async function kardexExcelAccion(entrada: unknown): Promise<Resultado<Tab
         costoUnitario: m.costoUnitario,
         usuario: m.usuario,
         motivo: m.motivo,
-        referencia: m.refTipo,
+        referencia: m.referencia,
       })),
       contexto.permisos.includes("ver_costos"),
     ),

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { sinTildes } from "@/lib/texto";
 import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
   costoUnico,
@@ -38,9 +39,7 @@ export async function listarProductos(
     if (q) {
       // Ya sin comas ni paréntesis (sanearBusqueda): el texto no puede alterar el filtro.
       consulta = consulta.or(
-        ["codigo", "codigo_barras", "nombre", "marca", "modelo"]
-          .map((c) => `${c}.ilike.*${q}*`)
-          .join(","),
+        `codigo.ilike.*${q}*,codigo_barras.ilike.*${q}*,busqueda.ilike.*${sinTildes(q)}*`,
       );
     }
     return consulta;

@@ -29,7 +29,10 @@ export function ListaConteo({
             className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3"
           >
             <span className="min-w-0">
-              <span className="font-semibold">{p.nombre}</span>
+              <span className="font-semibold">
+                {p.nombre}
+                {p.activo ? "" : " (inactivo)"}
+              </span>
               <span className="text-muted-foreground block font-mono text-xs">{p.codigo}</span>
             </span>
             <Input

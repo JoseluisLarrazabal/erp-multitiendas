@@ -123,6 +123,7 @@ export function FormTraslado({
       <SelectorProducto
         negocioId={negocioId}
         id="tra-producto"
+        conInactivos
         valor={producto}
         alElegir={(p) => {
           setProducto(p);
