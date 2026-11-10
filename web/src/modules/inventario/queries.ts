@@ -247,7 +247,8 @@ export async function seriesDisponibles(
   return { ok: true, data };
 }
 
-export type FilaConteo = ProductoElegible & { sistema: number };
+// sistema = stock + reservado: lo reservado sigue en el local aunque el kardex ya lo descontó (lo mismo que espera registrar_conteo).
+export type FilaConteo = ProductoElegible & { sistema: number; reservado: number };
 
 // Productos de una página del conteo, con lo que dice el sistema en esa ubicación.
 export async function paginaConteo(
@@ -266,19 +267,33 @@ export async function paginaConteo(
     false,
   );
   if (!lista.ok) return lista;
+  const ids = lista.data.filas.map((f) => f.id);
+  const { data: res, error } = ids.length
+    ? await supabase
+        .from("stock_reservado")
+        .select("producto_id, cantidad")
+        .eq("ubicacion_id", ubicacionId)
+        .in("producto_id", ids)
+    : { data: [], error: null };
+  if (error) return falla("No se pudieron leer las reservas.");
+  const reservadoDe = new Map((res ?? []).map((r) => [r.producto_id, Number(r.cantidad)]));
   return {
     ok: true,
     data: {
       ...lista.data,
-      filas: lista.data.filas.map((f) => ({
-        id: f.id,
-        codigo: f.codigo,
-        codigoBarras: f.codigoBarras,
-        nombre: f.nombre,
-        unidad: f.unidad,
-        controlaSerie: f.controlaSerie,
-        sistema: f.porUbicacion[ubicacionId] ?? 0,
-      })),
+      filas: lista.data.filas.map((f) => {
+        const reservado = reservadoDe.get(f.id) ?? 0;
+        return {
+          id: f.id,
+          codigo: f.codigo,
+          codigoBarras: f.codigoBarras,
+          nombre: f.nombre,
+          unidad: f.unidad,
+          controlaSerie: f.controlaSerie,
+          sistema: (f.porUbicacion[ubicacionId] ?? 0) + reservado,
+          reservado,
+        };
+      }),
     },
   };
 }

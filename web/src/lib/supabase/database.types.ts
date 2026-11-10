@@ -1228,6 +1228,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"stock_reservado": {
+                  Row: {
+                    "cantidad": number | null,"negocio_id": string,"producto_id": string,"ubicacion_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "inventario_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_producto_id_fkey"
+      columns: ["negocio_id","producto_id"]
+isOneToOne: false
+      referencedRelation: "productos_lista"
+      referencedColumns: ["negocio_id","id"]
+    },{
+      foreignKeyName: "reservas_negocio_id_ubicacion_id_fkey"
+      columns: ["negocio_id","ubicacion_id"]
+isOneToOne: false
+      referencedRelation: "ubicaciones"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 }
           }
           Functions: {
