@@ -209,7 +209,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     del repo (siguen cifrados con `age`) y se borran de GitHub los 4 más viejos de 37 MB (dos del 2026-11-05, 11-06 y
     11-07); se conservan el del 11-08 y el del 11-09 hasta que venzan. Sin ese borrado, viejos más nuevos rozan los
     500 MB hacia el 2026-11-17. Del borrado en adelante no hay nada manual: GitHub borra solo al vencer la retención.
-    Para el PR 4: procedimiento de copia periódica fuera de GitHub para el cliente (`docs/backup.md`).
+    El procedimiento de copia periódica fuera de GitHub quedó escrito en `docs/backup.md` (PR 4).
   - **Minutos de Actions (medido el 2026-11-09 sumando la duración de los jobs por la API, no leído de Billing):**
     unos 1.667 de 2.000 gastados en 9 días de noviembre; el CI se llevó 1.602 (153 corridas de unos 17 minutos, 71 de
     ellas en `push` a `main`) y el backup 61. Quedan unos 333 para 21 días. Si se agotan, Actions se detiene hasta el
@@ -263,8 +263,8 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       de instalar la app en los equipos (el almacenamiento del POS es por origen).
   - No verificado: datos reales de producción, hardware real, Codex (sin cuota). Los hallazgos medios sin marca
     salen de lectura de subagentes.
-  - Este handoff tiene 3 contradicciones por corregir en el PR de documentos: firma del contrato (líneas de "Estado
-    actual" y "Decisiones del CTO (2026-11-01)"), "en curso: fase 6" y la fecha de la cuota de Codex.
+  - Las 3 contradicciones que tenía este handoff (firma del contrato, "en curso: fase 6" y la fecha de la cuota de
+    Codex) se corrigieron en el PR 4 del plan de preentrega.
 
 - **Manual de usuario y capacitación con la fase 7: hecho el 2026-11-09** (`docs/plan-manual-usuario.md`, aprobado por el
   CTO). Manuales por rol en `docs/manual/`: vendedor, lavandería, encargado y dueño, contador. Llevan 25 capturas
@@ -340,11 +340,12 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 
 ## Estado actual
 
-- **Contrato redactado**, pendiente de firma: `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
-  (basado en el contrato de Elegance Dominio Barbería). Solo falta la fecha de firma (a mano).
+- **Contrato firmado** (decisión del CTO del 2026-11-01): `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
+  (basado en el contrato de Elegance Dominio Barbería). Falta anotar la fecha exacta de firma (D-04).
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
-- **Desarrollo:** fases 0 a 5 cerradas (frial, reportes y PWA: `docs/plan-fase-5.md`). En curso: fase 6 (salida), plan en
-  `docs/plan-fase-6.md`; backup en `docs/backup.md`. Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+- **Desarrollo:** fases 0 a 7 cerradas (frial, reportes y PWA: `docs/plan-fase-5.md`; salida: `docs/plan-fase-6.md`;
+  backup en `docs/backup.md`). Después vino la auditoría previa a la entrega y su plan de 4 PRs
+  (`docs/plan-preentrega.md`). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
 - **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/relevamiento.gs`
   creó (cuenta Google del CTO):
   - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform
@@ -432,7 +433,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - Desarrollo: `docs/estandares-codigo.md`, `docs/plan-pruebas.md`, `docs/roadmap.md`, `docs/migracion-datos.md`.
   - **Alcance v1 (CTO, 2026-11-01):** incluye todo: contrato más crédito, reservas, proveedores e insumos. Se avisó que
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
-  - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, firma del contrato).
+  - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, fecha exacta de firma del contrato).
   - **Pendiente cliente:** cargar precios en el panel, y preguntas P-01 a P-17 del SRS.
 - **Fase 0 cerrada (2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Hito cumplido: login real, RLS probado y CI
   verde. Hecha en una sesión; la estimación era 3 días. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
@@ -545,7 +546,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     POS, más "Usar este valor" en tipo de cambio (llena el campo, no guarda). Plan en `docs/plan-dolar-paralelo.md`.
     Fuera del contrato: sumado a D-01. Verificado en local con Playwright (dato real, 360 px sin overflow). Revisión:
     `/code-review` (3 fixes aplicados, 7 descartados por costo), `/security-review` sin hallazgos. Codex: no
-    verificado (sin cuota hasta 2026-11-16).
+    verificado (sin cuota; la fecha que se manejaba entonces era 2026-11-16, la vigente es 2026-12-03).
   - **§7 en local (2026-11-04, Playwright, base local con seed):** el vendedor entra directo a `/pos`; abrir caja con
     Bs 100, vender (venta `C1-000001`, kardex -1) y cerrar con Bs 140 da esperado 140 y diferencia 0. En producción no
     se hizo: una venta de prueba deja registros que el kardex no deja borrar. Falta la prueba en el equipo real con
@@ -564,7 +565,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
       `VERIFICACION OK` y `FOTOS OK`, 602 s en total. Tiempos en `docs/backup.md`.
     - #74, intermitente de `catalogo.spec.ts:195`. Causa: dos workers tomaban el mismo `Date.now()` en `unico()` y
       chocaban en código y barras. Ahora el índice del worker entra en `corrida` y `marca`. Pasó 90/90 con 8 workers.
-    - Codex: no verificado (sin cuota hasta 2026-11-16).
+    - Codex: no verificado (sin cuota; la fecha que se manejaba entonces era 2026-11-16, la vigente es 2026-12-03).
   - **PRs del 2026-11-05, mergeados:**
     - #77, datos únicos en los E2E: el helper `worker` (`tests/e2e/helpers.ts`) entra en `corrida` de `usuarios.spec.ts`
       y en el `PREFIJO` de `reportes.spec.ts`. El prefijo del dispositivo de prueba es el primero libre de Y10 a P99:
@@ -596,7 +597,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
         series solo se probó el tipo `ajuste`.
       - Revisión: `/code-review` medium (7 hallazgos aplicados, 2 por diseño) y low (3, todos descartados contra el
         esquema).
-    - Codex: no verificado (sin cuota hasta 2026-11-16).
+    - Codex: no verificado (sin cuota; la fecha que se manejaba entonces era 2026-11-16, la vigente es 2026-12-03).
   - **Antes de capacitar:** la capacitación no debe trasladar ni dar de baja productos con series importadas, porque
     entonces el script de limpieza aborta. Si pasa, la salida es restaurar el backup previo a la capacitación.
   - Usuarios del personal: se cargan al final (CTO).
@@ -781,7 +782,7 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - PR 3 hecho: productos, categorías, fotos en bucket privado, tipo de cambio y grilla masiva `/panel/precios`
     (RF-CAT-11). Tipo de cambio pide confirmar si varía más de 20 %. Sin probar en navegador: USD sin tipo de cambio,
     costo "Varía", registrar tras confirmar el cambio brusco, fallo parcial al guardar, lector de pantalla, móvil táctil.
-    **Codex sin cuota hasta el 2026-11-16:** al volver, correr `verify-fix` sobre el `fix:` de CI y revisar fases 0 y 1.
+    **Codex sin cuota (fecha vigente de vuelta: 2026-12-03):** al volver, correr `verify-fix` sobre el `fix:` de CI y revisar fases 0 y 1.
   - PR 4 hecho: stock por ubicación, kardex, entrada, salida, traslado, conteo y series, con selector de producto para
     lector USB. E2E-03 completo con la cuenta contador. El test de baneo usa su propia cuenta (`baneable@erp.test`).
     Sin probar: series de punta a punta en navegador y conteo de más de 500 ítems.
