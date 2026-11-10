@@ -120,7 +120,7 @@ export function SelectorProducto({
       );
       // Con varias coincidencias exactas no elige: deja la lista abierta.
       const unica = exactas.length === 1 ? exactas[0] : filas.length === 1 ? filas[0] : undefined;
-      if (unica && exactas.length < 2) elegir(unica);
+      if (unica) elegir(unica);
     }
   }
 
