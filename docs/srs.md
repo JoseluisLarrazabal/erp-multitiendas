@@ -246,7 +246,7 @@ que son quienes cubren al personal. Frial usa la grilla de Lider hasta que abra.
 | RNF-06 | Seguridad | RLS en toda tabla operativa. Sin escritura directa en tablas contables | pgTAP |
 | RNF-07 | Seguridad | `service_role` nunca llega al navegador. Secretos fuera del repo | Revisión y escaneo en CI |
 | RNF-08 | Respaldo | Backup diario cifrado fuera de Supabase, con restauración probada | Simulacro antes de producción |
-| RNF-09 | Recuperación | Pérdida máxima 24 h. Restauración en menos de 4 h | Simulacro cronometrado |
+| RNF-09 | Recuperación | Pérdida máxima 24 h de datos. Las fotos de productos se copian una vez por semana: pérdida máxima 7 días de fotos nuevas (decisión del CTO, 2026-11-10, `docs/backup.md`). Restauración en menos de 4 h | Simulacro cronometrado |
 | RNF-10 | Mantenibilidad | Cumple `docs/estandares-codigo.md`. CI verde para mergear | CI |
 | RNF-11 | Pruebas | Cumple `docs/plan-pruebas.md` | CI |
 | RNF-12 | Portabilidad | Despliegue reproducible, movible de proveedor en horas | Documentado y ensayado |
