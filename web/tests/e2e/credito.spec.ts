@@ -330,6 +330,24 @@ test("recargar a mitad del cobro a crédito no pierde ni duplica la venta", asyn
     .click();
   const cobro = page.getByRole("alertdialog", { name: "Cobrar la inicial del crédito" });
 
+  // Otra pestaña del mismo equipo arma su propia venta a crédito y abre el cobro, antes de que exista el pendiente.
+  const otra = await page.context().newPage();
+  let envios = 0;
+  await otra.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    envios++;
+    await route.fallback();
+  });
+  await abrirPos(otra);
+  await agregar(otra, producto.barras, 1);
+  await otra.getByRole("checkbox", { name: /Vender a crédito/ }).click();
+  await elegirCliente(otra);
+  await otra
+    .getByRole("button", { name: /^Cobrar/ })
+    .first()
+    .click();
+  const cobroOtra = otra.getByRole("alertdialog", { name: "Cobrar la inicial del crédito" });
+  await expect(cobroOtra).toBeVisible();
+
   // El servidor guarda la venta pero la respuesta nunca llega al cliente.
   let guardada!: () => void;
   const llegoAlServidor = new Promise<void>((r) => (guardada = r));
@@ -343,10 +361,21 @@ test("recargar a mitad del cobro a crédito no pierde ni duplica la venta", asyn
   await page.reload();
   await page.unrouteAll({ behavior: "ignoreErrors" });
 
+  // La otra pestaña recibe el pendiente por `storage`, que no es de su venta: no lo congela ni lo reenvía.
+  await expect(
+    otra.getByRole("button", { name: "Cambiar equipo", includeHidden: true }),
+  ).toBeDisabled();
+  await expect(cobroOtra.getByText("Cobro sin confirmar")).toHaveCount(0);
+  await cobroOtra.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobroOtra.getByText("Hay otro cobro sin confirmar en este equipo")).toBeVisible();
+  expect(envios).toBe(0);
+  await otra.close();
+
   // Tras recargar: carrito vacío, pero el cobro sin confirmar sigue ahí y no se reenvía solo.
   const aviso = page.getByRole("alert").filter({ hasText: "Cobro sin confirmar" });
   await expect(aviso).toBeVisible();
   await expect(aviso).toContainText(nombreCliente);
+
   await aviso.getByRole("button", { name: "Verificar cobro" }).click();
   await expect(page.getByRole("article", { name: /Nota de venta W2-\d{6}/ })).toBeVisible();
   expect((await cuentas()).length).toBe(antes + 1);

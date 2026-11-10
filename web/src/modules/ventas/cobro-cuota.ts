@@ -15,7 +15,21 @@ export const MENSAJE_CUOTA_SIN_CONFIRMAR =
   "No se confirmó el cobro de la cuota: no des el recibo por válido. Reintenta (se reenvía lo mismo) o descarta y verifica si quedó registrado.";
 
 // Cobro de cuota sin confirmar: el payload (con su id) y cómo mostrarlo.
-export type CuotaPendiente = { payload: PagoCuotaPayload; cliente: string; detalle: string };
+// `guardadoEn`: último envío (ISO); sin él (entrada antigua) no hay espera antes de descartar.
+export type CuotaPendiente = {
+  payload: PagoCuotaPayload;
+  cliente: string;
+  detalle: string;
+  guardadoEn?: string;
+};
+
+// Un cobro cuyo servidor aún pudo estar procesándolo no se descarta antes de este tiempo (igual que las ventas).
+export const ESPERA_VERIFICAR_MS = 60_000;
+export const MENSAJE_OTRA_CUOTA =
+  "Hay otra cuota sin confirmar para este crédito en este equipo. Verifícala antes de cobrar.";
+// Sin rastro en el servidor: ¿ya pasó la espera para poder descartar la entrada?
+export const puedeDescartarCuota = (p: CuotaPendiente, ahora = Date.now()) =>
+  !p.guardadoEn || ahora - Date.parse(p.guardadoEn) >= ESPERA_VERIFICAR_MS;
 
 // Viven en localStorage (sobreviven a recargar y a que el sistema mate la app): no se pierde el payload, y reintentarlo con el MISMO id nunca cobra dos veces
 // (pagar_cuota es idempotente por id). Cada lectura valida con el schema del payload.
@@ -34,7 +48,12 @@ function leer(alcance: string): Record<string, CuotaPendiente> {
       const e = v as Partial<CuotaPendiente> | null;
       const p = pagoCuotaSchema.safeParse(e?.payload);
       if (p.success && typeof e?.cliente === "string" && typeof e.detalle === "string")
-        salida[creditoId] = { payload: p.data, cliente: e.cliente, detalle: e.detalle };
+        salida[creditoId] = {
+          payload: p.data,
+          cliente: e.cliente,
+          detalle: e.detalle,
+          ...(typeof e.guardadoEn === "string" ? { guardadoEn: e.guardadoEn } : {}),
+        };
     }
     return salida;
   } catch {
@@ -45,15 +64,24 @@ export const cuotasSinConfirmar = (alcance: string) => Object.values(leer(alcanc
 export const cuotaSinConfirmar = (alcance: string, creditoId: string) => leer(alcance)[creditoId];
 // Una entrada solo sale por un éxito confirmado, por la verificación de existencia o por un ERP que prueba que no se registró
 // (PRUEBAN_NO_REGISTRADO): nunca por un permiso u otro rechazo, que no dicen qué pasó con un intento anterior.
-// false si no se pudo escribir: el llamador NO debe enviar el cobro (no quedaría rastro tras una recarga).
+// false si no se pudo escribir: el llamador NO debe enviar el cobro (no quedaría rastro tras una recarga). Otra pestaña del
+// mismo equipo comparte esta clave: una entrada con otro id es de otro cobro, así que ni se pisa al escribir (false) ni se
+// borra al quitar (`idBorrar`: el id que esta pestaña cree tener; si lo guardado es otro, no se toca).
 export function fijarCuotaSinConfirmar(
   alcance: string,
   creditoId: string,
   p: CuotaPendiente | null,
+  idBorrar?: string,
 ): boolean {
   const todas = leer(alcance);
-  if (p) todas[creditoId] = p;
-  else delete todas[creditoId];
+  const guardado = todas[creditoId]?.payload.id;
+  if (p) {
+    if (guardado && guardado !== p.payload.id) return false;
+    todas[creditoId] = p;
+  } else {
+    if (guardado !== idBorrar) return true;
+    delete todas[creditoId];
+  }
   try {
     localStorage.setItem(alcance, JSON.stringify(todas));
     return true;

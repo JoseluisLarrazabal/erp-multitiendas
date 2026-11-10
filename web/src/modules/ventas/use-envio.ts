@@ -52,9 +52,11 @@ const MENSAJE_EN_LINEA_RED =
 export const CLAVE_CREDITO = "credito";
 // Un cobro cuyo servidor aún pudo estar procesándolo no se descarta antes de este tiempo.
 const ESPERA_VERIFICAR_MS = 60_000;
+export const MENSAJE_EN_VUELO =
+  "Todavía puede estar registrándose: espera un momento y vuelve a verificar.";
 export const MENSAJE_NO_GUARDADO =
   "No se pudo guardar el cobro en este equipo. No se cobró: libera espacio o usa otro equipo.";
-const MENSAJE_OTRO_COBRO =
+export const MENSAJE_OTRO_COBRO =
   "Hay otro cobro sin confirmar en este equipo. Verifícalo antes de cobrar.";
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
@@ -139,7 +141,6 @@ export function useEnvio(opts: {
       const m = new Map(pendRef.current);
       if (p) {
         m.set(clave, p);
-        propios.current.add(p.payload.id);
       } else m.delete(clave);
       pendRef.current = m;
       setPendientes(m);
@@ -172,8 +173,12 @@ export function useEnvio(opts: {
       if (cuenta === "rechazar") return setEstado({ t: "rechazada", mensaje: MENSAJE_CUENTA });
       if (cuenta === "red") return setEstado({ t: "rechazada", mensaje: MENSAJE_EN_LINEA_RED });
       const previo = pendRef.current.get(clave) ?? null;
+      // Un pendiente que esta pestaña no creó es de otra venta: no se reenvía; se resuelve con "Verificar cobro".
+      if (previo && !propios.current.has(previo.payload.id))
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_OTRO_COBRO });
       const armada: { nota?: NotaVenta } = { nota: previo?.nota };
       const ventaId = crypto.randomUUID();
+      if (!previo) propios.current.add(ventaId);
       // Igual que en la venta normal: un QR sin confirmar no viaja en línea.
       const qrVerificado = !(c.qr > 0 && !c.qrConfirmado);
       const primerNumero = previo
@@ -291,7 +296,7 @@ export function useEnvio(opts: {
         if (!r.data && Date.now() - Date.parse(p.guardadoEn) < ESPERA_VERIFICAR_MS)
           return setEstado({
             t: "rechazada",
-            mensaje: "Todavía puede estar registrándose: espera un momento y vuelve a verificar.",
+            mensaje: MENSAJE_EN_VUELO,
           });
         fijarPendiente(clave, null);
         if (!r.data)
@@ -448,5 +453,14 @@ export function useEnvio(opts: {
     [],
   );
 
-  return { estado, confirmar, limpiarRechazo, hayPendiente, pendientes, descartarYVerificar };
+  const esPropio = useCallback((id: string) => propios.current.has(id), []);
+  return {
+    estado,
+    confirmar,
+    limpiarRechazo,
+    hayPendiente,
+    pendientes,
+    descartarYVerificar,
+    esPropio,
+  };
 }

@@ -29,6 +29,9 @@ grant execute on function public.auditar_clave(uuid, uuid) to service_role;
 
 -- Restablecer la clave equivale a entrar como esa persona: ademas de puede_administrar_cuenta, el destino no puede ser
 -- encargado en un negocio donde el llamador no es dueño (un encargado solo restablece a roles inferiores).
+-- NO es una barrera completa: asignar_usuario deja a quien tiene el permiso usuarios cambiar el rol de un encargado (solo
+-- protege al dueño), asi que la regla se rodea cambiando el rol, restableciendo y devolviendo el rol; cada paso queda en
+-- auditoria. Cerrarlo exige decidir si un encargado puede gestionar a otro encargado (decision pendiente).
 create function public.puede_restablecer_clave(p_usuario_id uuid)
 returns boolean
 language sql

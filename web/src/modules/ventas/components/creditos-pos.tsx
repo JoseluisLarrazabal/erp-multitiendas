@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -20,14 +20,17 @@ import { cargarCuentas, existePagoCuota, pagoCuotaSchema, type Cuenta } from "@/
 import {
   alcanceCuotas,
   cobrarCuota,
+  cuotaSinConfirmar,
   cuotasSinConfirmar,
   fijarCuotaSinConfirmar,
   MENSAJE_CUOTA_SIN_CONFIRMAR,
+  MENSAJE_OTRA_CUOTA,
+  puedeDescartarCuota,
   PRUEBAN_NO_REGISTRADO,
   type CuotaPendiente,
 } from "../cobro-cuota";
 import { aCentavos, bs, parsearMonto, textoMonto } from "../domain";
-import { MENSAJE_NO_GUARDADO, type EstadoEnvio } from "../use-envio";
+import { MENSAJE_EN_VUELO, MENSAJE_NO_GUARDADO, type EstadoEnvio } from "../use-envio";
 import { Cobro } from "./cobro";
 
 // Crédito en cobro: el de la lista o, tras recargar con un cobro sin confirmar, solo lo que se guardó de él.
@@ -55,13 +58,29 @@ export function CreditosPos({
   // actualiza junto con el almacenamiento.
   const alcance = alcanceCuotas(negocioId, equipoId);
   const [pendientes, setPendientes] = useState(() => cuotasSinConfirmar(alcance));
-  function fijar(creditoId: string, p: CuotaPendiente | null) {
-    const guardado = fijarCuotaSinConfirmar(alcance, creditoId, p);
+  // `idBorrar`: el id que esta pestaña cree tener al quitar la entrada (si lo guardado es otro, no se toca).
+  function fijar(creditoId: string, p: CuotaPendiente | null, idBorrar?: string) {
+    const guardado = fijarCuotaSinConfirmar(alcance, creditoId, p, idBorrar);
     const todas = cuotasSinConfirmar(alcance);
     setPendientes(todas);
     alCambiarPendientes(todas.length > 0);
     return guardado;
   }
+  // Otra pestaña del mismo equipo escribe en la misma clave: la memoria vuelve a reflejar lo que hay guardado.
+  const alCambiarRef = useRef(alCambiarPendientes);
+  useEffect(() => {
+    alCambiarRef.current = alCambiarPendientes;
+  });
+  useEffect(() => {
+    const f = (e: StorageEvent) => {
+      if (e.key !== alcance && e.key !== null) return;
+      const todas = cuotasSinConfirmar(alcance);
+      setPendientes(todas);
+      alCambiarRef.current(todas.length > 0);
+    };
+    window.addEventListener("storage", f);
+    return () => window.removeEventListener("storage", f);
+  }, [alcance]);
   const pendienteDe = (creditoId: string) =>
     pendientes.find((p) => p.payload.credito_id === creditoId);
   const [cliente, setCliente] = useState<ClienteElegido | null>(null);
@@ -151,19 +170,33 @@ export function CreditosPos({
     const payload = armado.data;
     intento.current = { id: payload.id, clave: creditoId };
     // Antes de enviar el cobro queda en este equipo: si la app muere a mitad del envío, reaparece para verificarlo.
-    if (!fijar(creditoId, { payload, cliente: elegida.clienteNombre, detalle: elegida.etiqueta }))
+    const entrada = () => ({
+      payload,
+      cliente: elegida.clienteNombre,
+      detalle: elegida.etiqueta,
+      guardadoEn: new Date().toISOString(),
+    });
+    if (!fijar(creditoId, entrada())) {
+      // Distinguir un fallo de escritura de otra cuota (otro id) ya guardada para este crédito por otra pestaña.
+      const enAlmacen = cuotaSinConfirmar(alcance, creditoId);
+      if (enAlmacen && enAlmacen.payload.id !== payload.id)
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_OTRA_CUOTA });
       return setEstado({ t: "rechazada", mensaje: MENSAJE_NO_GUARDADO });
+    }
     setEstado({ t: "enviando" });
     const s = await cobrarCuota(createClient(), payload, {
       alVerificar: () => setEstado({ t: "verificando" }),
     });
-    if (s.t === "sin-confirmar")
+    if (s.t === "sin-confirmar") {
+      // El último envío fue ahora: desde aquí cuenta la espera antes de poder descartar.
+      fijar(creditoId, entrada());
       return setEstado({ t: "rechazada", mensaje: MENSAJE_CUOTA_SIN_CONFIRMAR });
+    }
     if (s.t === "rechazada") {
       // Un permiso u otro rechazo no dicen qué pasó con un intento anterior: la entrada pendiente solo sale por la verificación o
       // por un ERP que prueba que no se registró. Sin entrada previa no hay nada que conservar.
       if (!previo || (s.codigo && PRUEBAN_NO_REGISTRADO.includes(s.codigo))) {
-        fijar(creditoId, null);
+        fijar(creditoId, null, payload.id);
         intento.current = null; // el servidor no guardó nada: el próximo intento estrena id
       }
       setEstado({ t: "rechazada", mensaje: s.error });
@@ -174,7 +207,7 @@ export function CreditosPos({
       }
       return;
     }
-    fijar(creditoId, null);
+    fijar(creditoId, null, payload.id);
     intento.current = null;
     cerrarCobro();
     setAviso(
@@ -193,7 +226,10 @@ export function CreditosPos({
         t: "rechazada",
         mensaje: `No se pudo verificar (${r.error}). No des el recibo por válido; intenta de nuevo.`,
       });
-    fijar(elegida.creditoId, null);
+    // Sin rastro en el servidor pero recién enviado: su transacción aún puede estar en vuelo. No se descarta.
+    if (!r.data && !puedeDescartarCuota(sin))
+      return setEstado({ t: "rechazada", mensaje: MENSAJE_EN_VUELO });
+    fijar(elegida.creditoId, null, sin.payload.id);
     intento.current = null;
     const nombre = elegida.clienteNombre;
     cerrarCobro();

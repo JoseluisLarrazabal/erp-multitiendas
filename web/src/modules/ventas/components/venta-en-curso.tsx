@@ -76,7 +76,8 @@ export function VentaEnCurso({
   const totales = v.resumen.totales;
   // Cobro online-only (reserva o crédito) sin confirmar: montos fijos (de lo enviado), no los del formulario.
   const clavePendiente = v.reserva ? v.reserva.id : v.formCredito.activo ? CLAVE_CREDITO : null;
-  const pendiente = clavePendiente ? envio.pendientes.get(clavePendiente) : undefined;
+  const ajeno = clavePendiente ? envio.pendientes.get(clavePendiente) : undefined;
+  const pendiente = ajeno && envio.esPropio(ajeno.payload.id) ? ajeno : undefined;
   const congelado = montosCongelados(pendiente, envio.estado);
   const planCredito = v.credito?.ok ? v.credito.plan : null;
   return (
