@@ -92,6 +92,7 @@ export default async function PaginaReportes({
             </Link>
           ))}
         </nav>
+        {def.criterio && <p className="text-muted-foreground text-sm">{def.criterio}</p>}
         <FiltrosReporteForm filtros={filtros} def={def} tipo={activo.tipo} hoy={hoy} />
         {invalido && (
           <p role="status" className="text-sm font-medium">

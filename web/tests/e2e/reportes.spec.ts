@@ -220,6 +220,21 @@ test.describe("dueño en la tienda", () => {
     await expect(page.getByRole("table", { name: "Caja" })).toContainText("Caja reportes Q1 (Q1)");
   });
 
+  test("cada reporte dice qué cuenta y por qué día", async ({ page }) => {
+    await ir(page, "/panel/reportes");
+    await expect(
+      page.getByText("Cuenta lo vendido, por el día en que la venta llegó al sistema"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("los anticipos y las cuotas no entran aquí sino en Caja"),
+    ).toBeVisible();
+    await ir(page, "/panel/reportes?r=caja");
+    await expect(
+      page.getByText("Cuenta lo cobrado en cada caja, por el día en que se abrió"),
+    ).toBeVisible();
+    await expect(page.getByText("esperado, contado y diferencia son los del cierre")).toBeVisible();
+  });
+
   test("el kardex baja a Excel completo, no solo la página", async ({ page }) => {
     await ir(page, `/panel/inventario/${producto.id}`);
     const [descarga] = await Promise.all([
