@@ -1287,6 +1287,9 @@ isOneToOne: false
 "asignar_usuario":
 { Args: { "p_negocio_id": string,"p_rol": string,"p_usuario_id": string }; Returns: undefined
                            },
+"auditar_clave":
+{ Args: { "p_actor_id": string,"p_usuario_id": string }; Returns: undefined
+                           },
 "auditar_cuenta":
 { Args: { "p_activo": boolean,"p_actor_id": string,"p_usuario_id": string }; Returns: undefined
                            },
@@ -1423,6 +1426,9 @@ isOneToOne: false
                            },
 "guardar_credito_config":
 { Args: { "p_inicial_pct": number,"p_interes_mensual_pct": number,"p_max_cuotas": number,"p_negocio_id": string,"p_plazo_cuotas": number }; Returns: undefined
+                           },
+"guardar_datos_negocio":
+{ Args: { "p_datos_nota": string,"p_negocio_id": string,"p_nit": string }; Returns: undefined
                            },
 "guardar_precios":
 { Args: { "p_items": Json,"p_negocio_id": string }; Returns: number
