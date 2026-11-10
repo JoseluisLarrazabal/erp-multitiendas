@@ -114,6 +114,105 @@ Opus lo baja a pasos al arrancar. Decisiones ya tomadas:
 - **M-8**: la compra en el frial pide lote y vencimiento por línea, con la lógica de `registrar_entrada_lote`. No se
   oculta "Compras" en el frial.
 
+### Plan detallado del PR 2 (Opus, 2026-11-10; arbitrado por el chairman)
+
+**Decisiones del chairman sobre el plan** (dentro del encargo "el punto 1 y 2 quedan a tu cargo"):
+
+1. `anular_compra` al contado: "solo sin pagos vivos" al pie de la letra impide anular toda compra al contado, porque
+   su pago automático siempre está vivo, y ese es el caso de la auditoría (1.000 en vez de 100). Se revierte el pago
+   automático dentro de `anular_compra` y se exige que la deuda resultante del proveedor sea mayor o igual a 0.
+2. El reverso de una cuota cobrada en una caja ya cerrada sale de otra caja abierta, igual que `cancelar_reserva` y la
+   devolución. El arqueo cerrado no cambia.
+3. Los documentos del crédito se pueden desmarcar, con auditoría.
+4. No se parte el PR (cupo de CI). M-2 va en migraciones y commits propios, al final; si la revisión lo rechaza se saca
+   antes del único push.
+5. Una compra con productos con serie no se anula (`ERP_COMPRA_CON_SERIES`). Límite conocido.
+
+**Estado de producción (consulta de solo lectura, 2026-11-10):** 0 compras, 0 pagos de cuota, 0 pagos a proveedor y 0
+encargados en los tres negocios. Ninguna migración de este PR choca con datos existentes. M-8 no es compatible con la
+web vieja (la base pasa a exigir lote en el frial), pero el frial no tiene compras y la ventana entre `db push` y el
+deploy de Vercel es de minutos.
+
+**Reparto** (cinco subagentes Sonnet en worktrees, archivos disjuntos). Nadie toca `erp-errores.ts` ni `docs/srs.md`
+(la matriz la actualiza el chairman al integrar). Nadie sube `database.types.ts`. Orden de integración: B, A, E, C, D;
+después `db reset`, `pnpm db:types`, `tsc` y commit de tipos.
+
+| Tema | Migraciones nuevas | Archivos principales |
+|---|---|---|
+| A. M-1 y M-7 | `20261110120000_cancelar_reserva_anular.sql` | `ventas/components/reservas-pos.tsx`, `form-reserva.tsx`, `venta-en-curso.tsx` (prop), `reservas.ts`, `creditos-pos.tsx`, `cobro-cuota.ts`; `tests/rpc-reservas.sql`; `e2e/reservas.spec.ts`, `e2e/credito.spec.ts` |
+| B. Encargados | `20261110120100_solo_dueno_encargados.sql` | `admin-usuarios/index.ts`; `usuarios/domain.ts` y su test; `tests/rpc-asignar-quitar-usuario.sql`, `puede-asignar-rol.sql`, `encargados-solo-dueno.sql` (nuevo); `integracion/admin-usuarios.test.ts`; `e2e/usuarios.spec.ts` |
+| C. Reverso de cuota y M-6 | `20261110120200_reverso_cuota_documentos.sql` | `creditos/{actions,schemas,domain,panel}.ts`, `components/detalle-credito.tsx` y tres componentes nuevos; `ventas/components/plan-credito.tsx`; `app/(panel)/panel/creditos/[id]/page.tsx`, `panel/layout.tsx`; `tests/rpc-reverso-cuota.sql`; `e2e/credito-reversos.spec.ts` |
+| D. M-8 y reversos de compras | `20261110120300_compra_lotes_frial.sql`, `20261110120400_reversos_compras.sql` | `compras/{schemas,actions,domain,queries,panel}.ts` y componentes; páginas de compras y proveedores; `inventario/domain.ts` (etiqueta); `tests/rpc-compras-frial.sql`, `rpc-reversos-compras.sql`; `e2e/compras.spec.ts` |
+| E. M-5 | ninguna | `ventas/lecturas-panel.ts` y su test, `components/{lista-ventas,detalle-venta}.tsx`, `app/(panel)/panel/ventas/[id]/page.tsx`; `e2e/ventas-especiales.spec.ts` |
+
+**A. M-1.** `create or replace cancelar_reserva`, copiada íntegra de `20261108150000_reservas.sql:246-296`; solo se
+agrega `or not tiene_permiso(negocio,'anular')` a la condición de permiso. `ReservasPos` recibe `puedeCancelar`; sin el
+permiso muestra "Para cancelar la reserva, pide a un encargado." pgTAP: los bloques que cancelan como vendedor pasan a
+dueño y se agrega el rechazo `ERP_SIN_PERMISO`. E2E-13: el vendedor ve el texto y ningún botón; cancela un encargado.
+
+**A. M-7.** `reclamar_operacion` solo da `ERP_OPERACION_REPETIDA` si un intento anterior con ese id se confirmó.
+Reserva: estrenar id, recargar la lista y avisar que la reserva quedó con los datos del primer intento. Cuota: tratarla
+como cobrada, limpiar el pendiente, recargar y avisar que revise el saldo. Cancelación: solo cambia el texto. Textos en
+`reservas.ts` y `cobro-cuota.ts` con Vitest; E2E de respuesta perdida cambiando el monto y reenviando.
+
+**B. Encargados.** Cuatro `create or replace` copiadas de `20261101120500`, `20261101120600` y `tenencia.sql:145-169`:
+`asignar_usuario` (`p_rol in ('dueno','encargado') or v_rol_actual in ('dueno','encargado')` exige dueño),
+`quitar_usuario` (`v_rol_actual in ('dueno','encargado')`), `puede_asignar_rol` (`p_rol not in ('dueno','encargado') or
+es_dueno`), `puede_administrar_cuenta` (por cada negocio donde el objetivo es dueño o encargado, quien llama debe ser
+dueño). `puede_restablecer_clave` no se toca: su regla queda contenida. Se reusa `ERP_DUENO_PROTEGIDO`; su mensaje pasa
+a nombrar también al encargado. La función `admin-usuarios` exige dueño para crear un encargado. En la web,
+`rolesOfrecidos` no ofrece "Encargado" a quien no es dueño y la fila de un encargado queda sin acciones. Pruebas: caso
+cruzado (X dueño de T y encargado de L; Y encargado de L y vendedor de T), integración (un encargado no crea, no
+desactiva ni restablece a otro encargado; no queda cuenta huérfana) y E2E.
+
+**C. `anular_pago_cuota(p_operacion_id, p_pago_operacion_id, p_sesion_id, p_dispositivo_id, p_motivo)`.** El
+contraasiento es una fila negativa en `credito_pagos`, así saldo, FIFO de `cuotas_con_pago`, `efectivo_esperado`,
+`total_qr_sesion` y `resumen_caja` quedan bien sin copiarlos. DDL: columnas `anula_operacion_id` y `motivo`; el check de
+monto pasa a `(anula is null and monto>0) or (anula is not null and monto<0)`; índice único parcial
+`(anula_operacion_id, medio)`. Pasos: permiso `anular` y mismo negocio; motivo de 1 a 200; `reclamar_operacion`; bloquear
+sesión (`ERP_CAJA_CERRADA`) y luego crédito; ya revertido devuelve `ya_anulado`; no es el último pago vivo da
+`ERP_PAGO_NO_ES_ULTIMO`; efectivo mayor que el esperado en la sesión da `ERP_EFECTIVO_INSUFICIENTE`; insertar filas
+negativas por medio; un crédito `pagado` vuelve a `activo`. `detalle_credito` suma `operacion_id`, `anula_operacion_id`,
+`motivo` y `ultimo_pago_id` (la web de producción ignora campos nuevos: Zod sin `strict`).
+
+**C. M-6.** `marcar_documentos_credito(p_credito_id, p_ci, p_domicilio, p_pagare)`: permiso `gestionar_credito`, solo
+`origen='venta'` y no anulado, `for update`, auditoría solo si cambió. El `<article>` del plan de cuotas pasa a
+`creditos/components/plan-cuotas-imprimible.tsx`, usado por el POS y por el detalle del crédito ("Imprimir plan").
+
+**D. M-8.** `registrar_compra` copiada íntegra de `compras.sql:169-279`. Los ítems aceptan `lote` y `vence`: en el
+frial son obligatorios (lote de 1 a 40, `vence` desde hoy en La Paz); fuera del frial deben venir nulos. Con serie en el
+frial, `ERP_DATOS_INVALIDOS`. Inserta en `lotes` con el `movimiento_id` de la compra.
+
+**D. Reversos de compras.** Tipo de movimiento `anulacion_compra`; tabla `compra_anulaciones` (RLS de lectura, solo
+agregar); `proveedor_pagos` con `anula_id` y `motivo`, check análogo, índice único parcial y `grant select` por columna
+de las dos columnas nuevas; `deuda_proveedor` y `deudas_proveedores` excluyen compras anuladas.
+`anular_pago_proveedor(p_operacion_id, p_pago_id, p_motivo)`: permisos `gestionar_compras` y `anular`, solo el último
+pago vivo del proveedor. `anular_compra(p_operacion_id, p_compra_id, p_motivo)`: mismos permisos; bloquea proveedor y
+luego stock (mismo orden que `registrar_compra`); rechaza series, pagos ligados que no sean el automático, deuda
+resultante negativa y stock insuficiente en la ubicación; por línea inserta `anulacion_compra` y, si corresponde,
+`ajuste_costo`; registra la anulación y revierte el pago automático del contado. `lotes_por_vencer` excluye lotes de
+compras anuladas. La lista de compras marca "Anulada".
+
+**E. M-5.** `detalleVenta` lee la condición, el crédito por `venta_id` y si hay reserva con ese `venta_id`. Con crédito
+o reserva la página oculta Anular y Devolver y explica por qué; en crédito muestra "Inicial" y el enlace "Ver pagos del
+crédito". La lista marca "Crédito" o "Reserva".
+
+**Trampas.**
+
+- Costo promedio: `aplicar_movimiento_a_stock` no recalcula con cantidad negativa. `anular_compra` corrige con
+  `(Q·A − q·c)/(Q − q)` si `Q − q > 0` y el resultado no es negativo; si no, deja el promedio. No es exacto si hubo
+  ventas o traslados después de la compra. Las ventas ya hechas conservan su costo (RN-06).
+- Las filas negativas cambian el supuesto `monto > 0` de `credito_pagos` y `proveedor_pagos`: cada subagente lista
+  todos los lectores (SQL y web, incluidos reportes y exportaciones) y confirma que suman o muestran bien.
+- Los reversos de cuota nunca escriben en una sesión cerrada.
+- `anular_credito_inicial` usa `exists credito_pagos`: un crédito con pago y reverso no se anula. Conservador; se deja.
+- Copias íntegras de funciones: conservar huellas, forma de respuesta, bloqueos y grants originales.
+- Los nombres de los checks automáticos se confirman en `db reset`.
+
+**Verificación.** `scratchpad/verificar.sh` completo sobre el árbol integrado; revisión del diff por el chairman;
+`/code-review`, `/ponytail-review`, `/security-review` y Opus (permisos y dinero); QA con Playwright en local de cada
+tema; migraciones a producción antes del merge, con backup manual previo; un solo push.
+
 ## PR 3: operación diaria (`fix/operacion-diaria-preentrega`)
 
 Opus lo baja a pasos al arrancar. M-9 (texto del criterio en reportes, sin cambiar cálculos), M-10, M-11, M-12

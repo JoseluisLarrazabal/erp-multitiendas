@@ -8,9 +8,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 - **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
   entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
   M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 2, Entrega B (rama `fix/entrega-b-preentrega`). Estado: sin arrancar.** Primer paso: Opus baja
-    el alcance de `docs/plan-preentrega.md` a pasos (incluye la regla nueva de encargados). Regla de cupo: verificar
-    todo en local y subir el PR una sola vez; aplicar las migraciones aditivas ANTES del merge (ver abajo).
+  - **Hito activo: PR 2, Entrega B (rama `fix/entrega-b-preentrega`). Estado (2026-11-10): plan detallado escrito en
+    `docs/plan-preentrega.md` ("Plan detallado del PR 2"); implementación en curso con cinco subagentes (A M-1 y M-7,
+    B encargados, C reverso de cuota y M-6, D M-8 y reversos de compras, E M-5).** Decisiones del chairman al arbitrar
+    el plan: `anular_compra` revierte el pago automático del contado; el reverso de una cuota de una caja cerrada sale
+    de otra caja abierta; los documentos del crédito se pueden desmarcar con auditoría; no se parte el PR. Producción
+    (solo lectura, 2026-11-10): 0 compras, 0 pagos de cuota, 0 pagos a proveedor, 0 encargados. Regla de cupo:
+    verificar todo en local y subir el PR una sola vez; aplicar las migraciones ANTES del merge (ver abajo).
   - **PR 1, bloqueantes: cerrado el 2026-11-10 (PR #95, squash `46b7ecd`).**
     - Qué entró: B-1 a B-6, más los arreglos de tres rondas de revisión (dos pestañas, cuotas guardadas antes de
       enviar, espera de 60 s en cuotas, pendiente ajeno que no se reenvía, encargado que no restablece a otro
