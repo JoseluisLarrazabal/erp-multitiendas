@@ -1,0 +1,94 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  alcanceCobros,
+  fijarCobroPendiente,
+  leerCobrosPendientes,
+  type PendienteEnLinea,
+} from "./cobro-pendiente";
+import type { VentaPayload } from "./schemas";
+import type { NotaVenta } from "./venta";
+
+const payload: VentaPayload = {
+  id: "a0000000-0000-4000-8000-000000000001",
+  dispositivo_id: "a0000000-0000-4000-8000-000000000002",
+  caja_sesion_id: "a0000000-0000-4000-8000-000000000003",
+  numero: "C1-000007",
+  cliente_id: null,
+  creada_en_cliente: "2026-11-08T10:00:00.000Z",
+  descuento: 0,
+  total: 90,
+  items: [
+    {
+      producto_id: "a0000000-0000-4000-8000-000000000005",
+      lista: "contado",
+      cantidad: 2,
+      precio_unitario: 45,
+      descuento: 0,
+      serie_id: null,
+    },
+  ],
+  pagos: [{ medio: "efectivo", monto: 90 }],
+};
+const nota = {
+  numero: "C1-000007",
+  fechaIso: "2026-11-08T10:00:00.000Z",
+  vendedor: "Ana",
+  negocio: { nombre: "Tienda", nit: null, datosNota: null },
+  cliente: null,
+  lineas: [],
+} as unknown as NotaVenta;
+const pendiente: PendienteEnLinea = { payload, nota, guardadoEn: "2026-11-08T10:00:01.000Z" };
+const A = alcanceCobros("n", "e");
+
+function almacen() {
+  const m = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+    removeItem: (k: string) => void m.delete(k),
+  });
+  return m;
+}
+afterEach(() => vi.unstubAllGlobals());
+
+describe("cobros en línea pendientes (sobreviven a recargar)", () => {
+  it("se guardan, se leen validados y se borran", () => {
+    const m = almacen();
+    expect(leerCobrosPendientes(A)).toEqual({});
+    expect(fijarCobroPendiente(A, "credito", pendiente)).toBe(true);
+    expect(leerCobrosPendientes(A)).toEqual({ credito: pendiente });
+    expect(fijarCobroPendiente(A, "reserva-1", pendiente)).toBe(true);
+    expect(Object.keys(leerCobrosPendientes(A))).toEqual(["credito", "reserva-1"]);
+    fijarCobroPendiente(A, "credito", null);
+    fijarCobroPendiente(A, "reserva-1", null);
+    expect(leerCobrosPendientes(A)).toEqual({});
+    expect(m.size).toBe(0);
+  });
+  it("descarta entradas inválidas y devuelve vacío ante JSON roto", () => {
+    const m = almacen();
+    m.set(
+      A,
+      JSON.stringify({ malo: { payload: { id: "no" }, nota, guardadoEn: "x" }, ok: pendiente }),
+    );
+    expect(Object.keys(leerCobrosPendientes(A))).toEqual(["ok"]);
+    m.set(A, "{no es json");
+    expect(leerCobrosPendientes(A)).toEqual({});
+  });
+  it("si setItem lanza, fijar devuelve false", () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem: () => undefined,
+    });
+    expect(fijarCobroPendiente(A, "credito", pendiente)).toBe(false);
+  });
+  it("separa por negocio y por equipo, no por usuario", () => {
+    almacen();
+    fijarCobroPendiente(A, "credito", pendiente);
+    expect(leerCobrosPendientes(alcanceCobros("n", "otro-equipo"))).toEqual({});
+    expect(leerCobrosPendientes(alcanceCobros("otro-negocio", "e"))).toEqual({});
+    expect(Object.keys(leerCobrosPendientes(alcanceCobros("n", "e")))).toEqual(["credito"]);
+  });
+});

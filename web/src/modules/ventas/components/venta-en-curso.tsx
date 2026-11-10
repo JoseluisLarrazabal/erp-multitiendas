@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PanelCaja } from "@/modules/caja";
 import { CLAVE_CREDITO } from "../use-envio";
+import { alcanceCuotas, hayCuotasSinConfirmar } from "../cobro-cuota";
 import { aCentavos, bs } from "../domain";
 import { datosBoleta } from "../orden";
 import { useVenta, type OpcionesVenta } from "../use-venta";
@@ -34,6 +35,11 @@ export function VentaEnCurso({
   const v = useVenta({ ...opciones, atajosBloqueados: opciones.atajosBloqueados || aparte });
   const { negocio, equipo, cajaId } = opciones;
   const { envio } = v;
+  // Lo que impide cerrar la caja o cambiar de equipo: la cola, un cobro en línea sin confirmar o una cuota sin confirmar.
+  const hayPendientes =
+    v.colaBloquea ||
+    envio.pendientes.size > 0 ||
+    hayCuotasSinConfirmar(alcanceCuotas(opciones.negocioId, equipo.id, opciones.usuarioId));
 
   if (v.nota) {
     const alNueva = () => {
@@ -71,7 +77,7 @@ export function VentaEnCurso({
       <BarraEquipo
         equipo={equipo}
         cajaAbierta={!!cajaId}
-        pendiente={v.colaBloquea}
+        pendiente={hayPendientes}
         alCambiarEquipo={() =>
           v.carrito.length > 0 ? v.setConfirmandoEquipo(true) : alCambiarEquipo()
         }
@@ -97,6 +103,29 @@ export function VentaEnCurso({
           if (m !== "caja") v.setConsulta(m === "consulta");
         }}
       />
+      {[...envio.pendientes]
+        .filter(([clave]) => !(v.cobrando && clave === clavePendiente))
+        .map(([clave, p]) => (
+          <div
+            key={clave}
+            role="alert"
+            className="border-destructive flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
+          >
+            <p className="text-destructive min-w-0 flex-1">
+              Cobro sin confirmar: {p.nota.numero}, {bs(aCentavos(p.payload.total))}
+              {p.nota.cliente ? `, ${p.nota.cliente.nombre}` : ""}. No entregues el producto hasta
+              verificar.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={envio.estado.t === "enviando" || envio.estado.t === "verificando"}
+              onClick={() => void envio.descartarYVerificar(clave)}
+            >
+              Verificar cobro
+            </Button>
+          </div>
+        ))}
       <AvisosVenta
         anuncio={v.anuncio}
         aviso={v.aviso}
@@ -113,7 +142,7 @@ export function VentaEnCurso({
           nombreEquipo={equipo.nombre}
           sesionId={cajaId}
           filas={opciones.cola.filas}
-          ventaPendiente={v.colaBloquea}
+          ventaPendiente={hayPendientes}
           lecturaColaFallida={opciones.cola.estado.lecturaFallida}
           alEncolar={() => opciones.cola.disparar()}
           alCerrar={() => opciones.cajaCerrada(equipo.id)}

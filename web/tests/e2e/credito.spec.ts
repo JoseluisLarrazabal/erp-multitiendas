@@ -300,3 +300,62 @@ test("respuesta perdida: el servidor guarda la venta a crédito pero el cliente 
   // Una sola venta y un solo crédito nuevo, aunque el cobro se reintentó.
   expect((await cuentas()).length).toBe(antes + 1);
 });
+
+// El pendiente se guarda en el equipo ANTES de enviar: si la página se recarga o la app se cierra con la respuesta en el
+// aire, el POS lo recuerda y se verifica contra el servidor en vez de repetir el cobro (que duplicaría el crédito).
+test("recargar a mitad del cobro a crédito no pierde ni duplica la venta", async ({ page }) => {
+  test.setTimeout(90_000);
+  // Con un cobro en vuelo el navegador pregunta antes de recargar (beforeunload): se acepta.
+  page.on("dialog", (d) => void d.accept());
+  const producto = await crearProductoConPrecio({
+    contado: 50,
+    credito: 60,
+    minimo: 45,
+    stock: 20,
+  });
+  const ventasDelCliente = async () =>
+    (
+      (await apiComo(CUENTA, `ventas?select=id&cliente_id=eq.${clienteId}`)).json as {
+        id: string;
+      }[]
+    ).length;
+  const antes = (await cuentas()).length;
+  const ventasAntes = await ventasDelCliente();
+  await abrirPos(page);
+  await agregar(page, producto.barras, 1);
+  await page.getByRole("checkbox", { name: /Vender a crédito/ }).click();
+  await expect(page.getByRole("checkbox", { name: /Vender a crédito/ })).toBeChecked();
+  await elegirCliente(page);
+  await page
+    .getByRole("button", { name: /^Cobrar/ })
+    .first()
+    .click();
+  const cobro = page.getByRole("alertdialog", { name: "Cobrar la inicial del crédito" });
+
+  // El servidor guarda la venta pero la respuesta nunca llega al cliente.
+  let guardada!: () => void;
+  const llegoAlServidor = new Promise<void>((r) => (guardada = r));
+  await page.route("**/rest/v1/rpc/registrar_venta", async (route) => {
+    await route.fetch();
+    guardada();
+    await route.abort("failed");
+  });
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await llegoAlServidor;
+  await page.reload();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+
+  // Tras recargar: carrito vacío, pero el cobro sin confirmar sigue ahí y no se reenvía solo.
+  const aviso = page.getByRole("alert").filter({ hasText: "Cobro sin confirmar" });
+  await expect(aviso).toBeVisible();
+  await expect(aviso).toContainText(nombreCliente);
+  await aviso.getByRole("button", { name: "Verificar cobro" }).click();
+  await expect(page.getByRole("article", { name: /Nota de venta W2-\d{6}/ })).toBeVisible();
+  expect((await cuentas()).length).toBe(antes + 1);
+  expect(await ventasDelCliente()).toBe(ventasAntes + 1);
+
+  // La nota se confirmó: el pendiente ya no existe y el POS queda libre.
+  await page.reload();
+  await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
+  await expect(page.getByText("Cobro sin confirmar")).toHaveCount(0);
+});

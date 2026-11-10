@@ -86,7 +86,7 @@ const A = alcanceCuotas("n", "e", "u");
 describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
   function sesion() {
     const m = new Map<string, string>();
-    vi.stubGlobal("sessionStorage", {
+    vi.stubGlobal("localStorage", {
       getItem: (k: string) => m.get(k) ?? null,
       setItem: (k: string, v: string) => void m.set(k, v),
     });

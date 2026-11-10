@@ -17,7 +17,7 @@ export const MENSAJE_CUOTA_SIN_CONFIRMAR =
 // Cobro de cuota sin confirmar: el payload (con su id) y cómo mostrarlo.
 export type CuotaPendiente = { payload: PagoCuotaPayload; cliente: string; detalle: string };
 
-// Viven en sessionStorage: recargar la pestaña no pierde el payload, y reintentarlo con el MISMO id nunca cobra dos veces
+// Viven en localStorage (sobreviven a recargar y a que el sistema mate la app): no se pierde el payload, y reintentarlo con el MISMO id nunca cobra dos veces
 // (pagar_cuota es idempotente por id). Cada lectura valida con el schema del payload.
 // La clave lleva el alcance (negocio, equipo y usuario): una pestaña con otra cuenta o equipo no ve ni se bloquea por lo de otra.
 const CLAVE = "erp:cuotas-sin-confirmar";
@@ -26,7 +26,7 @@ export const alcanceCuotas = (negocioId: string, equipoId: string, usuarioId: st
 
 function leer(alcance: string): Record<string, CuotaPendiente> {
   try {
-    const crudo: unknown = JSON.parse(sessionStorage.getItem(alcance) ?? "{}");
+    const crudo: unknown = JSON.parse(localStorage.getItem(alcance) ?? "{}");
     if (typeof crudo !== "object" || crudo === null) return {};
     const salida: Record<string, CuotaPendiente> = {};
     for (const [creditoId, v] of Object.entries(crudo)) {
@@ -53,7 +53,7 @@ export function fijarCuotaSinConfirmar(
   if (p) todas[creditoId] = p;
   else delete todas[creditoId];
   try {
-    sessionStorage.setItem(alcance, JSON.stringify(todas));
+    localStorage.setItem(alcance, JSON.stringify(todas));
   } catch {
     // Sin almacenamiento: el cobro sigue funcionando, solo no sobrevive a recargar.
   }

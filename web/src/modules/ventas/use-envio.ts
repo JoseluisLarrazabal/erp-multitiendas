@@ -17,13 +17,18 @@ import {
 } from "./cola-ventas";
 import { cobrarEnLinea, MENSAJE_SIN_CONFIRMAR } from "./cobro-en-linea";
 import { alcanceCuotas, hayCuotasSinConfirmar } from "./cobro-cuota";
+import {
+  alcanceCobros,
+  fijarCobroPendiente,
+  leerCobrosPendientes,
+  type PendienteEnLinea,
+} from "./cobro-pendiente";
 import { formatearNumero, siguienteSecuencia } from "./domain";
 import { leerContador, subirContador } from "./equipo-local";
 import { existeVenta, type Equipo } from "./queries";
 import type { OrdenPayload, VentaPayload } from "./schemas";
 
-// Cobro online-only (reserva o crédito) sin confirmar: lo que se envió y la nota armada con esos datos.
-export type PendienteEnLinea = { payload: VentaPayload; nota: NotaVenta };
+export type { PendienteEnLinea };
 import { equipoTieneCola, type ColaPos } from "./use-cola";
 import {
   construirNota,
@@ -45,6 +50,10 @@ const MENSAJE_EN_LINEA_RED =
   "Esta venta necesita conexión (reserva o crédito): no se cobró. Vuelve a intentar con red.";
 // Clave del cobro a crédito sin confirmar en `pendientes` (hay una sola venta en curso a la vez).
 export const CLAVE_CREDITO = "credito";
+// Un cobro cuyo servidor aún pudo estar procesándolo no se descarta antes de este tiempo.
+const ESPERA_VERIFICAR_MS = 60_000;
+const MENSAJE_NO_GUARDADO =
+  "No se pudo guardar el cobro en este equipo. No se cobró: libera espacio o usa otro equipo.";
 const MENSAJE_ARMAR = "No se pudo armar la venta. Recarga la página e intenta de nuevo.";
 const MENSAJE_COLA =
   "No se pudo guardar la venta en este equipo, así que no se cobró. Revisa el espacio y los permisos del navegador, o recarga la página.";
@@ -104,16 +113,35 @@ export function useEnvio(opts: {
   const [estado, setEstado] = useState<EstadoEnvio>({ t: "libre" });
   const ocupado = useRef(false);
   // Cobros online-only sin confirmar, por reserva (o CLAVE_CREDITO): el payload se reenvía idéntico (mismo id y número) hasta saber qué pasó
-  // en el servidor. El mapa vive en estado (la pantalla lo muestra) y en un ref (hayPendiente lo lee sin render).
-  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteEnLinea>>(new Map());
+  // en el servidor. El mapa vive en estado (la pantalla lo muestra) y en un ref (hayPendiente lo lee sin render), y se
+  // espeja en localStorage (cobro-pendiente.ts): sobrevive a recargar y se rehidrata al montar (el POS solo se monta en el cliente, tras cargar la sesión).
+  const alcance = alcanceCobros(negocioId, equipo.id);
+  const [pendientes, setPendientes] = useState<ReadonlyMap<string, PendienteEnLinea>>(
+    () => new Map(Object.entries(leerCobrosPendientes(alcance))),
+  );
   const pendRef = useRef(pendientes);
-  const fijarPendiente = useCallback((clave: string, p: PendienteEnLinea | null) => {
-    const m = new Map(pendRef.current);
-    if (p) m.set(clave, p);
-    else m.delete(clave);
-    pendRef.current = m;
-    setPendientes(m);
-  }, []);
+  // Devuelve false si no se pudo escribir en el almacenamiento (la memoria se actualiza igual).
+  const fijarPendiente = useCallback(
+    (clave: string, p: PendienteEnLinea | null) => {
+      const guardado = fijarCobroPendiente(alcance, clave, p);
+      const m = new Map(pendRef.current);
+      if (p) m.set(clave, p);
+      else m.delete(clave);
+      pendRef.current = m;
+      setPendientes(m);
+      return guardado;
+    },
+    [alcance],
+  );
+  // Aviso del navegador al cerrar o recargar con un cobro en vuelo o sin confirmar. Solo en escritorio: en el celular la
+  // protección real es haber guardado el pendiente antes de enviar.
+  const protegido = estado.t === "enviando" || estado.t === "verificando" || pendientes.size > 0;
+  useEffect(() => {
+    if (!protegido || window.matchMedia?.("(pointer: coarse)").matches) return;
+    const f = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", f);
+    return () => window.removeEventListener("beforeunload", f);
+  }, [protegido]);
 
   // Una reserva o un crédito nunca pasan por la cola ni por IndexedDB: sin conexión no se cobra.
   const confirmarEnLinea = useCallback(
@@ -140,6 +168,15 @@ export function useEnvio(opts: {
       const salida = await cobrarEnLinea(createClient(), {
         previo: previo?.payload,
         primerNumero,
+        // Antes de cada envío (y al renumerar) el cobro queda en este equipo, con su nota.
+        guardar: (v) =>
+          !!armada.nota &&
+          fijarPendiente(clave, {
+            payload: v,
+            nota: { ...armada.nota, numero: v.numero },
+            guardadoEn: new Date().toISOString(),
+          }),
+
         alVerificar: () => setEstado({ t: "verificando" }),
         armar: (seq) => {
           const datos: DatosEnvio = {
@@ -166,8 +203,17 @@ export function useEnvio(opts: {
       });
       if (salida.t === "no-armada" || !armada.nota)
         return setEstado({ t: "rechazada", mensaje: MENSAJE_ARMAR });
+      if (salida.t === "no-guardada") {
+        fijarPendiente(clave, previo);
+        return setEstado({ t: "rechazada", mensaje: MENSAJE_NO_GUARDADO });
+      }
       if (salida.t === "sin-confirmar") {
-        fijarPendiente(clave, { payload: salida.payload, nota: armada.nota });
+        // El último envío fue ahora: desde aquí cuenta la espera antes de poder descartar.
+        fijarPendiente(clave, {
+          payload: salida.payload,
+          nota: armada.nota,
+          guardadoEn: new Date().toISOString(),
+        });
         return setEstado({ t: "rechazada", mensaje: MENSAJE_SIN_CONFIRMAR });
       }
       if (salida.t === "rechazada") {
@@ -215,11 +261,17 @@ export function useEnvio(opts: {
             t: "rechazada",
             mensaje: `No se pudo verificar (${r.error}). No entregues el producto; intenta de nuevo.`,
           });
+        // Sin rastro en el servidor pero recién enviado: su transacción aún puede estar en vuelo. No se descarta.
+        if (!r.data && Date.now() - Date.parse(p.guardadoEn) < ESPERA_VERIFICAR_MS)
+          return setEstado({
+            t: "rechazada",
+            mensaje: "Todavía puede estar registrándose: espera un momento y vuelve a verificar.",
+          });
         fijarPendiente(clave, null);
         if (!r.data)
           return setEstado({
             t: "rechazada",
-            mensaje: "No se registró: el cobro no se hizo. Puedes cobrar de nuevo.",
+            mensaje: "Ese cobro no se registró. Puedes volver a cargarlo.",
           });
         subirContador(equipo.id, secuenciaDe(p.payload.numero));
         setEstado({ t: "libre" });
