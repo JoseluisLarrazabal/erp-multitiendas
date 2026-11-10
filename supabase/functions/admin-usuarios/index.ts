@@ -133,7 +133,9 @@ Deno.serve(async (req) => {
       return responder({ ok: true, data: { usuario_id: creada.user.id } });
     }
 
-    const { data: puede, error } = await llamador.rpc("puede_administrar_cuenta", {
+    // Restablecer la clave permite entrar como la otra persona: un encargado no puede hacerlo sobre otro encargado.
+    const permiso = datos.accion === "restablecer_clave" ? "puede_restablecer_clave" : "puede_administrar_cuenta";
+    const { data: puede, error } = await llamador.rpc(permiso, {
       p_usuario_id: datos.usuario_id,
     });
     if (error) return falla("ERP_INTERNO");

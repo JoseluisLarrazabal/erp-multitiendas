@@ -235,6 +235,27 @@ describe("restablecer_clave", () => {
     expect((await entrar("dueno@erp.test", NUEVA)).error).not.toBeNull();
   });
 
+  it("entre pares: el encargado no restablece a otro encargado, sí a roles inferiores", async () => {
+    const cuenta = async (rol: string) => {
+      const { correo, peticion } = crear(dueno, { negocio_id: LAVANDERIA, rol });
+      return { correo, id: (await peticion).cuerpo.data?.usuario_id ?? "" };
+    };
+    const par = await cuenta("encargado");
+    expect(par.id).not.toBe("");
+    const sobrePar = await restablecer(encargadoLav, par.id);
+    expect(sobrePar.status).toBe(403);
+    expect(sobrePar.cuerpo.error).toBe("ERP_SIN_PERMISO");
+    expect((await entrar(par.correo, "Clave-prueba-1")).error).toBeNull();
+    expect((await entrar(par.correo, NUEVA)).error).not.toBeNull();
+    for (const rol of ["vendedor", "empleado"]) {
+      const inferior = await cuenta(rol);
+      expect(inferior.id).not.toBe("");
+      expect((await restablecer(encargadoLav, inferior.id)).status, rol).toBe(200);
+      expect((await entrar(inferior.correo, NUEVA)).error, rol).toBeNull();
+    }
+    expect((await restablecer(dueno, par.id)).status).toBe(200);
+  });
+
   it("clave débil o ausente: 400 y no cambia nada", async () => {
     for (const clave of ["corta1", "sololetrasaqui", "1234567890"]) {
       const r = await restablecer(dueno, objetivo.id, clave);

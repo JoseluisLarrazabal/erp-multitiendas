@@ -43,9 +43,7 @@ export function AccionesFila({ fila, negocioId, negocioNombre, acciones }: Props
             accion={() => desactivarUsuario({ usuarioId })}
           />
         )}
-        {(acciones.desactivar || acciones.reactivar) && (
-          <DialogoRestablecerClave usuarioId={usuarioId} nombre={nombre} />
-        )}
+        {acciones.restablecer && <DialogoRestablecerClave usuarioId={usuarioId} nombre={nombre} />}
         {acciones.quitar && (
           <ConfirmarAccion
             etiqueta="Quitar"

@@ -26,3 +26,28 @@ $$;
 
 revoke all on function public.auditar_clave(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.auditar_clave(uuid, uuid) to service_role;
+
+-- Restablecer la clave equivale a entrar como esa persona: ademas de puede_administrar_cuenta, el destino no puede ser
+-- encargado en un negocio donde el llamador no es dueño (un encargado solo restablece a roles inferiores).
+create function public.puede_restablecer_clave(p_usuario_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(
+    public.puede_administrar_cuenta(p_usuario_id)
+    and not exists (
+      select 1
+      from public.usuario_negocio o
+      where o.usuario_id = p_usuario_id
+        and o.rol = 'encargado'
+        and not public.es_dueno(o.negocio_id)
+    ),
+    false
+  )
+$$;
+
+revoke all on function public.puede_restablecer_clave(uuid) from public, anon, authenticated;
+grant execute on function public.puede_restablecer_clave(uuid) to authenticated;

@@ -67,7 +67,7 @@ export async function nombreDePerfil(supabase: Cliente, usuarioId: string): Prom
   return data?.nombre ?? null;
 }
 
-// shortcut: puede_administrar_cuenta por fila (una RPC por usuario). Aceptable con ~15 usuarios por negocio;
+// shortcut: puede_administrar_cuenta y puede_restablecer_clave por fila (dos RPC por usuario). Aceptable con ~15 usuarios por negocio;
 // pasar a una RPC por lote si un negocio supera ~50.
 export async function listarUsuariosDelNegocio(
   supabase: Cliente,
@@ -83,10 +83,11 @@ export async function listarUsuariosDelNegocio(
   if (error) return { ok: false, error: "No se pudo leer el personal." };
   const filas = await Promise.all(
     data.map(async (f): Promise<FilaUsuario | null> => {
-      const { data: puede, error: e } = await supabase.rpc("puede_administrar_cuenta", {
-        p_usuario_id: f.usuario_id,
-      });
-      if (e) return null;
+      const [{ data: puede, error: e }, { data: restablece, error: e2 }] = await Promise.all([
+        supabase.rpc("puede_administrar_cuenta", { p_usuario_id: f.usuario_id }),
+        supabase.rpc("puede_restablecer_clave", { p_usuario_id: f.usuario_id }),
+      ]);
+      if (e || e2) return null;
       return {
         usuarioId: f.usuario_id,
         nombre: f.perfiles.nombre,
@@ -94,6 +95,7 @@ export async function listarUsuariosDelNegocio(
         activo: f.perfiles.activo,
         esYo: f.usuario_id === miId,
         puedeAdministrar: puede === true,
+        puedeRestablecer: restablece === true,
       };
     }),
   );
