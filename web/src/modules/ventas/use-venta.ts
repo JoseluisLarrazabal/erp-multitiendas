@@ -180,6 +180,10 @@ export function useVenta(o: OpcionesVenta) {
       setVersionCredito((v) => v + 1);
     } else setAviso(`No se pudieron releer los parámetros del crédito: ${r.error}`);
   }, [negocioId]);
+  const alVerificada = useCallback((n: NotaVenta) => {
+    setNota(n);
+    setNotaEnCola(false);
+  }, []);
   const envio = useEnvio({
     negocioId,
     cola: o.cola,
@@ -191,6 +195,7 @@ export function useVenta(o: OpcionesVenta) {
     alCajaCerrada,
     alErrorCredito: refrescarCredito,
     alExito,
+    alVerificada,
     usuarioId: o.usuarioId,
   });
   const { hayPendiente, limpiarRechazo } = envio;

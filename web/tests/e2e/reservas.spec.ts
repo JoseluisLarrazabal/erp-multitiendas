@@ -232,8 +232,6 @@ test("respuesta perdida: el servidor guarda el cobro pero el cliente no lo ve", 
 
 test("recargar a mitad del cobro de una reserva no la pierde ni la duplica", async ({ page }) => {
   test.setTimeout(90_000);
-  // Con un cobro en vuelo el navegador pregunta antes de recargar (beforeunload): se acepta.
-  page.on("dialog", (d) => void d.accept());
   const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
   const reservaId = await reservaApi(producto, 1);
   const cobro = await abrirCobroDeReserva(page);
@@ -251,6 +249,12 @@ test("recargar a mitad del cobro de una reserva no la pierde ni la duplica", asy
   await page.reload();
   await page.unrouteAll({ behavior: "ignoreErrors" });
 
+  // El cajero ya arma la venta del siguiente cliente: verificar el cobro viejo no debe vaciarla.
+  const otro = await crearProductoConPrecio({ contado: 30, minimo: 20, stock: 10 });
+  const buscar = page.getByRole("searchbox", { name: "Buscar producto" });
+  await buscar.fill(otro.barras);
+  await page.keyboard.press("Enter");
+  await expect(buscar).toHaveValue("");
   const aviso = page.getByRole("alert").filter({ hasText: "Cobro sin confirmar" });
   await expect(aviso).toBeVisible();
   await aviso.getByRole("button", { name: "Verificar cobro" }).click();
@@ -258,6 +262,10 @@ test("recargar a mitad del cobro de una reserva no la pierde ni la duplica", asy
   const r = await estadoReserva(reservaId);
   expect(r.estado).toBe("completada");
   expect(await ventasDe(r.venta_id!)).toEqual({ ventas: 1, anticipos: 1 });
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Venta" }).getByText(otro.nombre),
+  ).toBeVisible();
 });
 
 test("nunca llegó: la verificación dice que no se registró y se cobra de nuevo", async ({

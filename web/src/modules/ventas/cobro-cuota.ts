@@ -19,10 +19,11 @@ export type CuotaPendiente = { payload: PagoCuotaPayload; cliente: string; detal
 
 // Viven en localStorage (sobreviven a recargar y a que el sistema mate la app): no se pierde el payload, y reintentarlo con el MISMO id nunca cobra dos veces
 // (pagar_cuota es idempotente por id). Cada lectura valida con el schema del payload.
-// La clave lleva el alcance (negocio, equipo y usuario): una pestaña con otra cuenta o equipo no ve ni se bloquea por lo de otra.
+// La clave no lleva usuario (como la de los cobros en línea): otro cajero del mismo equipo ve la cuota pendiente y no la
+// repite, ni cierra la caja con ella sin confirmar. Otro equipo u otro negocio no ven ni se bloquean por lo de otro.
 const CLAVE = "erp:cuotas-sin-confirmar";
-export const alcanceCuotas = (negocioId: string, equipoId: string, usuarioId: string) =>
-  `${CLAVE}:${negocioId}:${equipoId}:${usuarioId}`;
+export const alcanceCuotas = (negocioId: string, equipoId: string) =>
+  `${CLAVE}:${negocioId}:${equipoId}`;
 
 function leer(alcance: string): Record<string, CuotaPendiente> {
   try {
@@ -44,18 +45,20 @@ export const cuotasSinConfirmar = (alcance: string) => Object.values(leer(alcanc
 export const cuotaSinConfirmar = (alcance: string, creditoId: string) => leer(alcance)[creditoId];
 // Una entrada solo sale por un éxito confirmado, por la verificación de existencia o por un ERP que prueba que no se registró
 // (PRUEBAN_NO_REGISTRADO): nunca por un permiso u otro rechazo, que no dicen qué pasó con un intento anterior.
+// false si no se pudo escribir: el llamador NO debe enviar el cobro (no quedaría rastro tras una recarga).
 export function fijarCuotaSinConfirmar(
   alcance: string,
   creditoId: string,
   p: CuotaPendiente | null,
-) {
+): boolean {
   const todas = leer(alcance);
   if (p) todas[creditoId] = p;
   else delete todas[creditoId];
   try {
     localStorage.setItem(alcance, JSON.stringify(todas));
+    return true;
   } catch {
-    // Sin almacenamiento: el cobro sigue funcionando, solo no sobrevive a recargar.
+    return false;
   }
 }
 export const hayCuotasSinConfirmar = (alcance: string) => Object.keys(leer(alcance)).length > 0;

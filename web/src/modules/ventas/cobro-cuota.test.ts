@@ -82,7 +82,7 @@ describe("cobrarCuota (sin cola offline)", () => {
   });
 });
 
-const A = alcanceCuotas("n", "e", "u");
+const A = alcanceCuotas("n", "e");
 describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
   function sesion() {
     const m = new Map<string, string>();
@@ -103,11 +103,24 @@ describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
     expect(hayCuotasSinConfirmar(A)).toBe(true);
     expect(cuotaSinConfirmar(A, payload.credito_id)?.payload).toEqual(payload);
     expect(cuotasSinConfirmar(A).map((p) => p.cliente)).toEqual(["Ana"]);
-    // Otro equipo o usuario no ve ni se bloquea por esta entrada.
-    expect(cuotasSinConfirmar(alcanceCuotas("n", "otro-equipo", "u"))).toEqual([]);
-    expect(hayCuotasSinConfirmar(alcanceCuotas("n", "e", "otro-usuario"))).toBe(false);
+    // Otro equipo o negocio no ve ni se bloquea por esta entrada (el usuario no entra en la clave).
+    expect(cuotasSinConfirmar(alcanceCuotas("n", "otro-equipo"))).toEqual([]);
+    expect(hayCuotasSinConfirmar(alcanceCuotas("otro-negocio", "e"))).toBe(false);
     fijarCuotaSinConfirmar(A, payload.credito_id, null);
     expect(hayCuotasSinConfirmar(A)).toBe(false);
+  });
+  it("fijar devuelve true al guardar y false si no hay forma de escribir: ahí no se envía", () => {
+    sesion();
+    const p = { payload, cliente: "Ana", detalle: "d" };
+    expect(fijarCuotaSinConfirmar(A, payload.credito_id, p)).toBe(true);
+    expect(cuotaSinConfirmar(A, payload.credito_id)?.payload.id).toBe(payload.id);
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    });
+    expect(fijarCuotaSinConfirmar(A, payload.credito_id, p)).toBe(false);
   });
   it("ignora entradas dañadas o con otro formato", () => {
     const m = sesion();

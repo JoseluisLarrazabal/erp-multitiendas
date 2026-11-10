@@ -3,6 +3,7 @@ import {
   alcanceCobros,
   fijarCobroPendiente,
   leerCobrosPendientes,
+  montosCongelados,
   type PendienteEnLinea,
 } from "./cobro-pendiente";
 import type { VentaPayload } from "./schemas";
@@ -51,6 +52,15 @@ function almacen() {
 }
 afterEach(() => vi.unstubAllGlobals());
 
+describe("montosCongelados", () => {
+  it("no hay montos fijos mientras el envío está en vuelo; sí tras fallar o si se rehidrató", () => {
+    expect(montosCongelados(pendiente, { t: "enviando" })).toBeUndefined();
+    expect(montosCongelados(undefined, { t: "libre" })).toBeUndefined();
+    expect(montosCongelados(pendiente, { t: "rechazada" })).toEqual({ efectivo: 9000, qr: 0 });
+    expect(montosCongelados(pendiente, { t: "libre" })).toEqual({ efectivo: 9000, qr: 0 });
+  });
+});
+
 describe("cobros en línea pendientes (sobreviven a recargar)", () => {
   it("se guardan, se leen validados y se borran", () => {
     const m = almacen();
@@ -59,8 +69,8 @@ describe("cobros en línea pendientes (sobreviven a recargar)", () => {
     expect(leerCobrosPendientes(A)).toEqual({ credito: pendiente });
     expect(fijarCobroPendiente(A, "reserva-1", pendiente)).toBe(true);
     expect(Object.keys(leerCobrosPendientes(A))).toEqual(["credito", "reserva-1"]);
-    fijarCobroPendiente(A, "credito", null);
-    fijarCobroPendiente(A, "reserva-1", null);
+    fijarCobroPendiente(A, "credito", null, payload.id);
+    fijarCobroPendiente(A, "reserva-1", null, payload.id);
     expect(leerCobrosPendientes(A)).toEqual({});
     expect(m.size).toBe(0);
   });
@@ -83,6 +93,21 @@ describe("cobros en línea pendientes (sobreviven a recargar)", () => {
       removeItem: () => undefined,
     });
     expect(fijarCobroPendiente(A, "credito", pendiente)).toBe(false);
+  });
+  it("no pisa ni borra la entrada de otro cobro; sí reescribe el mismo (renumerar conserva el id)", () => {
+    almacen();
+    const otro: PendienteEnLinea = {
+      ...pendiente,
+      payload: { ...payload, id: "a0000000-0000-4000-8000-0000000000ff" },
+    };
+    expect(fijarCobroPendiente(A, "credito", pendiente)).toBe(true);
+    expect(fijarCobroPendiente(A, "credito", otro)).toBe(false);
+    expect(fijarCobroPendiente(A, "credito", null, otro.payload.id)).toBe(true);
+    expect(fijarCobroPendiente(A, "credito", null)).toBe(true);
+    expect(leerCobrosPendientes(A).credito?.payload.id).toBe(payload.id);
+    const renumerado = { ...pendiente, payload: { ...payload, numero: "C1-000008" } };
+    expect(fijarCobroPendiente(A, "credito", renumerado)).toBe(true);
+    expect(leerCobrosPendientes(A).credito?.payload.numero).toBe("C1-000008");
   });
   it("separa por negocio y por equipo, no por usuario", () => {
     almacen();

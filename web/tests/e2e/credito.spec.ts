@@ -305,8 +305,6 @@ test("respuesta perdida: el servidor guarda la venta a crédito pero el cliente 
 // aire, el POS lo recuerda y se verifica contra el servidor en vez de repetir el cobro (que duplicaría el crédito).
 test("recargar a mitad del cobro a crédito no pierde ni duplica la venta", async ({ page }) => {
   test.setTimeout(90_000);
-  // Con un cobro en vuelo el navegador pregunta antes de recargar (beforeunload): se acepta.
-  page.on("dialog", (d) => void d.accept());
   const producto = await crearProductoConPrecio({
     contado: 50,
     credito: 60,
@@ -358,4 +356,70 @@ test("recargar a mitad del cobro a crédito no pierde ni duplica la venta", asyn
   await page.reload();
   await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
   await expect(page.getByText("Cobro sin confirmar")).toHaveCount(0);
+});
+
+// La cuota queda guardada en el equipo ANTES de enviarse: si la respuesta se pierde y la página se recarga, reaparece como
+// cobro sin confirmar y reintentarla (mismo id) deja exactamente un pago.
+test("recargar a mitad del cobro de una cuota no la pierde ni la duplica", async ({ page }) => {
+  test.setTimeout(90_000);
+  const saldoTotal = async () => (await cuentas()).reduce((s, c) => s + c.saldo, 0);
+  const antes = await saldoTotal();
+  expect(antes).toBeGreaterThan(1);
+  await abrirPos(page);
+  await page.getByRole("button", { name: "Cuotas" }).click();
+  await elegirCliente(page, page.getByRole("region", { name: "Cobrar cuotas" }));
+  await page
+    .getByRole("listitem", { name: /Crédito/ })
+    .first()
+    .getByRole("button", { name: /Cobrar cuota de/ })
+    .click();
+  await page.getByLabel("Monto a cobrar (Bs)").fill("1");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  const cobro = page.getByRole("alertdialog", { name: "Cobrar cuota" });
+
+  // El servidor registra el pago pero la respuesta nunca llega al cliente.
+  let guardada!: () => void;
+  const llegoAlServidor = new Promise<void>((r) => (guardada = r));
+  await page.route("**/rest/v1/rpc/pagar_cuota", async (route) => {
+    await route.fetch();
+    guardada();
+    await route.abort("failed");
+  });
+  // Con el envío en vuelo la cuota ya está guardada, pero todavía no es un fallo: no se muestra como sin confirmar.
+  let soltar!: () => void;
+  const retenida = new Promise<void>((r) => (soltar = r));
+  await page.route("**/rest/v1/rpc/pagar_cuota", async (route) => {
+    await retenida;
+    await route.fallback();
+  });
+  await cobro.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(cobro.getByRole("button", { name: "Enviando…" })).toBeVisible();
+  await expect(cobro.getByText("Cobro sin confirmar")).toHaveCount(0);
+  await expect(cobro.getByRole("button", { name: "Descartar y verificar" })).toHaveCount(0);
+  await expect(
+    page.getByRole("list", { name: "Cobros sin confirmar", includeHidden: true }),
+  ).toHaveCount(0);
+  soltar();
+  await llegoAlServidor;
+  // La cuota pendiente bloquea cambiar de equipo en el acto, sin cambiar de modo ni recargar.
+  // (el diálogo de cobro deja el resto de la página fuera del árbol de accesibilidad: includeHidden)
+  await expect(
+    page.getByRole("button", { name: "Cambiar equipo", includeHidden: true }),
+  ).toBeDisabled();
+  await page.reload();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await expect(page.getByRole("button", { name: "Cambiar equipo" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Cuotas" }).click();
+  const pendiente = page.getByRole("list", { name: "Cobros sin confirmar" });
+  await expect(pendiente).toContainText(nombreCliente);
+  await pendiente.getByRole("button", { name: "Reintentar o verificar" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Cobrar cuota" })
+    .getByRole("button", { name: "Reintentar cobro" })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Cuota cobrada: Bs 1,00" }),
+  ).toBeVisible();
+  expect(await saldoTotal()).toBeCloseTo(antes - 1, 2);
 });

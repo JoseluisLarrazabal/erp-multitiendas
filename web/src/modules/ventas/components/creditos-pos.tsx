@@ -27,7 +27,7 @@ import {
   type CuotaPendiente,
 } from "../cobro-cuota";
 import { aCentavos, bs, parsearMonto, textoMonto } from "../domain";
-import type { EstadoEnvio } from "../use-envio";
+import { MENSAJE_NO_GUARDADO, type EstadoEnvio } from "../use-envio";
 import { Cobro } from "./cobro";
 
 // Crédito en cobro: el de la lista o, tras recargar con un cobro sin confirmar, solo lo que se guardó de él.
@@ -39,24 +39,28 @@ export function CreditosPos({
   negocioId,
   equipoId,
   cajaId,
-  usuarioId,
+  alCambiarPendientes,
   alCajaCerrada,
 }: {
   negocioId: string;
   equipoId: string;
-  usuarioId: string;
   cajaId: string | null;
+  // Avisa al POS si queda alguna cuota sin confirmar (bloquea cambiar de equipo y cerrar la caja).
+  alCambiarPendientes: (hay: boolean) => void;
   // La base dice que la caja está cerrada: el POS la vuelve a comprobar (igual que al cobrar una venta).
   alCajaCerrada: () => Promise<void>;
 }) {
   const sinRed = useSinRed();
-  // Cobros sin confirmar de esta cuenta y este equipo (sessionStorage, también tras recargar): se leen una vez y el estado se
+  // Cobros sin confirmar de este equipo (localStorage, también tras recargar): se leen una vez y el estado se
   // actualiza junto con el almacenamiento.
-  const alcance = alcanceCuotas(negocioId, equipoId, usuarioId);
+  const alcance = alcanceCuotas(negocioId, equipoId);
   const [pendientes, setPendientes] = useState(() => cuotasSinConfirmar(alcance));
   function fijar(creditoId: string, p: CuotaPendiente | null) {
-    fijarCuotaSinConfirmar(alcance, creditoId, p);
-    setPendientes(cuotasSinConfirmar(alcance));
+    const guardado = fijarCuotaSinConfirmar(alcance, creditoId, p);
+    const todas = cuotasSinConfirmar(alcance);
+    setPendientes(todas);
+    alCambiarPendientes(todas.length > 0);
+    return guardado;
   }
   const pendienteDe = (creditoId: string) =>
     pendientes.find((p) => p.payload.credito_id === creditoId);
@@ -91,7 +95,12 @@ export function CreditosPos({
       </p>
     );
 
-  const sin = elegida ? pendienteDe(elegida.creditoId) : undefined;
+  // Mientras se envía, el pendiente guardado de antemano no es un fallo: solo se presenta como "sin confirmar" si el envío no cierra.
+  const enviando = estado.t === "enviando";
+  const sin = elegida && !enviando ? pendienteDe(elegida.creditoId) : undefined;
+  const sinConfirmar = enviando
+    ? pendientes.filter((p) => p.payload.credito_id !== elegida?.creditoId)
+    : pendientes;
   const congelado = sin
     ? { efectivo: aCentavos(sin.payload.efectivo), qr: aCentavos(sin.payload.qr) }
     : undefined;
@@ -141,18 +150,15 @@ export function CreditosPos({
       });
     const payload = armado.data;
     intento.current = { id: payload.id, clave: creditoId };
+    // Antes de enviar el cobro queda en este equipo: si la app muere a mitad del envío, reaparece para verificarlo.
+    if (!fijar(creditoId, { payload, cliente: elegida.clienteNombre, detalle: elegida.etiqueta }))
+      return setEstado({ t: "rechazada", mensaje: MENSAJE_NO_GUARDADO });
     setEstado({ t: "enviando" });
     const s = await cobrarCuota(createClient(), payload, {
       alVerificar: () => setEstado({ t: "verificando" }),
     });
-    if (s.t === "sin-confirmar") {
-      fijar(creditoId, {
-        payload,
-        cliente: elegida.clienteNombre,
-        detalle: elegida.etiqueta,
-      });
+    if (s.t === "sin-confirmar")
       return setEstado({ t: "rechazada", mensaje: MENSAJE_CUOTA_SIN_CONFIRMAR });
-    }
     if (s.t === "rechazada") {
       // Un permiso u otro rechazo no dicen qué pasó con un intento anterior: la entrada pendiente solo sale por la verificación o
       // por un ERP que prueba que no se registró. Sin entrada previa no hay nada que conservar.
@@ -218,12 +224,12 @@ export function CreditosPos({
           }}
         />
       </div>
-      {pendientes.length > 0 && (
+      {sinConfirmar.length > 0 && (
         <ul
           aria-label="Cobros sin confirmar"
           className="border-destructive divide-border bg-card divide-y rounded-xl border"
         >
-          {pendientes.map((p) => (
+          {sinConfirmar.map((p) => (
             <li
               key={p.payload.id}
               className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm"
