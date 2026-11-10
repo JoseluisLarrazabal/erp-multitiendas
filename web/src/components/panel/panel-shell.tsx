@@ -73,7 +73,7 @@ export function PanelShell({ negocio, usuario, permisos, tipo, children }: Props
       <aside
         id="menu-lateral"
         className={cn(
-          "bg-card fixed inset-y-0 left-0 z-20 flex w-[248px] flex-col gap-6 overflow-y-auto border-r px-3.5 pt-5 pb-3.5 duration-200 md:visible md:sticky md:top-0 md:h-dvh md:translate-x-0",
+          "bg-card fixed inset-y-0 left-0 z-20 flex w-[248px] flex-col gap-6 overflow-y-auto border-r px-3.5 pt-5 pb-3.5 duration-200 md:visible md:sticky md:top-0 md:h-dvh md:translate-x-0 print:hidden",
           abierto
             ? "visible translate-x-0 transition-transform" // visible sin transición: así admite foco ya
             : "invisible -translate-x-full transition-[transform,visibility]",
@@ -110,7 +110,7 @@ export function PanelShell({ negocio, usuario, permisos, tipo, children }: Props
         </div>
       </aside>
       <div className="min-w-0 flex-1" inert={abierto}>
-        <header className="bg-card flex h-[70px] items-center gap-2 border-b px-4 md:px-10">
+        <header className="bg-card flex h-[70px] items-center gap-2 border-b px-4 md:px-10 print:hidden">
           <Button
             variant="ghost"
             size="icon"

@@ -104,7 +104,18 @@ const detalleSchema = z.object({
       dias_atraso: z.number(),
     }),
   ),
-  pagos: z.array(z.object({ monto: z.number(), medio: z.string(), creado_en: z.string() })),
+  pagos: z.array(
+    z.object({
+      monto: z.number(),
+      medio: z.string(),
+      creado_en: z.string(),
+      operacion_id: z.guid(),
+      anula_operacion_id: z.guid().nullable(),
+      motivo: z.string().nullable(),
+    }),
+  ),
+  // El pago que se puede anular (el último vivo) o null.
+  ultimo_pago_id: z.guid().nullable(),
 });
 export type DetalleCredito = z.infer<typeof detalleSchema>;
 export const leerDetalle = (json: unknown): DetalleCredito | null => {
@@ -182,3 +193,18 @@ export const leerSimulacion = (json: unknown): Simulacion | null => {
   const r = simulacionSchema.safeParse(json);
   return r.success ? r.data : null;
 };
+
+export const anularPagoSchema = z.object({
+  operacionId: z.guid(),
+  pagoOperacionId: z.guid(),
+  sesionId: z.guid(),
+  dispositivoId: z.guid(),
+  motivo: z.string().trim().min(1).max(200),
+});
+
+export const documentosSchema = z.object({
+  creditoId: z.guid(),
+  ci: z.boolean(),
+  domicilio: z.boolean(),
+  pagare: z.boolean(),
+});
