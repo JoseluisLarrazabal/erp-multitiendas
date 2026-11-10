@@ -59,7 +59,7 @@ Los pasos:
    filas de `storage.objects` del bucket `productos` en `data.sql`; si no, el workflow falla. Los logs muestran solo
    cantidades, nunca nombres.
 6. Cifra el dump con `age` y la clave pública `scripts/backup/destinatario-age.txt`. Sube solo el `.age` como artifact
-   `erp-backup-AAAA-MM-DDTHHMMZ-<completo|base>` (fecha y hora UTC del cifrado), que GitHub guarda 7 o 30 días según el
+   `erp-backup-AAAA-MM-DDTHHMMZ-<completo|base>` (fecha y hora UTC del cifrado), que GitHub guarda 14 o 30 días según el
    tipo.
 
 El dump en claro solo existe dentro del runner. Los logs muestran nombres de tabla y números, nunca filas.
@@ -82,6 +82,33 @@ falla en el PR.
   en `scripts/backup/`, vía variable de entorno; nunca en `web/`.
 - La clave privada `age` vive fuera del repo, en la máquina del CTO (`~/.config/erp-multitiendas/backup-age.key`) y en
   una copia offline. **Si se pierde, ningún backup se puede leer.**
+
+## Copia periódica fuera de GitHub
+
+GitHub borra cada backup al vencer su retención (30 días la base, 14 las fotos) y todas las copias viven en una sola
+cuenta. Si esa cuenta se pierde o se suspende, o hace falta un dato de hace más de un mes, no queda nada. Por eso, una
+vez al mes y antes de cualquier cambio grande, quien administra el repositorio guarda una copia aparte. Hoy es el
+CTO; después de la entrega, el CLIENTE o quien él designe.
+
+```bash
+# 1. Elegir la última corrida `completo` en verde (la del domingo) y la última `base`.
+gh run list --workflow backup.yml --status success --limit 10
+
+# 2. Bajarlas a una carpeta fuera del repo. Los archivos siguen cifrados con `age`.
+gh run download <run-id> -D ~/ERP-backups-copias/<AAAA-MM>
+
+# 3. Anotar la huella de cada archivo y comprobar que el cifrado abre con la clave privada.
+cd ~/ERP-backups-copias
+sha256sum <AAAA-MM>/*/*.tar.age >> SHA256SUMS
+age -d -i ~/.config/erp-multitiendas/backup-age.key <AAAA-MM>/*/*.tar.age | tar -tf - | head
+```
+
+Reglas: la carpeta va a un disco externo o a otra nube, nunca al repo; no se guarda descifrada; la clave privada no
+viaja en el mismo disco que las copias; se conservan las doce últimas copias mensuales. Una copia mensual pesa unos
+40 MB.
+
+No verificado: nadie ensayó todavía este procedimiento de punta a punta con el CLIENTE; el 2026-11-10 el CTO copió así
+cuatro backups antes de borrarlos de GitHub (tamaño idéntico y `unzip -t` sin errores).
 
 ## Restaurar a mano
 
