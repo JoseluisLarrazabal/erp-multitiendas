@@ -3,7 +3,7 @@ import { limitesDelDia } from "@/lib/format/fecha";
 import type { Database } from "@/lib/supabase/database.types";
 import { falla, type Resultado } from "@/modules/usuarios";
 import type { Unidad } from "./domain";
-import { fueraDePlazo } from "./domain-panel";
+import { fueraDePlazo, tipoEspecial, type VentaEspecial } from "./domain-panel";
 import { parsearPagosPendientes, type FiltrosVentas } from "./schemas-panel";
 
 // Lecturas de /panel/ventas. Todo select lista columnas: venta_items sin costo_unitario y ventas sin huella (grant por
@@ -47,6 +47,7 @@ export type FilaVenta = {
   total: number;
   estado: string;
   dispositivoId: string;
+  especial: VentaEspecial | null;
 };
 
 export async function listarVentas(
@@ -59,7 +60,7 @@ export async function listarVentas(
     let c = supabase
       .from("ventas")
       .select(
-        "id, numero, recibida_en, total, estado, dispositivo_id",
+        "id, numero, recibida_en, total, estado, dispositivo_id, condicion",
         soloConteo ? { count: "exact", head: true } : undefined,
       )
       .eq("negocio_id", negocioId);
@@ -85,6 +86,16 @@ export async function listarVentas(
     .order("id")
     .range(desde, desde + porPagina - 1);
   if (error) return falla("No se pudieron leer las ventas.");
+  // Sin FK para un embed: dos consultas simples con las ids de la página.
+  const deReserva = await supabase
+    .from("reservas")
+    .select("venta_id")
+    .in(
+      "venta_id",
+      data.map((v) => v.id),
+    );
+  if (deReserva.error) return falla("No se pudieron leer las ventas.");
+  const conReserva = new Set(deReserva.data.map((r) => r.venta_id));
   return {
     ok: true,
     data: {
@@ -97,6 +108,7 @@ export async function listarVentas(
         total: Number(v.total),
         estado: v.estado,
         dispositivoId: v.dispositivo_id,
+        especial: tipoEspecial(v.condicion, conReserva.has(v.id)),
       })),
     },
   };
@@ -134,6 +146,9 @@ export type DetalleVenta = {
   cajaSesionAbierta: boolean;
   vendedor: string | null;
   cliente: string | null;
+  especial: VentaEspecial | null;
+  // Solo en venta a crédito: inicial pagada y crédito asociado (para enlazar sus cuotas).
+  credito: { id: string; inicial: number } | null;
   items: ItemVenta[];
   pagos: {
     id: string;
@@ -158,7 +173,7 @@ export async function detalleVenta(
   const { data: v, error } = await supabase
     .from("ventas")
     .select(
-      "id, numero, estado, recibida_en, origen, subtotal, descuento, total, motivo_anulacion, anulada_en, dispositivo_id, caja_sesion_id, vendedor_id, cliente_id",
+      "id, numero, estado, recibida_en, origen, subtotal, descuento, total, motivo_anulacion, anulada_en, dispositivo_id, caja_sesion_id, vendedor_id, cliente_id, condicion",
     )
     .eq("negocio_id", negocioId)
     .eq("id", ventaId)
@@ -166,37 +181,48 @@ export async function detalleVenta(
   if (error) return falla("No se pudo leer la venta.");
   if (!v) return { ok: true, data: null };
 
-  const [items, pagos, devs, equipo, sesion, vendedor, cliente] = await Promise.all([
-    supabase
-      .from("venta_items")
-      .select(
-        "id, linea, producto_id, cantidad, precio_unitario, descuento, total_linea, descuento_venta",
-      )
-      .eq("venta_id", ventaId)
-      .order("linea"),
-    supabase
-      .from("venta_pagos")
-      .select("id, medio, monto, verificacion")
-      .eq("venta_id", ventaId)
-      .order("medio")
-      .order("id"),
-    supabase
-      .from("devoluciones")
-      .select("id, created_at, motivo, monto, monto_efectivo")
-      .eq("venta_id", ventaId)
-      .order("created_at"),
-    supabase
-      .from("dispositivos")
-      .select("nombre, prefijo")
-      .eq("id", v.dispositivo_id)
-      .maybeSingle(),
-    supabase.from("caja_sesiones").select("cerrada_en").eq("id", v.caja_sesion_id).maybeSingle(),
-    supabase.from("perfiles").select("nombre").eq("id", v.vendedor_id).maybeSingle(),
-    v.cliente_id
-      ? supabase.from("clientes").select("nombre").eq("id", v.cliente_id).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-  if (items.error || pagos.error || devs.error || equipo.error || sesion.error)
+  const [items, pagos, devs, equipo, sesion, vendedor, cliente, credito, reserva] =
+    await Promise.all([
+      supabase
+        .from("venta_items")
+        .select(
+          "id, linea, producto_id, cantidad, precio_unitario, descuento, total_linea, descuento_venta",
+        )
+        .eq("venta_id", ventaId)
+        .order("linea"),
+      supabase
+        .from("venta_pagos")
+        .select("id, medio, monto, verificacion")
+        .eq("venta_id", ventaId)
+        .order("medio")
+        .order("id"),
+      supabase
+        .from("devoluciones")
+        .select("id, created_at, motivo, monto, monto_efectivo")
+        .eq("venta_id", ventaId)
+        .order("created_at"),
+      supabase
+        .from("dispositivos")
+        .select("nombre, prefijo")
+        .eq("id", v.dispositivo_id)
+        .maybeSingle(),
+      supabase.from("caja_sesiones").select("cerrada_en").eq("id", v.caja_sesion_id).maybeSingle(),
+      supabase.from("perfiles").select("nombre").eq("id", v.vendedor_id).maybeSingle(),
+      v.cliente_id
+        ? supabase.from("clientes").select("nombre").eq("id", v.cliente_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase.from("creditos").select("id, inicial").eq("venta_id", ventaId).maybeSingle(),
+      supabase.from("reservas").select("id").eq("venta_id", ventaId).limit(1),
+    ]);
+  if (
+    items.error ||
+    pagos.error ||
+    devs.error ||
+    equipo.error ||
+    sesion.error ||
+    credito.error ||
+    reserva.error
+  )
     return falla("No se pudo leer la venta.");
 
   const productoIds = [...new Set(items.data.map((i) => i.producto_id))];
@@ -238,6 +264,8 @@ export async function detalleVenta(
       cajaSesionAbierta: sesion.data ? sesion.data.cerrada_en === null : false,
       vendedor: vendedor.data?.nombre ?? null,
       cliente: cliente.data?.nombre ?? null,
+      especial: tipoEspecial(v.condicion, reserva.data.length > 0),
+      credito: credito.data ? { id: credito.data.id, inicial: Number(credito.data.inicial) } : null,
       items: items.data.map((i) => {
         const p = porId.get(i.producto_id);
         return {

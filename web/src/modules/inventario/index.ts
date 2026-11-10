@@ -2,6 +2,7 @@
 export * from "./domain";
 export {
   DIAS_VENCIMIENTO,
+  fechaDia,
   filtrosKardexSchema,
   filtrosStockSchema,
   leerFiltrosVencimientos,

@@ -6,6 +6,7 @@ import {
   alcanceCuotas,
   cobrarCuota,
   cuotaSinConfirmar,
+  esCuotaRepetida,
   cuotasSinConfirmar,
   fijarCuotaSinConfirmar,
   hayCuotasSinConfirmar,
@@ -165,5 +166,13 @@ describe("cobros de cuota sin confirmar (sobreviven a recargar)", () => {
     expect(cuotasSinConfirmar(A)).toEqual([]);
     m.set(A, "{no es json");
     expect(hayCuotasSinConfirmar(A)).toBe(false);
+  });
+});
+
+describe("esCuotaRepetida", () => {
+  it("solo ERP_OPERACION_REPETIDA cuenta como ya registrada", () => {
+    expect(esCuotaRepetida("ERP_OPERACION_REPETIDA")).toBe(true);
+    expect(esCuotaRepetida("ERP_PAGO_EXCEDE_SALDO")).toBe(false);
+    expect(esCuotaRepetida(null)).toBe(false);
   });
 });

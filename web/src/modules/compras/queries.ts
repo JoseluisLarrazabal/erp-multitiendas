@@ -17,6 +17,7 @@ export type FilaCompra = {
   creadaEn: string;
   proveedor: string;
   condicion: string;
+  anulada: boolean;
   // null = sin ver_costos.
   total: number | null;
 };
@@ -65,11 +66,18 @@ export async function listarCompras(
     .order("id")
     .range(desde, desde + porPagina - 1);
   if (compras.error) return falla;
+  const ids = compras.data.map((c) => c.id);
+  const anuladas = await supabase
+    .from("compra_anulaciones")
+    .select("compra_id")
+    .in("compra_id", ids);
+  if (anuladas.error) return falla;
+  const anuladaIds = new Set(anuladas.data.map((a) => a.compra_id));
   const totales = new Map<string, number>();
   if (verCostos) {
     const t = await supabase.rpc("totales_compras", {
       p_negocio_id: negocioId,
-      p_compra_ids: compras.data.map((c) => c.id),
+      p_compra_ids: ids,
     });
     if (t.error) return falla;
     for (const f of t.data) totales.set(f.compra_id, f.total);
@@ -84,6 +92,7 @@ export async function listarCompras(
         creadaEn: c.created_at,
         proveedor: c.proveedores?.nombre ?? "",
         condicion: c.condicion,
+        anulada: anuladaIds.has(c.id),
         total: verCostos ? (totales.get(c.id) ?? 0) : null,
       })),
     },

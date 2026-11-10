@@ -32,16 +32,28 @@ const CAMPOS = {
   items: { id: "cmp-agregar", mensaje: "No repitas un producto: súmalo en una sola línea." },
 };
 
-const nueva = (clave: number): ItemCompra => ({ clave, producto: null, cantidad: "", costo: "" });
+const nueva = (clave: number): ItemCompra => ({
+  clave,
+  producto: null,
+  cantidad: "",
+  costo: "",
+  lote: "",
+  vence: "",
+});
 
 export function FormCompra({
   negocioId,
   proveedores,
   ubicaciones,
+  esFrial,
+  hoy,
 }: {
   negocioId: string;
   proveedores: readonly { id: string; nombre: string }[];
   ubicaciones: readonly Ubicacion[];
+  // Frial (M-8): cada línea lleva lote y vencimiento. `hoy` es YYYY-MM-DD en Bolivia, calculado en el servidor.
+  esFrial: boolean;
+  hoy: string;
 }) {
   const { pendiente, error, enviar } = useOperacion();
   const [proveedorId, setProveedorId] = useState(proveedores[0]?.id ?? "");
@@ -68,6 +80,14 @@ export function FormCompra({
         nuevos[`${id}-cantidad`] = mensajeCantidad(i.producto.unidad);
       if (parsearCostoCompra(i.costo) === null)
         nuevos[`${id}-costo`] = "Escribe un costo de 0 o más, con hasta 4 decimales. Ej.: 12,5.";
+      if (esFrial) {
+        if (i.producto?.controlaSerie)
+          nuevos[`${id}-producto`] = "Un producto con serie no se compra en el frial.";
+        if (!i.lote.trim()) nuevos[`${id}-lote`] = "Escribe el lote (hasta 40 caracteres).";
+        if (!i.vence) nuevos[`${id}-vence`] = "Indica la fecha de vencimiento.";
+        else if (i.vence < hoy)
+          nuevos[`${id}-vence`] = "La fecha de vencimiento no puede ser pasada.";
+      }
     }
     if (Object.keys(nuevos).length) {
       setErrores(nuevos);
@@ -83,6 +103,7 @@ export function FormCompra({
         productoId: i.producto!.id,
         cantidad: i.cantidad,
         costo: i.costo,
+        ...(esFrial && { lote: i.lote, vence: i.vence }),
       })),
     };
     const v = validarCampos(
@@ -167,6 +188,8 @@ export function FormCompra({
           <FilaCompra
             key={i.clave}
             negocioId={negocioId}
+            esFrial={esFrial}
+            hoy={hoy}
             item={i}
             errores={errores}
             puedeQuitar={items.length > 1}

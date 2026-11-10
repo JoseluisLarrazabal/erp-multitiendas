@@ -11,7 +11,13 @@ import {
   type Resultado,
 } from "@/modules/usuarios/panel";
 import { mensajeDeCredito } from "./domain";
-import { anularInicialSchema, configSchema, saldoInicialSchema } from "./schemas";
+import {
+  anularInicialSchema,
+  anularPagoSchema,
+  configSchema,
+  documentosSchema,
+  saldoInicialSchema,
+} from "./schemas";
 
 const fallo = (codigo?: string): Resultado<never> => ({
   ok: false,
@@ -66,6 +72,35 @@ export async function anularCreditoInicial(entrada: unknown): Promise<Resultado<
     p_operacion_id: d.operacionId,
     p_credito_id: d.creditoId,
     p_motivo: d.motivo,
+  });
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+}
+
+export async function anularPagoCuota(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(anularPagoSchema, entrada);
+  if (!d) return fallo("ERP_DATOS_INVALIDOS");
+  const { error } = await (
+    await createClient()
+  ).rpc("anular_pago_cuota", {
+    p_operacion_id: d.operacionId,
+    p_pago_operacion_id: d.pagoOperacionId,
+    p_sesion_id: d.sesionId,
+    p_dispositivo_id: d.dispositivoId,
+    p_motivo: d.motivo,
+  });
+  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+}
+
+export async function marcarDocumentosCredito(entrada: unknown): Promise<Resultado<null>> {
+  const d = validar(documentosSchema, entrada);
+  if (!d) return fallo("ERP_DATOS_INVALIDOS");
+  const { error } = await (
+    await createClient()
+  ).rpc("marcar_documentos_credito", {
+    p_credito_id: d.creditoId,
+    p_ci: d.ci,
+    p_domicilio: d.domicilio,
+    p_pagare: d.pagare,
   });
   return error ? fallo(codigoDeMensaje(error.message)) : listo();
 }

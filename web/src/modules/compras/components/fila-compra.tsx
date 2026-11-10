@@ -14,11 +14,16 @@ export type ItemCompra = {
   producto: ProductoElegible | null;
   cantidad: string;
   costo: string;
+  // Solo el frial (M-8): lote y vencimiento (YYYY-MM-DD) de la línea.
+  lote: string;
+  vence: string;
 };
 
 // Una línea de la compra: producto, cantidad y costo unitario. Los ids dependen de la clave para que haya varias.
 export function FilaCompra({
   negocioId,
+  esFrial,
+  hoy,
   item,
   errores,
   puedeQuitar,
@@ -26,6 +31,8 @@ export function FilaCompra({
   alQuitar,
 }: {
   negocioId: string;
+  esFrial: boolean;
+  hoy: string;
   item: ItemCompra;
   errores: Errores;
   puedeQuitar: boolean;
@@ -81,6 +88,34 @@ export function FilaCompra({
         >
           <X aria-hidden />
         </Button>
+      )}
+      {esFrial && (
+        <div className="grid gap-4 sm:grid-cols-2 md:col-span-full md:max-w-xl">
+          <Campo id={`${id}-lote`} etiqueta="Lote" error={errores[`${id}-lote`]}>
+            <Input
+              id={`${id}-lote`}
+              maxLength={40}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="h-10"
+              value={item.lote}
+              onChange={(e) => alCambiar({ lote: e.target.value })}
+              {...propsCampo(`${id}-lote`, errores, true)}
+            />
+          </Campo>
+          <Campo id={`${id}-vence`} etiqueta="Vence" error={errores[`${id}-vence`]}>
+            <Input
+              id={`${id}-vence`}
+              type="date"
+              min={hoy}
+              className="h-10"
+              value={item.vence}
+              onChange={(e) => alCambiar({ vence: e.target.value })}
+              {...propsCampo(`${id}-vence`, errores, true)}
+            />
+          </Campo>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,14 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { apiComo, CLAVE, CUENTAS, iniciarSesionUI, rutaAuth, worker } from "./helpers";
+import {
+  apiComo,
+  CLAVE,
+  CUENTAS,
+  elegirNegocio,
+  iniciarSesionUI,
+  NEGOCIOS,
+  rutaAuth,
+  worker,
+} from "./helpers";
 
 // RF-TR-04, RF-TR-05, RF-TR-08. Cada corrida crea sus propios datos (correo y prefijo únicos).
 // Con solo la hora (ms), dos workers que cargan el archivo a la vez compartían corrida y chocaban en correo y nombre;
@@ -299,19 +308,34 @@ test.describe("encargado de tienda", () => {
 
 test.describe("encargado de lavandería", () => {
   test.use({ storageState: rutaAuth("encargadoLavanderia") });
+  const par = `Par ${corrida}`;
 
-  test("administra su personal pero no tiene acciones sobre un dueño", async ({ page }) => {
+  // El seed trae un solo encargado en lavandería: el dueño crea el segundo, que es el compañero de la prueba.
+  test.beforeAll(async ({ browser }) => {
+    const contexto = await browser.newContext({ storageState: rutaAuth("dueno") });
+    await elegirNegocio(contexto, NEGOCIOS.lavanderia.id);
+    await crearPersona(await contexto.newPage(), par, "encargado");
+    await contexto.close();
+  });
+
+  test("administra su personal pero no tiene acciones sobre un dueño ni sobre otro encargado", async ({
+    page,
+  }) => {
     await page.goto("/panel/usuarios");
     const dueno = page.getByRole("row").filter({ hasText: "Dueño Demo" });
     await expect(dueno).toBeVisible();
     await expect(dueno.getByRole("button")).toHaveCount(0);
     await expect(dueno.getByRole("combobox")).toHaveCount(0);
+    const compañero = page.getByRole("row").filter({ hasText: par });
+    await expect(compañero).toBeVisible();
+    await expect(compañero.getByRole("button")).toHaveCount(0);
+    await expect(compañero.getByRole("combobox")).toHaveCount(0);
     const empleado = page.getByRole("row").filter({ hasText: "Empleado Lavandería" });
     await expect(empleado.getByRole("button", { name: "Quitar" })).toBeVisible();
-    // No ofrece el rol dueño al crear.
-    await expect(
-      page.getByLabel("Rol", { exact: true }).locator("option[value=dueno]"),
-    ).toHaveCount(0);
+    // No ofrece los roles dueño ni encargado al crear.
+    const roles = page.getByLabel("Rol", { exact: true });
+    await expect(roles.locator("option[value=dueno]")).toHaveCount(0);
+    await expect(roles.locator("option[value=encargado]")).toHaveCount(0);
   });
 });
 

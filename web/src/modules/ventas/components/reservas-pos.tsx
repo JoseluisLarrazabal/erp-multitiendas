@@ -9,7 +9,14 @@ import { useSinRed } from "@/lib/offline/red";
 import { createClient } from "@/lib/supabase/browser";
 import { ETIQUETA_MEDIO, bs, formatearCantidad, aMilesimas, type Indice } from "../domain";
 import { cancelarReserva, cargarReservasActivas } from "../queries-reservas";
-import { saldoReserva, totalReserva, type ReservaActiva } from "../reservas";
+import {
+  MENSAJE_CANCELACION_REPETIDA,
+  MENSAJE_SIN_PERMISO_CANCELAR,
+  mensajeSiRepetida,
+  saldoReserva,
+  totalReserva,
+  type ReservaActiva,
+} from "../reservas";
 import { FormReserva } from "./form-reserva";
 
 // Modo "Reservas" del POS: reservas activas del negocio, alta con anticipo, cancelar y completar (carga la venta).
@@ -22,6 +29,7 @@ export function ReservasPos({
   cajaId,
   indice,
   hayCarrito,
+  puedeCancelar,
   alCompletar,
 }: {
   negocioId: string;
@@ -32,6 +40,8 @@ export function ReservasPos({
   cajaId: string | null;
   indice: Indice | null;
   hayCarrito: boolean;
+  // Cancelar devuelve el anticipo por caja: exige el permiso `anular`.
+  puedeCancelar: boolean;
   alCompletar: (r: ReservaActiva) => void;
 }) {
   const sinRed = useSinRed();
@@ -79,6 +89,7 @@ export function ReservasPos({
           setAviso("Reserva creada: stock apartado y anticipo en caja.");
           void cargar();
         }}
+        alRepetida={() => void cargar()}
       />
       <div role="status" className="flex flex-col gap-3 empty:hidden">
         {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
@@ -143,42 +154,55 @@ export function ReservasPos({
                 >
                   Completar venta
                 </Button>
-                <ConfirmarAccion
-                  etiqueta="Cancelar"
-                  titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
-                  descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
-                  confirmar="Cancelar reserva"
-                  deshabilitado={!cajaId}
-                  accion={async () => {
-                    if (!cajaId)
-                      return { ok: false, error: "Abre la caja para devolver el anticipo." };
-                    const clave = `${r.id}:${cajaId}`; // otra sesión de caja = otra operación
-                    const operacion = operaciones.current.get(clave) ?? crypto.randomUUID();
-                    operaciones.current.set(clave, operacion);
-                    const res = await cancelarReserva(
-                      createClient(),
-                      operacion,
-                      r.id,
-                      cajaId,
-                      equipoId,
-                    );
-                    if (!res.ok) {
-                      // Ya se completó o canceló en otro equipo: se recarga la lista y se descarta la operación.
-                      if (
-                        res.codigo === "ERP_RESERVA_NO_ACTIVA" ||
-                        res.codigo === "ERP_OPERACION_REPETIDA"
-                      ) {
-                        operaciones.current.delete(clave);
-                        void cargar();
+                {puedeCancelar ? (
+                  <ConfirmarAccion
+                    etiqueta="Cancelar"
+                    titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
+                    descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
+                    confirmar="Cancelar reserva"
+                    deshabilitado={!cajaId}
+                    accion={async () => {
+                      if (!cajaId)
+                        return { ok: false, error: "Abre la caja para devolver el anticipo." };
+                      const clave = `${r.id}:${cajaId}`; // otra sesión de caja = otra operación
+                      const operacion = operaciones.current.get(clave) ?? crypto.randomUUID();
+                      operaciones.current.set(clave, operacion);
+                      const res = await cancelarReserva(
+                        createClient(),
+                        operacion,
+                        r.id,
+                        cajaId,
+                        equipoId,
+                      );
+                      if (!res.ok) {
+                        // Ya se completó o canceló en otro equipo: se recarga la lista y se descarta la operación.
+                        if (
+                          res.codigo === "ERP_RESERVA_NO_ACTIVA" ||
+                          res.codigo === "ERP_OPERACION_REPETIDA"
+                        ) {
+                          operaciones.current.delete(clave);
+                          void cargar();
+                        }
+                        return {
+                          ...res,
+                          error: mensajeSiRepetida(
+                            res.codigo,
+                            MENSAJE_CANCELACION_REPETIDA,
+                            res.error,
+                          ),
+                        };
                       }
-                      return res;
-                    }
-                    operaciones.current.delete(clave);
-                    setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
-                    void cargar();
-                    return { ok: true, data: null };
-                  }}
-                />
+                      operaciones.current.delete(clave);
+                      setAviso(`Reserva de ${r.clienteNombre} cancelada: anticipo devuelto.`);
+                      void cargar();
+                      return { ok: true, data: null };
+                    }}
+                  />
+                ) : (
+                  <p className="text-muted-foreground self-center text-xs">
+                    {MENSAJE_SIN_PERMISO_CANCELAR}
+                  </p>
+                )}
               </div>
             </li>
           );

@@ -1,6 +1,6 @@
 -- RPC asignar_usuario y quitar_usuario: camino feliz, sin permiso, otro negocio, datos inválidos y reglas 1 y 2.
 begin;
-select plan(34);
+select plan(35);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -63,7 +63,8 @@ select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000
 select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000002', 'empleado')$$, 'P0001', 'ERP_DUENO_PROTEGIDO', 'regla 1: el encargado no modifica a un dueño');
 select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000003', 'dueno')$$, 'P0001', 'ERP_AUTOGESTION', 'regla 2: nadie se asigna dueno a sí mismo');
 select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000003', 'empleado')$$, 'P0001', 'ERP_AUTOGESTION', 'regla 2: nadie cambia su propio rol');
-select lives_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000004', 'encargado')$$, 'el encargado de lavandería sí gestiona a un no dueño');
+select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000004', 'encargado')$$, 'P0001', 'ERP_DUENO_PROTEGIDO', 'solo dueño: el encargado no asigna encargado');
+select lives_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000004', 'contador')$$, 'el encargado de lavandería sí gestiona a un no dueño ni encargado');
 select pg_temp.como('66666666-0000-0000-0000-000000000001');
 select throws_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000001', '66666666-0000-0000-0000-000000000001', 'vendedor')$$, 'P0001', 'ERP_AUTOGESTION', 'regla 2: el dueño no se degrada');
 select lives_ok($$select public.asignar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000002', 'encargado')$$, 'regla 1: un dueño sí modifica a otro dueño');
@@ -85,7 +86,7 @@ select throws_ok($$select public.quitar_usuario('77777777-0000-0000-0000-0000000
 select throws_ok($$select public.quitar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000001')$$, 'P0001', 'ERP_DUENO_PROTEGIDO', 'regla 1: el encargado no quita a un dueño');
 select throws_ok($$select public.quitar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000003')$$, 'P0001', 'ERP_AUTOGESTION', 'regla 2: nadie se quita a sí mismo');
 select throws_ok($$select public.quitar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000004')$$, 'P0001', 'ERP_ULTIMO_NEGOCIO', 'último negocio: no se quita, la cuenta se desactiva');
-select is(pg_temp.rol_de('66666666-0000-0000-0000-000000000004', '77777777-0000-0000-0000-000000000002'), 'encargado', 'último negocio: emp_l conserva su rol');
+select is(pg_temp.rol_de('66666666-0000-0000-0000-000000000004', '77777777-0000-0000-0000-000000000002'), 'contador', 'último negocio: emp_l conserva su rol');
 select pg_temp.como('66666666-0000-0000-0000-000000000001');
 select throws_ok($$select public.quitar_usuario('77777777-0000-0000-0000-000000000001', '66666666-0000-0000-0000-000000000001')$$, 'P0001', 'ERP_AUTOGESTION', 'regla 2: el dueño no se quita');
 select lives_ok($$select public.quitar_usuario('77777777-0000-0000-0000-000000000002', '66666666-0000-0000-0000-000000000002')$$, 'regla 1: un dueño sí quita a otro dueño');

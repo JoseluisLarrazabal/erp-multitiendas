@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { hoyEnBolivia } from "@/lib/format/fecha";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import { FormCompra } from "@/modules/compras/panel";
@@ -67,6 +68,8 @@ export default async function PaginaNuevaCompra() {
           negocioId={activo.negocioId}
           proveedores={activos}
           ubicaciones={ubicaciones.data}
+          esFrial={activo.tipo === "frial"}
+          hoy={hoyEnBolivia()}
         />
       )}
     </>

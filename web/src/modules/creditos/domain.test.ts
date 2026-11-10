@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agruparPorCliente, vencidas, type Cuenta } from "./domain";
+import { agruparPagos, agruparPorCliente, vencidas, type Cuenta, type PagoFila } from "./domain";
 
 const cuenta = (o: Partial<Cuenta>): Cuenta => ({
   creditoId: "c1",
@@ -47,5 +47,42 @@ describe("cuentas por cobrar", () => {
       cuenta({ creditoId: "3", cuotasVencidas: 2, diasAtraso: 40 }),
     ]);
     expect(v.map((x) => x.creditoId)).toEqual(["3", "1"]);
+  });
+});
+
+describe("agruparPagos", () => {
+  const fila = (o: Partial<PagoFila>): PagoFila => ({
+    monto: 10,
+    medio: "efectivo",
+    creado_en: "2026-11-01T10:00:00Z",
+    operacion_id: "p1",
+    anula_operacion_id: null,
+    motivo: null,
+    ...o,
+  });
+
+  it("junta las filas de un pago mixto en una línea", () => {
+    const [p] = agruparPagos([fila({ monto: 0.1 }), fila({ monto: 0.2, medio: "qr" })]);
+    expect(p).toMatchObject({
+      efectivo: 0.1,
+      qr: 0.2,
+      total: 0.3,
+      esReverso: false,
+      anulado: false,
+    });
+  });
+
+  it("marca como anulado el cobro con reverso y deja el reverso en negativo", () => {
+    const r = agruparPagos([
+      fila({ monto: 50 }),
+      fila({ monto: -50, operacion_id: "r1", anula_operacion_id: "p1", motivo: "error" }),
+      fila({ monto: 20, operacion_id: "p2" }),
+    ]);
+    expect(r.map((x) => [x.operacionId, x.total, x.anulado, x.esReverso])).toEqual([
+      ["p1", 50, true, false],
+      ["r1", -50, false, true],
+      ["p2", 20, false, false],
+    ]);
+    expect(r[1]?.motivo).toBe("error");
   });
 });

@@ -1,16 +1,67 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (PR 1 del plan de preentrega mergeado y desplegado en producción).
+Última actualización: 2026-11-10 (PR 2 del plan de preentrega: migraciones y función en producción; PR abierto).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
   entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
   M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 2, Entrega B (rama `fix/entrega-b-preentrega`). Estado: sin arrancar.** Primer paso: Opus baja
-    el alcance de `docs/plan-preentrega.md` a pasos (incluye la regla nueva de encargados). Regla de cupo: verificar
-    todo en local y subir el PR una sola vez; aplicar las migraciones aditivas ANTES del merge (ver abajo).
+  - **Hito activo: PR 3, operación diaria (rama `fix/operacion-diaria-preentrega`, sin empezar).** Opus lo baja a
+    pasos al arrancar. Alcance: M-9 a M-14, M-16, M-17, pruebas de la sección 4, los dos "no concluyentes" del QA,
+    compresión de fotos al subir, y dos cosas que salieron del PR 2: el reporte "sin movimiento" cuenta
+    `anulacion_compra` como salida, y el aviso de actualización del POS (ver "QA autenticado" abajo).
+  - **PR 2, Entrega B: código y base desplegados el 2026-11-10 (rama `fix/entrega-b-preentrega`).** El número del PR,
+    el squash y la verificación de la web en producción se anotan al mergear.
+    - Qué entró: M-1 (`cancelar_reserva` exige además `anular`), M-2 (reversos por contraasiento:
+      `anular_pago_cuota`, `anular_pago_proveedor`, `anular_compra`), M-5 (`/panel/ventas` distingue ventas a crédito
+      y de reserva, sin Anular ni Devolver, con explicación), M-6 (reimprimir el plan de cuotas y marcar documentos
+      después de vender), M-7 (mensaje propio de operación repetida en reserva, cuota y cancelación), M-8 (lote y
+      vencimiento por línea en las compras del frial) y la decisión del CTO de que solo el dueño gestiona a los
+      encargados. Detalle y decisiones: `docs/plan-preentrega.md`, "Plan detallado del PR 2".
+    - Decisiones del chairman al arbitrar el plan (comunicadas al CTO, sin objeción): `anular_compra` revierte el
+      pago automático del contado y exige que la deuda resultante no quede negativa; el reverso de una cuota cobrada
+      en una caja ya cerrada sale de otra caja abierta; los documentos del crédito se pueden desmarcar, con auditoría;
+      una compra con series no se anula; no se partió el PR.
+    - Migraciones (5, aditivas): `20261110120000_cancelar_reserva_anular`, `120100_solo_dueno_encargados`,
+      `120200_reverso_cuota_documentos`, `120300_compra_lotes_frial`, `120400_reversos_compras`.
+    - Revisión: `/code-review`, `/ponytail-review`, `/security-review` (sin hallazgos altos ni medios) y revisión de
+      Opus sobre permisos y dinero ("no bloquea"). Arreglos de la ronda: un pago manual a proveedor quedaba sin poder
+      anularse si después había una compra al contado; el reintento de una compra del frial pasada la medianoche se
+      rechazaba por la fecha de vencimiento; el formulario de documentos se remontaba al refrescar.
+      **Codex: no verificado (sin cuota hasta el 2026-12-03).**
+    - Verificación local sobre el árbol final (`eb73d92` más documentos): lint, formato y `tsc` en 0; Vitest 499 en
+      54 archivos; pgTAP 2.481 en 54 archivos; tipos sin diferencias; build; integración 19 de 19; Playwright 256 de
+      256.
+    - Despliegue (2026-11-10, 12:41 a 12:47 UTC), migraciones antes del merge: backup manual
+      `erp-backup-2026-11-10T1245Z-base` (1,7 MB, vence a los 30 días, corrida 42817870121 en verde); antes existía
+      el completo `erp-backup-2026-11-10T0439Z-completo` → `db push --dry-run` listó solo las 5 → `db push` →
+      `functions deploy admin-usuarios`. Comprobado en producción: `migration list` igual en local y remoto (46); las
+      11 funciones tocadas son `security definer` con `search_path` vacío, ejecutables por `authenticated` y no por
+      `anon`; `compra_anulaciones` con RLS, 1 policy, sin `insert` para `authenticated` ni `select` para `anon`.
+      Producción antes de migrar: 0 compras, 0 pagos de cuota, 0 pagos a proveedor, 0 reservas, 0 encargados.
+    - **QA autenticado en producción (2026-11-10, solo lectura, sesión del dueño en el navegador de Playwright):**
+      `/panel/negocio` carga y **el NIT y los datos de la nota están vacíos** (pendiente del CTO: llenarlos en los
+      tres negocios o la nota sale sin dirección); el conteo de Multitienda Lider carga con "Sistema: N"; en
+      producción solo existe la cuenta del dueño, así que el botón de restablecer contraseña no se pudo ver;
+      "Cambiar contraseña" está en panel y POS; 0 errores de consola. **Hallazgo:** el POS abrió con la versión vieja
+      y el aviso "Actualización disponible"; la nueva apareció solo tras "Actualizar ahora". Los equipos con el POS
+      abierto no reciben un arreglo hasta pulsar ese botón: va al manual y a la capacitación (PR 4) y se revisa en
+      el PR 3.
+    - Límites conocidos (también en el cuerpo del PR): una venta a crédito o de reserva hecha por error no tiene
+      reverso; al anular una compra, el costo promedio se recalcula con una aproximación si hubo ventas o traslados
+      después; `anular_compra` en el frial valida el stock total, no el saldo del lote; una compra con series no se
+      anula; "cuotas en efectivo" puede salir negativo en la caja de donde sale un reverso (va al manual);
+      `pagar_proveedor` acepta por RPC directa el `compra_id` de una compra al contado y deja a los dos sin poder
+      anularse (la pantalla no lo ofrece); `ERP_OPERACION_REPETIDA` al anular una compra o un pago cierra el diálogo
+      y refresca sin mensaje propio; `DialogoMotivo` y `ConfirmarAccion` no se unificaron; entre el `db push` y el
+      merge la web vieja convive con la base nueva (compras del frial rechazadas y acciones sobre encargados
+      rechazadas por la RPC: 0 compras y 0 encargados en producción).
+    - No verificado: concurrencia real de dos reversos a la vez (hay bloqueos, no hay prueba con dos sesiones); la
+      impresión real del plan de cuotas en papel; el foco tras anular; el reintento del frial tras medianoche contra
+      el código viejo; la primera corrida programada del backup nuevo (a las 12:41 UTC la de las 05:23 UTC no había
+      arrancado; GitHub ya atrasaba 6 a 10 h); Codex.
   - **PR 1, bloqueantes: cerrado el 2026-11-10 (PR #95, squash `46b7ecd`).**
     - Qué entró: B-1 a B-6, más los arreglos de tres rondas de revisión (dos pestañas, cuotas guardadas antes de
       enviar, espera de 60 s en cuotas, pendiente ajeno que no se reenvía, encargado que no restablece a otro

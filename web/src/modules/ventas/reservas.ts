@@ -86,3 +86,17 @@ export function armarReserva(
   });
   return r.success ? { ok: true, payload: r.data } : { ok: false, error: "Revisa los datos." };
 }
+
+// ERP_OPERACION_REPETIDA: un intento anterior con ese mismo id SÍ se confirmó, con otros datos. No es un fallo: hay que salir del bucle.
+export const MENSAJE_RESERVA_REPETIDA =
+  "La reserva ya quedó registrada con los datos del primer intento; revísala en la lista. Si hace falta otra, envía de nuevo.";
+export const MENSAJE_CANCELACION_REPETIDA =
+  "La cancelación ya quedó registrada con el primer intento; revisa la lista de reservas.";
+export const MENSAJE_SIN_PERMISO_CANCELAR = "Para cancelar la reserva, pide a un encargado.";
+
+// Mensaje propio si el servidor dice que la operación ya se resolvió; si no, el error tal cual.
+export const mensajeSiRepetida = (
+  codigo: string | null | undefined,
+  propio: string,
+  error: string,
+) => (codigo === "ERP_OPERACION_REPETIDA" ? propio : error);

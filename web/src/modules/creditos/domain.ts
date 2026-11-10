@@ -79,9 +79,67 @@ export const ETIQUETA_ORIGEN: Record<Cuenta["origen"], string> = {
 const MENSAJES: Record<string, string> = {
   ERP_DATOS_INVALIDOS: "Revisa los datos: hay algo incompleto o inválido.",
   ERP_OPERACION_REPETIDA: "Esta operación ya se registró con otros datos; recarga la página.",
-  ERP_SIN_PERMISO: "No tienes permiso para gestionar créditos.",
+  ERP_SIN_PERMISO: "No tienes permiso para esta acción sobre el crédito.",
   ERP_CREDITO_CON_PAGOS: "Ese crédito ya tiene pagos (o ya no está activo): no se puede anular.",
+  ERP_PAGO_NO_ES_ULTIMO: "Solo se puede anular el último pago del crédito. Recarga la página.",
+  ERP_CAJA_CERRADA: "La caja elegida ya está cerrada. Elige otra caja abierta.",
+  ERP_EFECTIVO_INSUFICIENTE:
+    "La caja elegida no tiene efectivo suficiente para devolver ese pago. Elige otra caja.",
 };
 // Solo los códigos propios del crédito; el resto lo traduce usuarios/domain.
 export const mensajeDeCredito = (codigo: string | undefined) =>
   codigo ? MENSAJES[codigo] : undefined;
+
+// Una fila de credito_pagos tal como la devuelve detalle_credito. Un pago mixto escribe una fila por medio; un reverso
+// (contraasiento) es otra fila con monto negativo que apunta al cobro por `anula_operacion_id`.
+export type PagoFila = {
+  monto: number;
+  medio: string;
+  creado_en: string;
+  operacion_id: string;
+  anula_operacion_id: string | null;
+  motivo: string | null;
+};
+
+export type PagoAgrupado = {
+  operacionId: string;
+  creadoEn: string;
+  efectivo: number;
+  qr: number;
+  total: number;
+  esReverso: boolean;
+  motivo: string | null;
+  // Un cobro al que ya le hicieron reverso.
+  anulado: boolean;
+};
+
+// Junta las filas por operación (en el orden en que llegan) y marca los cobros anulados. Suma en centavos.
+export function agruparPagos(filas: readonly PagoFila[]): PagoAgrupado[] {
+  const anuladas = new Set(
+    filas.flatMap((f) => (f.anula_operacion_id ? [f.anula_operacion_id] : [])),
+  );
+  const porOperacion = new Map<string, PagoAgrupado & { e: number; q: number }>();
+  for (const f of filas) {
+    const g = porOperacion.get(f.operacion_id) ?? {
+      operacionId: f.operacion_id,
+      creadoEn: f.creado_en,
+      efectivo: 0,
+      qr: 0,
+      total: 0,
+      esReverso: f.anula_operacion_id !== null,
+      motivo: f.motivo,
+      anulado: anuladas.has(f.operacion_id),
+      e: 0,
+      q: 0,
+    };
+    if (f.medio === "efectivo") g.e += centavos(f.monto);
+    else g.q += centavos(f.monto);
+    porOperacion.set(f.operacion_id, g);
+  }
+  return [...porOperacion.values()].map(({ e, q, ...g }) => ({
+    ...g,
+    efectivo: e / 100,
+    qr: q / 100,
+    total: (e + q) / 100,
+  }));
+}

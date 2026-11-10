@@ -4,8 +4,10 @@ import {
   ETIQUETA_MOTIVO,
   fueraDePlazo,
   mensajeDeVentas,
+  permiteAnularODevolver,
   textoMotivo,
   textoPorRevisar,
+  tipoEspecial,
 } from "./domain-panel";
 import {
   anularSchema,
@@ -175,5 +177,19 @@ describe("textoPorRevisar", () => {
     expect(textoPorRevisar(3, false, 1)).toBe("3 ventas y 1 movimiento de caja por revisar");
     expect(textoPorRevisar(25, true, 2)).toBe("25+ ventas y 2 movimientos de caja por revisar");
     expect(textoPorRevisar(0, false, 0)).toBeNull();
+  });
+});
+
+describe("tipoEspecial", () => {
+  it("la reserva manda sobre el crédito; contado es normal", () => {
+    expect(tipoEspecial("contado", false)).toBeNull();
+    expect(tipoEspecial("credito", false)).toBe("credito");
+    expect(tipoEspecial("contado", true)).toBe("reserva");
+    expect(tipoEspecial("credito", true)).toBe("reserva");
+  });
+  it("solo la venta normal ofrece anular y devolver", () => {
+    expect(permiteAnularODevolver(null)).toBe(true);
+    expect(permiteAnularODevolver("credito")).toBe(false);
+    expect(permiteAnularODevolver("reserva")).toBe(false);
   });
 });

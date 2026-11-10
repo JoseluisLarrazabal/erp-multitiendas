@@ -29,7 +29,7 @@ const cantidad = (conSigno = false, admiteCero = false) =>
 
 const operacion = { operacionId: id, negocioId: id };
 
-const fechaDia = z
+export const fechaDia = z
   .string()
   .trim()
   .refine((t) => {

@@ -4,14 +4,17 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { buttonVariants } from "@/components/ui/button";
+import { itemsVisibles } from "@/components/panel/panel-items";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
 import {
   AnularVenta,
   detalleVenta,
   DetalleVentaVista,
+  EXPLICACION_ESPECIAL,
   FormDevolucion,
   listarEquiposPanel,
+  permiteAnularODevolver,
   sesionesAbiertas,
   type EquipoAbierto,
 } from "@/modules/ventas/panel";
@@ -70,7 +73,12 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
     (i) => Math.round(i.cantidad * 1000) > Math.round(i.devuelta * 1000),
   );
   const completada = v.estado === "completada";
-  const puedeDevolver = completada && (puedeAnular || permisos.includes("devolver_fuera_plazo"));
+  const ofreceAcciones = permiteAnularODevolver(v.especial);
+  const puedeVerCreditos = itemsVisibles(permisos, activo.tipo).some(
+    (i) => i.href === "/panel/creditos",
+  );
+  const puedeDevolver =
+    completada && ofreceAcciones && (puedeAnular || permisos.includes("devolver_fuera_plazo"));
   const sinDevoluciones = v.devoluciones.length === 0;
 
   return (
@@ -85,7 +93,22 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
       </p>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <DetalleVentaVista v={v} />
-        {completada && (puedeAnular || puedeDevolver) && (
+        {completada && v.especial && (
+          <div className="flex min-w-0 flex-col gap-6">
+            <Seccion titulo="Anular y devolver">
+              <p className="text-sm">{EXPLICACION_ESPECIAL[v.especial]}</p>
+              {v.credito && puedeVerCreditos && (
+                <Link
+                  href={`/panel/creditos/${v.credito.id}`}
+                  className={buttonVariants({ variant: "outline", className: "h-10 w-fit" })}
+                >
+                  Ver pagos del crédito
+                </Link>
+              )}
+            </Seccion>
+          </div>
+        )}
+        {completada && ofreceAcciones && (puedeAnular || puedeDevolver) && (
           <div className="flex min-w-0 flex-col gap-6">
             {puedeAnular && sinDevoluciones && (
               <Seccion titulo="Anular venta">

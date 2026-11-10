@@ -11,7 +11,13 @@ import { createClient } from "@/lib/supabase/browser";
 import { SelectorCliente, type ClienteElegido } from "@/modules/clientes";
 import { buscar, textoMonto, type Indice, type ProductoPos } from "../domain";
 import { crearReserva } from "../queries-reservas";
-import { armarReserva, sePuedeReservar, type MedioReserva } from "../reservas";
+import {
+  armarReserva,
+  MENSAJE_RESERVA_REPETIDA,
+  mensajeSiRepetida,
+  sePuedeReservar,
+  type MedioReserva,
+} from "../reservas";
 
 // Alta de una reserva (RF-RES-01): cliente, producto del catálogo, cantidad, precio acordado y anticipo por caja.
 // El id se fija al abrir el formulario y se conserva en los reintentos (idempotencia); cambia solo tras el éxito.
@@ -21,12 +27,15 @@ export function FormReserva({
   cajaId,
   indice,
   alCrear,
+  alRepetida,
 }: {
   negocioId: string;
   equipoId: string;
   cajaId: string | null;
   indice: Indice | null;
   alCrear: () => void;
+  // El servidor ya tenía este intento: la lista se recarga.
+  alRepetida: () => void;
 }) {
   const id = useRef(crypto.randomUUID());
   const [cliente, setCliente] = useState<ClienteElegido | null>(null);
@@ -69,7 +78,14 @@ export function FormReserva({
     setError(null);
     try {
       const res = await crearReserva(createClient(), r.payload);
-      if (!res.ok) return setError(res.error);
+      if (!res.ok) {
+        // El primer intento SÍ se confirmó: este id ya no sirve; se estrena otro y se recarga la lista.
+        if (res.codigo === "ERP_OPERACION_REPETIDA") {
+          id.current = crypto.randomUUID();
+          alRepetida();
+        }
+        return setError(mensajeSiRepetida(res.codigo, MENSAJE_RESERVA_REPETIDA, res.error));
+      }
       id.current = crypto.randomUUID();
       setCliente(null);
       setProducto(null);

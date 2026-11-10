@@ -7,7 +7,7 @@ import { exigirPermiso } from "@/modules/usuarios/panel";
 export const metadata: Metadata = { title: "Proveedores · ERP Multitiendas" };
 
 export default async function PaginaProveedores() {
-  const { activo } = await exigirPermiso("gestionar_compras");
+  const { activo, permisos } = await exigirPermiso("gestionar_compras");
   const lista = await listarProveedores(await createClient(), activo.negocioId);
 
   return (
@@ -29,7 +29,11 @@ export default async function PaginaProveedores() {
             Aún no hay proveedores.
           </p>
         ) : (
-          <ListaProveedores negocioId={activo.negocioId} proveedores={lista.data} />
+          <ListaProveedores
+            negocioId={activo.negocioId}
+            proveedores={lista.data}
+            puedeAnular={permisos.includes("anular")}
+          />
         )}
       </div>
     </>

@@ -39,7 +39,10 @@ async function reservasDelCliente() {
   return r.json as { id: string; estado: string; venta_id: string | null }[];
 }
 
-test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async ({ page }) => {
+test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async ({
+  page,
+  browser,
+}) => {
   const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
   await fijarEquipo(page, equipoId);
   await page.goto("/pos");
@@ -119,11 +122,27 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
   await page.getByRole("button", { name: "Reservas" }).click();
   const otra = page.getByRole("listitem", { name: `Reserva de ${nombreCliente}` });
   await expect(otra).toHaveCount(1);
-  await otra.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Cancelar reserva" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "cancelada: anticipo devuelto" }),
-  ).toBeVisible();
+  // M-1: cancelar devuelve el anticipo por caja y exige `anular`: el vendedor ve la reserva y el texto, sin botón.
+  await expect(otra.getByText("Para cancelar la reserva, pide a un encargado.")).toBeVisible();
+  await expect(otra.getByRole("button", { name: "Cancelar", exact: true })).toHaveCount(0);
+  // La cancelación la hace un encargado.
+  const ctxEncargado = await browser.newContext({ storageState: rutaAuth("encargadoTienda") });
+  try {
+    const pagina = await ctxEncargado.newPage();
+    await fijarEquipo(pagina, equipoId);
+    await pagina.goto("/pos");
+    await expect(pagina.getByText(/productos en el catálogo/)).toBeVisible();
+    await pagina.getByRole("button", { name: "Reservas" }).click();
+    const deEncargado = pagina.getByRole("listitem", { name: `Reserva de ${nombreCliente}` });
+    await expect(deEncargado).toHaveCount(1);
+    await deEncargado.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await pagina.getByRole("alertdialog").getByRole("button", { name: "Cancelar reserva" }).click();
+    await expect(
+      pagina.getByRole("status").filter({ hasText: "cancelada: anticipo devuelto" }),
+    ).toBeVisible();
+  } finally {
+    await ctxEncargado.close();
+  }
   expect(await stockEn(producto.id)).toBe(8);
   expect((await reservasDelCliente()).map((r) => r.estado)).toEqual(["completada", "cancelada"]);
 
@@ -132,6 +151,62 @@ test("E2E-13: reserva con anticipo, conversión en venta y cancelación", async 
   await expect(page.getByText(/Las reservas necesitan conexión/)).toBeVisible();
   await page.context().setOffline(false);
   await expect(page.getByRole("form", { name: "Nueva reserva" })).toBeVisible();
+});
+
+test("M-7: respuesta perdida al reservar, reenviar con otro monto no atasca", async ({ page }) => {
+  test.setTimeout(90_000);
+  const producto = await crearProductoConPrecio({ contado: 50, minimo: 40, stock: 10 });
+  // Cliente propio: los tests siguientes suponen una sola reserva activa de `nombreM7`.
+  const nombreM7 = `Cliente M7 ${corrida}`;
+  const c = await apiComo("dueno", "rpc/guardar_cliente", {
+    metodo: "POST",
+    cuerpo: { p_negocio_id: tienda, p_datos: { nombre: nombreM7 } },
+  });
+  const reservasM7 = async () =>
+    (
+      (await apiComo("vendedor", `reservas?select=id&cliente_id=eq.${c.json as string}`))
+        .json as unknown[]
+    ).length;
+  await fijarEquipo(page, equipoId);
+  await page.goto("/pos");
+  await expect(page.getByText(/productos en el catálogo/)).toBeVisible();
+  await page.getByRole("button", { name: "Reservas" }).click();
+  const form = page.getByRole("form", { name: "Nueva reserva" });
+  await form.getByRole("button", { name: "Elegir" }).click();
+  await form.getByRole("textbox", { name: "Buscar cliente" }).fill(nombreM7);
+  await form.getByRole("button", { name: new RegExp(nombreM7) }).click();
+  await form.getByRole("searchbox", { name: "Producto" }).fill(producto.codigo);
+  await form.getByRole("button", { name: new RegExp(producto.nombre) }).click();
+  await form.getByLabel("Cantidad").fill("1");
+  await form.getByLabel("Precio acordado (Bs)").fill("50");
+  await form.getByLabel("Anticipo (Bs)").fill("10");
+
+  // El servidor guarda la reserva pero la respuesta se pierde.
+  await page.route("**/rest/v1/rpc/crear_reserva", async (route) => {
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
+  await expect(form.getByRole("alert")).not.toBeEmpty();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+
+  // Reenvía con otro anticipo y el mismo id: el servidor dice "repetida" y hay salida.
+  await form.getByLabel("Anticipo (Bs)").fill("15");
+  await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
+  await expect(form.getByRole("alert")).toContainText(
+    "ya quedó registrada con los datos del primer intento",
+  );
+  await expect(
+    page
+      .getByRole("listitem", { name: `Reserva de ${nombreM7}` })
+      .filter({ hasText: "anticipo Bs 10,00" }),
+  ).toHaveCount(1);
+  expect(await reservasM7()).toBe(1);
+
+  // Salida: con un id nuevo, enviar de nuevo crea otra reserva.
+  await form.getByRole("button", { name: "Reservar y cobrar anticipo" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Reserva creada" })).toBeVisible();
+  expect(await reservasM7()).toBe(2);
 });
 
 // Cobro de reserva sin confirmar: el cobro nunca va a la cola; se reintenta en memoria y, si no se sabe qué pasó,

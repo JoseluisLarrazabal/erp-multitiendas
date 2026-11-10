@@ -120,3 +120,9 @@ export async function cobrarCuota(
   });
   return r.t === "sin-confirmar" ? r : r.valor;
 }
+
+// ERP_OPERACION_REPETIDA: un intento anterior con ese id SÍ se registró (con otro monto): se trata como cobrado.
+export const MENSAJE_CUOTA_REPETIDA =
+  "Ya se registró un cobro con este intento por otro monto; revisa el saldo.";
+export const esCuotaRepetida = (codigo: string | null | undefined) =>
+  codigo === "ERP_OPERACION_REPETIDA";

@@ -58,7 +58,7 @@ export default async function PaginaCompras({
           </p>
         ) : (
           <>
-            <ListaCompras compras={lista.data.filas} />
+            <ListaCompras compras={lista.data.filas} puedeAnular={permisos.includes("anular")} />
             <Paginador
               pagina={lista.data.pagina}
               porPagina={PAGINA_COMPRAS}

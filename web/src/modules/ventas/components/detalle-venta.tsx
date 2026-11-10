@@ -3,7 +3,7 @@ import { formatearFechaHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { aMilesimas, formatearCantidad } from "../domain";
 import { ETIQUETA_MEDIO } from "../domain";
-import { ETIQUETA_ORIGEN } from "../domain-panel";
+import { ETIQUETA_ESPECIAL, ETIQUETA_ORIGEN } from "../domain-panel";
 import type { DetalleVenta } from "../lecturas-panel";
 import { EstadoVenta } from "./estado-venta";
 
@@ -25,6 +25,13 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
           <Dato t="Vendedor" d={v.vendedor ?? "—"} />
           <Dato t="Cliente" d={v.cliente ?? "General"} />
           <Dato t="Origen" d={ETIQUETA_ORIGEN[v.origen] ?? v.origen} />
+          {v.especial && <Dato t="Tipo de venta" d={ETIQUETA_ESPECIAL[v.especial]} />}
+          {v.credito && (
+            <Dato
+              t="Inicial"
+              d={<span className="tabular-nums">{formatearBs(v.credito.inicial)}</span>}
+            />
+          )}
           <Dato
             t="Total"
             d={<span className="text-lg font-bold tabular-nums">{formatearBs(v.total)}</span>}

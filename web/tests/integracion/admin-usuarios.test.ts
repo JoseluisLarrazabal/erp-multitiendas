@@ -137,6 +137,42 @@ describe("crear", () => {
   });
 });
 
+describe("solo el dueño gestiona a los encargados", () => {
+  it("un encargado no crea un encargado: 403 y la cuenta no existe", async () => {
+    const { correo, peticion } = crear(encargadoLav, { negocio_id: LAVANDERIA, rol: "encargado" });
+    const r = await peticion;
+    expect(r.status).toBe(403);
+    expect(r.cuerpo.error).toBe("ERP_DUENO_PROTEGIDO");
+    expect((await entrar(correo, "Clave-prueba-1")).error).not.toBeNull();
+  });
+
+  it("un encargado no desactiva ni restablece a otro encargado; el dueño sí", async () => {
+    const { correo, peticion } = crear(dueno, { negocio_id: LAVANDERIA, rol: "encargado" });
+    const id = (await peticion).cuerpo.data?.usuario_id ?? "";
+    expect(id).not.toBe("");
+    const baja = await invocar(encargadoLav, { accion: "desactivar", usuario_id: id });
+    expect(baja.status).toBe(403);
+    const clave = await invocar(encargadoLav, {
+      accion: "restablecer_clave",
+      usuario_id: id,
+      clave: "Clave-nueva-9",
+    });
+    expect(clave.status).toBe(403);
+    expect((await entrar(correo, "Clave-prueba-1")).error).toBeNull();
+
+    expect((await invocar(dueno, { accion: "desactivar", usuario_id: id })).cuerpo.ok).toBe(true);
+    expect((await entrar(correo, "Clave-prueba-1")).error).not.toBeNull();
+    expect((await invocar(dueno, { accion: "reactivar", usuario_id: id })).cuerpo.ok).toBe(true);
+    const r = await invocar(dueno, {
+      accion: "restablecer_clave",
+      usuario_id: id,
+      clave: "Clave-nueva-9",
+    });
+    expect(r.status).toBe(200);
+    expect((await entrar(correo, "Clave-nueva-9")).error).toBeNull();
+  });
+});
+
 describe("desactivar y reactivar", () => {
   let objetivo = { correo: "", id: "" };
   beforeAll(async () => {

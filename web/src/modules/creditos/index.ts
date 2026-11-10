@@ -1,5 +1,6 @@
 // Entrada pública sin server actions (la usa /pos). Las páginas de /panel usan ./panel.
 export { agruparPorCliente, MAX_CUOTAS, vencidas, type Cuenta, type CuotaPlan } from "./domain";
+export { PlanCuotasImprimible } from "./components/plan-cuotas-imprimible";
 export {
   cargarCuentas,
   cargarDetalle,

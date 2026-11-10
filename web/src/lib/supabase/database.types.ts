@@ -185,6 +185,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"compra_anulaciones": {
+                  Row: {
+                    "compra_id": string,"created_at": string,"motivo": string,"negocio_id": string,"operacion_id": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "compra_id": string,"created_at"?: string,"motivo": string,"negocio_id": string,"operacion_id": string,"usuario_id": string
+                  }
+                  Update: {
+                    "compra_id"?: string,"created_at"?: string,"motivo"?: string,"negocio_id"?: string,"operacion_id"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "compra_anulaciones_negocio_id_compra_id_fkey"
+      columns: ["negocio_id","compra_id"]
+isOneToOne: false
+      referencedRelation: "compras"
+      referencedColumns: ["negocio_id","id"]
+    }
+                  ]
                 },"compra_items": {
                   Row: {
                     "cantidad": number,"compra_id": string,"costo_unitario": number,"negocio_id": string,"producto_id": string
@@ -349,14 +369,14 @@ isOneToOne: false
                   ]
                 },"credito_pagos": {
                   Row: {
-                    "caja_sesion_id": string,"created_at": string,"credito_id": string,"id": string,"medio": string,"monto": number,"negocio_id": string,"operacion_id": string,"usuario_id": string | null
+                    "anula_operacion_id": string | null,"caja_sesion_id": string,"created_at": string,"credito_id": string,"id": string,"medio": string,"monto": number,"motivo": string | null,"negocio_id": string,"operacion_id": string,"usuario_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "caja_sesion_id": string,"created_at"?: string,"credito_id": string,"id"?: string,"medio": string,"monto": number,"negocio_id": string,"operacion_id": string,"usuario_id"?: string | null
+                    "anula_operacion_id"?: string | null,"caja_sesion_id": string,"created_at"?: string,"credito_id": string,"id"?: string,"medio": string,"monto": number,"motivo"?: string | null,"negocio_id": string,"operacion_id": string,"usuario_id"?: string | null
                   }
                   Update: {
-                    "caja_sesion_id"?: string,"created_at"?: string,"credito_id"?: string,"id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"operacion_id"?: string,"usuario_id"?: string | null
+                    "anula_operacion_id"?: string | null,"caja_sesion_id"?: string,"created_at"?: string,"credito_id"?: string,"id"?: string,"medio"?: string,"monto"?: number,"motivo"?: string | null,"negocio_id"?: string,"operacion_id"?: string,"usuario_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -737,17 +757,23 @@ isOneToOne: false
                   ]
                 },"proveedor_pagos": {
                   Row: {
-                    "compra_id": string | null,"created_at": string,"id": string,"medio": string,"monto": number,"negocio_id": string,"proveedor_id": string,"usuario_id": string | null
+                    "anula_id": string | null,"compra_id": string | null,"created_at": string,"id": string,"medio": string,"monto": number,"motivo": string | null,"negocio_id": string,"proveedor_id": string,"seq": number,"usuario_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "compra_id"?: string | null,"created_at"?: string,"id": string,"medio": string,"monto": number,"negocio_id": string,"proveedor_id": string,"usuario_id"?: string | null
+                    "anula_id"?: string | null,"compra_id"?: string | null,"created_at"?: string,"id": string,"medio": string,"monto": number,"motivo"?: string | null,"negocio_id": string,"proveedor_id": string,"seq"?: never,"usuario_id"?: string | null
                   }
                   Update: {
-                    "compra_id"?: string | null,"created_at"?: string,"id"?: string,"medio"?: string,"monto"?: number,"negocio_id"?: string,"proveedor_id"?: string,"usuario_id"?: string | null
+                    "anula_id"?: string | null,"compra_id"?: string | null,"created_at"?: string,"id"?: string,"medio"?: string,"monto"?: number,"motivo"?: string | null,"negocio_id"?: string,"proveedor_id"?: string,"seq"?: never,"usuario_id"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "proveedor_pagos_anula_id_fkey"
+      columns: ["anula_id"]
+isOneToOne: false
+      referencedRelation: "proveedor_pagos"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "proveedor_pagos_negocio_id_compra_id_fkey"
       columns: ["negocio_id","compra_id"]
 isOneToOne: false
@@ -1269,11 +1295,20 @@ isOneToOne: false
 "ajustar_inventario":
 { Args: { "p_cantidad": number,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[],"p_tipo": string,"p_ubicacion_id": string }; Returns: string
                            },
+"anular_compra":
+{ Args: { "p_compra_id": string,"p_motivo": string,"p_operacion_id": string }; Returns: Json
+                           },
 "anular_credito_inicial":
 { Args: { "p_credito_id": string,"p_motivo": string,"p_operacion_id": string }; Returns: Json
                            },
 "anular_orden":
 { Args: { "p_motivo": string,"p_orden_id": string }; Returns: Json
+                           },
+"anular_pago_cuota":
+{ Args: { "p_dispositivo_id": string,"p_motivo": string,"p_operacion_id": string,"p_pago_operacion_id": string,"p_sesion_id": string }; Returns: Json
+                           },
+"anular_pago_proveedor":
+{ Args: { "p_motivo": string,"p_operacion_id": string,"p_pago_id": string }; Returns: Json
                            },
 "anular_venta":
 { Args: { "p_motivo": string,"p_venta_id": string }; Returns: Json
@@ -1447,6 +1482,9 @@ isOneToOne: false
 "lotes_por_vencer":
 { Args: { "p_dias"?: number,"p_negocio_id": string }; Returns: Json
                            },
+"marcar_documentos_credito":
+{ Args: { "p_ci": boolean,"p_credito_id": string,"p_domicilio": boolean,"p_pagare": boolean }; Returns: undefined
+                           },
 "mis_negocios":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
@@ -1609,6 +1647,9 @@ isOneToOne: false
                            },
 "trasladar_stock":
 { Args: { "p_cantidad": number,"p_destino_id": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_origen_id": string,"p_producto_id": string,"p_serie_ids"?: (string)[] }; Returns: string
+                           },
+"ultimo_pago_proveedor":
+{ Args: { "p_proveedor_id": string }; Returns: Json
                            },
 "usuario_en_negocio":
 { Args: { "p_negocio_id": string,"p_usuario_id": string }; Returns: boolean

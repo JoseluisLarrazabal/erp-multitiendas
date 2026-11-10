@@ -113,3 +113,21 @@ export function cantidadADevolver(
   const m = parsearCantidad(texto, unidad);
   return m === null || m > quedaMilesimas ? null : m / 1000;
 }
+
+// Ventas que el servidor no deja anular ni devolver (ERP_VENTA_DE_RESERVA y ERP_VENTA_CON_CREDITO): el anticipo, la inicial y
+// las cuotas ya están repartidos y no hay reverso automático. Si nacieron de una reserva, la reserva manda (misma prioridad
+// que en el servidor).
+export type VentaEspecial = "credito" | "reserva";
+export const ETIQUETA_ESPECIAL: Record<VentaEspecial, string> = {
+  credito: "Crédito",
+  reserva: "Reserva",
+};
+export const tipoEspecial = (condicion: string, deReserva: boolean): VentaEspecial | null =>
+  deReserva ? "reserva" : condicion === "credito" ? "credito" : null;
+export const permiteAnularODevolver = (tipo: VentaEspecial | null) => tipo === null;
+export const EXPLICACION_ESPECIAL: Record<VentaEspecial, string> = {
+  credito:
+    "Esta venta es a crédito: la inicial y las cuotas ya quedaron registradas, por eso el sistema no permite anularla ni devolverla. Los pagos y el saldo se ven en el crédito.",
+  reserva:
+    "Esta venta completó una reserva: el anticipo ya está en caja, por eso el sistema no permite anularla ni devolverla.",
+};
