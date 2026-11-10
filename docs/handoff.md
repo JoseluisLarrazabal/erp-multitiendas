@@ -36,6 +36,13 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     corre en local antes de subir y cada PR se sube una sola vez. Si aun así el contador se acerca al tope, se
     publica con la verificación local (excepción a la regla 4, avisada al CTO, sin objeción hasta ahora) y los
     minutos que queden son del backup.
+  - **Decisión pendiente del CTO, nueva (2026-11-09): ¿un encargado puede gestionar a otro encargado?** Hoy quien
+    tiene el permiso `usuarios` (el encargado de la lavandería) puede crear encargados, cambiarles el rol y quitarlos;
+    `asignar_usuario` solo protege al dueño. El PR 1 impide que un encargado restablezca directamente la contraseña de
+    otro encargado, pero la regla se rodea en tres pasos (bajarle el rol, restablecer, devolverle el rol), los tres
+    auditados. Es fricción, no barrera. Cerrarlo de verdad exige que solo el dueño pueda cambiar el rol o quitar a un
+    encargado (`asignar_usuario` y `quitar_usuario`, pantalla de personal y matriz del SRS). Recomendación del
+    chairman: sí, en el PR 2. Mientras no se decida, queda como límite conocido.
   - **Fotos y cupos (2026-11-09).** Las fotos viven en Supabase Storage (1 GB gratis, unos 36 MB hoy); lo que aprieta
     es su copia en GitHub. Medido en el código: la subida no comprime (`catalogo/foto.ts`, hasta 5 MB por foto). El
     CTO espera que el catálogo crezca. Decidido: compresión al subir, en el PR 3 (`docs/plan-preentrega.md`). Límite
