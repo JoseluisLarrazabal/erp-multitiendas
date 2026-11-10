@@ -1,25 +1,51 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (plan de preentrega culminado: los 4 PRs están mergeados; sigue el paralelo y lo que
-depende del CTO y del cliente).
+Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; fase 0 cerrada, PR A de registro de
+errores en curso).
 
 ## Próxima sesión (arrancar acá)
 
-- **Sin plan activo. Lo que sigue no es código:** el paralelo (`docs/paralelo.md`), la capacitación
-  (`docs/capacitacion.md`) y la firma del acta (`docs/acta-entrega.md`). Antes hace falta, del lado del CTO:
-  - cargar el NIT y los "Datos para la nota" de los tres negocios (vacíos en producción);
-  - resolver D-01 (garantía de los extras: el punto 6 del acta la deja como `[quedan / no quedan]`), D-02 y la fecha
-    exacta del contrato (D-04);
-  - llevar al cliente las preguntas M-3/P-07 (interés en el prepago), P-06 y P-12;
+- **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
+  paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
+  - **Fase 0, documentos: cerrada el 2026-11-10.** El plan, estas decisiones y `docs/preguntas-cliente.md`.
+  - **Fase 1, PR A, registro de errores (M-15, RNF-16): hito activo.** Rama `feat/registro-errores`. Tabla propia
+    `errores_app` en Supabase con RPC `registrar_error`; sin proveedor externo. Es el único PR de código que cabe en
+    noviembre por los minutos de Actions.
+  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con una lista que prepara Claude),
+    QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
+  - **Fase 3, rediseño visual y tablero: pendiente.** Auditoría y brief, dos propuestas en Artifacts (regla 7.b), el
+    CTO elige, implementación por tramos en ramas sin PR. Los PR B, C y D se abren desde el 2026-12-01.
+  - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
+    minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
+- **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
+  - El NIT y los "Datos para la nota" de los tres negocios los carga el cliente desde "Datos del negocio".
+  - El contrato se firmó "hace 3 semanas" (hacia el 2026-10-20). Sigue faltando la fecha exacta (D-04): el plazo no
+    está medido.
+  - Las funcionalidades fuera de contrato se hicieron sin costo. El CTO dijo que ya no importa si la garantía de
+    los extras está estipulada. Objeción dicha una vez: el punto 6 del acta sigue con el blanco
+    `[quedan / no quedan]` y conviene escribir la palabra antes de firmar; la recomendación es "no quedan". Sin
+    respuesta todavía.
+  - La rotación de credenciales y la compra del dominio siguen diferidas al cierre.
+  - Registro de errores propio, sin Sentry: no suma dependencia a la PWA, no manda datos del cliente a un tercero y no
+    agrega una credencial que entregar. Costo aceptado: sin alertas por correo ni trazas legibles; la tabla se
+    consulta por SQL o en el panel de Supabase.
+  - El rediseño visual va antes de la capacitación y del paralelo (un cambio visual posterior obliga a capacitar de
+    nuevo y a rehacer el manual). En el POS cambia solo la piel; los cambios de flujo esperan al paralelo.
+- **Pendiente del CTO y del cliente:**
+  - llevar al cliente `docs/preguntas-cliente.md`; las 8 primeras cambian el sistema si la respuesta difiere del
+    supuesto y deben resolverse antes del paralelo;
+  - resolver D-01 (la palabra del punto 6 del acta), D-02 y la fecha exacta del contrato (D-04);
   - rotar las credenciales y comprar el dominio (diferidos por el CTO hasta el cierre);
-  - pulsar "Actualizar ahora" una vez en cada equipo con el POS instalado;
+  - los equipos que abrieron el POS antes del PR 3 necesitan pulsar "Actualizar ahora" una vez; los que lo instalen
+    desde ahora se actualizan solos;
   - guardar fuera de línea la clave privada `age` y hacer la copia periódica de los backups (`docs/backup.md`).
   Y del lado de quien retome:
   - comprobar la primera corrida programada `base` del backup (17:23 UTC; al cerrar esta sesión GitHub todavía no la
     había arrancado), la primera corrida con fotos semanales del domingo 2026-11-15 (que `github.event.schedule`
     entregue `23 5 * * 0`) y revisar la cadencia el 2026-12-01;
-  - vigilar los minutos de Actions: quedan unos 240 estimados y el backup necesita unos 190 hasta fin de mes;
+  - vigilar los minutos de Actions: medidos el 2026-11-10 por reloj, noviembre lleva unos 1.630 de 2.000 (CI 1.537
+    en 156 corridas, backup 86); el backup necesita unos 190 hasta fin de mes. Lo facturado puede ser más;
   - cuando vuelva la cuota de Codex (2026-12-03), correrlo sobre los PR 1 a 3 (#95, #97, #99); si encuentra algo, el
     arreglo va en un PR nuevo.
 - **Plan cerrado: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09, culminado el 2026-11-10).** Cerró la
