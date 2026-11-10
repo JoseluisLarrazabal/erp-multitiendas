@@ -1,14 +1,51 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-09 (plan de cierre de la auditoría previa a la entrega, aprobado).
+Última actualización: 2026-11-10 (PR 1 del plan de preentrega mergeado y desplegado en producción).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
   entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
   M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 1, bloqueantes (rama `fix/bloqueantes-preentrega`). Estado: en implementación.**
+  - **Hito activo: PR 2, Entrega B (rama `fix/entrega-b-preentrega`). Estado: sin arrancar.** Primer paso: Opus baja
+    el alcance de `docs/plan-preentrega.md` a pasos (incluye la regla nueva de encargados). Regla de cupo: verificar
+    todo en local y subir el PR una sola vez; aplicar las migraciones aditivas ANTES del merge (ver abajo).
+  - **PR 1, bloqueantes: cerrado el 2026-11-10 (PR #95, squash `46b7ecd`).**
+    - Qué entró: B-1 a B-6, más los arreglos de tres rondas de revisión (dos pestañas, cuotas guardadas antes de
+      enviar, espera de 60 s en cuotas, pendiente ajeno que no se reenvía, encargado que no restablece a otro
+      encargado) y el recorte del CI (sin corrida en `push` a `main`, sin CI en cambios solo de documentos, gitleaks
+      en `secretos.yml`).
+    - Verificación local sobre el árbol final: lint, formato y `tsc` en 0; Vitest 483; pgTAP 2.224 en 50 archivos;
+      tipos sin diferencias; build; integración 17 de 17; Playwright 245 de 245. CI del PR en verde (15 min 27 s).
+    - Revisión: `/code-review`, `/ponytail-review`, `/security-review` (0 vulnerabilidades) y dos pasadas de Opus.
+      **Codex: no verificado (sin cuota hasta el 2026-12-03).**
+    - QA local con Playwright de las 5 reproducciones de la auditoría: pasan (código "25", "Sistema: 10 (3
+      reservadas)" sin ajuste y ajuste de −1 al contar 9, NIT y dirección en la nota, recarga a mitad del cobro a
+      crédito con 1 solo crédito, contraseñas). Capturas revisadas por el chairman; no se guardan en el repo.
+    - Despliegue (2026-11-10, 04:26 a 04:40 UTC): backup manual `erp-backup-2026-11-10T0439Z-completo` (37 MB, vence
+      a los 7 días, corrida 42755891404 en verde, con restauración de prueba) → `db push` de las 3 migraciones
+      (`20261109130000`, `130100`, `130200`) → `functions deploy admin-usuarios`. Comprobado en producción:
+      `migration list` igual en local y remoto (41); 3 funciones nuevas, vista `stock_reservado` y check de auditoría
+      presentes; `auditar_clave` no ejecutable por `authenticated`; deploy de Vercel `READY` sobre `46b7ecd`; `/panel`
+      y `/pos` sin sesión llevan a `/login`; 0 errores de consola; 0 errores de runtime en la última hora.
+    - **Desvío del plan:** el orden real fue web, migraciones, función. Vercel publica al mergear, así que la web
+      nueva estuvo unos 14 minutos sin sus migraciones (conteo y lista de personal habrían fallado; fue de madrugada,
+      sin uso). Corrección para los PR 2 y 3: como las migraciones son aditivas, se aplican antes del merge.
+    - Backups viejos (aprobado por el CTO): los 4 de 37 MB más viejos (dos del 2026-11-05, 11-06 y 11-07) se copiaron
+      a `~/Documents/ERP-backups-copias/` en la máquina del CTO (fuera del repo, cifrados con `age`, con
+      `SHA256SUMS`; tamaño idéntico al de GitHub y `unzip -t` sin errores) y se borraron de GitHub. Artifacts vivos:
+      128 MB de 500.
+    - Límites conocidos que quedan (también en el PR #95): restablecer no cierra sesiones abiertas (desactivar,
+      restablecer, reactivar); verificar la clave actual protege la pantalla, no la API; stock negativo si se cuenta
+      menos de lo reservado; `conteo_items.cantidad_sistema` incluye lo reservado desde ahora; la espera de 60 s
+      depende del reloj del equipo; `aviso-actualizacion.tsx` no mira cobros pendientes; en cuotas, un rechazo por
+      permiso tras un intento en duda borra la entrada pendiente (no reproducido); `cobro-pendiente.ts` y
+      `cobro-cuota.ts` duplican el patrón de almacenamiento y la constante de 60 s.
+    - No verificado: la corrida `base` del backup nuevo y la primera corrida programada `completo` (se comprueban
+      el 2026-11-10 tras las 05:23 y las 17:23 UTC); QA autenticado en producción (necesita que el CTO escriba una
+      contraseña); que un equipo con la PWA instalada tome la versión nueva sin intervención (el QA local vio un
+      service worker sirviendo la build vieja hasta actualizar; está en el PR 3).
   - Decisiones del CTO (2026-11-09): camino de 4 PRs y M-1 con la opción recomendada (`cancelar_reserva` exige
     `anular`), a cargo del chairman; autorizó la consulta de colisiones de B-1 en producción; rotar credenciales y
     comprar el dominio quedan para cuando el producto esté listo para entregar (objeción ya dicha).
@@ -36,13 +73,14 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
     corre en local antes de subir y cada PR se sube una sola vez. Si aun así el contador se acerca al tope, se
     publica con la verificación local (excepción a la regla 4, avisada al CTO, sin objeción hasta ahora) y los
     minutos que queden son del backup.
-  - **Decisión pendiente del CTO, nueva (2026-11-09): ¿un encargado puede gestionar a otro encargado?** Hoy quien
-    tiene el permiso `usuarios` (el encargado de la lavandería) puede crear encargados, cambiarles el rol y quitarlos;
-    `asignar_usuario` solo protege al dueño. El PR 1 impide que un encargado restablezca directamente la contraseña de
-    otro encargado, pero la regla se rodea en tres pasos (bajarle el rol, restablecer, devolverle el rol), los tres
-    auditados. Es fricción, no barrera. Cerrarlo de verdad exige que solo el dueño pueda cambiar el rol o quitar a un
-    encargado (`asignar_usuario` y `quitar_usuario`, pantalla de personal y matriz del SRS). Recomendación del
-    chairman: sí, en el PR 2. Mientras no se decida, queda como límite conocido.
+  - **Decisión del CTO (2026-11-10): solo el dueño gestiona a los encargados. Va en el PR 2.** Contexto: quien tiene
+    el permiso `usuarios` (el encargado de la lavandería) podía crear encargados, cambiarles el rol y quitarlos;
+    `asignar_usuario` solo protegía al dueño. El PR 1 impide que un encargado restablezca directamente la contraseña
+    de otro encargado, pero hasta el PR 2 la regla se rodea en tres pasos (bajarle el rol, restablecer, devolverle el
+    rol), los tres auditados. Alcance en el PR 2: asignar el rol `encargado`, cambiar el rol de un encargado, quitarlo,
+    desactivarlo o reactivarlo y restablecer su contraseña exigen ser dueño del negocio (`asignar_usuario`,
+    `quitar_usuario`, `puede_asignar_rol`, `puede_administrar_cuenta`, `admin-usuarios`, pantalla de personal, pgTAP,
+    integración, E2E y matriz del SRS). Costo aceptado: sin el dueño, nadie corrige a un encargado.
   - **Fotos y cupos (2026-11-09).** Las fotos viven en Supabase Storage (1 GB gratis, unos 36 MB hoy); lo que aprieta
     es su copia en GitHub. Medido en el código: la subida no comprime (`catalogo/foto.ts`, hasta 5 MB por foto). El
     CTO espera que el catálogo crezca. Decidido: compresión al subir, en el PR 3 (`docs/plan-preentrega.md`). Límite

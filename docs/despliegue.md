@@ -31,9 +31,16 @@ pnpm exec supabase --workdir .. config push                    # usa el bloque [
 pnpm exec supabase --workdir .. functions deploy admin-usuarios
 ```
 
-En una actualización el orden importa: primero las migraciones, después la función `admin-usuarios` y al final la web
-(Vercel despliega sola al mergear). La función y la web nuevas llaman a objetos que crean las migraciones; mientras
-no se aplican, las pantallas nuevas fallan. Antes de `db push` en producción: backup manual en verde.
+En una actualización el orden importa: primero las migraciones, después la función `admin-usuarios` y al final la web.
+La función y la web nuevas llaman a objetos que crean las migraciones; mientras no se aplican, las pantallas nuevas
+fallan. Antes de `db push` en producción: backup manual en verde.
+
+Vercel publica la web en cuanto se mergea a `main`, así que ese orden solo se cumple si las migraciones se aplican
+**antes del merge**, con el PR ya revisado y el CI en verde. Vale cuando las migraciones son aditivas (objetos nuevos,
+`create or replace` compatible con la web vieja), que es lo normal. Secuencia: backup manual (unos 5 a 13 minutos) →
+`db push --linked --dry-run` → `db push --linked` → `functions deploy` → merge. Si una migración rompe la web vieja,
+no hay orden bueno: se hace en ventana sin uso. El 2026-11-10 (PR #95) se mergeó primero y la web nueva estuvo unos
+14 minutos sin sus migraciones, de madrugada.
 
 - Las migraciones traen la matriz de permisos (`rol_permisos`) y el bucket privado `productos`.
 - `config.toml` tiene `site_url` localhost para el entorno local. El bloque `[remotes.produccion]`, con el ref de
