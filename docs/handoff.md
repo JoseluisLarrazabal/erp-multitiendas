@@ -1,16 +1,64 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (PR 3 del plan de preentrega mergeado y desplegado en producción; falta el PR 4).
+Última actualización: 2026-11-10 (plan de preentrega culminado: los 4 PRs están mergeados; sigue el paralelo y lo que
+depende del CTO y del cliente).
 
 ## Próxima sesión (arrancar acá)
 
-- **Plan activo: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09).** Cierra la auditoría previa a la
-  entrega en 4 PRs: 1 bloqueantes B-1 a B-6, 2 Entrega B (M-1, M-2, M-5 a M-8), 3 operación diaria (M-9 a M-14, M-16,
-  M-17, pruebas y no concluyentes), 4 documentos.
-  - **Hito activo: PR 4, documentos (rama `docs/paquete-entrega`, sin empezar).** Los escribe el chairman: acta,
-    paralelo, capacitación, despliegue, las reglas faltantes en `docs/manual/`, SRS, contradicciones del handoff y los
-    límites conocidos de los PR 1 a 3. Lista de lo que los PR 1 a 3 mandan al manual, abajo en cada PR.
+- **Sin plan activo. Lo que sigue no es código:** el paralelo (`docs/paralelo.md`), la capacitación
+  (`docs/capacitacion.md`) y la firma del acta (`docs/acta-entrega.md`). Antes hace falta, del lado del CTO:
+  - cargar el NIT y los "Datos para la nota" de los tres negocios (vacíos en producción);
+  - resolver D-01 (garantía de los extras: el punto 6 del acta la deja como `[quedan / no quedan]`), D-02 y la fecha
+    exacta del contrato (D-04);
+  - llevar al cliente las preguntas M-3/P-07 (interés en el prepago), P-06 y P-12;
+  - rotar las credenciales y comprar el dominio (diferidos por el CTO hasta el cierre);
+  - pulsar "Actualizar ahora" una vez en cada equipo con el POS instalado;
+  - guardar fuera de línea la clave privada `age` y hacer la copia periódica de los backups (`docs/backup.md`).
+  Y del lado de quien retome:
+  - comprobar la primera corrida programada `base` del backup (17:23 UTC; al cerrar esta sesión GitHub todavía no la
+    había arrancado), la primera corrida con fotos semanales del domingo 2026-11-15 (que `github.event.schedule`
+    entregue `23 5 * * 0`) y revisar la cadencia el 2026-12-01;
+  - vigilar los minutos de Actions: quedan unos 240 estimados y el backup necesita unos 190 hasta fin de mes;
+  - cuando vuelva la cuota de Codex (2026-12-03), correrlo sobre los PR 1 a 3 (#95, #97, #99); si encuentra algo, el
+    arreglo va en un PR nuevo.
+- **Plan cerrado: `docs/plan-preentrega.md` (aprobado por el CTO el 2026-11-09, culminado el 2026-11-10).** Cerró la
+  auditoría previa a la entrega en 4 PRs: 1 bloqueantes B-1 a B-6 (#95), 2 Entrega B (M-1, M-2, M-5 a M-8; #97), 3
+  operación diaria (M-9 a M-14, M-16, M-17, pruebas y no concluyentes; #99), 4 documentos (#101). Resultado: los 6
+  bloqueantes y los medios del plan están arreglados y desplegados; el paquete de entrega está al día. Quedó fuera,
+  como se aprobó: M-15 (registro de errores), las preguntas al cliente y las decisiones D-01, D-02 y D-04.
+  - **PR 4, documentos: cerrado el 2026-11-10 (PR #101, rama `docs/paquete-entrega`).** Solo documentos e imágenes;
+    ningún archivo de producto. En GitHub solo corre gitleaks (el CI completo ignora `docs/**`).
+    - Qué entró: acta con el punto 6 redactado (6 funcionalidades adicionales; la garantía queda en blanco hasta
+      D-01) y la lista previa a la firma ampliada; paralelo, capacitación y despliegue con lo que cambiaron los PR 1 a
+      3; SRS (RF-INV-06, RF-VEN-05, contraseñas, RNF-09); los cuatro manuales (`docs/manual/`); `decisiones-manual.md`
+      con las reglas nuevas y las corregidas; `auditoria-entrega-a.md` con una sección de estado al 2026-11-10 (qué
+      brecha cerró con qué evidencia y cuáles siguen abiertas); `backup.md` con la copia periódica fuera de GitHub;
+      y las tres contradicciones de este handoff (contrato, fase 6, fecha de Codex).
+    - Capturas: las 25 de `docs/manual/img` se regeneraron en local con la base del seed (`pnpm manual:capturas`, 27
+      pruebas en verde); nunca contra producción. No se agregaron capturas nuevas (Datos del negocio, restablecer
+      contraseña, anular compra): decisión del chairman para no tocar código en este PR.
+    - PDF: `scripts/manual/exportar.sh` genera los cuatro (vendedor 19 páginas, lavandería 11, encargado y dueño 31,
+      contador 6) en `docs/manual/dist/`, que no se versiona. Hay que volver a generarlos antes de entregarlos si el
+      manual cambia.
+    - Cómo se hizo: desvío del plan, dicho al CTO. El plan decía que los documentos los escribía el chairman; la
+      redacción masiva la hicieron cuatro subagentes Sonnet sobre un mapa de brechas (Opus), y el chairman escribió el
+      acta, `backup.md` y este handoff, revisó cada diff y comprobó contra el código los textos de pantalla citados.
+    - Correcciones de la revisión: "Cobro sin confirmar" solo aplica a la venta que completa una reserva, a la venta a
+      crédito y a la cuota (no a lavandería); "Actualizar ahora" se pulsa sin venta en curso, no "con la caja
+      cerrada"; se quitó del manual del vendedor la frase que exigía entrar con la cuenta que hizo la venta para
+      descartar una rechazada (el manual dice lo que la pantalla dice: descarta quien tiene el permiso de devolución
+      fuera de plazo); la sección del dueño describe los dos límites de seguridad como límites que debe conocer, no
+      como riesgos "que el cliente acepta" (el cliente no los ha aceptado: los aceptó el CTO).
+    - Límites conocidos que quedaron escritos como tales: la fecha de la nota sale "9/11/26, 5:29 p. m."; la búsqueda
+      de órdenes de lavandería por cliente distingue tildes; una venta a crédito o de reserva hecha por error no tiene
+      reverso; M-15.
+    - No verificado: el texto y el comportamiento exactos al descartar una venta rechazada desde otra cuenta
+      (`revisarDescarte` devuelve "La sesión caducó o es de otra cuenta..." en algún caso que no se llegó a aislar);
+      de la regla "pasados 30 días del cierre solo se puede descartar" se confirmó el rechazo del servidor
+      (`cerrada_en <= now() - interval '30 days'`), no lo que muestra la pantalla en ese caso; que el servidor siga aplicando el tope de 5 MB a una foto que no se pudo achicar; los
+      PDF se abrieron por muestreo (2 páginas), no se leyeron enteros; las líneas de más de 120 caracteres que
+      agregaron los manuales no se reajustaron. Codex: no verificado (sin cuota hasta el 2026-12-03).
   - **PR 3, operación diaria: cerrado el 2026-11-10 (PR #99, squash `2340106`).**
     - Cierre: CI del PR en verde (17 min 42 s, una sola subida; la prueba de bloqueos con `dblink` pasó en GitHub);
       merge a las 14:50 UTC; deploy de Vercel en verde sobre `2340106`. Comprobado en producción con la web nueva
