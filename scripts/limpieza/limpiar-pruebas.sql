@@ -90,6 +90,28 @@ begin
     raise exception 'ABORTA: el producto con series % tuvo traslado, baja o ajuste dentro del corte; las series no se pueden reconstruir', m.producto_id;
   end loop;
 
+  -- Una compra previa anulada después del corte quedaría con su anulación borrada y su contraasiento fuera del kardex.
+  for m in select a.compra_id from public.compra_anulaciones a
+           join public.compras c on c.id = a.compra_id
+           where c.created_at < v_desde and a.created_at >= v_desde limit 1 loop
+    raise exception 'ABORTA: la compra previa % fue anulada después de --desde; elegí otro --desde', m.compra_id;
+  end loop;
+  -- Igual con un pago a proveedor previo: su reverso (fila negativa con anula_id) caería y el pago volvería a contar.
+  for m in select r.anula_id from public.proveedor_pagos r
+           join public.proveedor_pagos p on p.id = r.anula_id
+           where r.created_at >= v_desde and p.created_at < v_desde limit 1 loop
+    raise exception 'ABORTA: el pago a proveedor previo % fue anulado después de --desde; elegí otro --desde', m.anula_id;
+  end loop;
+  -- Una revisión posterior al corte sobre una apertura o un movimiento que se conserva se borraría sin su razón de ser.
+  for m in select r.id from public.caja_revisiones r
+           where r.revisado_en >= v_desde
+             and ((r.tipo = 'apertura' and r.ref_id not in (select id from _sesiones))
+               or (r.tipo = 'movimiento' and r.ref_id not in
+                    (select id from public.caja_movimientos where sesion_id in (select id from _sesiones) or created_at >= v_desde)))
+           limit 1 loop
+    raise exception 'ABORTA: la revisión de caja % es posterior a --desde y su apertura o movimiento no se borra; elegí otro --desde', m.id;
+  end loop;
+
   -- Hijos primero.
   with d as (delete from public.devolucion_items di
              using public.devoluciones dv
@@ -122,12 +144,21 @@ begin
     insert into _resumen (tabla, filas) select 'venta_items', count(*) from d;
   with d as (delete from public.ventas where id in (select id from _ventas) returning 1)
     insert into _resumen (tabla, filas) select 'ventas', count(*) from d;
+  with d as (delete from public.caja_revisiones
+             where (tipo = 'apertura' and ref_id in (select id from _sesiones))
+                or (tipo = 'movimiento' and ref_id in
+                     (select id from public.caja_movimientos where sesion_id in (select id from _sesiones) or created_at >= v_desde))
+             returning 1)
+    insert into _resumen (tabla, filas) select 'caja_revisiones', count(*) from d;
   with d as (delete from public.caja_movimientos where sesion_id in (select id from _sesiones) or created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'caja_movimientos', count(*) from d;
   with d as (delete from public.caja_sesiones where id in (select id from _sesiones) returning 1)
     insert into _resumen (tabla, filas) select 'caja_sesiones', count(*) from d;
   with d as (delete from public.proveedor_pagos where created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'proveedor_pagos', count(*) from d;
+  with d as (delete from public.compra_anulaciones a using public.compras c
+             where a.compra_id = c.id and (c.created_at >= v_desde or a.created_at >= v_desde) returning 1)
+    insert into _resumen (tabla, filas) select 'compra_anulaciones', count(*) from d;
   with d as (delete from public.compra_items ci using public.compras c
              where ci.compra_id = c.id and c.created_at >= v_desde returning 1)
     insert into _resumen (tabla, filas) select 'compra_items', count(*) from d;
@@ -218,6 +249,11 @@ begin
             or compra_id not in (select id from public.compras))
        + (select count(*) from public.compra_items where compra_id not in (select id from public.compras))
        + (select count(*) from public.compras where created_at >= v_desde)
+       + (select count(*) from public.compra_anulaciones where created_at >= v_desde
+            or compra_id not in (select id from public.compras))
+       + (select count(*) from public.caja_revisiones where revisado_en >= v_desde
+            or (tipo = 'apertura' and ref_id not in (select id from public.caja_sesiones))
+            or (tipo = 'movimiento' and ref_id not in (select id from public.caja_movimientos)))
        + (select count(*) from public.proveedores where created_at >= v_desde)
        + (select count(*) from public.conteos where fecha >= v_desde)
        + (select count(*) from public.conteo_items where conteo_id not in (select id from public.conteos))

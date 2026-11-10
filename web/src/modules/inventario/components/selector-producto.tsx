@@ -19,6 +19,8 @@ type Props = {
   error?: string;
   // Etiqueta del campo (el consumo de insumos lo llama "Insumo").
   etiqueta?: string;
+  // Salida y traslado: también desactivados con stock (se marcan "(inactivo)").
+  conInactivos?: boolean;
 };
 
 const DEMORA_MS = 250;
@@ -32,6 +34,7 @@ export function SelectorProducto({
   idSiguiente,
   error,
   etiqueta = "Producto",
+  conInactivos,
 }: Props) {
   const lista = useId();
   const campo = useRef<HTMLInputElement>(null);
@@ -61,7 +64,7 @@ export function SelectorProducto({
   async function buscar(q: string): Promise<ProductoElegible[]> {
     const turno = ++consulta.current;
     try {
-      const r = await buscarProductosAccion({ negocioId, q });
+      const r = await buscarProductosAccion({ negocioId, q, conInactivos });
       if (turno !== consulta.current) return [];
       setFalla(r.ok ? null : r.error);
       const filas = r.ok ? r.data : [];
@@ -135,7 +138,10 @@ export function SelectorProducto({
         <div className="flex min-h-10 items-center justify-between gap-2 rounded-lg border px-3 py-1.5">
           <p id={id} tabIndex={-1} className="min-w-0 text-sm">
             <span className="text-muted-foreground font-mono text-xs">{valor.codigo}</span>{" "}
-            <span className="font-semibold">{valor.nombre}</span>
+            <span className="font-semibold">
+              {valor.nombre}
+              {valor.activo ? "" : " (inactivo)"}
+            </span>
           </p>
           <Button
             type="button"
@@ -185,7 +191,10 @@ export function SelectorProducto({
                 onClick={() => elegir(p)}
                 className="aria-selected:bg-muted hover:bg-muted flex min-h-11 cursor-pointer flex-col justify-center rounded-md px-2.5 py-1 text-sm"
               >
-                <span className="font-medium">{p.nombre}</span>
+                <span className="font-medium">
+                  {p.nombre}
+                  {p.activo ? "" : " (inactivo)"}
+                </span>
                 <span className="text-muted-foreground font-mono text-xs">
                   {p.codigo}
                   {p.codigoBarras ? ` · ${p.codigoBarras}` : ""}

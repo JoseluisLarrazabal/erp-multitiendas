@@ -759,6 +759,50 @@ test("rechazo al reenviar: la fila queda visible y Reintentar la entrega cuando 
   expect(await stockEn(a.id)).toBe(2);
 });
 
+test("M-11: con una venta rechazada el cierre no se bloquea, avisa, y al reintentar entra como tardía", async ({
+  page,
+}) => {
+  await ventaRechazada(page, 24);
+  const cajaId = (await sesionAbierta(equipoId))!;
+  await page.getByRole("button", { name: "Nueva venta" }).click();
+  await page.getByRole("button", { name: "Caja", exact: true }).click();
+  await page.getByLabel("Efectivo contado (Bs)").fill("24");
+  const cerrar = page.getByRole("button", { name: "Cerrar caja" }).first();
+  await expect(cerrar).toBeEnabled();
+  await expect(
+    page.getByText(
+      /Hay 1 operación rechazada sin resolver \(ventas por Bs 24,00\)\. El esperado no las cuenta/,
+    ),
+  ).toBeVisible();
+  await cerrar.click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cerrar caja" }).click();
+  await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 0,00");
+  await expect(page.getByTestId("cierre-diferencia")).toHaveText("Bs 24,00");
+
+  // El encargado la reintenta: entra en la sesión cerrada, marcada, y el resumen la cuenta como tardía.
+  await page.unroute("**/rest/v1/rpc/registrar_venta");
+  await page
+    .getByRole("region", { name: "Operaciones rechazadas" })
+    .getByRole("button", { name: /^Reintentar la venta/ })
+    .click();
+  await expect
+    .poll(async () => {
+      const r = await apiComo("dueno", "rpc/resumen_caja", {
+        metodo: "POST",
+        cuerpo: { p_sesion_id: cajaId },
+      });
+      return (r.json as { tardias_ventas: number }).tardias_ventas;
+    })
+    .toBe(1);
+  const ventas = await apiComo(
+    "vendedor",
+    `ventas?select=total,motivos_revision&caja_sesion_id=eq.${cajaId}`,
+  );
+  expect((ventas.json as { motivos_revision: string[] }[])[0]!.motivos_revision).toContain(
+    "caja_cerrada",
+  );
+});
+
 test.describe("descartar con permiso de encargado", () => {
   test.use({ storageState: rutaAuth("dueno") });
   test("rechazo al reenviar: Descartar exige escribir DESCARTAR y no deja rastro en la base", async ({
@@ -797,7 +841,9 @@ test("E2E-07: con la cola pendiente el cierre de caja está bloqueado y se habil
   const cerrar = page.getByRole("button", { name: "Cerrar caja" }).first();
   await expect(cerrar).toBeDisabled();
   await expect(
-    page.getByText("Hay operaciones sin enviar o rechazadas en este equipo"),
+    page.getByText(
+      "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar",
+    ),
   ).toBeVisible();
 
   await context.setOffline(false);
@@ -1748,9 +1794,22 @@ test("actualización disponible: el botón se habilita solo con la cola vacía",
   await confirmarVenta(page);
   await expect(sinEnviar(page, 1)).toBeVisible();
   await expect(boton).toBeDisabled();
-  await expect(page.getByText(/cuando se envíen/)).toBeVisible();
+  await expect(page.getByText(/se podrá aplicar cuando se resuelvan/)).toBeVisible();
 
   await context.setOffline(false);
   await volverLaRed(page);
   await expect(boton).toBeEnabled({ timeout: 15_000 });
+
+  // Un cobro o una cuota sin confirmar en el navegador impide aplicar aunque la cola esté vacía.
+  await page.evaluate(() =>
+    localStorage.setItem("erp:cuotas-sin-confirmar:prueba:prueba", '{"a":1}'),
+  );
+  await boton.click();
+  await expect(
+    page.getByText(
+      "Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de actualizar.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualizar ahora" })).toBeVisible();
+  await page.evaluate(() => localStorage.removeItem("erp:cuotas-sin-confirmar:prueba:prueba"));
 });

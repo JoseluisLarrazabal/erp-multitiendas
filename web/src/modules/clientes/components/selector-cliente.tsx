@@ -28,6 +28,8 @@ export function SelectorCliente({
   const [creando, setCreando] = useState(false);
   const [nuevo, setNuevo] = useState({ nombre: "", ci_nit: "", telefono: "" });
   const [error, setError] = useState<string | null>(null);
+  // Aviso de documento repetido: aparte de `error` porque la búsqueda que sigue lo borraría al responder.
+  const [duplicado, setDuplicado] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const entrada = useRef<HTMLInputElement>(null);
   // Buscar y crear clientes necesita el servidor; sin red se vende a cliente general (RF-VEN-14).
@@ -59,6 +61,7 @@ export function SelectorCliente({
     setCreando(false);
     setQ("");
     setError(null);
+    setDuplicado(null);
   }
 
   async function guardar(e: React.FormEvent) {
@@ -72,12 +75,12 @@ export function SelectorCliente({
       setNuevo({ nombre: "", ci_nit: "", telefono: "" });
       return elegir(r.data);
     }
-    setError(r.error);
     // Duplicado: pasa a la búsqueda por documento para elegir el existente.
     if (r.codigo === "ERP_CLIENTE_DUPLICADO") {
+      setDuplicado(r.error);
       setCreando(false);
       setQ(normalizarDocumento(nuevo.ci_nit));
-    }
+    } else setError(r.error);
   }
 
   if (!abierto)
@@ -186,7 +189,10 @@ export function SelectorCliente({
               autoComplete="off"
               spellCheck={false}
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setDuplicado(null);
+              }}
             />
           </div>
           {buscando && <p className="text-muted-foreground text-xs">Buscando…</p>}
@@ -209,9 +215,9 @@ export function SelectorCliente({
           )}
         </>
       )}
-      {error && (
+      {(duplicado ?? error) && (
         <p role="alert" className="text-destructive text-xs">
-          {error}
+          {duplicado ?? error}
         </p>
       )}
       <div className="flex gap-2">
@@ -220,7 +226,10 @@ export function SelectorCliente({
             type="button"
             variant="outline"
             className="h-10 flex-1"
-            onClick={() => setCreando(true)}
+            onClick={() => {
+              setCreando(true);
+              setDuplicado(null);
+            }}
           >
             <UserPlus /> Nuevo cliente
           </Button>
@@ -243,6 +252,7 @@ export function SelectorCliente({
             setAbierto(false);
             setCreando(false);
             setError(null);
+            setDuplicado(null);
           }}
         >
           Cerrar

@@ -56,7 +56,10 @@ export function PosApp({ titulo }: { titulo: React.ReactNode }) {
       <div className="flex justify-end print:hidden">
         <DolarParalelo />
       </div>
-      <AvisoActualizacion lineasEnCurso={() => guarda.current.lineas()} />
+      <AvisoActualizacion
+        lineasEnCurso={() => guarda.current.lineas()}
+        hayPendiente={() => guarda.current.hayPendiente()}
+      />
       {sesion.fase === "lista" && activo && (
         <PosVenta
           key={sesion.activoId}

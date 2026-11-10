@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { errorRpc } from "@/lib/erp-errores";
 import type { Resultado } from "@/modules/usuarios";
+import { sinTildes } from "@/lib/texto";
 import { limpiarBusqueda, normalizarDocumento, type ClienteElegido } from "./domain";
 import { clienteRapidoSchema } from "./schemas";
 
@@ -19,7 +20,7 @@ export async function buscarClientes(
     .from("clientes")
     .select("id, nombre, ci_nit, telefono")
     .eq("negocio_id", negocioId)
-    .or(`nombre.ilike.%${q}%,ci_nit.ilike.%${normalizarDocumento(q)}%`)
+    .or(`busqueda.ilike.%${sinTildes(q)}%,ci_nit.ilike.%${normalizarDocumento(q)}%`)
     .order("nombre")
     .limit(8);
   if (error) return { ok: false, error: "No se pudo buscar clientes." };

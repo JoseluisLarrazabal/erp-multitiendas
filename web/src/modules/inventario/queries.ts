@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { sinTildes } from "@/lib/texto";
 import { sanearBusqueda } from "@/modules/catalogo";
 import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
@@ -18,11 +19,11 @@ export type Pagina<T> = { filas: T[]; total: number; pagina: number };
 // movimientos_inventario.costo_unitario, y un `select *` da 42501.
 const COLUMNAS_LISTA =
   "id, codigo, codigo_barras, nombre, unidad, controla_serie, activo, stock_minimo, stock_total, stock_bajo, stock_negativo";
-const COLUMNAS_ELEGIBLE = "id, codigo, codigo_barras, nombre, unidad, controla_serie";
+const COLUMNAS_ELEGIBLE = "id, codigo, codigo_barras, nombre, unidad, controla_serie, activo";
 
 type FilaLista = Pick<
   Database["public"]["Views"]["inventario_lista"]["Row"],
-  "id" | "codigo" | "codigo_barras" | "nombre" | "unidad" | "controla_serie"
+  "id" | "codigo" | "codigo_barras" | "nombre" | "unidad" | "controla_serie" | "activo"
 >;
 
 const aElegible = (p: FilaLista): ProductoElegible => ({
@@ -32,17 +33,18 @@ const aElegible = (p: FilaLista): ProductoElegible => ({
   nombre: p.nombre!,
   unidad: p.unidad as Unidad,
   controlaSerie: p.controla_serie === true,
+  activo: p.activo === true,
 });
 
 const filtroTexto = (q: string) =>
-  ["codigo", "codigo_barras", "nombre", "marca"].map((c) => `${c}.ilike.*${q}*`).join(",");
+  `codigo.ilike.*${q}*,codigo_barras.ilike.*${q}*,busqueda.ilike.*${sinTildes(q)}*`;
 
 // Stock por producto de la página, paginado en el servidor (la vista inventario_lista agrega el total).
 // `negativo`: algún producto con una ubicación en negativo, aunque el total sume positivo.
 export async function listarStock(
   supabase: Cliente,
   negocioId: string,
-  f: { q: string; bajo: boolean; pagina: number; soloActivos?: boolean; negativo?: boolean },
+  f: { q: string; bajo: boolean; pagina: number; activosOConStock?: boolean; negativo?: boolean },
   porPagina: number,
   verCostos: boolean,
 ): Promise<Resultado<Pagina<FilaStock>>> {
@@ -53,7 +55,8 @@ export async function listarStock(
       .select(COLUMNAS_LISTA, soloConteo ? { count: "exact", head: true } : undefined)
       .eq("negocio_id", negocioId);
     if (f.bajo) c = c.eq("stock_bajo", true);
-    if (f.soloActivos) c = c.eq("activo", true);
+    // Conteo: un producto desactivado con stock sigue contándose (M-14).
+    if (f.activosOConStock) c = c.or("activo.eq.true,stock_total.neq.0");
     if (f.negativo) c = c.eq("stock_negativo", true);
     if (q) c = c.or(filtroTexto(q));
     return c;
@@ -103,7 +106,6 @@ export async function listarStock(
       pagina,
       filas: data.map((p) => ({
         ...aElegible(p),
-        activo: p.activo === true,
         stockMinimo: p.stock_minimo,
         total: p.stock_total ?? 0,
         bajo: p.stock_bajo === true,
@@ -175,6 +177,7 @@ export async function leerKardex(
         cantidad: m.cantidad,
         costoUnitario: m.costo_unitario,
         refTipo: m.ref_tipo,
+        referencia: m.referencia,
         usuario: m.usuario_nombre,
         motivo: m.motivo,
         fecha: m.created_at,
@@ -202,13 +205,16 @@ export async function buscarProductos(
   supabase: Cliente,
   negocioId: string,
   texto: string,
+  opciones: { conInactivos?: boolean } = {},
 ): Promise<Resultado<ProductoElegible[]>> {
-  const base = () =>
-    supabase
+  // Salida y traslado: un desactivado con stock distinto de 0 se puede sacar o mover (M-14). Dos .or() se combinan con AND.
+  const base = () => {
+    const c = supabase
       .from("inventario_lista")
       .select(COLUMNAS_ELEGIBLE)
-      .eq("negocio_id", negocioId)
-      .eq("activo", true);
+      .eq("negocio_id", negocioId);
+    return opciones.conInactivos ? c.or("activo.eq.true,stock_total.neq.0") : c.eq("activo", true);
+  };
   const q = sanearBusqueda(texto);
   const sinFilas = { data: [], error: null };
   const [exacto, parecidos] = await Promise.all([
@@ -262,7 +268,7 @@ export async function paginaConteo(
   const lista = await listarStock(
     supabase,
     negocioId,
-    { q, bajo: false, pagina, soloActivos: true },
+    { q, bajo: false, pagina, activosOConStock: true },
     porPagina,
     false,
   );
@@ -290,6 +296,7 @@ export async function paginaConteo(
           nombre: f.nombre,
           unidad: f.unidad,
           controlaSerie: f.controlaSerie,
+          activo: f.activo,
           sistema: (f.porUbicacion[ubicacionId] ?? 0) + reservado,
           reservado,
         };

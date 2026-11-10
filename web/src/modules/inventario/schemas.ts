@@ -147,6 +147,7 @@ export const seriesSchema = z.object({
 export const busquedaSchema = z.object({
   negocioId: id,
   q: z.string().trim().min(1).max(80),
+  conInactivos: z.boolean().optional(),
 });
 
 export const revertirConsumoSchema = z.object({

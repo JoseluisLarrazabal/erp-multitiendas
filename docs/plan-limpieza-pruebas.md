@@ -26,6 +26,16 @@ después de la capacitación y antes del paralelo. Nunca después del paralelo: 
 - Antes de producción: el mismo ensayo sobre el último backup restaurado en local (`docs/backup.md`), y un backup
   manual en verde justo antes de aplicar.
 
+- Ensayo del 2026-11-10 (PR 3 de la preentrega, base local): `db reset`, la suite completa de Playwright (269 pruebas:
+  92 ventas, compras, anulaciones, reversos, reservas, créditos y lotes), corrida en seco con `--desde` un segundo
+  después del seed (cuenta y termina en rollback; las 92 ventas siguen) y corrida con `--aplicar`: 0 ventas, 0
+  compras, 0 `compra_anulaciones`, 0 pagos de cuota, 0 pagos a proveedor, 0 reservas, 0 movimientos posteriores al
+  corte y `stock` igual a la suma del kardex en todos los pares. El script cubre desde ese PR `compra_anulaciones` y
+  `caja_revisiones`, con tres abortos nuevos (compra o pago a proveedor previos anulados después del corte; revisión
+  de caja posterior sobre algo que se conserva). No verificado en ese ensayo: que la numeración de cada equipo vuelva
+  a la del seed y un humo de Playwright después de limpiar. El ensayo sobre el último backup restaurado sigue
+  pendiente antes de producción.
+
 ## Excepción autorizada
 
 Este script es una excepción **única**, autorizada por el CTO, a dos reglas del proyecto: "el kardex es append-only" y

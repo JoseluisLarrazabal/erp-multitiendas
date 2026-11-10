@@ -1,6 +1,6 @@
 -- RPC de compras: guardar_proveedor, registrar_compra, pagar_proveedor, deudas_proveedores, totales_compras (DB-25).
 begin;
-select plan(99);
+select plan(106);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -228,6 +228,16 @@ select throws_ok($$delete from public.proveedor_pagos$$, 'P0001', 'ERP_SOLO_AGRE
 select throws_ok($$truncate public.proveedor_pagos$$, 'P0001', 'ERP_SOLO_AGREGAR', 'proveedor_pagos: TRUNCATE rechazado');
 select throws_ok($$insert into public.compras (id, negocio_id, proveedor_id, ubicacion_id, total, condicion)
   values (gen_random_uuid(), pg_temp.i('T'), pg_temp.i('PVX'), pg_temp.i('U1'), 0, 'credito')$$, '23503', null, 'FK compuesta: una compra no referencia el proveedor de otro negocio');
+
+-- Arrastres del PR 2: compra_id de pagar_proveedor solo acepta compras a crédito y no anuladas (todo con PV1, que sí tiene deuda)
+select pg_temp.como(pg_temp.i('d'));
+select lives_ok($$select public.registrar_compra(pg_temp.compra('O66', 'PV1', 'contado', 3, jsonb_build_array(pg_temp.it('P1', 3, 1)), 'efectivo'))$$, 'compra al contado O66');
+select lives_ok($$select public.registrar_compra(pg_temp.compra('O61', 'PV1', 'credito', 10, jsonb_build_array(pg_temp.it('P1', 10, 1))))$$, 'compra a crédito O61');
+select lives_ok($$select public.registrar_compra(pg_temp.compra('O64', 'PV1', 'credito', 5, jsonb_build_array(pg_temp.it('P1', 5, 1))))$$, 'compra a crédito O64');
+select lives_ok($$select public.anular_compra(pg_temp.i('O62'), pg_temp.i('O61'), 'error de carga')$$, 'anular O61');
+select throws_ok($$select public.pagar_proveedor(pg_temp.pago('O60', 'PV1', 1) || jsonb_build_object('compra_id', pg_temp.i('O66')))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'pagar_proveedor: compra_id de una compra al contado');
+select throws_ok($$select public.pagar_proveedor(pg_temp.pago('O63', 'PV1', 1) || jsonb_build_object('compra_id', pg_temp.i('O61')))$$, 'P0001', 'ERP_DATOS_INVALIDOS', 'pagar_proveedor: compra_id de una compra anulada');
+select lives_ok($$select public.pagar_proveedor(pg_temp.pago('O65', 'PV1', 1) || jsonb_build_object('compra_id', pg_temp.i('O64')))$$, 'pagar_proveedor: compra a crédito vigente pasa');
 
 select * from finish();
 rollback;

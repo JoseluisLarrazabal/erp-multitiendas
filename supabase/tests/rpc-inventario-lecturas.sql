@@ -1,6 +1,6 @@
 -- DB-04, DB-12 en reconciliación; costos_stock, kardex_producto, stock_inconsistente, productos_stock_bajo.
 begin;
-select plan(32);
+select plan(36);
 -- preámbulo común (se copia en cada test)
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
@@ -125,6 +125,25 @@ select is((select count(*) from public.kardex_producto(pg_temp.i('P1')) where co
 select is((select usuario_nombre from public.kardex_producto(pg_temp.i('P1')) where tipo = 'danado'), 'd', 'kardex: nombre del usuario');
 select is((select count(*) from public.kardex_producto(pg_temp.i('P1'), pg_temp.i('U2'))), (select count(*) from public.movimientos_inventario where producto_id = pg_temp.i('P1') and ubicacion_id = pg_temp.i('U2')), 'kardex: filtra por ubicación');
 select is((select tipo from public.kardex_producto(pg_temp.i('P1'), null, 1)), 'venta', 'kardex: lo más reciente primero');
+-- referencia (M-13): conteo con su fecha, entrada sin documento, ajuste de costos; una venta simulada sin ref_id no rompe
+select is((select referencia from public.kardex_producto(pg_temp.i('P1')) where ref_tipo = 'conteo'),
+  'Conteo del ' || (select to_char(fecha at time zone 'America/La_Paz', 'DD/MM/YYYY') from public.conteos where id = pg_temp.i('O6')), 'kardex: referencia del conteo');
+select ok((select count(*) > 0 and bool_and(referencia is null) from public.kardex_producto(pg_temp.i('P1')) where ref_tipo = 'operacion'), 'kardex: las operaciones (entrada, ajuste, traslado) no tienen referencia');
+select is((select string_agg(distinct referencia, ',') from public.kardex_producto(pg_temp.i('P1')) where tipo = 'ajuste_costo'), 'Ajuste de costos', 'kardex: referencia del ajuste de costos');
+-- Venta y anulación con su número: la fila de ventas se simula con las FK apagadas (solo el número importa aquí).
+reset role;
+set local session_replication_role = replica;
+insert into public.ventas (id, negocio_id, ubicacion_id, dispositivo_id, caja_sesion_id, numero, vendedor_id, enviada_por, origen,
+  creada_en_cliente, subtotal, total, huella) values
+  ('cccccccc-3000-0000-0000-0000000000f1', pg_temp.i('T'), pg_temp.i('U1'), gen_random_uuid(), gen_random_uuid(), 'C1-000001',
+   pg_temp.i('d'), pg_temp.i('d'), 'online', now(), 5, 5, 'h');
+set local session_replication_role = origin;
+insert into public.movimientos_inventario (negocio_id, ubicacion_id, producto_id, tipo, cantidad, costo_unitario, ref_tipo, ref_id) values
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PK'), 'venta', -1, 2, 'venta', 'cccccccc-3000-0000-0000-0000000000f1'),
+  (pg_temp.i('T'), pg_temp.i('U1'), pg_temp.i('PK'), 'anulacion_venta', 1, 2, 'venta', 'cccccccc-3000-0000-0000-0000000000f1');
+select pg_temp.como(pg_temp.i('d'));
+select results_eq($$select tipo, referencia from public.kardex_producto(pg_temp.i('PK')) where ref_tipo = 'venta' order by tipo$$,
+  $$values ('anulacion_venta', 'Anulación de la venta C1-000001'), ('venta', 'Venta C1-000001')$$, 'kardex: referencia de la venta y de su anulación');
 -- paginación: tres páginas de 4 cubren todo sin repetir
 select set_config('t.p1', (select string_agg(id::text, ',' order by n) from (select id, row_number() over () n from public.kardex_producto(pg_temp.i('P1'), null, 4)) a), true);
 select set_config('t.c1', (select id::text from public.kardex_producto(pg_temp.i('P1'), null, 4) offset 3 limit 1), true);

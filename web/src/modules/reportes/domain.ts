@@ -19,26 +19,63 @@ export const DIAS_SIN_MOVIMIENTO = [30, 60, 90] as const;
 // El rango máximo de la RPC: 366 días con ambos extremos.
 export const MAX_DIAS_RANGO = 366;
 
-export type DefReporte = { id: IdReporte; etiqueta: string; agrupar?: readonly Agrupar[] };
+export type DefReporte = {
+  id: IdReporte;
+  etiqueta: string;
+  agrupar?: readonly Agrupar[];
+  // Qué cuenta el reporte y por qué día; se muestra bajo la barra de reportes.
+  criterio?: string;
+};
 
-const CAJA: DefReporte = { id: "caja", etiqueta: "Caja" };
+const CRITERIO_VENTAS =
+  "Cuenta lo vendido, por el día en que la venta llegó al sistema: una venta hecha sin conexión cuenta el día en que se envió. Una venta a crédito entra entera el día de la venta y una reserva, cuando se completa; los anticipos y las cuotas no entran aquí sino en Caja. Las devoluciones restan el día en que se hacen.";
+
+const CAJA: DefReporte = {
+  id: "caja",
+  etiqueta: "Caja",
+  criterio:
+    "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo y QR de ventas, anticipos de reservas y cuotas de crédito. Una venta sin conexión cuenta en la caja donde se hizo, aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre; lo que llegó después se ve en el detalle de esa caja.",
+};
+// Sin créditos, reservas ni cuotas; la orden se cobra al recibirla. reporte_ventas solo cuenta las completadas: una orden
+// anulada no entra; las devoluciones restan el día en que se hacen.
+const CRITERIO_INGRESOS_LAVANDERIA =
+  "Cuenta las órdenes recibidas, por el día en que la orden llegó al sistema: una orden hecha sin conexión cuenta el día en que se envió. La orden se cobra al recibirla. Una orden anulada no cuenta y las devoluciones restan el día en que se hacen.";
+const CAJA_LAVANDERIA: DefReporte = {
+  ...CAJA,
+  criterio:
+    "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo y QR de las órdenes. Una orden sin conexión cuenta en la caja donde se hizo, aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre; lo que llegó después se ve en el detalle de esa caja.",
+};
 const STOCK: DefReporte = { id: "stock", etiqueta: "Stock" };
 
 // El reporte de insumos es de costos: sin ver_costos no se ofrece (la RPC lo exige también).
 export function reportesDe(tipo: string, verCostos: boolean): readonly DefReporte[] {
   if (tipo === "lavanderia")
     return [
-      { id: "ingresos", etiqueta: "Ingresos", agrupar: ["dia", "producto"] },
+      {
+        id: "ingresos",
+        etiqueta: "Ingresos",
+        agrupar: ["dia", "producto"],
+        criterio: CRITERIO_INGRESOS_LAVANDERIA,
+      },
       ...(verCostos
         ? [{ id: "insumos", etiqueta: "Insumos", agrupar: AGRUPAR_INSUMOS } as DefReporte]
         : []),
-      CAJA,
+      CAJA_LAVANDERIA,
     ];
   if (tipo === "frial")
-    return [{ id: "ventas", etiqueta: "Ventas", agrupar: ["dia", "producto"] }, STOCK, CAJA];
+    return [
+      {
+        id: "ventas",
+        etiqueta: "Ventas",
+        agrupar: ["dia", "producto"],
+        criterio: CRITERIO_VENTAS,
+      },
+      STOCK,
+      CAJA,
+    ];
   return [
-    { id: "ventas", etiqueta: "Ventas", agrupar: AGRUPAR },
-    { id: "masvendidos", etiqueta: "Más vendidos" },
+    { id: "ventas", etiqueta: "Ventas", agrupar: AGRUPAR, criterio: CRITERIO_VENTAS },
+    { id: "masvendidos", etiqueta: "Más vendidos", criterio: CRITERIO_VENTAS },
     STOCK,
     CAJA,
   ];

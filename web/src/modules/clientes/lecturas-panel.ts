@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Resultado } from "@/modules/usuarios";
+import { sinTildes } from "@/lib/texto";
 import { limpiarBusqueda, normalizarDocumento } from "./domain";
 import type { FiltrosClientes } from "./schemas";
 
@@ -30,7 +31,7 @@ export async function listarClientes(
         soloConteo ? { count: "exact", head: true } : undefined,
       )
       .eq("negocio_id", negocioId);
-    if (q) c = c.or(`nombre.ilike.%${q}%,ci_nit.ilike.%${normalizarDocumento(q)}%`);
+    if (q) c = c.or(`busqueda.ilike.%${sinTildes(q)}%,ci_nit.ilike.%${normalizarDocumento(q)}%`);
     return c;
   };
   const { count, error: errorConteo } = await filtrada(true);

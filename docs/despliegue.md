@@ -151,7 +151,7 @@ El backup de fotos necesita además los secretos `SUPABASE_URL` y `SUPABASE_SERV
 - [ ] El vendedor entra directo al punto de venta
 - [ ] Abrir caja, vender y cerrar caja en un equipo real
 - [ ] Una foto importada se ve en la ficha del producto (CSP)
-- [ ] Backup en verde: las dos corridas del día (`completo` y `base`)
+- [ ] Backup en verde: las dos corridas del día (`base`; la del domingo a las 05:23 UTC es `completo`, con fotos)
 - [ ] Playwright sobre producción sin sesión: `/`, `/panel` y `/pos` llevan a `/login`
 
 ## Dominio (al final)

@@ -39,6 +39,8 @@ export const ID_PAGINA_SIGUIENTE = "pagina-siguiente";
 
 export const MOTIVO_COSTOS = "Carga de costos";
 export const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+// Tope del original antes de comprimir: no se decodifica algo enorme en un celular.
+export const FOTO_ORIGINAL_MAX_BYTES = 25 * 1024 * 1024;
 export const FOTO_TIPOS: Record<string, "jpg" | "png" | "webp"> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -46,9 +48,13 @@ export const FOTO_TIPOS: Record<string, "jpg" | "png" | "webp"> = {
 };
 
 // Valida tipo y tamaño antes de subir; Storage también lo impone, pero así el aviso es inmediato y en español.
-export function errorDeFoto(archivo: { type: string; size: number }): string | null {
+// `tope` es 25 MB para el original (antes de comprimir) y 5 MB, el del bucket, para el resultado.
+export function errorDeFoto(
+  archivo: { type: string; size: number },
+  tope = FOTO_MAX_BYTES,
+): string | null {
   if (!(archivo.type in FOTO_TIPOS)) return "La foto debe ser JPG, PNG o WebP.";
-  if (archivo.size > FOTO_MAX_BYTES) return "La foto pesa más de 5 MB.";
+  if (archivo.size > tope) return `La foto pesa más de ${tope / (1024 * 1024)} MB.`;
   return null;
 }
 

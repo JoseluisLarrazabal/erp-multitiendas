@@ -254,3 +254,366 @@ cierre de brechas en `auditoria-entrega-a.md` y `decisiones-manual.md`.
   `secure_password_change=false`; QA autenticado en producción (necesita que el CTO escriba una contraseña); hardware
   real; Codex.
 - Los pasos de los PR 2 y 3 son alcance y decisiones, no plan detallado: se detallan al arrancar cada uno.
+
+### Plan detallado del PR 3 (Opus, 2026-11-10; arbitrado por el chairman)
+
+**Decisiones del chairman al arbitrar (2026-11-10).** Numeradas como las preguntas del final.
+
+1. La actualización se aplica sola al abrir el POS: sí. Solo antes de la primera interacción y sin cola, cobros ni
+   cuotas pendientes; después, el botón como hoy. Motivo: en producción el POS abrió con la versión vieja tras el
+   deploy del PR 1 y nadie en el local va a saber que debe pulsar el botón.
+2. Red para el chunk 404: no. Queda el QA de dos builds seguidos.
+3. `ERP_ULTIMO_DUENO` como 409 en integración y la carrera de dos dueños: se recorta. El trigger tiene pgTAP; el 409 es
+   una línea de mapeo sin prueba. Va como límite conocido.
+4. Actualizar con solo filas rechazadas en la cola: sigue bloqueado. Límite conocido junto a M-11, y va al manual.
+5. `dblink` para el orden de bloqueos: se intenta una vez. La prueba no espera un tiempo fijo: consulta
+   `pg_stat_activity` hasta ver a la otra conexión esperando un bloqueo (con tope de unos segundos), para que no falle
+   por lentitud del CI. Si aun así no conecta o es inestable, se saca y se anota.
+6. Accesibilidad de lavandería, crédito, reservas y reconciliación: después de la entrega.
+7. Proveedor en la referencia del kardex: fuera.
+
+Cambios al reparto: los subagentes sí pueden correr `db reset`, sus archivos pgTAP y sus specs de Playwright, pero
+siempre agrupados en una sola invocación bajo el candado compartido (`flock`), como en el PR 2; la suite completa
+la corre solo el integrador. M-10 y M-11 quedan con los ajustes de la crítica de Opus (la línea de tardías cuenta
+también movimientos de caja; `reporte_caja` usa el esperado guardado; solo ventas y movimientos rechazados dejan de
+bloquear el cierre). El ensayo de la limpieza lo corre el integrador al final de la suite local. La cadencia del
+backup (fotos semanales por el cupo de minutos de Actions) no entra hasta que el CTO decida.
+
+**Estado encontrado en el código (rama recién salida de `main` en `8cd35dd`).**
+
+- M-10. El esperado del cierre **está guardado**: `cerrar_caja` escribe `caja_sesiones.monto_esperado` y `diferencia`
+  (`20261101190100_rpc_ventas.sql:219-222`) y un check los exige al cerrar (`20261101180100_caja.sql:26-28`).
+  No hay que derivarlo. El detalle muestra `resumen_caja.esperado` en vivo junto al contado y la diferencia guardados
+  (`detalle-sesion.tsx:99-113`); `lecturas-panel.ts:107` ya lee `monto_esperado` y no lo usa. **`reporte_caja` tiene el
+  mismo descuadre**: esperado vivo y contado y diferencia guardados (`credito.sql:1499-1500`). Lo que entra
+  tarde: ventas sin conexión hechas antes del cierre, marcadas `caja_cerrada` (`credito.sql:858-864`), y **también
+  movimientos de caja sin conexión** con la misma marca (`auditoria_entrega_a.sql:1045`). Una venta tardía
+  anulada por corrección (`credito.sql:1178`) sale del esperado vivo.
+- M-11. `bloqueaEquipo` es verdadero con cualquier fila del equipo en la cola, pendiente o rechazada
+  (`use-cola.ts:92-96`); alimenta el cierre (`venta-en-curso.tsx:51` → `panel-caja.tsx:348-366`), el cambio de equipo
+  (`barra-equipo.tsx:46`) y, por `equipoTieneCola`, el cambio de negocio (`use-envio.ts:443-449`, `pos-app.tsx:42`).
+  Reintentar no pide permiso; descartar exige `devolver_fuera_plazo` (`aviso-cola.tsx:139-163`). Cerrar sesión borra
+  solo el IndexedDB `datos`; la cola es otra tabla y sobrevive (`lib/offline/datos.ts:47-58`). El reenvío va con
+  `p_offline` (`cola-ventas.ts:76-78`): una rechazada reintentada después del cierre entra como tardía si se hizo
+  dentro de la sesión y el cierre tiene menos de 30 días (`credito.sql:858-864`).
+- M-12. Búsquedas con `ilike` en el servidor: `catalogo/queries.ts:40-44` (productos del panel: código, barras,
+  nombre, marca, modelo), `clientes/queries.ts:22` (buscador del POS y del panel), `clientes/lecturas-panel.ts:33`
+  (lista de clientes), `inventario/queries.ts:37-38` (`filtroTexto`: lista de stock, conteo y selector de producto),
+  `ventas/lecturas-ordenes.ts:48` (órdenes por `cliente_nombre`). `ventas/lecturas-panel.ts:71` busca por número: no
+  entra. `unaccent` no está instalada (ninguna migración crea extensiones). El POS normaliza con
+  `ventas/domain.ts:163-164`.
+- M-13. `kardex_producto` ya devuelve `ref_id` y la web lo ignora (`20261108140000_insumos.sql:143-192`,
+  `inventario/queries.ts:158-181`). Valores de `ref_tipo`: `venta` (venta y anulación), `devolucion`, `compra` (compra y
+  `anulacion_compra`), `reserva`, `conteo`, `operacion` (entrada, salida, traslado), `costos`, `consumo_revertido`.
+  **Solo las ventas tienen número**; compras, conteos, traslados y reservas no tienen ninguno. El Excel del kardex
+  exporta la misma palabra cruda (`reportes/actions.ts:65`).
+- M-14. Las RPC de inventario no exigen producto activo (`validar_inventario`, `rpc_inventario.sql:11-30`):
+  el bloqueo es solo de la web, `inventario/queries.ts:211` (selector) y `:265` (conteo).
+- M-16. El grupo de modos es `flex gap-1` sin `flex-wrap` (`barra-equipo.tsx:58`): con 5 botones no entra en 375 px.
+- M-17. Causa: el aviso de duplicado se escribe en `error`, se pasa a la búsqueda con el documento y la búsqueda, 250 ms
+  después, hace `setError(null)` al responder bien (`selector-cliente.tsx:36-48,76-80`). El mensaje existe
+  (`erp-errores.ts:19`).
+- Service worker. Solo precache de `.next/static/**/*.{js,css,woff2}` más `/pos` con revisión por build
+  (`sw-pos/[path]/route.ts:10-17`); `skipWaiting: false` (`sw.ts:12-18`). El POS no tiene `import()` dinámicos. Con el
+  precache completo el SW viejo sirve HTML y chunks viejos coherentes entre sí sin pedir nada a Vercel, así que un chunk
+  borrado en Vercel **no** da 404 por diseño; un 404 solo sale de una petición que no está en el precache. No encontré
+  por lectura una ruta del POS que la haga; la hipótesis más barata sigue siendo la de la auditoría (restos de builds en
+  `localhost:3000`). **Lo de producción es el diseño funcionando**: al abrir, el navegador busca un SW nuevo, lo instala
+  mientras la página vieja ya es su cliente y queda esperando; por eso cada primer arranque tras un deploy muestra la
+  versión vieja con el aviso. `aviso-actualizacion.tsx:29-36` solo mira la cola (filas + ilegibles), no los cobros en
+  línea ni las cuotas sin confirmar; `pos-app.tsx:59` le pasa solo `lineasEnCurso`.
+- Precio de crédito. Con red, cada montaje del POS baja `catalogo_pos` de nuevo (`use-catalogo.ts:123-146`) y el SW no
+  cachea nada de Supabase (`sw.ts:6`). Sin recargar, el catálogo solo se refresca al volver la red, tras un rechazo por
+  precio viejo, o en la venta siguiente a 5 min de la última carga (`use-catalogo.ts:85-121`). **El caso "tras recargar"
+  no se explica leyendo el código**; dos candidatos a descartar en el QA: la lista Crédito solo aplica con el modo
+  crédito activo (`use-venta.ts:287`) y el vendedor no tiene lista Crédito por línea (`vendedor.md:63`, auditoría §6).
+- Fotos: `foto.ts` sube el `File` tal cual; tipo y 5 MB se validan al elegir (`catalogo/domain.ts:41-51`,
+  `foto-campo.tsx:17-27`); el bucket acepta jpeg, png y webp hasta 5 MB (`20261101150000_fotos_productos.sql:5-6`).
+- Arrastres del PR 2: `reporte_stock` toma como `ultima_salida` todo movimiento negativo salvo `traslado_salida`
+  (`20261102140000_reportes.sql:159-164`), así que `anulacion_compra` cuenta. `pagar_proveedor` acepta cualquier
+  `compra_id` del proveedor (`20261108120000_compras.sql:328-334`); nunca se redefinió. `registrar_compra` ya bloquea en
+  orden con `bloquear_stock` (`20261110120300_compra_lotes_frial.sql:126`): el punto de la §4 sobre compras quedó
+  resuelto en el PR 2; `validar_inventario` toma los productos `for share` en el orden de llegada, que no se bloquean
+  entre sí.
+- Limpieza: no cubre `compra_anulaciones` ni `caja_revisiones` (comparé las tablas de todas las migraciones contra
+  `limpiar-pruebas.sql`). Los contraasientos de `credito_pagos` y `proveedor_pagos` ya caen por `created_at`, y
+  los lotes de compras también.
+- Pruebas que ya existen y no se repiten: recarga a mitad del cobro (crédito, reserva y cuota), respuesta perdida en
+  cuota, ventas especiales en `/panel/ventas`, anular compra y pago, conteo con reserva (`rpc-conteo-reservas.sql`),
+  fin de mes 31 → 28 → 31 en `crear_credito_inicial` (`rpc-credito.sql:376-379`), pago total en DB-22, inicial por QR,
+  `ERP_EFECTIVO_INSUFICIENTE` al cancelar reserva (`rpc-reservas.sql:263`) y el trigger de `ERP_ULTIMO_DUENO` en pgTAP.
+
+**Crítica a las decisiones del chairman.**
+
+- M-10: correcta. Dos ajustes: la línea debe contar también los movimientos de caja tardíos, porque cambian el esperado
+  igual que las ventas; y `reporte_caja` se arregla en el mismo PR, con el esperado guardado en las sesiones cerradas.
+- M-11: se sostiene, con límites. Al cerrar con una venta rechazada, su efectivo está en el cajón y no en el esperado:
+  la diferencia sale a favor por ese monto (o en contra con un gasto rechazado). Si el encargado la reintenta después y
+  pasa, entra como tardía en la sesión cerrada y la línea de M-10 la muestra: la historia cuadra. Condiciones: (1) solo
+  dejan de bloquear las **ventas y movimientos rechazados**; siguen bloqueando lo pendiente, lo ilegible, la cola sin
+  leer, una apertura rechazada, los cobros en línea y las cuotas sin confirmar; (2) el cambio de equipo y de negocio no
+  cambian; (3) el aviso dice que el esperado no las cuenta. No rompe cerrar sesión (la cola sobrevive) ni la auditoría
+  (nada se borra). Riesgos que quedan: pasados 30 días del cierre el reintento ya no entra y solo queda descartar; las
+  filas viven en ese navegador, así que reinstalar o cambiar de dominio las pierde (ya era así); y una fila rechazada
+  deja al equipo **sin poder actualizar la app** mientras no se resuelva (el aviso exige la cola vacía).
+
+**Migraciones** (aditivas: `create or replace` u objetos nuevos; cada copia conserva huellas, forma de respuesta,
+bloqueos y grants).
+
+| Migración | Lote | Contenido |
+|---|---|---|
+| `20261110130000_cierre_caja_tardias.sql` | A | `resumen_caja` copiada íntegra de `credito.sql:1410-1466`, con tres claves más: `tardias_ventas` (cuenta de ventas `completada` con `'caja_cerrada' = any(motivos_revision)`), `tardias_ventas_total` (suma de su `total`) y `tardias_movimientos` (cuenta de `caja_movimientos` con la marca); van en null sin `ver_reportes`, como los otros términos. `reporte_caja` copiada de `credito.sql:1470-1537`: en una sesión cerrada `esperado` = `s.monto_esperado`; en una abierta, el vivo de siempre |
+| `20261110130100_busqueda_sin_tildes.sql` | B | `create extension if not exists unaccent with schema extensions`; `public.sin_tildes(text)` `language sql immutable parallel safe`, `search_path = ''`, cuerpo `select extensions.unaccent('extensions.unaccent'::regdictionary, $1)`; campos calculados de PostgREST `public.busqueda(public.productos_lista)` (código, barras, nombre, marca, modelo), `public.busqueda(public.inventario_lista)` (código, barras, nombre, marca), `public.busqueda(public.clientes)` (nombre) y `public.busqueda(public.ordenes)` (`cliente_nombre`), cada uno `select public.sin_tildes(concat_ws(' ', ...))`, `stable`, invoker. `revoke all ... from public, anon` y `grant execute ... to authenticated` en las cinco |
+| `20261110130200_kardex_referencia.sql` | B | `drop function` + `create function kardex_producto` copiada de `insumos.sql:142-194` (cambia el tipo de retorno), con la columna final `referencia text` y los dos grants |
+| `20261110130300_arrastres_pr2.sql` | C | `reporte_stock` copiada de `reportes.sql:128-190` con `m.tipo not in ('traslado_salida', 'anulacion_compra')`; `pagar_proveedor` copiada de `compras.sql:295-347` con `and condicion = 'credito'` y `not exists (select 1 from public.compra_anulaciones a where a.compra_id = v_compra_id)` en la comprobación del `compra_id` (sigue siendo `ERP_DATOS_INVALIDOS`; el pago automático del contado inserta directo y no pasa por aquí) |
+
+Por qué campos calculados para M-12: no reescriben tablas ni recrean vistas, no duplican en una RPC la paginación y el
+`count: exact` que ya hacen las consultas, y cada sitio cambia una cadena del `.or()`. Sin índices: el catálogo tiene
+unos 600 productos. **Primer paso de B, antes de escribir**: comprobar contra el Supabase local que PostgREST acepta
+el campo calculado dentro de `or=(...)`. Si no lo acepta, se cambia a columna generada `busqueda` (con `sin_tildes`,
+que por eso es inmutable) en `productos` y `clientes`, más `create or replace` de las dos vistas agregando la columna al
+final, y se avisa al chairman.
+
+**Reparto en 5 lotes** (subagentes Sonnet en worktrees, archivos disjuntos). Nadie toca `database.types.ts` (si hace
+falta para compilar, el cambio a mano queda fuera del commit), `erp-errores.ts`, `docs/` ni `docs/srs.md`. Los
+subagentes corren lint, `tsc` y Vitest; **solo el integrador** corre `db reset`, pgTAP, integración y Playwright, porque
+la base local es compartida. Orden de integración: C, B, A, E, D; después `db reset`, `pnpm db:types`, `tsc`, commit de
+tipos.
+
+| Lote | Temas | Archivos que toca | No toca |
+|---|---|---|---|
+| A. Caja, cola y actualización | M-10, M-11, aviso de actualización | migración 130000; `caja/components/{detalle-sesion,panel-caja}.tsx`, `caja/schemas.ts` y su test; `ventas/{use-cola,use-venta,cobro-pendiente,cobro-cuota,index}.ts`, `use-cola.test.ts`, `cobro-pendiente.test.ts`, `ventas/components/venta-en-curso.tsx`; `components/aviso-actualizacion.tsx`; `app/(pos)/pos/pos-app.tsx`; `tests/rpc-resumen-caja.sql`, `tests/caja-tardias.sql` (nuevo); `e2e/pos-venta.spec.ts`, `e2e/caja-tardia.spec.ts` (nuevo) | `reportes/**`, `rpc-reportes.sql`, `barra-equipo.tsx`, `use-catalogo.ts` |
+| B. Búsquedas, kardex e inactivos | M-12, M-13, M-14 | migraciones 130100 y 130200; `lib/texto.ts` (nuevo); `catalogo/queries.ts`; `clientes/{queries,lecturas-panel}.ts`; `inventario/{queries,actions,schemas,domain}.ts`, `inventario/components/{selector-producto,form-salida,form-traslado,lista-conteo,lista-kardex}.tsx`; `ventas/lecturas-ordenes.ts`; `reportes/actions.ts` (solo la columna del Excel del kardex); `tests/rpc-inventario-lecturas.sql`, `tests/busqueda-sin-tildes.sql` (nuevo); `e2e/inventario.spec.ts`, `e2e/busqueda-sin-tildes.spec.ts` (nuevo) | `catalogo/{domain,foto}.ts`, `selector-cliente.tsx`, `reportes/{domain,queries,tabla}.ts` |
+| C. Reportes y arrastres | M-9, `ultima_salida`, `pagar_proveedor` | migración 130300; `reportes/domain.ts`, `reportes/domain.test.ts` (nuevo), `app/(panel)/panel/reportes/page.tsx`; `tests/rpc-reportes.sql`, `tests/rpc-compras.sql`; `e2e/reportes.spec.ts` | `reportes/actions.ts`, `reportes/tabla.ts`, todo `caja/` |
+| D. Pruebas de la §4 y limpieza | bloqueos, brechas pgTAP, compra de varias líneas, limpieza | `tests/bloqueos-orden.sql` y `tests/brechas-preentrega.sql` (nuevos), `tests/auditoria-entrega-a.sql` (solo el bloque de las líneas 168-173); `e2e/compras.spec.ts`; `scripts/limpieza/limpiar-pruebas.sql` | código de producto (`web/src/**`, migraciones) |
+| E. POS chico y fotos | M-16, M-17, POS sin productos, compresión de fotos, refresco del catálogo | `ventas/components/{barra-equipo,zona-productos}.tsx`, `clientes/components/selector-cliente.tsx`, `ventas/use-catalogo.ts`; `catalogo/{foto,domain}.ts`, `catalogo/domain.test.ts`, `catalogo/foto.test.ts` (nuevo), `catalogo/components/foto-campo.tsx`; `e2e/responsive.spec.ts`, `e2e/catalogo.spec.ts`, `e2e/pos-cliente.spec.ts` y `e2e/pos-vacio.spec.ts` (nuevos) | `catalogo/queries.ts`, `clientes/queries.ts`, `use-venta.ts`, `venta-en-curso.tsx` |
+
+Archivos calientes y a quién van: `inventario/queries.ts` (M-12 y M-14) → B; `pos-venta.spec.ts` (M-11 y aviso de
+actualización) → A, y la E2E de M-10 va a un archivo nuevo; `catalogo.spec.ts` (fotos) → E, y la E2E de M-12 a un
+archivo nuevo; `clientes/` (M-12 en `queries.ts`, M-17 en el componente) queda partido por archivo; `rpc-compras.sql`
+→ C, y las brechas de compras de D van a `brechas-preentrega.sql`; `reportes/` partido por archivo entre B
+(`actions.ts`) y C (`domain.ts`, página).
+
+**A. M-10.** `caja/schemas.ts`: `tardias_ventas`, `tardias_ventas_total` y `tardias_movimientos`
+`z.number().nullable().optional()` (el POS viejo y el nuevo conviven). `detalle-sesion.tsx`, solo en sesiones
+cerradas: "Esperado al cierre" = `s.montoEsperado` (conserva `data-testid="sesion-esperado"`), "Contado" y "Diferencia"
+(`sesion-diferencia`) guardados. Si hay tardías o el vivo difiere del guardado, antes de esa terna va "Esperado con lo
+que llegó después" = `r.esperado` (`data-testid="sesion-esperado-actual"`), y debajo un `role="status"`: "Después del
+cierre llegaron N ventas sin conexión por Bs X[ y M movimientos de caja]. El arqueo del cierre no cambia." En una
+abierta queda como hoy. Pruebas: `rpc-resumen-caja.sql:69-73` compara el objeto entero y **hay que sumarle las tres
+claves**; `caja-tardias.sql` nuevo: abrir, vender, cerrar con contado C (esperado E), registrar una venta con
+`p_offline` y hora dentro de la sesión → `monto_esperado` sigue en E, `resumen_caja.esperado` = E + efectivo,
+`tardias_ventas` = 1 y su total, `reporte_caja` devuelve E y cumple contado − esperado = diferencia; un movimiento
+tardío suma en `tardias_movimientos`; sin `ver_reportes`, null. E2E `caja-tardia.spec.ts` (dueño): la misma secuencia
+por API, abrir `/panel/cajas/<id>` y ver los tres números del cierre, la línea y el esperado actual.
+
+**A. M-11.** `use-cola.ts`: `EstadoCola` suma `bloqueaCierre` (igual que `bloqueaEquipo`, pero sin contar las filas del
+equipo `rechazada` de tipo venta o movimiento) y `rechazadasEquipo: { cantidad: number; totalVentas: number }` (solo
+las del equipo). `use-venta.ts` expone `colaBloqueaCierre`. `venta-en-curso.tsx`: `ventaPendiente` de `PanelCaja`
+pasa a `colaBloqueaCierre || envio.pendientes.size > 0 || hayCuotas`; `BarraEquipo` sigue con `hayPendientes`.
+`panel-caja.tsx` recibe `rechazadas` y muestra, sin bloquear, en `role="status"`: "Hay N operaciones rechazadas sin
+resolver[ (ventas por Bs X)]. El esperado no las cuenta. Avisa a un encargado para que las reintente o las descarte." El
+texto que bloquea pasa a "Hay operaciones sin enviar o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar
+la caja." Pruebas: `use-cola.test.ts` (una rechazada de venta no bloquea el cierre y sí el equipo; una pendiente, una
+apertura rechazada o una ilegible bloquean ambos). En `pos-venta.spec.ts`: E2E-07 (línea 800) cambia al texto nuevo, y
+un caso nuevo con `ventaRechazada(page, 24)` → Caja → contado 24 → el cierre está habilitado y se ve el aviso con Bs
+24,00 → cerrar → diferencia Bs 24,00 → `unroute` y Reintentar → la venta queda en la base con `caja_cerrada` y
+`resumen_caja` (como dueño, por API) da `tardias_ventas` 1.
+
+**A. Aviso de actualización.** `cobro-pendiente.ts` exporta `hayCobrosGuardados(): boolean`: alguna clave de
+`localStorage` que empiece por `erp:cobros-en-linea:` o `erp:cuotas-sin-confirmar:` (las claves se borran al quedar
+vacías; `cobro-cuota.ts` solo exporta su prefijo). `AvisoActualizacion` recibe también `hayPendiente: () =>
+Promise<boolean>` (`pos-app.tsx` le pasa `guarda.current.hayPendiente`, que ya cubre el envío en curso, la cola del
+equipo, los cobros en memoria y las cuotas). Al pulsar, si `hayCobrosGuardados() || await hayPendiente()`, no aplica y
+muestra en `role="alert"`: "Hay un cobro o una cuota sin confirmar en este equipo. Verifícalo antes de actualizar." Con
+la cola no vacía el texto pasa a "Hay operaciones sin enviar o rechazadas en este equipo: se podrá aplicar cuando se
+resuelvan." (`pos-venta.spec.ts:1751` busca `/cuando se envíen/` y cambia). Pruebas: Vitest de `hayCobrosGuardados`;
+en el E2E de la línea 1726, con un cobro pendiente en `localStorage` el botón no aplica y sale el texto. Sobre el chunk
+404: sin código; ver preguntas (aplicar sola al abrir) y el QA de dos builds.
+
+**B. M-12.** `lib/texto.ts`: `export const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "")`. Cada
+sitio aplica primero su saneado de siempre y después `sinTildes`, y busca `busqueda.ilike.*q*` (en `clientes`, junto al
+`ci_nit` de siempre; en productos, junto a `codigo` y `codigo_barras` tal cual). En `lecturas-ordenes.ts` la rama de
+`cliente_nombre` usa `busqueda` (si el tipado de `.ilike` no admite la columna, `.filter("busqueda", "ilike", ...)`).
+Pruebas: `busqueda-sin-tildes.sql` (`sin_tildes('María José ÑANDÚ')` = `'Maria Jose NANDU'`; `busqueda` de cada
+relación; `anon` no ejecuta, que también vigila `seguridad-generica.sql`); E2E nuevo: un cliente "María Tildes <id>" se
+encuentra con "maria tildes" en `/panel/clientes` y en el buscador del POS, y un producto "Café <id>" con "cafe" en
+`/panel/productos` y en el selector de salida.
+
+**B. M-13.** `referencia` en `kardex_producto`, con `left join` por `ref_id`: venta → `'Venta ' || numero` (o
+`'Anulación de la venta '` si el tipo es `anulacion_venta`); devolución → `'Devolución de la venta ' || numero` de su
+venta; compra → `'Compra del ' || to_char(created_at at time zone 'America/La_Paz', 'DD/MM/YYYY')` (o `'Anulación de la
+compra del '`), sin el proveedor, para no mostrárselo a quien no tiene `gestionar_compras`; conteo → `'Conteo del ' ||`
+la fecha; reserva → `'Reserva'`, más `' · venta ' || numero` si se completó; `costos` → `'Ajuste de costos'`;
+`consumo_revertido` → `'Reversión de consumo'`; `operacion` → null (no hay documento; el tipo ya dice entrada, salida o
+traslado). `lista-kardex.tsx:83-90` muestra `Ref.: {referencia}` solo si no es null; el Excel usa `referencia`. Pruebas:
+`rpc-inventario-lecturas.sql` (una venta, una anulación y un conteo dan su texto; una entrada da null) y en
+`inventario.spec.ts` el kardex de un producto vendido muestra "Venta C1-…".
+
+**B. M-14.** `buscarProductos(supabase, negocioId, texto, opciones?: { conInactivos?: boolean })`: con la opción, en vez
+de `.eq("activo", true)` usa `.or("activo.eq.true,stock_total.neq.0")` (confirmar que dos `.or()` se combinan con AND;
+si no, anidar con `and(...)`). `COLUMNAS_ELEGIBLE` suma `activo` y `ProductoElegible` gana `activo: boolean`;
+`busquedaSchema` acepta `conInactivos` opcional. `SelectorProducto` recibe `conInactivos` y agrega " (inactivo)" al
+nombre en la lista y en lo elegido; lo pasan `form-salida` y `form-traslado` (entrada y compras no). `listarStock`
+cambia `soloActivos` por `activosOConStock` en el conteo, y `lista-conteo.tsx` marca "(inactivo)". Prueba en
+`inventario.spec.ts`: producto con stock 3, desactivarlo, darlo de baja desde Salida (sale "(inactivo)") y verlo en el
+conteo; un inactivo con stock 0 no aparece.
+
+**C. M-9.** `DefReporte` gana `criterio?: string`; la página lo muestra bajo la barra de reportes en
+`text-muted-foreground text-sm`. Textos exactos. Ventas, Ingresos y Más vendidos: "Cuenta lo vendido, por el día en que
+la venta llegó al sistema: una venta hecha sin conexión cuenta el día en que se envió. Una venta a crédito entra entera
+el día de la venta y una reserva, cuando se completa; los anticipos y las cuotas no entran aquí sino en Caja. Las
+devoluciones restan el día en que se hacen." Caja: "Cuenta lo cobrado en cada caja, por el día en que se abrió: efectivo
+y QR de ventas, anticipos de reservas y cuotas de crédito. Una venta sin conexión cuenta en la caja donde se hizo,
+aunque llegue después. En una caja cerrada, esperado, contado y diferencia son los del cierre." (la última frase vale
+cuando entra la migración de A). Pruebas: `reportes/domain.test.ts` (todo reporte con rango tiene criterio);
+`rpc-reportes.sql`: venta a crédito de 120 con inicial 36 suma 120 en `reporte_ventas` y la cuota cobrada no suma;
+reserva con anticipo no suma hasta completarse y luego suma su total; venta con `p_offline` y `creada_en_cliente` de
+ayer cuenta hoy; `reportes.spec.ts` ve los dos textos.
+
+**C. Arrastres.** pgTAP en `rpc-compras.sql`: `pagar_proveedor` con el `compra_id` de una compra al contado →
+`ERP_DATOS_INVALIDOS`, y con una anulada también; con una a crédito, pasa. En `rpc-reportes.sql`: compra y su anulación
+→ `ultima_salida` sigue null y `sin_movimiento` es verdadero.
+
+**D. Orden de bloqueos probado de verdad** (`bloqueos-orden.sql`, nuevo). `create extension if not exists dblink with
+schema extensions` dentro de la transacción de la prueba. Dos productos del seed de la tienda con fila de `stock`
+confirmada (el seed los crea por kardex, `seed.sql:110`), X < Y por uuid. La prueba toma Y con `for update`;
+por `dblink_send_query` otra conexión (`host=127.0.0.1 port=5432 dbname=postgres user=postgres password=postgres`, solo
+Supabase local) llama `bloquear_stock(T, U, array[Y, X])` y queda esperando; tras `pg_sleep(0.3)`, `select ... where
+producto_id = X for update nowait` debe dar `55P03`: la otra conexión ya tomó X, o sea ordenó. Sin el `order by`
+esperaría en Y sin tener X y el `nowait` pasaría: la prueba falla. Lo mismo con `registrar_conteo`, entrando en la otra
+conexión como el dueño del seed (`set_config('request.jwt.claims', ...)`, `set role authenticated`). Al final
+`dblink_cancel_query` y `dblink_disconnect`: nada se confirma. La búsqueda de texto de `auditoria-entrega-a.sql:168-173`
+queda para `guardar_precios` y `fijar_costos`, con el comentario de que no discrimina. **Si la conexión de `dblink` no
+funciona en CI al primer intento, se saca y se anota**: el riesgo es un deadlock que aborta sin corromper.
+
+**D. Brechas pgTAP** (`brechas-preentrega.sql`, nuevo). Cada caso fija lo que hace **hoy**: el implementador lee
+la función antes de escribir la aserción y, si el resultado le parece un defecto, no lo arregla: lo reporta.
+
+- Compra sobre stock −2 con costo promedio 8: 5 a costo 10 → stock 3, promedio 10 (la fórmula ignora el negativo; la
+  confirma `aplicar_movimiento_a_stock`, `20261101140000_kardex.sql:134`).
+- Compra a costo 0 sobre 5 a promedio 8: 5 más → promedio 4.
+- Reserva con anticipo igual al total: se crea; completarla deja una venta del total sin cobro adicional y el esperado
+  sube solo por el anticipo. Es el caso con más probabilidad de fallar.
+- Crédito con descuento: leer la rama de crédito de `registrar_venta` (`credito.sql:656` en adelante); si acepta
+  descuento, el capital es el total con descuento; si lo rechaza, se fija el código.
+- Vencimientos: `crear_credito_inicial` desde el 29 y el 30 de enero de 2026 (febrero → 28, marzo → 29 y 30) y desde el
+  29 de enero de 2028 (bisiesto → 29 de febrero). Confirmar si la venta a crédito usa el mismo cálculo; si no, queda
+  anotado que solo se prueba el saldo inicial.
+- Prepago total: crédito de 1.000 al 2,5 % en 3 cuotas pagado entero al día siguiente → saldo 0, `pagado`, y lo cobrado
+  incluye el interés de los 3 meses. Documenta M-3 hasta que el cliente decida.
+- RF-FRI-03: un frial nuevo sin productos → `catalogo_pos` devuelve `productos: []` (no null), `reporte_ventas` y
+  `reporte_stock` sin filas, `lotes_por_vencer` vacío, y la primera entrada con lote funciona.
+
+**D. E2E.** `compras.spec.ts`: compra de tres líneas → tres movimientos en el kardex y total correcto. Las demás brechas
+de E2E de la §4 ya están cubiertas por pgTAP o por los PR 1 y 2 (lista arriba).
+
+**D. Limpieza** (`limpiar-pruebas.sql`). Abortos nuevos, en el estilo de los existentes: una compra previa a `--desde`
+anulada después; un pago a proveedor previo anulado después (reverso con `anula_id` hacia un pago anterior al corte);
+una revisión de caja posterior al corte sobre una sesión o un movimiento que no se borra. Borrados nuevos, antes de
+`compras`: `compra_anulaciones` (`created_at >= desde` o compra borrada); antes de `caja_sesiones`: `caja_revisiones`
+cuyo `ref_id` es una sesión o un movimiento borrados. Aserciones nuevas: `compra_anulaciones` sin huérfanas ni filas del
+corte; `caja_revisiones` sin huérfanas. Ensayo local (el chairman lo escribe en `docs/plan-limpieza-pruebas.md`): `db
+reset` → anotar la hora → Playwright completo (ventas, compras, anulaciones, reversos, reservas, créditos y lotes) →
+`limpiar-pruebas.sh --desde <hora>` en seco: imprime conteos y termina en rollback → aplicar → comprobar en SQL que no
+quedan filas con fecha posterior, que `stock` es la suma del kardex y que la numeración de los equipos volvió al seed
+→ `pnpm test:e2e` de humo. Sobre el último backup restaurado, el mismo ensayo antes de producción.
+
+**E. M-16.** `barra-equipo.tsx:58`: `flex flex-wrap justify-end gap-1`. Sin rediseño: a 390 px los modos bajan a una
+segunda fila. `responsive.spec.ts` suma un caso por negocio (tienda y frial) como dueño, a 390×844, con el equipo del
+`beforeAll` fijado en `localStorage` como hace `fijarEquipo`: `scrollWidth <= clientWidth` y cada botón del grupo "Modo"
+`toBeInViewport()`.
+
+**E. M-17.** `selector-cliente.tsx`: estado aparte `duplicado: string | null`, puesto con el mensaje de
+`ERP_CLIENTE_DUPLICADO`, mostrado en `role="alert"` y limpiado al escribir en el buscador o al elegir. La búsqueda ya no
+lo pisa. E2E nuevo `pos-cliente.spec.ts`: cliente creado por API con documento D; en el POS, "Nuevo cliente" con D →
+esperar la respuesta de `rest/v1/clientes` de la búsqueda → el alerta sigue mostrando "Ya existe un cliente con ese
+documento" y la lista muestra al existente. Antes del arreglo la alerta desaparece con esa respuesta.
+
+**E. POS sin productos (RF-FRI-03).** `zona-productos.tsx`: con el catálogo cargado y 0 productos, "Este negocio todavía
+no tiene productos con precio. Pide al encargado que los cargue en el panel." E2E `pos-vacio.spec.ts`: `page.route`
+sobre `rpc/catalogo_pos` devuelve el catálogo con `productos: []` → se ve el texto, el carrito vacío y la caja se abre.
+
+**E. Fotos.** `catalogo/foto.ts`: `comprimirFoto(archivo: File): Promise<File>` y la función pura `medidasDestino(ancho,
+alto, ladoMax)`. Lado mayor 1.200 px, WebP calidad 0,8. `createImageBitmap(archivo)`; si falla (formato que el
+navegador no decodifica), se devuelve el original. Si el lado mayor ya es de 1.200 o menos y pesa menos de 300 KB, el
+original. Canvas → `toBlob("image/webp", 0.8)`; si el blob no es `image/webp` (Safari viejo), `image/jpeg` a 0,82 sobre
+fondo blanco; si el resultado pesa más que el original, el original. Se comprime al elegir, en `foto-campo.tsx`: el tipo
+se valida antes (JPG, PNG o WebP; HEIC ya se rechaza hoy) y el tope de 5 MB del bucket después, sobre el resultado, con
+un tope previo de 25 MB del original para no decodificar algo enorme en un celular ("La foto pesa más de 25 MB."). Texto
+de ayuda: "JPG, PNG o WebP. Se achica sola antes de subir." La ruta toma la extensión del tipo final y la lógica
+existente borra la anterior si cambió. Las fotos ya guardadas no se tocan. Pruebas: Vitest de `medidasDestino`
+(2.400×1.600 → 1.200×800; 800×600 igual) y del tope de 25 MB en `domain.test.ts`; E2E en `catalogo.spec.ts`: un PNG de
+2.400×1.600 armado en la página con `OffscreenCanvas` y puesto en el input con `DataTransfer` → `foto_path` termina en
+`.webp` y la imagen mostrada mide 1.200 de ancho.
+
+**E. Refresco del catálogo.** `use-catalogo.ts`: al volver a `visibilityState === "visible"`, con red y más de
+`REFRESCO_MS` desde la última carga, `recargar()` (no toca el carrito; un precio viejo en el carrito lo sigue atajando
+el rechazo del servidor). Cubre el equipo que queda abierto todo el día. El caso "tras recargar" se reproduce antes en
+el QA; si se reproduce, se para y se diagnostica aparte.
+
+**Trampas.**
+
+- Literales que cambian: `pos-venta.spec.ts:800` (texto del bloqueo del cierre) y `:1751` (`/cuando se envíen/`);
+  `rpc-resumen-caja.sql:69-73` compara el objeto entero de `resumen_caja`; `catalogo/domain.test.ts:150` busca "5 MB"
+  (sigue valiendo para el resultado).
+- `sesion-esperado` pasa a ser el guardado en sesiones cerradas: en la E2E de `pos-venta.spec.ts:1389` vale lo mismo
+  porque no hay tardías.
+- `kardex_producto` cambia de tipo de retorno: `drop` + `create` en la misma migración y los dos grants de nuevo
+  (`insumos.sql:193-194`); los tipos generados cambian y el integrador los sube. Las pruebas de
+  `rpc-inventario-lecturas.sql:119-125` eligen columnas por nombre y no se rompen.
+- Campos calculados: deben quedar sin `execute` para `anon` (`seguridad-generica.sql:37-45` lo hace fallar) y en
+  `public`, que es el esquema expuesto. PostgREST los publica también como `/rpc/busqueda`; no devuelven nada que el
+  llamador no pueda leer.
+- `unaccent` en producción: la crea `db push`; si el rol no puede, la migración falla entera y no se aplica nada. Se ve
+  en el `--dry-run`.
+- Compatibilidad: las migraciones van antes del merge, y además **el POS instalado sigue con el JS viejo hasta pulsar
+  "Actualizar ahora"**, días si hace falta. Todo lo nuevo es aditivo: claves nuevas que el Zod viejo descarta,
+  `reporte_caja` con el mismo contrato, `pagar_proveedor` que solo rechaza lo que la pantalla no ofrece. La web vieja no
+  usa `busqueda` ni `referencia`.
+- E2E que dependen del seed: el caso de bloqueos usa productos del seed con stock confirmado (pgTAP corre antes que
+  Playwright en el CI, paso 5 contra 8); `responsive.spec.ts` usa los equipos R1 y R2 de su `beforeAll`; los nuevos
+  crean sus datos con un id único para no chocar con otros workers.
+- M-11 toca el estado que decide el cierre: el revisor confirma que `bloqueaEquipo` y `equipoTieneCola` no cambiaron.
+
+**Verificación local y QA con Playwright** (el integrador, sobre el árbol integrado): `scratchpad/verificar.sh` completo
+y, en navegador, cada reproducción: M-9, los textos en las 5 pestañas de reportes; M-10, caja cerrada más venta tardía →
+tres números coherentes, línea y esperado actual en el detalle y en el reporte de Caja; M-11, venta rechazada → cierre
+con aviso → Reintentar → aparece como tardía; M-12, "maria" encuentra a "María" en el panel, el POS y el selector, y
+"cafe" a "Café"; M-13, "Venta C1-…" en el kardex; M-14, baja de un inactivo con stock; M-16, capturas del POS de tienda
+y frial a 390×844; M-17, el mensaje sigue a la vista tras la búsqueda; SW, dos builds seguidos en `localhost` (build,
+abrir `/pos`, cambiar un texto, build, reiniciar, abrir): la versión vieja abre sin ningún 404 en la red y con el aviso,
+y "Actualizar ahora" la cambia; con un cobro sin confirmar no se aplica; precio de crédito, guardarlo en el panel,
+recargar el POS, activar crédito y ver el precio; fotos, una de celular de 3 a 5 MB queda en WebP de menos de 200 KB;
+`ultima_salida` tras anular una compra. En producción tras el despliegue: `migration list` igual, `unaccent` instalada,
+las cinco funciones nuevas sin `execute` para `anon`, deploy `READY`, `/panel/clientes?q=…` sin errores.
+
+**Preguntas para el chairman.**
+
+1. **Aplicar la actualización sola al abrir.** Es el arreglo real del hallazgo de producción. Propuesta: si el SW nuevo
+   queda esperando antes de la primera interacción (`pointerdown` o `keydown`) y no hay cola, cobros ni cuotas, se
+   aplica sin preguntar; después de interactuar, el botón como hoy. Unas 15 líneas en `aviso-actualizacion.tsx`.
+   **Recomiendo sí** (va en A). Sin eso, cada equipo sigue con la versión vieja hasta que alguien pulse el botón.
+2. **Red para el chunk 404** (escuchar `ChunkLoadError` y ofrecer actualizar). No se reprodujo en producción y por
+   diseño no se alcanza con el precache completo. **Recomiendo no hacerla** y dejar el QA de dos builds como prueba.
+3. **`ERP_ULTIMO_DUENO` como 409 en integración y la carrera de dos dueños.** Desde el PR 2 quien desactiva a un dueño
+   tiene que ser dueño de todos sus negocios, así que nunca es el último: solo se llega por carrera. Para probarla hay
+   que crear un segundo dueño de los tres negocios del seed y arriesgar que el dueño del seed quede baneado si la prueba
+   cae a mitad, lo que rompe el resto de la suite. **Recomiendo recortarla** y anotar que el trigger tiene pgTAP y el
+   409 es una línea de mapeo sin prueba.
+4. **Actualizar con solo filas rechazadas en la cola** (hoy no se puede). **Recomiendo dejarlo bloqueado** en este PR:
+   el build nuevo tendría que leer filas viejas y lo ilegible exige encargado. Va como límite conocido junto a M-11.
+5. **`dblink` para el orden de bloqueos.** Es la única forma barata de que la prueba discrimine. Recomiendo intentarlo
+   una vez; si falla en CI, sacarlo y anotarlo en vez de pelear con la conexión.
+6. **Accesibilidad de lavandería, crédito, reservas y reconciliación** (§4) no está en el mínimo. Agregar las rutas a
+   `accesibilidad.spec.ts` es barato, pero cada violación que salga es trabajo sin estimar. **Recomiendo dejarlo para
+   después de la entrega**.
+7. **Proveedor en la referencia del kardex.** Lo dejé fuera porque el kardex lo ve quien no tiene
+   `gestionar_compras`. Si al dueño le sirve, se agrega con esa condición.
+
+**No verificado.** Que PostgREST acepte campos calculados dentro de `or=` (primer paso de B); que dos `.or()` de
+supabase-js se combinen con AND; la conexión de `dblink` en el CI; si `registrar_venta` admite descuento en crédito y si
+la venta a crédito calcula los vencimientos igual que `crear_credito_inicial`; qué hace completar una reserva con
+anticipo igual al total; el `toBlob` WebP en Safari de iPhone y qué entrega iOS al elegir una foto HEIC; la causa del
+precio de crédito "tras recargar"; si una apertura rechazada deja una caja local cerrable. No corrí pruebas ni toqué la
+base.

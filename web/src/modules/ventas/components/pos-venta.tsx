@@ -55,6 +55,7 @@ export function PosVenta({
     fase.t === "abrir" || fase.t === "lista" ? fase.equipo.id : "",
     usuarioId,
     sesionCaducada,
+    fase.t === "lista" ? fase.cajaId : null,
   );
 
   // Con la caja cerrada aún no hay venta montada que cargue el catálogo: la barra lee su edad de lo guardado.

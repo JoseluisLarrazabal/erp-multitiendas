@@ -7,6 +7,54 @@ import { corrida, crearProducto, tienda, ubicaciones } from "./inventario-helper
 test.describe("dueño", () => {
   test.use({ storageState: rutaAuth("dueno") });
 
+  test("compra de tres líneas: tres movimientos en el kardex y el total correcto", async ({
+    page,
+  }) => {
+    const nombre = `Proveedor tres líneas ${corrida}`;
+    const prov = await apiComo("dueno", "rpc/guardar_proveedor", {
+      metodo: "POST",
+      cuerpo: { p_negocio_id: tienda, p_datos: { nombre } },
+    });
+    expect(prov.status).toBeLessThan(300);
+    const lineas = [
+      { producto: await crearProducto(), cantidad: "2", costo: "10" },
+      { producto: await crearProducto(), cantidad: "3", costo: "5" },
+      { producto: await crearProducto(), cantidad: "1", costo: "7,5" },
+    ];
+
+    await ir(page, "/panel/compras/nueva");
+    await page.getByLabel("Proveedor", { exact: true }).selectOption({ label: nombre });
+    for (const [i, l] of lineas.entries()) {
+      if (i > 0) await page.getByRole("button", { name: "Agregar producto" }).click();
+      // Una línea ya elegida deja de ser combobox: el único abierto es el de la línea nueva.
+      await page.getByRole("combobox", { name: "Producto" }).fill(l.producto.codigo);
+      await page.getByRole("option", { name: new RegExp(l.producto.nombre) }).click();
+      await page.getByLabel("Cantidad").nth(i).fill(l.cantidad);
+      await page.getByLabel("Costo unitario (Bs)").nth(i).fill(l.costo);
+    }
+    await expect(page.getByText("Total: Bs 42,50")).toBeVisible();
+    await page.getByRole("button", { name: "Registrar compra" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Compra registrada por Bs 42,50." }),
+    ).toBeVisible();
+
+    for (const l of lineas) {
+      const k = await apiComo("dueno", "rpc/kardex_producto", {
+        metodo: "POST",
+        cuerpo: { p_producto_id: l.producto.id, p_limite: 5 },
+      });
+      const filas = (k.json as { tipo: string; cantidad: number; costo_unitario: number }[]).filter(
+        (m) => m.tipo === "compra",
+      );
+      expect(filas).toEqual([
+        expect.objectContaining({
+          cantidad: Number(l.cantidad),
+          costo_unitario: Number(l.costo.replace(",", ".")),
+        }),
+      ]);
+    }
+  });
+
   test("compra a crédito: sube la deuda y un pago parcial la reduce", async ({ page }) => {
     const nombre = `Proveedor ${corrida}`;
     const producto = await crearProducto();

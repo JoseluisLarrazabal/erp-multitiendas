@@ -1,7 +1,7 @@
 -- reporte_ventas, reporte_stock, reporte_caja: permisos, rangos, fechas de La Paz, devoluciones, ganancia con costo foto,
 -- costos ocultos sin ver_costos, kg, servicios sin costo, última salida del kardex y coincidencia de la caja con resumen_caja.
 begin;
-select plan(72);
+select plan(87);
 create function pg_temp.como(p_uid uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_uid, 'role', 'authenticated')::text, true)
@@ -317,6 +317,56 @@ select is((public.reporte_caja(pg_temp.i('T'), pg_temp.hoy(), pg_temp.hoy()) -> 
   jsonb_build_object('sesiones', 2, 'esperado', 125.5, 'contado', 170, 'diferencia', 44.5, 'sesiones_abiertas', 1,
     'esperado_abiertas', (public.resumen_caja(pg_temp.i('S2')) ->> 'esperado')::numeric),
   'caja: totales de esperado/contado/diferencia solo sobre cerradas; la abierta va aparte');
+
+-- Criterio de los reportes (M-9): cada caso fija lo que dice el texto de la pantalla. Todo en S2/D2, al final para no mover
+-- los números de arriba. bh = bruto de hoy (La Paz) en reporte_ventas; cada paso se mide por su diferencia.
+reset role;
+insert into public.clientes (id, negocio_id, nombre) values (pg_temp.i('CL'), pg_temp.i('T'), 'Cliente');
+insert into public.producto_precios (negocio_id, producto_id, lista, monto, moneda) values (pg_temp.i('T'), pg_temp.i('P1'), 'credito', 12, 'BOB');
+insert into public.proveedores (id, negocio_id, nombre) values (pg_temp.i('PRV'), pg_temp.i('T'), 'PRV');
+create function pg_temp.bh(p_desde date default null, p_hasta date default null) returns numeric language sql as $$
+  select (public.reporte_ventas(pg_temp.i('T'), coalesce(p_desde, pg_temp.hoy()), coalesce(p_hasta, pg_temp.hoy()), 'dia') -> 'totales' ->> 'bruto')::numeric
+$$;
+create function pg_temp.vs2(p_id text, p_num text, p_total numeric, p_cant numeric, p_lista text, p_pagos jsonb, p_extra jsonb default '{}')
+returns jsonb language sql as $$
+  select jsonb_build_object('id', pg_temp.i(p_id), 'dispositivo_id', pg_temp.i('D2'), 'caja_sesion_id', pg_temp.i('S2'), 'numero', p_num,
+    'creada_en_cliente', now(), 'total', p_total,
+    'items', jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('P1'), 'lista', p_lista, 'cantidad', p_cant,
+      'precio_unitario', p_total / p_cant)),
+    'pagos', p_pagos) || p_extra
+$$;
+select pg_temp.como(pg_temp.i('d'));
+select set_config('t.b0', pg_temp.bh()::text, true);
+-- Venta a crédito de 120 con inicial 60 (el mínimo de la tienda es 50 %): entra entera el día de la venta; la cuota cobrada después no suma
+select lives_ok($$select public.registrar_venta(pg_temp.vs2('VC', 'C2-000101', 120, 10, 'credito', jsonb_build_array(pg_temp.pg('efectivo', 60)),
+  jsonb_build_object('cliente_id', pg_temp.i('CL'), 'condicion', 'credito',
+    'credito', jsonb_build_object('cuotas', 3, 'docs_ci', true, 'docs_domicilio', false, 'docs_pagare', true))))$$, 'venta a crédito de 120, inicial 60');
+select is(pg_temp.bh() - current_setting('t.b0')::numeric, 120::numeric, 'reporte_ventas: la venta a crédito suma entera (120, no la inicial)');
+select lives_ok($$select public.pagar_cuota(jsonb_build_object('id', pg_temp.i('QC'), 'credito_id', (select id from public.creditos where venta_id = pg_temp.i('VC')),
+  'dispositivo_id', pg_temp.i('D2'), 'caja_sesion_id', pg_temp.i('S2'), 'efectivo', 20, 'qr', 0))$$, 'cuota cobrada de 20');
+select is(pg_temp.bh() - current_setting('t.b0')::numeric, 120::numeric, 'reporte_ventas: la cuota cobrada no suma');
+-- Reserva con anticipo de 20 sobre 60: no suma hasta completarse; al completarse suma su total
+select lives_ok($$select public.crear_reserva(jsonb_build_object('id', pg_temp.i('RS'), 'dispositivo_id', pg_temp.i('D2'), 'caja_sesion_id', pg_temp.i('S2'),
+  'cliente_id', pg_temp.i('CL'), 'producto_id', pg_temp.i('P1'), 'cantidad', 5, 'precio_acordado', 12, 'anticipo', 20, 'medio', 'efectivo'))$$, 'reserva con anticipo 20');
+select is(pg_temp.bh() - current_setting('t.b0')::numeric, 120::numeric, 'reporte_ventas: la reserva con anticipo no suma');
+select lives_ok($$select public.registrar_venta(pg_temp.vs2('VRS', 'C2-000102', 60, 5, 'contado', jsonb_build_array(pg_temp.pg('anticipo', 20), pg_temp.pg('efectivo', 40)),
+  jsonb_build_object('cliente_id', pg_temp.i('CL'), 'reserva_id', pg_temp.i('RS'))))$$, 'la reserva se completa');
+select is(pg_temp.bh() - current_setting('t.b0')::numeric, 180::numeric, 'reporte_ventas: al completarse la reserva suma su total (60)');
+-- Venta sin conexión hecha ayer: cuenta el día en que llegó (hoy), no el de creada_en_cliente
+select lives_ok($$select public.registrar_venta(pg_temp.vs2('VO', 'C2-000103', 40, 4, 'contado', jsonb_build_array(pg_temp.pg('efectivo', 40)),
+  jsonb_build_object('creada_en_cliente', now() - interval '1 day')), jsonb_build_object('vendedor_id', pg_temp.i('d'), 'tipo_cambio', 6.96, 'numero_impreso', null))$$,
+  'venta sin conexión con creada_en_cliente de ayer');
+select is(pg_temp.bh() - current_setting('t.b0')::numeric, 220::numeric, 'reporte_ventas: la venta sin conexión cuenta hoy (por fecha de envío)');
+select is(pg_temp.bh(pg_temp.hoy() - 1, pg_temp.hoy() - 1), 0::numeric, 'reporte_ventas: ayer no suma la venta sin conexión');
+-- Arrastre del PR 2: compra y anulación no son salida (PQ: stock 3, ninguna salida)
+select lives_ok($$select public.registrar_compra(jsonb_build_object('id', pg_temp.i('CP'), 'negocio_id', pg_temp.i('T'), 'proveedor_id', pg_temp.i('PRV'),
+  'ubicacion_id', pg_temp.i('U1'), 'condicion', 'credito', 'total', 4,
+  'items', jsonb_build_array(jsonb_build_object('producto_id', pg_temp.i('PQ'), 'cantidad', 4, 'costo_unitario', 1))))$$, 'compra de 4 PQ');
+select lives_ok($$select public.anular_compra(pg_temp.i('CPA'), pg_temp.i('CP'), 'error de carga')$$, 'anular la compra de PQ');
+select is((select f -> 'ultima_salida' from jsonb_array_elements(public.reporte_stock(pg_temp.i('T')) -> 'filas') f where f ->> 'codigo' = 'PQ'),
+  'null'::jsonb, 'reporte_stock: la anulación de una compra no es última salida');
+select is((select f ->> 'sin_movimiento' from jsonb_array_elements(public.reporte_stock(pg_temp.i('T')) -> 'filas') f where f ->> 'codigo' = 'PQ'),
+  'true', 'reporte_stock: PQ sigue sin movimiento tras compra y anulación');
 
 -- ERP_LOTE_GRANDE: más de 5.000 filas no se truncan (negocio G con 5.001 productos)
 reset role;

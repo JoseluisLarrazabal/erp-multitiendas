@@ -146,10 +146,55 @@ test.describe("dueño: inventario", () => {
 
     await ir(page, `/panel/inventario/${b.id}`);
     await expect(page.getByRole("list", { name: "Movimientos" })).toContainText("Ajuste");
+    // M-13: el movimiento dice de qué conteo viene.
+    await expect(page.getByRole("list", { name: "Movimientos" })).toContainText(
+      /Ref\.: Conteo del \d{2}\/\d{2}\/\d{4}/,
+    );
     await ir(page, `/panel/inventario/${a.id}`);
     await expect(page.getByRole("list", { name: "Movimientos" }).getByRole("listitem")).toHaveCount(
       1,
     );
+  });
+
+  test("un producto desactivado con stock se puede sacar y contar; sin stock no aparece", async ({
+    page,
+  }) => {
+    const conStock = await crearProducto();
+    const sinStock = await crearProducto();
+    const u = await ubicaciones();
+    await entradaApi(conStock, u.tienda, 3);
+    for (const p of [conStock, sinStock]) {
+      const r = await apiComo("dueno", "rpc/desactivar_producto", {
+        metodo: "POST",
+        cuerpo: { p_producto_id: p.id, p_activo: false },
+      });
+      expect(r.status).toBeLessThan(300);
+    }
+    await ir(page, "/panel/inventario/salida");
+    const selector = page.getByRole("combobox", { name: "Producto" });
+    await selector.fill(sinStock.codigo);
+    await expect(page.getByText("Ningún producto coincide.")).toBeVisible();
+    await selector.fill(conStock.codigo);
+    await page
+      .getByRole("option", { name: new RegExp(`${conStock.nombre} \\(inactivo\\)`) })
+      .click();
+    await page.getByLabel("Ubicación").selectOption({ label: "Tienda" });
+    await page.getByLabel("Cantidad").fill("1");
+    await page.getByLabel("Motivo").fill("Baja de producto inactivo");
+    await page.getByRole("button", { name: "Registrar", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Movimiento registrado" }),
+    ).toBeVisible();
+
+    await ir(page, "/panel/inventario/conteo");
+    await page.getByLabel("Ubicación a contar").selectOption({ label: "Tienda" });
+    await page.getByRole("searchbox", { name: "Buscar" }).fill(conStock.codigo);
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await expect(page.getByLabel(`Contado de ${conStock.nombre}`)).toBeVisible();
+    await expect(page.getByText("(inactivo)").first()).toBeVisible();
+    await page.getByRole("searchbox", { name: "Buscar" }).fill(sinStock.codigo);
+    await page.getByRole("button", { name: "Buscar" }).click();
+    await expect(page.getByLabel(`Contado de ${sinStock.nombre}`)).toHaveCount(0);
   });
 
   test("stock bajo lista el producto bajo su mínimo y no el que está sobre él", async ({

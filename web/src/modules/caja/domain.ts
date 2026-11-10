@@ -41,3 +41,20 @@ export type Movimiento = {
   motivo: string;
   creadoEn: string;
 };
+
+// Aviso de una caja cerrada a la que llegó algo después del cierre; nombra solo lo que llegó.
+export function textoTardias(ventas: number, totalVentas: number, movimientos: number): string {
+  const v = `${ventas} ${ventas === 1 ? "venta" : "ventas"} sin conexión por ${formatearBs(totalVentas)}`;
+  const m = `${movimientos} ${movimientos === 1 ? "movimiento" : "movimientos"} de caja sin conexión`;
+  const que =
+    ventas > 0 && movimientos > 0
+      ? `${v} y ${movimientos} ${movimientos === 1 ? "movimiento" : "movimientos"} de caja`
+      : ventas > 0
+        ? v
+        : movimientos > 0
+          ? m
+          : null;
+  return que
+    ? `Después del cierre llegaron ${que}. El arqueo del cierre no cambia.`
+    : "Después del cierre hubo cambios que modificaron el esperado. El arqueo del cierre no cambia.";
+}

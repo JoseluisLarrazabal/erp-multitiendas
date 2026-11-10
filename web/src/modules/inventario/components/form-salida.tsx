@@ -128,6 +128,7 @@ export function FormSalida({
       <SelectorProducto
         negocioId={negocioId}
         id="sal-producto"
+        conInactivos
         valor={producto}
         alElegir={(p) => {
           setProducto(p);

@@ -41,9 +41,11 @@ const ID_DE: Record<string, string> = {
   },
 };
 const UBICACION_LAVANDERIA = "b0000000-0000-0000-0000-000000000003";
+const UBICACION_FRIAL = "b0000000-0000-0000-0000-000000000004";
 // Ids creados en beforeAll, para las rutas con segmento dinámico.
 const ids = { producto: "", venta: "", orden: "", caja: "", credito: "" };
 const sesiones: string[] = [];
+const equiposPos: Record<string, string> = {};
 let ordenLavanderia = "";
 
 // El seed no trae ventas, cajas ni órdenes: cada negocio recibe una venta (u orden) en su equipo propio (R1 y R2, que
@@ -61,6 +63,7 @@ test.beforeAll(async () => {
   const producto = await crearProductoConPrecio({ contado: 30 });
   expect((await entradaApi(producto, u.tienda, 20, 12.5)).status).toBeLessThan(300);
   const t = await equipoYCaja(NEGOCIOS.tienda.id, u.tienda, "R1");
+  equiposPos.tienda = t.equipo.id;
   ids.producto = producto.id;
   ids.caja = t.sesion;
   ids.venta = crypto.randomUUID();
@@ -90,6 +93,9 @@ test.beforeAll(async () => {
   expect(v.status, JSON.stringify(v.json)).toBeLessThan(300);
 
   const l = await equipoYCaja(NEGOCIOS.lavanderia.id, UBICACION_LAVANDERIA, "R2");
+  // El frial no tiene equipo propio en este archivo: R3 con su caja abierta para recorrer el POS.
+  const f = await equipoYCaja(NEGOCIOS.frial.id, UBICACION_FRIAL, "R3");
+  equiposPos.frial = f.equipo.id;
   ids.orden = crypto.randomUUID();
   ordenLavanderia = ids.orden;
   const o = await apiComo("dueno", "rpc/crear_orden", {
@@ -184,6 +190,31 @@ for (const ruta of rutas) {
     }
     await ir(page, url);
     await expect(page.locator("main h1").first()).toBeVisible();
+    const [ancho, visible] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    expect(ancho, `scrollWidth ${ancho} > clientWidth ${visible}`).toBeLessThanOrEqual(visible);
+  });
+}
+
+// M-16: la barra de modos del POS baja a una segunda fila en vez de desbordar. Con la caja abierta aparecen los 5 modos.
+for (const negocio of ["tienda", "frial"] as const) {
+  test(`/pos de ${negocio} no desborda a 390 px y muestra todos los modos`, async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      { name: "negocio_activo", value: NEGOCIOS[negocio].id, domain: "localhost", path: "/" },
+    ]);
+    await page.addInitScript(
+      ([clave, id]) => localStorage.setItem(clave!, id!),
+      [`erp:pos:equipo:${NEGOCIOS[negocio].id}`, equiposPos[negocio]!],
+    );
+    await page.goto("/pos");
+    const modos = page.getByRole("group", { name: "Modo" }).getByRole("button");
+    await expect(modos.first()).toBeVisible();
+    for (const boton of await modos.all()) await expect(boton).toBeInViewport({ ratio: 1 });
     const [ancho, visible] = await page.evaluate(() => [
       document.documentElement.scrollWidth,
       document.documentElement.clientWidth,

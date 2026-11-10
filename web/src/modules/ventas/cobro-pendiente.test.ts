@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   alcanceCobros,
+  debeAplicarSola,
   fijarCobroPendiente,
+  hayCobrosGuardados,
   leerCobrosPendientes,
   montosCongelados,
   type PendienteEnLinea,
@@ -115,5 +117,61 @@ describe("cobros en línea pendientes (sobreviven a recargar)", () => {
     expect(leerCobrosPendientes(alcanceCobros("n", "otro-equipo"))).toEqual({});
     expect(leerCobrosPendientes(alcanceCobros("otro-negocio", "e"))).toEqual({});
     expect(Object.keys(leerCobrosPendientes(alcanceCobros("n", "e")))).toEqual(["credito"]);
+  });
+});
+
+describe("hayCobrosGuardados", () => {
+  const almacen = (datos: Record<string, string>) =>
+    vi.stubGlobal("localStorage", {
+      length: Object.keys(datos).length,
+      key: (i: number) => Object.keys(datos)[i] ?? null,
+      getItem: (k: string) => datos[k] ?? null,
+    });
+
+  it("cuenta cobros en línea y cuotas con contenido de cualquier alcance, y nada más", () => {
+    almacen({});
+    expect(hayCobrosGuardados()).toBe(false);
+    almacen({ "erp:otra-cosa:x": '{"a":1}', "erp:cobros-en-linea": '{"a":1}' });
+    expect(hayCobrosGuardados()).toBe(false);
+    almacen({ "erp:otra-cosa:x": "1", "erp:cobros-en-linea:n:e": '{"credito":{}}' });
+    expect(hayCobrosGuardados()).toBe(true);
+    almacen({ "erp:cuotas-sin-confirmar:n:e": '[{"a":1}]' });
+    expect(hayCobrosGuardados()).toBe(true);
+  });
+
+  it("una clave vacía o ilegible no cuenta", () => {
+    for (const v of ["", "{}", "[]", "basura{", "null", "5"]) {
+      almacen({ "erp:cobros-en-linea:n:e": v });
+      expect(hayCobrosGuardados()).toBe(false);
+    }
+  });
+
+  it("si el almacenamiento no responde, asume que hay", () => {
+    vi.stubGlobal("localStorage", {
+      length: 1,
+      key: () => {
+        throw new Error("bloqueado");
+      },
+    });
+    expect(hayCobrosGuardados()).toBe(true);
+  });
+});
+
+describe("debeAplicarSola", () => {
+  const libre = {
+    interactuo: false,
+    colaVacia: true,
+    cobrosGuardados: false,
+    pendiente: false,
+    lineas: 0,
+  };
+  it("solo antes de interactuar y sin cola, cobros ni pendientes", () => {
+    expect(debeAplicarSola(libre)).toBe(true);
+    expect(debeAplicarSola({ ...libre, interactuo: true })).toBe(false);
+    expect(debeAplicarSola({ ...libre, colaVacia: false })).toBe(false);
+    expect(debeAplicarSola({ ...libre, colaVacia: null })).toBe(false);
+    expect(debeAplicarSola({ ...libre, cobrosGuardados: true })).toBe(false);
+    expect(debeAplicarSola({ ...libre, pendiente: true })).toBe(false);
+    expect(debeAplicarSola({ ...libre, lineas: 1 })).toBe(false);
   });
 });

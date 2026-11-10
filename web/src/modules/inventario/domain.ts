@@ -10,10 +10,10 @@ export type ProductoElegible = {
   nombre: string;
   unidad: Unidad;
   controlaSerie: boolean;
+  activo: boolean;
 };
 
 export type FilaStock = ProductoElegible & {
-  activo: boolean;
   stockMinimo: number | null;
   total: number;
   bajo: boolean;
@@ -31,6 +31,7 @@ export type Movimiento = {
   cantidad: number;
   costoUnitario: number | null;
   refTipo: string | null;
+  referencia: string | null;
   usuario: string | null;
   motivo: string | null;
   fecha: string;

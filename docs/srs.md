@@ -197,7 +197,7 @@ Cada requisito es verificable por su criterio. Entrega A salvo que se indique B.
 | RN-04 | Stock negativo permitido: se marca para revisar, no se bloquea |
 | RN-05 | El kardex es append-only. Una corrección es un contramovimiento |
 | RN-06 | El costo es promedio ponderado. La venta guarda foto del costo para la ganancia |
-| RN-07 | Cierre de caja imposible con envíos pendientes en ese equipo |
+| RN-07 | Cierre de caja imposible con envíos pendientes en ese equipo. Una venta o un movimiento rechazado no es un envío pendiente: no bloquea el cierre, se avisa y queda para que un encargado lo reintente o lo descarte |
 | RN-08 | Devolución dentro de 24 h con permiso `anular`. Después, exige `devolver_fuera_plazo` |
 | RN-09 | Ropa sin recoger: se avisa a los 30 días. La salida del local la decide una persona |
 | RN-10 | Un producto con series vende una unidad identificada por línea |
@@ -246,7 +246,7 @@ que son quienes cubren al personal. Frial usa la grilla de Lider hasta que abra.
 | RNF-06 | Seguridad | RLS en toda tabla operativa. Sin escritura directa en tablas contables | pgTAP |
 | RNF-07 | Seguridad | `service_role` nunca llega al navegador. Secretos fuera del repo | Revisión y escaneo en CI |
 | RNF-08 | Respaldo | Backup diario cifrado fuera de Supabase, con restauración probada | Simulacro antes de producción |
-| RNF-09 | Recuperación | Pérdida máxima 24 h. Restauración en menos de 4 h | Simulacro cronometrado |
+| RNF-09 | Recuperación | Pérdida máxima 24 h de datos. Las fotos de productos se copian una vez por semana: pérdida máxima 7 días de fotos nuevas (decisión del CTO, 2026-11-10, `docs/backup.md`). Restauración en menos de 4 h | Simulacro cronometrado |
 | RNF-10 | Mantenibilidad | Cumple `docs/estandares-codigo.md`. CI verde para mergear | CI |
 | RNF-11 | Pruebas | Cumple `docs/plan-pruebas.md` | CI |
 | RNF-12 | Portabilidad | Despliegue reproducible, movible de proveedor en horas | Documentado y ensayado |

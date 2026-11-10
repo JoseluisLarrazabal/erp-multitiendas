@@ -167,9 +167,9 @@ isOneToOne: false
                   ]
                 },"clientes": {
                   Row: {
-                    "ci_nit": string | null,"created_at": string,"direccion": string | null,"id": string,"negocio_id": string,"nombre": string,"telefono": string | null,"updated_at": string
+                    "ci_nit": string | null,"created_at": string,"direccion": string | null,"id": string,"negocio_id": string,"nombre": string,"telefono": string | null,"updated_at": string,"busqueda": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: "busqueda"
                   Insert: {
                     "ci_nit"?: string | null,"created_at"?: string,"direccion"?: string | null,"id"?: string,"negocio_id": string,"nombre": string,"telefono"?: string | null,"updated_at"?: string
                   }
@@ -1182,9 +1182,9 @@ isOneToOne: false
           Views: {
             "inventario_lista": {
                   Row: {
-                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"unidad": string
+                    "activo": boolean,"codigo": string,"codigo_barras": string | null,"controla_serie": boolean,"id": string,"marca": string | null,"negocio_id": string,"nombre": string,"stock_bajo": boolean | null,"stock_minimo": number | null,"stock_negativo": boolean | null,"stock_total": number | null,"unidad": string,"busqueda": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: "busqueda"
                   Relationships: [
                     {
       foreignKeyName: "productos_negocio_id_fkey"
@@ -1236,9 +1236,9 @@ isOneToOne: false
                   ]
                 },"productos_lista": {
                   Row: {
-                    "activo": boolean,"categoria_id": string | null,"categoria_nombre": string | null,"codigo": string,"codigo_barras": string | null,"con_precio": boolean | null,"foto_path": string | null,"id": string,"marca": string | null,"modelo": string | null,"moneda_principal": string | null,"monto_principal": number | null,"negocio_id": string,"nombre": string,"peso_paquete_kg": number | null,"principal_bs": number | null,"tipo": string,"unidad": string
+                    "activo": boolean,"categoria_id": string | null,"categoria_nombre": string | null,"codigo": string,"codigo_barras": string | null,"con_precio": boolean | null,"foto_path": string | null,"id": string,"marca": string | null,"modelo": string | null,"moneda_principal": string | null,"monto_principal": number | null,"negocio_id": string,"nombre": string,"peso_paquete_kg": number | null,"principal_bs": number | null,"tipo": string,"unidad": string,"busqueda": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: "busqueda"
                   Relationships: [
                     {
       foreignKeyName: "productos_negocio_id_categoria_id_fkey"
@@ -1333,6 +1333,13 @@ isOneToOne: false
                            },
 "bloquear_stock":
 { Args: { "p_negocio_id": string,"p_producto_ids": (string)[],"p_ubicacion_id": string }; Returns: undefined
+                           },
+"busqueda":
+{ Args: { "r": Omit<Database["public"]['Tables']["clientes"]['Row'], Database["public"]['Tables']["clientes"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.busqueda(r => productos_lista), public.busqueda(r => inventario_lista), public.busqueda(r => clientes). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "r": Omit<Database["public"]['Views']["inventario_lista"]['Row'], Database["public"]['Views']["inventario_lista"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.busqueda(r => productos_lista), public.busqueda(r => inventario_lista), public.busqueda(r => clientes). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "r": Omit<Database["public"]['Views']["productos_lista"]['Row'], Database["public"]['Views']["productos_lista"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.busqueda(r => productos_lista), public.busqueda(r => inventario_lista), public.busqueda(r => clientes). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
                            },
 "caja_sesion_abierta":
 { Args: { "p_dispositivo_id": string }; Returns: {
@@ -1476,7 +1483,7 @@ isOneToOne: false
                            },
 "kardex_producto":
 { Args: { "p_desde_id"?: string,"p_limite"?: number,"p_producto_id": string,"p_ubicacion_id"?: string }; Returns: {
-              "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"revertido": boolean,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
+              "cantidad": number,"costo_unitario": number,"created_at": string,"id": string,"motivo": string,"ref_id": string,"ref_tipo": string,"referencia": string,"revertido": boolean,"tipo": string,"ubicacion_id": string,"usuario_id": string,"usuario_nombre": string
             }[]
                            },
 "lotes_por_vencer":
@@ -1625,6 +1632,9 @@ isOneToOne: false
                            },
 "simular_credito":
 { Args: { "p_cuotas"?: number,"p_inicial"?: number,"p_negocio_id": string,"p_total": number }; Returns: Json
+                           },
+"sin_tildes":
+{ Args: { "texto": string }; Returns: string
                            },
 "stock_inconsistente":
 { Args: { "p_negocio_id": string }; Returns: {
