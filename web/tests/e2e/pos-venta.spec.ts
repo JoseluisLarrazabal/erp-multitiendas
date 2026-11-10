@@ -370,6 +370,25 @@ test("alta de cliente desde el POS, venta con él y duplicado al repetir el docu
   }
 });
 
+test("un código que coincide con dos productos no agrega y pide elegir", async ({ page }) => {
+  const a = await crearProductoConPrecio({ contado: 20, stock: 5 });
+  // El código de barras de b es el código interno de a.
+  const b = await crearProductoConPrecio({ contado: 30, stock: 5, barras: a.codigo });
+  await abrirCajaPorUI(page, "0");
+  await agregarPorCodigo(page, a.codigo);
+  await expect(page.getByText("Ese código coincide con 2 productos: elige uno.")).toBeVisible();
+  await expect(page.getByText("El carrito está vacío.")).toBeVisible();
+  const lista = page.getByRole("list", { name: "Resultados" }).getByRole("listitem");
+  await expect(lista).toHaveCount(2);
+  await expect(lista.nth(0)).toContainText(b.nombre);
+  await expect(lista.nth(1)).toContainText(a.nombre);
+  await lista
+    .nth(1)
+    .getByRole("button", { name: /Agregar/ })
+    .click();
+  await expect(page.getByText("El carrito está vacío.")).toBeHidden();
+});
+
 test("venta con serie: se elige la serie y queda vendida en base", async ({ page }) => {
   const a = await crearProductoConPrecio({ contado: 200, stock: 2, controlaSerie: true });
   const series = [`S${corrida}A`, `S${corrida}B`];
