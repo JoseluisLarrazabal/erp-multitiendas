@@ -359,13 +359,13 @@ export function CreditosPos({
               <p className="text-[15px] font-semibold break-words">
                 {c.ventaNumero ? `Venta ${c.ventaNumero}` : "Saldo inicial"}
               </p>
-              <p className="text-muted-foreground text-[13px] tabular-nums">
+              <p className="text-muted-foreground text-sm tabular-nums">
                 Saldo {formatearBs(c.saldo)}
                 {c.proximaVence &&
                   ` · próxima cuota ${formatearBs(c.proximoMonto)} (${formatearDia(c.proximaVence)})`}
               </p>
               {c.cuotasVencidas > 0 && (
-                <p className="text-destructive text-[13px] font-medium tabular-nums">
+                <p className="text-destructive text-sm font-medium tabular-nums">
                   {c.cuotasVencidas} {c.cuotasVencidas === 1 ? "cuota vencida" : "cuotas vencidas"}:{" "}
                   {formatearBs(c.montoVencido)}, {c.diasAtraso}{" "}
                   {c.diasAtraso === 1 ? "día" : "días"} de atraso
@@ -412,7 +412,7 @@ export function CreditosPos({
                   onChange={(e) => setMontoTexto(e.target.value)}
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <p role="status" className="text-muted-foreground text-[13px] empty:hidden">
+                <p role="status" className="text-muted-foreground text-sm empty:hidden">
                   {montoTexto.trim() !== "" && !montoValido
                     ? `Escribe un monto mayor a 0 y hasta el saldo (${formatearBs(elegida.saldo ?? 0)}).`
                     : "Un pago parcial se aplica a la cuota más vieja."}
@@ -420,12 +420,7 @@ export function CreditosPos({
               </div>
               <div className="flex gap-2">
                 <AlertDialogCancel size="xl">Volver</AlertDialogCancel>
-                <Button
-                  type="submit"
-                  size="xl"
-                  className="flex-1 aria-disabled:opacity-50"
-                  aria-disabled={!montoValido}
-                >
+                <Button type="submit" size="xl" className="flex-1" aria-disabled={!montoValido}>
                   Continuar
                 </Button>
               </div>

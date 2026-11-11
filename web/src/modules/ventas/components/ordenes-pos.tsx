@@ -185,7 +185,7 @@ export function OrdenesPos({
                   )}
                 </p>
                 <p className="text-[15px] break-words">{o.cliente}</p>
-                <p className="text-muted-foreground text-[13px] tabular-nums">
+                <p className="text-muted-foreground text-sm tabular-nums">
                   {o.prendas} {o.prendas === 1 ? "prenda" : "prendas"}
                   {o.casillero && ` · Casillero ${o.casillero}`} · {formatearBs(o.total)}
                 </p>

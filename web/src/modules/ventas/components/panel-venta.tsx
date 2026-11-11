@@ -154,13 +154,13 @@ export function PanelVenta({
         />
       )}
       {hayLineas && !permisos.puedeDescontar && (
-        <p className="text-muted-foreground text-[13px]">
+        <p className="text-muted-foreground text-sm">
           Sin permiso de descuento: para bajar precios o descontar, pide a un encargado que venda
           desde su sesión.
         </p>
       )}
       {hayLineas && permisos.puedeDescontar && permisos.tope === 0 && (
-        <p className="text-muted-foreground text-[13px]">
+        <p className="text-muted-foreground text-sm">
           Los descuentos están desactivados (tope 0 %). Un encargado puede configurarlo.
         </p>
       )}
@@ -180,7 +180,7 @@ export function PanelVenta({
       )}
       <div className="border-foreground/80 border-t-2 pt-3">
         {totales && totales.subtotal !== totales.total && (
-          <p className="text-muted-foreground flex justify-between text-[13px]">
+          <p className="text-muted-foreground flex justify-between text-sm">
             <span>Subtotal</span>
             <span className="cifra">{bs(totales.subtotal)}</span>
           </p>
@@ -198,7 +198,7 @@ export function PanelVenta({
           </span>
         </p>
       </div>
-      <p role="status" className="text-destructive text-[13px] font-medium empty:hidden">
+      <p role="status" className="text-destructive text-[15px] font-medium empty:hidden">
         {motivoBloqueo}
       </p>
       <Button

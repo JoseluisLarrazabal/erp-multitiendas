@@ -48,15 +48,17 @@ export function CarritoLineas({
           : null;
         return (
           <li key={l.id} className="flex flex-col gap-2 py-2.5">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-1 min-[360px]:flex-nowrap">
+              <div className="min-w-0 basis-full min-[360px]:flex-1 min-[360px]:basis-0">
                 <p className="text-[15px] font-semibold break-words">{l.producto.nombre}</p>
-                <p className="text-muted-foreground text-[13px]">
+                <p className="text-muted-foreground text-sm">
                   {l.producto.codigo} · lista {bs(precioLista)}
                   {l.producto.unidad === "kg" && " / kg"}
                 </p>
               </div>
-              <p className="cifra text-base">{total === null ? "—" : bs(total)}</p>
+              <p className="cifra ml-auto text-base min-[360px]:ml-0">
+                {total === null ? "—" : bs(total)}
+              </p>
               <Button
                 type="button"
                 variant="ghost"
@@ -66,7 +68,7 @@ export function CarritoLineas({
                 disabled={bloqueado}
                 onClick={() => despachar({ tipo: "quitar", id: l.id })}
               >
-                <Trash2 />
+                <Trash2 className="size-5" />
               </Button>
             </div>
             <div
@@ -78,7 +80,7 @@ export function CarritoLineas({
                 } as React.CSSProperties
               }
             >
-              <label className="flex min-w-0 flex-col gap-1 text-[13px]">
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
                 <span className="text-muted-foreground font-medium">{etiquetaCantidad}</span>
                 <Input
                   aria-label={`${etiquetaCantidad} de ${l.producto.nombre}`}
@@ -90,7 +92,7 @@ export function CarritoLineas({
                   onChange={(e) => cambiar({ cantidadTexto: e.target.value })}
                 />
               </label>
-              <label className="flex min-w-0 flex-col gap-1 text-[13px]">
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
                 <span className="text-muted-foreground font-medium">Precio</span>
                 <Input
                   aria-label={`Precio de ${l.producto.nombre}`}
@@ -106,7 +108,7 @@ export function CarritoLineas({
                 />
               </label>
               {puedeBajar && (
-                <label className="flex min-w-0 flex-col gap-1 text-[13px]">
+                <label className="flex min-w-0 flex-col gap-1 text-sm">
                   <span className="text-muted-foreground font-medium">Descuento</span>
                   <Input
                     aria-label={`Descuento de ${l.producto.nombre}`}
@@ -120,7 +122,7 @@ export function CarritoLineas({
                 </label>
               )}
               {listas.length > 1 && !listaFija && (
-                <label className="flex min-w-0 flex-col gap-1 text-[13px]">
+                <label className="flex min-w-0 flex-col gap-1 text-sm">
                   <span className="text-muted-foreground font-medium">Lista</span>
                   <SelectNativo
                     aria-label={`Lista de ${l.producto.nombre}`}
@@ -150,7 +152,7 @@ export function CarritoLineas({
               />
             )}
             {error && (
-              <p role="alert" className="text-destructive text-[13px] font-medium">
+              <p role="alert" className="text-destructive text-sm font-medium">
                 {error}
               </p>
             )}

@@ -325,7 +325,7 @@ export function PanelCaja({
               </ul>
             )}
             {totalMovimientos > movimientos.length && (
-              <p className="text-muted-foreground text-[13px]">
+              <p className="text-muted-foreground text-sm">
                 Mostrando {movimientos.length} de {totalMovimientos} movimientos (los más
                 recientes).
               </p>

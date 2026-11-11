@@ -31,7 +31,7 @@ export function SelectorSerie({
       cancelado = true;
     };
   }, [productoId, ubicacionId]);
-  if (error) return <p className="text-destructive text-[13px]">{error}</p>;
+  if (error) return <p className="text-destructive text-sm">{error}</p>;
   const opciones = (series ?? []).filter((s) => s.id === valor || !usadas.has(s.id));
   return (
     <SelectNativo

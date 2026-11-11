@@ -31,7 +31,7 @@ export function BarraEquipo({
   conCreditos?: boolean;
 }) {
   const sinRed = useSinRed();
-  const clase = (m: ModoPos) => cn("h-11", modo === m && "border-primary");
+  const clase = (m: ModoPos) => cn("h-11", modo === m && "border-primary font-bold");
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <p className="text-muted-foreground">
@@ -43,7 +43,7 @@ export function BarraEquipo({
       </p>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         className="h-11"
         disabled={pendiente || sinRed}
         title={

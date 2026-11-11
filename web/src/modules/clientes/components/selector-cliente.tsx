@@ -120,7 +120,7 @@ export function SelectorCliente({
           {valor ? "Cambiar" : "Elegir"}
         </Button>
         {sinRed && (
-          <span role="status" className="text-muted-foreground w-full text-[13px]">
+          <span role="status" className="text-muted-foreground w-full text-sm">
             Elegir cliente necesita conexión.
           </span>
         )}
@@ -128,7 +128,7 @@ export function SelectorCliente({
     );
 
   return (
-    <div className="bg-muted flex flex-col gap-2 rounded-lg p-3">
+    <div className="bg-surface flex flex-col gap-2 rounded-lg p-3">
       {creando ? (
         <form onSubmit={guardar} className="flex flex-col gap-2">
           <Input
@@ -195,7 +195,7 @@ export function SelectorCliente({
               }}
             />
           </div>
-          {buscando && <p className="text-muted-foreground text-[13px]">Buscando…</p>}
+          {buscando && <p className="text-muted-foreground text-sm">Buscando…</p>}
           <ul aria-label="Clientes encontrados" className="flex flex-col">
             {resultados.map((c) => (
               <li key={c.id}>
@@ -211,12 +211,12 @@ export function SelectorCliente({
             ))}
           </ul>
           {q.trim().length >= 2 && !buscando && resultados.length === 0 && (
-            <p className="text-muted-foreground text-[13px]">Sin resultados.</p>
+            <p className="text-muted-foreground text-sm">Sin resultados.</p>
           )}
         </>
       )}
       {(duplicado ?? error) && (
-        <p role="alert" className="text-destructive text-[13px] font-medium">
+        <p role="alert" className="text-destructive text-sm font-medium">
           {duplicado ?? error}
         </p>
       )}

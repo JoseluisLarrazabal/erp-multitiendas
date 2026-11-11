@@ -137,11 +137,11 @@ export function ReservasPos({
                 <p className="text-[15px] break-words">
                   {r.productoNombre} × {formatearCantidad(aMilesimas(r.cantidad))}
                 </p>
-                <p className="text-muted-foreground text-[13px] tabular-nums">
+                <p className="text-muted-foreground text-sm tabular-nums">
                   Total {bs(totalReserva(r))} · anticipo {formatearBs(r.anticipo)} (
                   {ETIQUETA_MEDIO[r.medio]}) · saldo {bs(saldoReserva(r))}
                 </p>
-                {!aqui && <p className="text-muted-foreground text-[13px]">Reservada en {donde}</p>}
+                {!aqui && <p className="text-muted-foreground text-sm">Reservada en {donde}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -206,7 +206,7 @@ export function ReservasPos({
                     }}
                   />
                 ) : (
-                  <p className="text-muted-foreground self-center text-[13px]">
+                  <p className="text-muted-foreground self-center text-sm">
                     {MENSAJE_SIN_PERMISO_CANCELAR}
                   </p>
                 )}

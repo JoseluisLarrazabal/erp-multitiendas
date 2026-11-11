@@ -47,12 +47,12 @@ export function FormCreditoVenta({
         />
         <HandCoins className="size-4" aria-hidden /> Vender a crédito
       </label>
-      {sinRed && <p className="text-muted-foreground text-[13px]">El crédito necesita conexión.</p>}
+      {sinRed && <p className="text-muted-foreground text-sm">El crédito necesita conexión.</p>}
       {form.activo && (
         <>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex min-w-0 flex-col gap-1">
-              <Label htmlFor={`${id}-inicial`} className="text-[13px]">
+              <Label htmlFor={`${id}-inicial`} className="text-sm">
                 Inicial (Bs)
               </Label>
               <Input
@@ -66,7 +66,7 @@ export function FormCreditoVenta({
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <Label htmlFor={`${id}-cuotas`} className="text-[13px]">
+              <Label htmlFor={`${id}-cuotas`} className="text-sm">
                 Cuotas{parametros ? ` (1 a ${parametros.maxCuotas})` : ""}
               </Label>
               <Input
@@ -85,7 +85,7 @@ export function FormCreditoVenta({
             role="group"
             aria-label="Documentos del crédito"
           >
-            <p className="text-muted-foreground text-[13px] font-medium">Documentos recibidos</p>
+            <p className="text-muted-foreground text-sm font-medium">Documentos recibidos</p>
             {(
               [
                 ["docsCi", "Cédula de identidad"],
@@ -122,7 +122,7 @@ export function FormCreditoVenta({
               <p>
                 Inicial {bs(plan.inicial)} · a financiar {bs(plan.financiado)}
               </p>
-              <ul className="text-muted-foreground mt-1 text-[13px]">
+              <ul className="text-muted-foreground mt-1 text-sm">
                 {plan.plan.slice(0, 4).map((p) => (
                   <li key={p.fila.numero}>
                     Cuota {p.fila.numero}: {bs(p.fila.monto)} · vence {formatearDia(p.vence)}
@@ -130,9 +130,7 @@ export function FormCreditoVenta({
                 ))}
                 {plan.plan.length > 4 && <li>… {plan.plan.length - 4} cuotas más</li>}
               </ul>
-              <p className="text-muted-foreground mt-1 text-[13px]">
-                Plan calculado por el servidor.
-              </p>
+              <p className="text-muted-foreground mt-1 text-sm">Plan calculado por el servidor.</p>
             </div>
           )}
         </>

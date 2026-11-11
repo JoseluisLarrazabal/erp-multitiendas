@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { EstadoCatalogo } from "../use-catalogo";
 
@@ -32,7 +32,7 @@ export function AvisosVenta({
             <span className="flex-1 py-1">{aviso}</span>
             <button
               type="button"
-              className="min-h-11 px-3 text-[13px] font-semibold underline"
+              className="min-h-11 px-3 text-sm font-semibold underline"
               onClick={alCerrarAviso}
             >
               Cerrar
@@ -43,8 +43,9 @@ export function AvisosVenta({
       {rechazo && (
         <p
           role="alert"
-          className="border-destructive bg-destructive-soft text-destructive rounded-lg border p-3 text-sm font-medium"
+          className="border-destructive bg-destructive-soft text-destructive flex items-start gap-2 rounded-lg border p-3 text-sm font-medium"
         >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {rechazo}
         </p>
       )}
@@ -58,6 +59,7 @@ export function AvisosVenta({
           role="alert"
           className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
+          <TriangleAlert className="size-4 shrink-0" aria-hidden />
           {catalogo.mensaje}
           <Button type="button" variant="outline" className="h-11" onClick={alReintentarCatalogo}>
             Reintentar

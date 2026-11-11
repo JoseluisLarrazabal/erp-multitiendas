@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Loader2, QrCode } from "lucide-react";
+import { Banknote, Loader2, QrCode, TriangleAlert } from "lucide-react";
 import { useRef, useState } from "react";
 import {
   AlertDialog,
@@ -173,7 +173,7 @@ export function Cobro({
                 }}
                 onFocus={(e) => e.currentTarget.select()}
               />
-              <p className="text-muted-foreground text-[13px] tabular-nums">
+              <p className="text-muted-foreground text-sm tabular-nums">
                 Efectivo a cobrar: {bs(aplicado)}
               </p>
             </div>
@@ -190,14 +190,17 @@ export function Cobro({
             </span>
           </p>
 
-          <p role="status" className="text-foreground text-[13px] font-medium empty:hidden">
+          <p role="status" className="text-foreground text-sm font-medium empty:hidden">
             {calculo && !calculo.ok ? calculo.error : null}
           </p>
           {congelado && (
-            <p className="bg-muted rounded-lg px-3 py-2 text-sm">
-              Cobro sin confirmar: los montos quedaron fijos ({bs(congelado.efectivo)} en efectivo
-              {congelado.qr > 0 ? ` y ${bs(congelado.qr)} por QR` : ""}). Reintenta o verifica si
-              quedó registrado.
+            <p className="border-warning-line bg-warning-soft text-warning flex items-start gap-2 rounded-lg border px-3 py-2 text-[15px] font-medium">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                Cobro sin confirmar: los montos quedaron fijos ({bs(congelado.efectivo)} en efectivo
+                {congelado.qr > 0 ? ` y ${bs(congelado.qr)} por QR` : ""}). Reintenta o verifica si
+                quedó registrado.
+              </span>
             </p>
           )}
           {estado.t === "rechazada" && (
@@ -228,7 +231,7 @@ export function Cobro({
             <Button
               type="submit"
               size="xl"
-              className="flex-1 aria-disabled:opacity-50"
+              className="flex-1"
               aria-disabled={!calculo?.ok || ocupado}
             >
               {ocupado && <Loader2 className="animate-spin" aria-hidden />}{" "}

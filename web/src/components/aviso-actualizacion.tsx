@@ -199,8 +199,15 @@ export function AvisoActualizacion({
         )}
       </div>
       {cobroSinConfirmar && (
-        <p role="alert" className="text-destructive text-sm font-medium">
-          Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de actualizar.
+        <p
+          role="alert"
+          className="border-warning-line bg-warning-soft text-warning flex items-start gap-2 rounded-lg border px-3 py-2 text-[15px] font-medium"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de
+            actualizar.
+          </span>
         </p>
       )}
       <ConfirmarDescarte

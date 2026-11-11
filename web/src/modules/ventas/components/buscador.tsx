@@ -44,7 +44,7 @@ export function CampoBusqueda({
         autoCapitalize="off"
         spellCheck={false}
         enterKeyHint="search"
-        className="h-12 pl-10 text-base"
+        className="h-12 pl-10 text-base max-[399px]:placeholder:text-sm"
         value={valor}
         onChange={(e) => alCambiar(e.target.value)}
         onKeyDown={(e) => {
@@ -89,12 +89,12 @@ export function ListaResultados({
           <li key={p.id} className="flex items-start gap-3 px-3 py-3">
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-semibold break-words">{p.nombre}</p>
-              <p className="text-muted-foreground font-mono text-[13px]">
+              <p className="text-muted-foreground font-mono text-sm">
                 {p.codigo}
                 {p.codigoBarras ? ` · ${p.codigoBarras}` : ""}
               </p>
               {consulta ? (
-                <div className="mt-1 grid gap-x-4 gap-y-0.5 text-[13px] sm:grid-cols-2">
+                <div className="mt-1 grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2">
                   <dl className="flex flex-wrap gap-x-3">
                     {LISTAS.filter((l) => p.precios[l] !== null).map((l) => (
                       <div key={l} className="flex gap-1">
@@ -118,7 +118,7 @@ export function ListaResultados({
                   </dl>
                 </div>
               ) : (
-                <p className="text-muted-foreground mt-0.5 text-[13px] tabular-nums">
+                <p className="text-muted-foreground mt-0.5 text-sm tabular-nums">
                   Stock aquí:{" "}
                   <span
                     className={
@@ -140,7 +140,7 @@ export function ListaResultados({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 px-4"
+                    className="border-primary text-primary h-11 px-4"
                     aria-label={`Agregar ${p.nombre}`}
                     onClick={() => alAgregar(p)}
                   >
@@ -148,7 +148,7 @@ export function ListaResultados({
                   </Button>
                 </div>
               ) : (
-                <span className="text-destructive max-w-32 shrink-0 text-right text-[13px] font-semibold">
+                <span className="text-destructive max-w-32 shrink-0 text-right text-sm font-semibold">
                   {motivo}
                 </span>
               ))}

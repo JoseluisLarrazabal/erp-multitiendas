@@ -16,11 +16,11 @@ export function ClienteEscrito({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p role="status" className="text-muted-foreground text-[13px]">
+      <p role="status" className="text-muted-foreground text-sm">
         Sin conexión: escribe los datos del cliente.
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Nombre</span>
           <Input
             className="h-11"
@@ -31,7 +31,7 @@ export function ClienteEscrito({
             onChange={(e) => alCambiar({ ...ficha, nombre: e.target.value })}
           />
         </Label>
-        <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Teléfono (opcional)</span>
           <Input
             className="h-11"
@@ -66,7 +66,7 @@ export function FichaOrden({
 }) {
   return (
     <fieldset className="bg-surface flex flex-col gap-2 rounded-lg border p-3">
-      <legend className="px-1 text-[13px] font-semibold">Datos de la orden</legend>
+      <legend className="px-1 text-sm font-semibold">Datos de la orden</legend>
       <Label className="min-h-11 justify-between text-base">
         <span>Express</span>
         <input
@@ -79,7 +79,7 @@ export function FichaOrden({
         />
       </Label>
       <div className="grid grid-cols-2 gap-2">
-        <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Prendas</span>
           <Input
             className="cifra h-11 text-right"
@@ -92,7 +92,7 @@ export function FichaOrden({
             onChange={(e) => alCambiar({ ...ficha, prendas: e.target.value })}
           />
         </Label>
-        <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Casillero (opcional)</span>
           <Input
             className="h-11"
@@ -104,7 +104,7 @@ export function FichaOrden({
           />
         </Label>
       </div>
-      <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+      <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
         <span className="text-muted-foreground">Fecha prometida</span>
         <Input
           type="date"
@@ -115,7 +115,7 @@ export function FichaOrden({
           onChange={(e) => alCambiar({ ...ficha, fecha: e.target.value })}
         />
       </Label>
-      <Label className="min-w-0 flex-col items-stretch gap-1 text-[13px]">
+      <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
         <span className="text-muted-foreground">Nota (opcional)</span>
         <Input
           className="h-11"

@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudOff, RotateCw, Trash2 } from "lucide-react";
+import { CloudOff, RotateCw, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatearBs } from "@/lib/format/moneda";
@@ -93,8 +93,9 @@ export function AvisoCola({
       {mensaje && (
         <p
           role="alert"
-          className="border-destructive bg-destructive-soft text-destructive rounded-lg border px-3 py-3 text-sm font-medium"
+          className="border-destructive bg-destructive-soft text-destructive flex items-start gap-2 rounded-lg border px-3 py-3 text-sm font-medium"
         >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {mensaje}
         </p>
       )}

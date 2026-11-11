@@ -47,7 +47,7 @@ export function ZonaProductos({
         </EstadoVacio>
       )}
       {catalogo && catalogo.productos.length > 0 && busqueda.trim() === "" && (
-        <p className="text-muted-foreground text-[13px] tabular-nums">
+        <p className="text-muted-foreground text-sm tabular-nums">
           {catalogo.productos.length} productos en el catálogo. Escanea o escribe para buscar.
         </p>
       )}
