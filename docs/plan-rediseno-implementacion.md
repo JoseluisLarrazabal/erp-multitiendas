@@ -19,6 +19,12 @@ Maquetas y capturas de referencia, fuera del repo: `~/.cache/erp-recupera/redise
 - "Por cobrar esta semana" se omite: solo se podría aproximar.
 - "Por pagar a proveedores" usa solo la RPC de deudas, para no pasar de unas 11 consultas por carga.
 - Los iconos de la aplicación pasan al color primario nuevo en R4.
+- **"Por atender" (pedido del CTO, 2026-11-10):** los avisos van como el apartado de la maqueta B, no como la banda de
+  la A: una caja ámbar con cabecera "Por atender" y el número de avisos, y una fila por aviso con título, línea de
+  detalle y botón. Con la piel de A (tokens `--warning*`, Figtree, radios y botones de R1). En escritorio va a la
+  derecha de "Ventas de hoy"; en celular, arriba, debajo de las acciones. Si no hay avisos, la caja no aparece y
+  "Ventas de hoy" ocupa el ancho completo. El aviso de tipo de cambio sin confirmar hoy (maqueta B) entra solo si sale
+  de una lectura que ya existe; se comprueba al implementar R2.
 
 ## Restricciones duras (todos los tramos)
 
@@ -164,8 +170,8 @@ alto fijo.
 - Título: `<h1><span className="sr-only">Inicio: </span>Martes 10 de noviembre</h1>` con `Intl` en `America/La_Paz`,
   para que `auth.spec.ts:46` y `responsive.spec.ts` sigan pasando. La descripción conserva
   `${activo.nombre} · ${etiquetaRol}` (`negocio.spec.ts:21,25,35`).
-- Avisos: cada uno es un solo `<Link>` de fila completa con título, detalle y un botón visual (`<span>` con
-  `buttonVariants`). El de ventas lleva `data-testid="aviso-por-revisar"` y el texto `textoPorRevisar(n, hayMas)`:
+- Avisos, dentro de la caja "Por atender" (`<section aria-label="Por atender">` con la cuenta en la cabecera): cada
+  uno es un solo `<Link>` de fila completa con título, detalle y un botón visual (`<span>` con `buttonVariants`). El de ventas lleva `data-testid="aviso-por-revisar"` y el texto `textoPorRevisar(n, hayMas)`:
   `reconciliacion.spec.ts:160-163` pasa sin cambios.
 - Gráfico: el SVG dibuja solo barras y guías (`fill-chart-bar`, hoy `fill-primary`); días y montos van en HTML, en una
   grilla de 7 columnas a 12 o 13 px, para que el escalado no los encoja. `role="img"` con `aria-label` y una tabla
