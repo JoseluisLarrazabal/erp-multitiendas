@@ -3,6 +3,7 @@
 import { CalendarDays, Printer, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatearFechaHora } from "@/lib/format/fecha";
 import { cn } from "@/lib/utils";
 import { bs, ETIQUETA_MEDIO } from "../domain";
 import { fechaCorta } from "../ordenes-pos";
@@ -28,10 +29,7 @@ export function NotaVentaVista({
   const [papel, setPapel] = useState<Papel>("80");
   const orden = nota.orden;
   const cosa = orden ? "Orden" : "Venta";
-  const fecha = new Date(nota.fechaIso).toLocaleString("es-BO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+  const fecha = formatearFechaHora(nota.fechaIso);
   return (
     <div className="flex flex-col items-center gap-3 print:block">
       <div className="flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
