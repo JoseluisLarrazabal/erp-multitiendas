@@ -19,7 +19,7 @@ export function PieOperacion({
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <Button type="submit" disabled={pendiente || deshabilitado} className="h-10">
+        <Button type="submit" disabled={pendiente || deshabilitado}>
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           {etiqueta}
         </Button>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatearBs } from "@/lib/format/moneda";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { cn } from "@/lib/utils";
 import { formatearCantidad, type FilaStock, type Ubicacion } from "../domain";
 import { CantidadStock } from "./cantidad-stock";
@@ -15,34 +16,32 @@ export function ListaStock({
   ubicaciones: readonly Ubicacion[];
   verCostos: boolean;
 }) {
-  const columnas = {
-    gridTemplateColumns: `minmax(0,1fr) repeat(${ubicaciones.length}, 6.5rem) 8rem${verCostos ? " 8rem" : ""}`,
-  };
+  const cols = {
+    "--cols-stock": `minmax(0,1fr) repeat(${ubicaciones.length}, 6.5rem) 8rem${verCostos ? " 8rem" : ""}`,
+  } as React.CSSProperties;
   return (
-    <div className="bg-card shadow-card rounded-xl border">
-      <div
-        aria-hidden
-        style={columnas}
-        className="text-muted-foreground hidden gap-x-3 border-b px-4 py-2 text-xs font-semibold md:grid"
+    <div style={cols}>
+      <ListaFilas
+        etiqueta="Stock por producto"
+        columnas="md:grid-cols-(--cols-stock)"
+        cabeceras={
+          <>
+            <span>Producto</span>
+            {ubicaciones.map((u) => (
+              <span key={u.id} className="text-right">
+                {u.nombre}
+              </span>
+            ))}
+            <span className="text-right">Total</span>
+            {verCostos && <span className="text-right">Valor</span>}
+          </>
+        }
       >
-        <span>Producto</span>
-        {ubicaciones.map((u) => (
-          <span key={u.id} className="text-right">
-            {u.nombre}
-          </span>
-        ))}
-        <span className="text-right">Total</span>
-        {verCostos && <span className="text-right">Valor</span>}
-      </div>
-      <ul className="divide-y" aria-label="Stock por producto">
         {filas.map((p) => (
-          <li
+          <Fila
             key={p.id}
-            style={columnas}
-            className={cn(
-              "flex flex-col gap-1 px-4 py-3 md:grid md:items-center md:gap-x-3",
-              !p.activo && "bg-muted/60",
-            )}
+            columnas="flex flex-col items-stretch md:grid md:items-center md:grid-cols-(--cols-stock)"
+            className={cn(!p.activo && "bg-muted/60")}
           >
             <div className="min-w-0">
               <Link
@@ -51,11 +50,11 @@ export function ListaStock({
               >
                 {p.nombre}
               </Link>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-[13px]">
                 <span className="font-mono">{p.codigo}</span>
                 {!p.activo && " · Inactivo"}
                 {p.bajo && p.stockMinimo !== null && (
-                  <strong className="text-foreground">
+                  <strong className="text-warning">
                     {" "}
                     · Stock bajo (mínimo {formatearCantidad(p.stockMinimo, p.unidad)})
                   </strong>
@@ -63,26 +62,24 @@ export function ListaStock({
               </p>
             </div>
             {ubicaciones.map((u) => (
-              <p key={u.id} className="flex justify-between gap-2 text-sm md:justify-end">
+              <p key={u.id} className="cifra flex justify-between gap-2 text-[13px] md:justify-end">
                 <span className="text-muted-foreground md:sr-only">{u.nombre}</span>
                 <CantidadStock valor={p.porUbicacion[u.id] ?? 0} unidad={p.unidad} />
               </p>
             ))}
-            <p className="flex justify-between gap-2 text-sm font-semibold md:justify-end">
+            <p className="cifra flex justify-between gap-2 text-[13px] font-semibold md:justify-end">
               <span className="text-muted-foreground font-normal md:sr-only">Total</span>
               <CantidadStock valor={p.total} unidad={p.unidad} />
             </p>
             {verCostos && (
-              <p className="flex justify-between gap-2 text-sm md:justify-end">
+              <p className="cifra flex justify-between gap-2 text-[13px] md:justify-end">
                 <span className="text-muted-foreground md:sr-only">Valor</span>
-                <span className="tabular-nums">
-                  {p.valor === null ? "—" : formatearBs(p.valor)}
-                </span>
+                <span>{p.valor === null ? "—" : formatearBs(p.valor)}</span>
               </p>
             )}
-          </li>
+          </Fila>
         ))}
-      </ul>
+      </ListaFilas>
     </div>
   );
 }

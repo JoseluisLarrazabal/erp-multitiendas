@@ -13,7 +13,7 @@ export function CampoCantidad({
   alCambiar,
   errores,
   inputMode,
-  className = "h-10 sm:max-w-64",
+  className = "sm:max-w-64",
 }: {
   id: string;
   unidad: Unidad | undefined;

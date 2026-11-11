@@ -27,7 +27,6 @@ export function CampoMotivo({
         onChange={(e) => alCambiar(e.target.value)}
         maxLength={200}
         autoComplete="off"
-        className="h-10"
         {...propsCampo(id, errores, !!ayuda)}
       />
     </Campo>
