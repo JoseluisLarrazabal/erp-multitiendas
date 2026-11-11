@@ -1,4 +1,5 @@
 import { etiquetaRol, accionesDeFila, type FilaUsuario } from "../domain";
+import { Etiqueta } from "@/components/ui/etiqueta";
 import { AccionesFila } from "./acciones-fila";
 import { CambiarRol } from "./cambiar-rol";
 
@@ -13,21 +14,40 @@ type Props = {
 // Tabla en escritorio; en móvil cada fila se apila como tarjeta.
 export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamadorEsDueno }: Props) {
   return (
-    <div className="bg-card shadow-card rounded-xl border">
+    <div>
       <table role="table" className="w-full text-sm">
         <caption className="sr-only">Personal de {negocioNombre}</caption>
         <thead role="rowgroup" className="sr-only md:not-sr-only md:table-header-group">
-          <tr role="row" className="text-muted-foreground border-b text-left text-xs">
-            <th scope="col" role="columnheader" className="px-4 py-3 font-medium">
+          <tr
+            role="row"
+            className="text-muted-foreground border-foreground border-b-2 text-left text-[13px]"
+          >
+            <th
+              scope="col"
+              role="columnheader"
+              className="h-10 px-3 font-semibold first:pl-0 last:pr-0"
+            >
               Nombre
             </th>
-            <th scope="col" role="columnheader" className="px-4 py-3 font-medium">
+            <th
+              scope="col"
+              role="columnheader"
+              className="h-10 px-3 font-semibold first:pl-0 last:pr-0"
+            >
               Rol
             </th>
-            <th scope="col" role="columnheader" className="px-4 py-3 font-medium">
+            <th
+              scope="col"
+              role="columnheader"
+              className="h-10 px-3 font-semibold first:pl-0 last:pr-0"
+            >
               Estado
             </th>
-            <th scope="col" role="columnheader" className="px-4 py-3 font-medium">
+            <th
+              scope="col"
+              role="columnheader"
+              className="h-10 px-3 font-semibold first:pl-0 last:pr-0"
+            >
               Acciones
             </th>
           </tr>
@@ -40,21 +60,21 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
               <tr
                 key={fila.usuarioId}
                 role="row"
-                className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 border-b px-4 py-3.5 last:border-b-0 md:table-row"
+                className="hover:bg-surface grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 border-b py-3 md:table-row"
               >
                 <th
                   scope="row"
                   role="rowheader"
-                  className="min-w-0 text-left font-semibold md:table-cell md:px-4 md:py-3.5"
+                  className="min-w-0 text-left font-semibold md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   <span className="block truncate">{fila.nombre}</span>
                   {fila.esYo && (
-                    <span className="text-muted-foreground text-xs font-normal">Tú</span>
+                    <span className="text-muted-foreground text-[13px] font-normal">Tú</span>
                   )}
                 </th>
                 <td
                   role="cell"
-                  className="text-muted-foreground col-start-2 row-start-1 md:table-cell md:px-4 md:py-3.5"
+                  className="text-muted-foreground col-start-2 row-start-1 md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   {acciones.cambiarRol ? (
                     <CambiarRol
@@ -68,18 +88,18 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
                     etiquetaRol(fila.rol)
                   )}
                 </td>
-                <td role="cell" className="md:table-cell md:px-4 md:py-3.5">
-                  <span
-                    className={
-                      fila.activo
-                        ? "bg-secondary text-secondary-foreground rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        : "text-destructive border-destructive/40 rounded-full border px-2.5 py-0.5 text-xs font-medium"
-                    }
-                  >
+                <td
+                  role="cell"
+                  className="md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                >
+                  <Etiqueta tono={fila.activo ? "exito" : "neutro"}>
                     {fila.activo ? "Activo" : "Desactivado"}
-                  </span>
+                  </Etiqueta>
                 </td>
-                <td role="cell" className="col-span-2 md:table-cell md:px-4 md:py-3.5">
+                <td
+                  role="cell"
+                  className="col-span-2 md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                >
                   {hayAcciones && (
                     <AccionesFila
                       fila={fila}

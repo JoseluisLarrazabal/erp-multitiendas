@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import {
   exigirPermiso,
@@ -64,10 +65,10 @@ export default async function PaginaUsuarios() {
       ) : (
         <div className="flex flex-col gap-6">
           {filas.data.length <= 1 && (
-            <p className="text-muted-foreground text-sm">
+            <EstadoVacio>
               Aún no hay otras personas en este negocio. Crea una cuenta o agrega a alguien de tus
               otros negocios.
-            </p>
+            </EstadoVacio>
           )}
           <UsuariosTabla
             filas={filas.data}

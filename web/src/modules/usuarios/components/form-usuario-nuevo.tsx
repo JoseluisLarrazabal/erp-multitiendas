@@ -82,7 +82,6 @@ export function FormUsuarioNuevo({ negocioId, roles }: Props) {
           name="nombre"
           autoComplete="off"
           required
-          className="h-10"
           {...propsCampo("nuevo-nombre", errores)}
         />
       </Campo>
@@ -93,7 +92,6 @@ export function FormUsuarioNuevo({ negocioId, roles }: Props) {
           type="email"
           autoComplete="off"
           required
-          className="h-10"
           {...propsCampo("nuevo-correo", errores)}
         />
       </Campo>
@@ -123,7 +121,6 @@ export function FormUsuarioNuevo({ negocioId, roles }: Props) {
           type="password"
           autoComplete="new-password"
           required
-          className="h-10"
           {...propsCampo("nuevo-clave", errores, true)}
         />
       </Campo>
@@ -136,7 +133,7 @@ export function FormUsuarioNuevo({ negocioId, roles }: Props) {
             ? "Cuenta creada. Ya puede ingresar con su correo y la contraseña inicial."
             : ""}
         </p>
-        <Button type="submit" disabled={pendiente} className="h-10 self-start">
+        <Button type="submit" disabled={pendiente} className="self-start">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Crear cuenta
         </Button>
