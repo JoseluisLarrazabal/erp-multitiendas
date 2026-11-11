@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 import { buttonVariants } from "@/components/ui/button";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { SelectNativo } from "@/components/ui/select-nativo";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
 import { filtrosKardexSchema, formatearCantidad, PAGINA_KARDEX } from "@/modules/inventario";
@@ -75,10 +77,7 @@ export default async function PaginaKardex({
         titulo={p ? p.nombre : "Kardex"}
         descripcion={p ? `Código ${p.codigo}. Historial de movimientos: solo lectura.` : undefined}
         acciones={
-          <Link
-            href="/panel/inventario"
-            className={buttonVariants({ variant: "outline", className: "h-10" })}
-          >
+          <Link href="/panel/inventario" className={buttonVariants({ variant: "outline" })}>
             <ArrowLeft aria-hidden /> Inventario
           </Link>
         }
@@ -102,12 +101,8 @@ export default async function PaginaKardex({
                 Mínimo: {formatearCantidad(p.stockMinimo, p.unidad)}
               </p>
             )}
-            <form
-              method="get"
-              action={`/panel/inventario/${productoId}`}
-              className="flex flex-wrap items-end gap-3"
-            >
-              <div className="flex min-w-48 flex-col gap-1.5">
+            <BarraFiltros method="get" action={`/panel/inventario/${productoId}`}>
+              <CampoFiltro className="min-w-48">
                 <Label htmlFor="kardex-ubicacion">Ubicación</Label>
                 <SelectNativo
                   id="kardex-ubicacion"
@@ -121,18 +116,18 @@ export default async function PaginaKardex({
                     </option>
                   ))}
                 </SelectNativo>
-              </div>
-              <Button type="submit" variant="outline" className="h-10">
+              </CampoFiltro>
+              <Button type="submit" variant="outline">
                 Filtrar
               </Button>
-            </form>
+            </BarraFiltros>
           </>
         )}
         {kardex?.ok && kardex.data.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             Este producto no tiene movimientos
             {filtros.ubicacion ? " en esa ubicación" : ""}.
-          </p>
+          </EstadoVacio>
         )}
         {kardex?.ok && p && ubicaciones.ok && kardex.data.filas.length > 0 && (
           <>
@@ -157,10 +152,7 @@ export default async function PaginaKardex({
             className="flex flex-wrap items-center justify-between gap-3"
           >
             {filtros.desde ? (
-              <Link
-                href={hrefKardex({})}
-                className={buttonVariants({ variant: "outline", className: "h-10" })}
-              >
+              <Link href={hrefKardex({})} className={buttonVariants({ variant: "outline" })}>
                 <ArrowLeft aria-hidden /> Volver a lo más reciente
               </Link>
             ) : (
@@ -169,7 +161,7 @@ export default async function PaginaKardex({
             {kardex.data.siguiente && (
               <Link
                 href={hrefKardex({ desde: kardex.data.siguiente })}
-                className={buttonVariants({ variant: "outline", className: "h-10" })}
+                className={buttonVariants({ variant: "outline" })}
               >
                 Movimientos más antiguos <ChevronRight aria-hidden />
               </Link>

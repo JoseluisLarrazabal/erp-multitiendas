@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -47,9 +48,7 @@ export default async function PaginaVencimientos({
               className={cn(
                 buttonVariants({
                   variant: d === filtros.dias ? "default" : "outline",
-                  size: "sm",
                 }),
-                "min-h-9 md:min-h-8",
               )}
             >
               {d} días
@@ -67,9 +66,7 @@ export default async function PaginaVencimientos({
           </p>
         )}
         {lotes.ok && lotes.data.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-            Ningún lote vence en los próximos {filtros.dias} días.
-          </p>
+          <EstadoVacio>Ningún lote vence en los próximos {filtros.dias} días.</EstadoVacio>
         )}
         {lotes.ok && lotes.data.length > 0 && <ListaVencimientos lotes={lotes.data} />}
       </div>

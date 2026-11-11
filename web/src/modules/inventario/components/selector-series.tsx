@@ -67,7 +67,6 @@ export function SelectorSeries({
           placeholder="Buscar serie"
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
-          className="h-10"
         />
       )}
       <ul className="max-h-56 overflow-y-auto">

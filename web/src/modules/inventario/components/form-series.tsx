@@ -83,7 +83,7 @@ export function FormSeries({
         />
       </Campo>
       <div>
-        <Button type="submit" disabled={pendiente} className="h-10">
+        <Button type="submit" disabled={pendiente}>
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Registrar series
         </Button>

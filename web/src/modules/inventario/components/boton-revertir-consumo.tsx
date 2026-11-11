@@ -25,7 +25,6 @@ export function BotonRevertirConsumo({ movimientoId }: { movimientoId: string })
           onChange={(e) => setMotivo(e.target.value)}
           maxLength={200}
           autoComplete="off"
-          className="h-9"
         />
       </div>
       <ConfirmarAccion

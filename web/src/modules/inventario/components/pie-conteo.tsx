@@ -17,7 +17,7 @@ export function PieConteo({
   return (
     <div className="flex flex-col gap-2">
       <div>
-        <Button id="cont-revisar" className="h-10" onClick={alRevisar} disabled={pendiente}>
+        <Button id="cont-revisar" onClick={alRevisar} disabled={pendiente}>
           Revisar diferencias ({contados})
         </Button>
       </div>

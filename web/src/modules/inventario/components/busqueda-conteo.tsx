@@ -37,10 +37,9 @@ export function BusquedaConteo({
           onChange={(e) => alCambiar(e.target.value)}
           placeholder="Código, código de barras o nombre"
           autoComplete="off"
-          className="h-10"
         />
       </div>
-      <Button type="submit" className="h-10">
+      <Button type="submit">
         <Search aria-hidden /> Buscar
       </Button>
     </form>

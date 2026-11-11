@@ -1,5 +1,6 @@
 "use client";
 
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatearCantidad } from "../domain";
@@ -20,14 +21,11 @@ export function ListaConteo({
   alEscribir: (producto: FilaConteo, texto: string) => void;
 }) {
   return (
-    <ul className="bg-card divide-y rounded-xl border" aria-label="Productos a contar">
+    <ListaFilas etiqueta="Productos a contar" columnas="">
       {filas.map((p) => {
         const b = borradores[p.id];
         return (
-          <li
-            key={p.id}
-            className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3"
-          >
+          <Fila key={p.id} columnas="grid-cols-[1fr_auto] gap-x-4">
             <span className="min-w-0">
               <span className="font-semibold">
                 {p.nombre}
@@ -44,23 +42,20 @@ export function ListaConteo({
               onChange={(e) => alEscribir(p, e.target.value)}
               inputMode={p.unidad === "kg" ? "decimal" : "numeric"}
               autoComplete="off"
-              className={cn(
-                "h-10 w-28 text-right tabular-nums",
-                malos.has(p.id) && "border-destructive",
-              )}
+              className={cn("cifra w-28 text-right", malos.has(p.id) && "border-destructive")}
             />
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-[13px]">
               Sistema: {formatearCantidad(p.sistema, p.unidad)}
               {p.reservado > 0 && ` (${formatearCantidad(p.reservado, p.unidad)} reservadas)`}
             </span>
             {malos.has(p.id) && (
-              <span id={`cont-ayuda-${p.id}`} className="text-destructive text-right text-xs">
+              <span id={`cont-ayuda-${p.id}`} className="text-destructive text-right text-[13px]">
                 Entero, o con coma si es kg
               </span>
             )}
-          </li>
+          </Fila>
         );
       })}
-    </ul>
+    </ListaFilas>
   );
 }

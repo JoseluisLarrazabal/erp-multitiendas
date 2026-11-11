@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { buttonVariants } from "@/components/ui/button";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import type { Resultado } from "@/modules/usuarios";
@@ -21,17 +22,13 @@ export function PaginaOperacion({
   minimo?: number;
   children: (ubicaciones: readonly Ubicacion[]) => React.ReactNode;
 }) {
-  const tarjeta = "text-muted-foreground bg-card rounded-xl border p-6 text-sm";
   return (
     <>
       <EncabezadoPagina
         titulo={titulo}
         descripcion={descripcion}
         acciones={
-          <Link
-            href="/panel/inventario"
-            className={buttonVariants({ variant: "outline", className: "h-10" })}
-          >
+          <Link href="/panel/inventario" className={buttonVariants({ variant: "outline" })}>
             <ArrowLeft aria-hidden /> Inventario
           </Link>
         }
@@ -42,10 +39,10 @@ export function PaginaOperacion({
         </p>
       )}
       {ubicaciones.ok && ubicaciones.data.length === 0 && (
-        <p className={tarjeta}>Este negocio no tiene ubicaciones. Se crean por script o seed.</p>
+        <EstadoVacio>Este negocio no tiene ubicaciones. Se crean por script o seed.</EstadoVacio>
       )}
       {ubicaciones.ok && ubicaciones.data.length > 0 && ubicaciones.data.length < minimo && (
-        <p className={tarjeta}>Hace falta al menos {minimo} ubicaciones para esta operación.</p>
+        <EstadoVacio>Hace falta al menos {minimo} ubicaciones para esta operación.</EstadoVacio>
       )}
       {ubicaciones.ok &&
         ubicaciones.data.length >= Math.max(minimo, 1) &&

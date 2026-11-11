@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/panel/campo";
 import { cn } from "@/lib/utils";
@@ -74,9 +75,9 @@ export function ConteoRevision({
         contaste no se tocan.
       </p>
       {conDiferencia.length > 0 && (
-        <ul className="bg-card divide-y rounded-xl border" aria-label="Diferencias">
+        <ListaFilas etiqueta="Diferencias" columnas="">
           {conDiferencia.map((f) => (
-            <li key={f.producto.id} className="flex flex-col gap-3 px-4 py-3">
+            <Fila key={f.producto.id} columnas="flex flex-col items-stretch gap-3">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="font-semibold">{f.producto.nombre}</span>
                 <span className="text-sm tabular-nums">
@@ -106,9 +107,9 @@ export function ConteoRevision({
                   alCambiar={(ids) => setSeries((s) => ({ ...s, [f.producto.id]: ids }))}
                 />
               )}
-            </li>
+            </Fila>
           ))}
-        </ul>
+        </ListaFilas>
       )}
       <form
         onSubmit={(e) => {
@@ -128,7 +129,6 @@ export function ConteoRevision({
             onChange={(e) => setMotivo(e.target.value)}
             maxLength={200}
             autoComplete="off"
-            className="h-10"
           />
         </Campo>
         <PieOperacion
@@ -138,13 +138,7 @@ export function ConteoRevision({
           exito={null}
         />
         <div>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10"
-            onClick={alVolver}
-            disabled={pendiente}
-          >
+          <Button type="button" variant="outline" onClick={alVolver} disabled={pendiente}>
             Volver a contar
           </Button>
         </div>

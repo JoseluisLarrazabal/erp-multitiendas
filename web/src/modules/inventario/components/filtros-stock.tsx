@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { FiltrosStock } from "../schemas";
@@ -16,18 +17,17 @@ export function FiltrosStockForm({
   bajos: number | null;
 }) {
   return (
-    <form
+    <BarraFiltros
       key={`${filtros.q}|${filtros.bajo}`}
       method="get"
       action="/panel/inventario"
       role="search"
       aria-label="Buscar en el inventario"
-      className="flex flex-wrap items-end gap-x-4 gap-y-3"
     >
-      <div className="flex min-w-60 flex-[2] flex-col gap-1.5">
+      <CampoFiltro className="min-w-60 flex-[2] sm:max-w-none">
         <Label htmlFor="stock-q">Buscar</Label>
         <CampoBusquedaStock defaultValue={filtros.q} />
-      </div>
+      </CampoFiltro>
       <label className="flex min-h-10 items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -38,7 +38,7 @@ export function FiltrosStockForm({
         />
         Stock bajo{bajos !== null && ` (${bajos})`}
       </label>
-      <Button type="submit" className="h-10">
+      <Button type="submit">
         <Search aria-hidden /> Buscar
       </Button>
       {(filtros.q || filtros.bajo) && (
@@ -49,6 +49,6 @@ export function FiltrosStockForm({
           Quitar filtros
         </Link>
       )}
-    </form>
+    </BarraFiltros>
   );
 }
