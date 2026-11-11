@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Figtree, IBM_Plex_Mono } from "next/font/google";
 import { RegistroErroresGlobal } from "@/components/registro-errores-global";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree", display: "swap" });
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["600"],
+  variable: "--font-plex-mono",
+});
 
 export const metadata: Metadata = {
   title: "ERP Multitiendas",
@@ -16,11 +21,11 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#5348e0" };
+export const viewport: Viewport = { themeColor: "#0e5e5a" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es-BO" className={inter.variable}>
+    <html lang="es-BO" className={`${figtree.variable} ${plexMono.variable}`}>
       <body className="antialiased">
         <RegistroErroresGlobal />
         {children}

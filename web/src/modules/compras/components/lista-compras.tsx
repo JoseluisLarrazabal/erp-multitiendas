@@ -16,7 +16,7 @@ export function ListaCompras({
       id="lista-compras"
       tabIndex={-1}
       aria-label="Compras"
-      className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
+      className="bg-card shadow-card divide-y rounded-xl border"
     >
       {compras.map((c) => (
         <li

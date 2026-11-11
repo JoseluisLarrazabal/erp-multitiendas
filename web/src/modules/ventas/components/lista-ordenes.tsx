@@ -27,7 +27,7 @@ export function EstadoOrden({ estado }: { estado: string }) {
 
 export function ListaOrdenes({ ordenes }: { ordenes: readonly FilaOrden[] }) {
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <div
         aria-hidden
         className={cn(

@@ -170,7 +170,7 @@ export function GrillaPrecios({
         aria-label="Tabla de precios, desplazable"
         tabIndex={0}
         // scroll-pl = ancho de la columna fija: el foco que llega por scroll no queda tapado por ella.
-        className="bg-card focus-visible:ring-ring/50 scroll-pl-36 overflow-x-auto rounded-xl border shadow-[0_2px_5px_#34345a0d] outline-none focus-visible:ring-3 md:scroll-pl-48"
+        className="bg-card focus-visible:ring-ring/50 shadow-card scroll-pl-36 overflow-x-auto rounded-xl border outline-none focus-visible:ring-3 md:scroll-pl-48"
       >
         <table
           ref={tabla}

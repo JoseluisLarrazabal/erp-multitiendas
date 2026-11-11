@@ -8,7 +8,7 @@ const COLUMNAS = "md:grid-cols-[minmax(0,1fr)_7rem_9rem_7rem_11rem_8rem]";
 // Lotes por vencer: solo lectura. El saldo es una estimación (la venta no elige lote).
 export function ListaVencimientos({ lotes }: { lotes: readonly LoteVencimiento[] }) {
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <div
         aria-hidden
         className={cn(

@@ -66,7 +66,7 @@ export default async function PaginaProducto({ params }: { params: Promise<{ id:
           {error}
         </p>
       ) : (
-        <div className="bg-card max-w-3xl rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] md:p-6">
+        <div className="bg-card shadow-card max-w-3xl rounded-xl border p-5 md:p-6">
           <FormProducto
             // Remonta al cambiar de producto o al guardar: los campos son no controlados.
             key={`${producto.data.id}-${producto.data.fotoPath}`}

@@ -13,7 +13,7 @@ type Props = {
 // Tabla en escritorio; en móvil cada fila se apila como tarjeta.
 export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamadorEsDueno }: Props) {
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <table role="table" className="w-full text-sm">
         <caption className="sr-only">Personal de {negocioNombre}</caption>
         <thead role="rowgroup" className="sr-only md:not-sr-only md:table-header-group">

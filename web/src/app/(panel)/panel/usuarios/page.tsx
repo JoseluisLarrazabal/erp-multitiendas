@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Usuarios · ERP Multitiendas" };
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="bg-card flex flex-col gap-4 rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] md:p-6">
+    <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
       <h2 className="text-[15px] font-semibold tracking-tight">{titulo}</h2>
       {children}
     </section>

@@ -19,7 +19,7 @@ export function ListaStock({
     gridTemplateColumns: `minmax(0,1fr) repeat(${ubicaciones.length}, 6.5rem) 8rem${verCostos ? " 8rem" : ""}`,
   };
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <div
         aria-hidden
         style={columnas}

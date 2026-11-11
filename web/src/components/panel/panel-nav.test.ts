@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { itemDeRuta, itemsVisibles } from "./panel-nav";
+import { ITEMS, gruposVisibles, itemDeRuta, itemsVisibles } from "./panel-nav";
 
 const etiquetas = (permisos: string[], tipo = "tienda") =>
   itemsVisibles(permisos, tipo).map((i) => i.etiqueta);
@@ -92,5 +92,39 @@ describe("Órdenes", () => {
   });
   it("un ítem sin `tipos` se ve en cualquier negocio", () => {
     expect(etiquetas(["ver_reportes"], "lavanderia")).toContain("Ventas");
+  });
+});
+
+describe("gruposVisibles", () => {
+  const conjuntos = [
+    [],
+    ["ver_reportes"],
+    ["vender", "caja"],
+    ["editar_productos", "ver_costos"],
+    ["usuarios", "gestionar_compras", "gestionar_credito"],
+    ITEMS.flatMap((i) => i.permisos ?? []),
+  ];
+  const tipos = ["tienda", "frial", "lavanderia"];
+
+  it("todo ítem salvo Inicio tiene grupo", () => {
+    expect(ITEMS.filter((i) => !i.grupo).map((i) => i.href)).toEqual(["/panel"]);
+  });
+  it("agrupar no cambia qué ve cada rol: los grupos más Inicio son itemsVisibles", () => {
+    for (const permisos of conjuntos) {
+      for (const tipo of tipos) {
+        const agrupados = gruposVisibles(permisos, tipo).flatMap((g) => g.items.map((i) => i.href));
+        const esperado = itemsVisibles(permisos, tipo)
+          .map((i) => i.href)
+          .filter((h) => h !== "/panel");
+        expect(agrupados.sort()).toEqual(esperado.sort());
+      }
+    }
+  });
+  it("un grupo sin ítems no aparece", () => {
+    expect(gruposVisibles([], "tienda")).toEqual([]);
+    expect(gruposVisibles(["usuarios"], "tienda").map((g) => g.grupo)).toEqual([
+      "Ventas",
+      "Configuración",
+    ]);
   });
 });

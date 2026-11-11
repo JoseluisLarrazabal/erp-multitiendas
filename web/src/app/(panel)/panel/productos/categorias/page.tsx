@@ -42,10 +42,7 @@ export default async function PaginaCategorias() {
           {categorias.data.length === 0 ? (
             <p className="text-muted-foreground text-sm">Aún no hay categorías.</p>
           ) : (
-            <ul
-              className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-              aria-label="Categorías"
-            >
+            <ul className="bg-card shadow-card divide-y rounded-xl border" aria-label="Categorías">
               {categorias.data.map((c) => (
                 <li key={`${c.id}-${c.nombre}`} className="px-4 py-3">
                   <FormCategoria negocioId={activo.negocioId} categoria={c} />

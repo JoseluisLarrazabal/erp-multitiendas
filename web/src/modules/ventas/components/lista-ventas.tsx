@@ -20,7 +20,7 @@ export function ListaVentas({
     return e ? `${e.nombre} (${e.prefijo})` : "—";
   };
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <div
         aria-hidden
         className={cn(

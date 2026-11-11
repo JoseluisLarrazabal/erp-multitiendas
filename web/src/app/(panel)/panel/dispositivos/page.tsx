@@ -39,7 +39,7 @@ export default async function PaginaDispositivos() {
           {dispositivos.data.length === 0 ? (
             <p className="text-muted-foreground text-sm">Aún no hay dispositivos registrados.</p>
           ) : (
-            <ul className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+            <ul className="bg-card shadow-card divide-y rounded-xl border">
               {dispositivos.data.map((d) => (
                 <li
                   key={d.id}
@@ -56,7 +56,7 @@ export default async function PaginaDispositivos() {
               ))}
             </ul>
           )}
-          <section className="bg-card flex flex-col gap-4 rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] md:p-6">
+          <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
             <h2 className="text-[15px] font-semibold tracking-tight">Registrar dispositivo</h2>
             {ubicaciones.data.length === 0 ? (
               <p className="text-muted-foreground text-sm">

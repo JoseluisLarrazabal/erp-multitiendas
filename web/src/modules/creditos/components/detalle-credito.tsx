@@ -31,7 +31,7 @@ export function DetalleCreditoVista({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-6 print:hidden">
-        <dl className="bg-card grid gap-x-6 gap-y-3 rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="bg-card shadow-card grid gap-x-6 gap-y-3 rounded-xl border p-5 sm:grid-cols-2 lg:grid-cols-4">
           <Dato
             t="Cliente"
             d={`${d.cliente_nombre}${d.cliente_documento ? ` · ${d.cliente_documento}` : ""}`}

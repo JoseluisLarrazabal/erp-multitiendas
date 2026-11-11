@@ -4,28 +4,37 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Paleta del prototipo. --muted-foreground se oscureció (#7a7c8d daba 3,9:1) para cumplir AA. */
+/* Paleta del rediseño. Contrastes AA calculados en docs/plan-rediseno-implementacion.md. */
 :root {
   color-scheme: light;
-  --background: #f7f8fc;
-  --foreground: #20212d;
-  --card: #ffffff;
-  --card-foreground: #20212d;
-  --popover: #ffffff;
-  --popover-foreground: #20212d;
-  --muted: #f4f5f9;
-  --muted-foreground: #62647a;
-  --border: #e8e9f0;
-  --input: #868aa0;
-  --primary: #5348e0;
-  --primary-foreground: #ffffff;
-  --secondary: #eeedff;
-  --secondary-foreground: #3f36b8;
-  --accent: #eeedff;
-  --accent-foreground: #3f36b8;
-  --destructive: #b8322a;
-  --ring: #6157e8;
-  --radius: 0.75rem;
+  --background: #f4f2ee;
+  --foreground: #1d2321;
+  --card: #fff;
+  --card-foreground: #1d2321;
+  --popover: #fff;
+  --popover-foreground: #1d2321;
+  --surface: #fbfaf7;
+  --muted: #ebe8e1;
+  --muted-foreground: #59615e;
+  --border: #ddd9cf;
+  --input: #868c88;
+  --primary: #0e5e5a;
+  --primary-foreground: #fff;
+  --primary-hover: #0a4a47;
+  --secondary: #dcefec;
+  --secondary-foreground: #0a4a47;
+  --accent: #dcefec;
+  --accent-foreground: #0a4a47;
+  --ring: #0e7c76;
+  --warning: #8a5300;
+  --warning-soft: #fdefd0;
+  --warning-line: #e8c27a;
+  --destructive: #a3281f;
+  --destructive-soft: #fbe4e0;
+  --success: #1c6b3b;
+  --success-soft: #e0f0e5;
+  --chart-bar: #5f9c97; /* 3,1:1 sobre card; el #9fc7c3 de la maqueta da 1,8:1 */
+  --radius: 0.5rem;
 }
 
 @theme inline {
@@ -35,22 +44,40 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-surface: var(--surface);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-chart-bar: var(--chart-bar);
   --color-ring: var(--ring);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: 0 1px 2px rgb(29 35 33 / 0.06);
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+@utility cifra {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 @layer base {
@@ -60,7 +87,8 @@
   body {
     background: var(--background);
     color: var(--foreground);
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.45;
   }
   ::selection {
     background: color-mix(in srgb, var(--primary) 22%, transparent);

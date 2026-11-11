@@ -54,7 +54,7 @@ const COLUMNAS = "md:grid-cols-[3rem_8rem_minmax(0,1fr)_10rem_10rem_9rem]";
 
 export function ListaProductos({ productos, fotos, puedeEditar, listaPrincipal }: Props) {
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       {/* Cabeceras solo de escritorio. Lectores de pantalla: cada celda lleva su rótulo oculto. */}
       <div
         aria-hidden

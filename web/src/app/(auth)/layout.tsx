@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
         </span>
         ERP Multitiendas
       </div>
-      <div className="bg-card w-full max-w-sm rounded-xl border p-6 shadow-[0_2px_5px_#34345a0d] sm:p-8">
+      <div className="bg-card shadow-card w-full max-w-sm rounded-xl border p-6 sm:p-8">
         {children}
       </div>
     </main>

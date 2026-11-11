@@ -27,7 +27,7 @@ export function ListaKardex({
 }) {
   const nombre = (id: string) => ubicaciones.find((u) => u.id === id)?.nombre ?? "—";
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
+    <div className="bg-card shadow-card rounded-xl border">
       <div
         aria-hidden
         className={cn(

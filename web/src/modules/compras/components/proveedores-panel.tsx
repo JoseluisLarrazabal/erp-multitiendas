@@ -42,10 +42,7 @@ export function ListaProveedores({
   const [abierto, setAbierto] = useState<{ id: string; modo: "editar" | "pagar" } | null>(null);
   const cerrar = () => setAbierto(null);
   return (
-    <ul
-      aria-label="Proveedores"
-      className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-    >
+    <ul aria-label="Proveedores" className="bg-card shadow-card divide-y rounded-xl border">
       {proveedores.map((p) => (
         <li key={p.id} className="px-4 py-3">
           {abierto?.id === p.id && abierto.modo === "editar" ? (

@@ -6,10 +6,7 @@ import type { FilaSesion } from "../lecturas-panel";
 
 export function ListaSesiones({ sesiones }: { sesiones: readonly FilaSesion[] }) {
   return (
-    <ul
-      aria-label="Cajas"
-      className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-    >
+    <ul aria-label="Cajas" className="bg-card shadow-card divide-y rounded-xl border">
       {sesiones.map((s) => (
         <li key={s.id}>
           <Link

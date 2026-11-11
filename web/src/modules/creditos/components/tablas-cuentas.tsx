@@ -4,7 +4,7 @@ import type { Cuenta, SaldoCliente } from "../domain";
 import { formatearDia } from "@/lib/format/fecha";
 import { ETIQUETA_ORIGEN } from "../domain";
 
-const tarjeta = "bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]";
+const tarjeta = "bg-card divide-y rounded-xl border shadow-card";
 
 // Saldo por cliente (RF-CRE-05). `creditos` trae los créditos de cada cliente para enlazar su detalle.
 export function TablaSaldos({

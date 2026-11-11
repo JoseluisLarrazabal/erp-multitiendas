@@ -143,10 +143,7 @@ export function ListaClientes({
 }) {
   const [editando, setEditando] = useState<string | null>(null);
   return (
-    <ul
-      aria-label="Clientes"
-      className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-    >
+    <ul aria-label="Clientes" className="bg-card shadow-card divide-y rounded-xl border">
       {clientes.map((c) => (
         <li key={c.id} className="px-4 py-3">
           {editando === c.id ? (

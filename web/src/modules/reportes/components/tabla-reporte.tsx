@@ -31,7 +31,7 @@ export function TablaReporte({ tabla, nombre }: { tabla: TablaDatos; nombre: str
       tabIndex={0}
       role="region"
       aria-label={`Tabla de ${nombre}`}
-      className="bg-card focus-visible:ring-ring overflow-x-auto rounded-xl border shadow-[0_2px_5px_#34345a0d] focus-visible:ring-2 focus-visible:outline-none"
+      className="bg-card focus-visible:ring-ring shadow-card overflow-x-auto rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
     >
       <table className="w-full text-sm">
         <caption className="sr-only">{nombre}</caption>
