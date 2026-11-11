@@ -74,9 +74,7 @@ export function DialogoRestablecerClave({
 
   return (
     <AlertDialog open={abierto} onOpenChange={cambiarAbierto}>
-      <AlertDialogTrigger
-        render={<Button variant="outline" size="sm" className="min-h-9 md:min-h-8" />}
-      >
+      <AlertDialogTrigger render={<Button variant="outline" size="sm" className="min-h-10" />}>
         Restablecer contraseña
       </AlertDialogTrigger>
       <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
@@ -106,7 +104,6 @@ export function DialogoRestablecerClave({
                 type="password"
                 autoComplete="new-password"
                 required
-                className="h-10"
                 {...propsCampo("restablecer-clave", errores, true)}
               />
             </Campo>
@@ -121,7 +118,6 @@ export function DialogoRestablecerClave({
                 type="password"
                 autoComplete="new-password"
                 required
-                className="h-10"
                 {...propsCampo("restablecer-repetir", errores)}
               />
             </Campo>

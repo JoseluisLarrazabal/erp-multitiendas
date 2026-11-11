@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Etiqueta } from "@/components/ui/etiqueta";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { createClient } from "@/lib/supabase/server";
 import {
   exigirPermiso,
@@ -8,6 +11,8 @@ import {
 } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Dispositivos · ERP Multitiendas" };
+
+const COLUMNAS = "md:grid-cols-[5rem_1fr_1fr]";
 
 export default async function PaginaDispositivos() {
   const { activo } = await exigirPermiso("usuarios");
@@ -37,24 +42,31 @@ export default async function PaginaDispositivos() {
       ) : (
         <div className="flex flex-col gap-6">
           {dispositivos.data.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aún no hay dispositivos registrados.</p>
+            <EstadoVacio>Aún no hay dispositivos registrados.</EstadoVacio>
           ) : (
-            <ul className="bg-card shadow-card divide-y rounded-xl border">
+            <ListaFilas
+              etiqueta="Dispositivos"
+              columnas={COLUMNAS}
+              cabeceras={
+                <>
+                  <span>Prefijo</span>
+                  <span>Nombre</span>
+                  <span>Ubicación</span>
+                </>
+              }
+            >
               {dispositivos.data.map((d) => (
-                <li
-                  key={d.id}
-                  className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 px-4 py-3.5 md:grid-cols-[5rem_1fr_1fr]"
-                >
-                  <span className="bg-secondary text-secondary-foreground w-fit rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
+                <Fila key={d.id} columnas={`grid-cols-[2.75rem_1fr] ${COLUMNAS}`}>
+                  <Etiqueta tono="marca" className="font-mono">
                     {d.prefijo}
-                  </span>
+                  </Etiqueta>
                   <span className="font-semibold">{d.nombre}</span>
                   <span className="text-muted-foreground col-start-2 text-sm md:col-start-3">
                     {d.ubicacion}
                   </span>
-                </li>
+                </Fila>
               ))}
-            </ul>
+            </ListaFilas>
           )}
           <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
             <h2 className="text-[15px] font-semibold tracking-tight">Registrar dispositivo</h2>

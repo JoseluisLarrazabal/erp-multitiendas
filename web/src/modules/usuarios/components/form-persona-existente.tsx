@@ -104,12 +104,7 @@ export function FormPersonaExistente({ negocioId, roles, personas }: Props) {
             <p role="alert" className="text-destructive text-sm empty:hidden">
               {mensaje}
             </p>
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={pendiente}
-              className="h-10 self-start"
-            >
+            <Button type="submit" disabled={pendiente} className="self-start">
               {pendiente && <Loader2 className="animate-spin" aria-hidden />}
               Agregar al negocio
             </Button>

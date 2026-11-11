@@ -27,7 +27,7 @@ export function CambiarRol({ fila, negocioId, negocioNombre, roles }: Props) {
       <SelectNativo
         aria-label={`Rol de ${nombre}`}
         value={abierto || aplicado ? propuesto : fila.rol}
-        className="h-9 w-auto min-w-32 md:h-8"
+        className="w-auto min-w-32"
         onChange={(e) => {
           setPropuesto(e.target.value);
           setAbierto(true);
