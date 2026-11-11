@@ -3,6 +3,7 @@ import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Etiqueta } from "@/components/ui/etiqueta";
 import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { createClient } from "@/lib/supabase/server";
+import { Seccion } from "@/modules/catalogo/panel";
 import {
   exigirPermiso,
   FormDispositivo,
@@ -68,8 +69,7 @@ export default async function PaginaDispositivos() {
               ))}
             </ListaFilas>
           )}
-          <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
-            <h2 className="text-[15px] font-semibold tracking-tight">Registrar dispositivo</h2>
+          <Seccion titulo="Registrar dispositivo">
             {ubicaciones.data.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 {activo.nombre} aún no tiene ubicaciones, y cada dispositivo se registra en una.
@@ -78,7 +78,7 @@ export default async function PaginaDispositivos() {
             ) : (
               <FormDispositivo negocioId={activo.negocioId} ubicaciones={ubicaciones.data} />
             )}
-          </section>
+          </Seccion>
         </div>
       )}
     </>

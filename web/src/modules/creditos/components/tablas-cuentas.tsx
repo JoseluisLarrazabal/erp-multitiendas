@@ -7,7 +7,7 @@ import { formatearDia } from "@/lib/format/fecha";
 import { ETIQUETA_ORIGEN } from "../domain";
 
 const COLUMNAS_SALDOS = "md:grid-cols-[minmax(0,1.2fr)_8rem_minmax(0,1.8fr)]";
-const COLUMNAS_VENCIDAS = "md:grid-cols-[minmax(0,1.2fr)_9rem_minmax(0,1.6fr)_minmax(0,1fr)]";
+const COLUMNAS_VENCIDAS = "md:grid-cols-[minmax(10rem,1.4fr)_9rem_minmax(0,1.6fr)_minmax(0,1fr)]";
 
 // Saldo por cliente (RF-CRE-05). `creditos` trae los créditos de cada cliente para enlazar su detalle.
 export function TablaSaldos({
@@ -86,7 +86,7 @@ export function TablaVencidas({ cuentas }: { cuentas: readonly Cuenta[] }) {
           <span>Cliente</span>
           <span>Atraso</span>
           <span>Cuotas</span>
-          <span>Impaga más vieja</span>
+          <span>Vencimiento</span>
         </>
       }
     >
@@ -94,7 +94,7 @@ export function TablaVencidas({ cuentas }: { cuentas: readonly Cuenta[] }) {
         <Fila key={c.creditoId} columnas={`grid-cols-[1fr_auto] ${COLUMNAS_VENCIDAS}`}>
           <Link
             href={`/panel/creditos/${c.creditoId}`}
-            className="focus-visible:ring-ring min-w-0 truncate rounded font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+            className="focus-visible:ring-ring min-w-0 rounded font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-3"
           >
             {c.clienteNombre}
             <span className="text-muted-foreground font-normal">

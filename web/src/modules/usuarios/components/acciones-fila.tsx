@@ -25,7 +25,6 @@ export function AccionesFila({ fila, negocioId, negocioNombre, acciones }: Props
         {acciones.reactivar && (
           <Button
             variant="outline"
-            className="min-h-10"
             disabled={pendiente}
             onClick={() => ejecutar(() => reactivarUsuario({ usuarioId }))}
           >

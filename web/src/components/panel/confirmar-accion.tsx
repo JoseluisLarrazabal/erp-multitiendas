@@ -72,9 +72,8 @@ export function ConfirmarAccion({
           render={
             <Button
               variant="outline"
-              size="sm"
               disabled={deshabilitado}
-              className={cn("min-h-9 md:min-h-8", destructiva && "text-destructive")}
+              className={cn(destructiva && "text-destructive")}
             />
           }
         >

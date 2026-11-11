@@ -162,7 +162,9 @@ export function ListaClientes({
         ) : (
           <Fila key={c.id} columnas={`grid-cols-[1fr_auto] ${COLUMNAS}`}>
             <span className="min-w-0 truncate font-semibold">{c.nombre}</span>
-            <span className="text-muted-foreground font-mono text-[13px] max-md:order-3 max-md:col-span-2">
+            <span
+              className={`text-muted-foreground text-[13px] max-md:order-3 max-md:col-span-2 ${c.ci_nit ? "font-mono" : ""}`}
+            >
               {c.ci_nit ?? "Sin documento"}
             </span>
             <span className="text-muted-foreground cifra text-[13px] max-md:order-4 max-md:col-span-2">

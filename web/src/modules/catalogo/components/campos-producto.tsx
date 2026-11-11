@@ -187,8 +187,7 @@ export function CamposProducto({
               Controla número de serie
             </label>
             <p id="producto-serie-ayuda" className="text-muted-foreground text-[13px]">
-              Cada unidad que entre o salga pedirá su número de serie. Úsalo para productos con
-              garantía.
+              Al vender, dar salida o trasladar, se elige el número de serie de cada unidad.
             </p>
           </div>
         </div>

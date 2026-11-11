@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
+import { Seccion } from "@/modules/catalogo/panel";
 import {
   exigirPermiso,
   FormPersonaExistente,
@@ -13,15 +14,6 @@ import {
 } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Usuarios · ERP Multitiendas" };
-
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
-      <h2 className="text-[15px] font-semibold tracking-tight">{titulo}</h2>
-      {children}
-    </section>
-  );
-}
 
 export default async function PaginaUsuarios() {
   const { activo, usuario } = await exigirPermiso("usuarios");

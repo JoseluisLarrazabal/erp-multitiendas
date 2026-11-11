@@ -19,42 +19,43 @@ export function ListaCompras({
   const conTotal = compras.some((c) => c.total !== null);
   const columnas = conTotal ? CON_TOTAL : SIN_TOTAL;
   return (
-    // El foco tras anular cae aquí (focoTrasExito): ListaFilas no deja ponerle id al <ul>.
-    <div id="lista-compras" tabIndex={-1} className="outline-none">
-      <ListaFilas
-        etiqueta="Compras"
-        columnas={columnas}
-        cabeceras={
-          <>
-            <span>Fecha</span>
-            <span>Proveedor</span>
-            <span>Condición</span>
-            {conTotal && <span className="text-right">Total</span>}
-            <span />
-          </>
-        }
-      >
-        {compras.map((c) => (
-          <Fila key={c.id} columnas={`grid-cols-[1fr_auto] ${columnas}`}>
-            <span className="text-muted-foreground cifra text-[13px]">
-              {formatearFechaHora(c.creadaEn)}
+    <ListaFilas
+      etiqueta="Compras"
+      columnas={columnas}
+      // El foco tras anular cae aquí (focoTrasExito).
+      id="lista-compras"
+      tabIndex={-1}
+      className="outline-none"
+      cabeceras={
+        <>
+          <span>Fecha</span>
+          <span>Proveedor</span>
+          <span>Condición</span>
+          {conTotal && <span className="text-right">Total</span>}
+          <span />
+        </>
+      }
+    >
+      {compras.map((c) => (
+        <Fila key={c.id} columnas={`grid-cols-[1fr_auto] ${columnas}`}>
+          <span className="text-muted-foreground cifra text-[13px]">
+            {formatearFechaHora(c.creadaEn)}
+          </span>
+          <span className="min-w-0 truncate font-semibold max-md:order-first">{c.proveedor}</span>
+          <span className="flex flex-wrap items-center gap-2 text-sm">
+            {c.condicion === "contado" ? "Contado" : "Crédito"}
+            {c.anulada && <Etiqueta tono="peligro">Anulada</Etiqueta>}
+          </span>
+          {c.total !== null && (
+            <span className="cifra text-[13px] md:text-right">{formatearBs(c.total)}</span>
+          )}
+          {puedeAnular && !c.anulada && (
+            <span className="max-md:col-span-2 md:justify-self-end">
+              <AnularCompra compraId={c.id} proveedor={c.proveedor} />
             </span>
-            <span className="min-w-0 truncate font-semibold max-md:order-first">{c.proveedor}</span>
-            <span className="flex flex-wrap items-center gap-2 text-sm">
-              {c.condicion === "contado" ? "Contado" : "Crédito"}
-              {c.anulada && <Etiqueta tono="peligro">Anulada</Etiqueta>}
-            </span>
-            {c.total !== null && (
-              <span className="cifra text-[13px] md:text-right">{formatearBs(c.total)}</span>
-            )}
-            {puedeAnular && !c.anulada && (
-              <span className="max-md:col-span-2 md:justify-self-end">
-                <AnularCompra compraId={c.id} proveedor={c.proveedor} />
-              </span>
-            )}
-          </Fila>
-        ))}
-      </ListaFilas>
-    </div>
+          )}
+        </Fila>
+      ))}
+    </ListaFilas>
   );
 }

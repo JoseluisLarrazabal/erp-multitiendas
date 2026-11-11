@@ -37,22 +37,24 @@ export function ListaSesiones({ sesiones }: { sesiones: readonly FilaSesion[] })
             <span className="text-muted-foreground">
               {s.cerradaEn ? `Cerró ${formatearFechaHora(s.cerradaEn)}` : "Abierta"}
             </span>
-            <span className="cifra text-[13px] md:text-right">
+            <span className="text-[13px] md:text-right">
               <span className="text-muted-foreground md:sr-only">Esperado </span>
-              {bsONulo(s.montoEsperado)}
+              <span className="cifra">{bsONulo(s.montoEsperado)}</span>
             </span>
-            <span className="cifra text-[13px] md:text-right">
+            <span className="text-[13px] md:text-right">
               <span className="text-muted-foreground md:sr-only">Contado </span>
-              {bsONulo(s.montoContado)}
+              <span className="cifra">{bsONulo(s.montoContado)}</span>
             </span>
-            <span
-              className={cn(
-                "cifra text-[13px] font-semibold md:text-right",
-                s.diferencia !== null && s.diferencia < 0 && "text-destructive",
-              )}
-            >
-              <span className="text-muted-foreground font-normal md:sr-only">Diferencia </span>
-              {bsONulo(s.diferencia)}
+            <span className="text-[13px] md:text-right">
+              <span className="text-muted-foreground md:sr-only">Diferencia </span>
+              <span
+                className={cn(
+                  "cifra font-semibold",
+                  s.diferencia !== null && s.diferencia < 0 && "text-destructive",
+                )}
+              >
+                {bsONulo(s.diferencia)}
+              </span>
             </span>
           </Link>
         </Fila>

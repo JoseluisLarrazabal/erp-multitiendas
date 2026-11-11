@@ -106,10 +106,16 @@ export function DetalleCreditoVista({
                 <tr key={c.numero}>
                   <TdCifra>{c.numero}</TdCifra>
                   <TdCifra>{formatearDia(c.vence_en)}</TdCifra>
-                  <TdCifra className="text-right">{formatearBs(c.capital)}</TdCifra>
-                  <TdCifra className="text-right">{formatearBs(c.interes)}</TdCifra>
-                  <TdCifra className="text-right">{formatearBs(c.monto)}</TdCifra>
-                  <TdCifra className="text-right">{formatearBs(c.pagado)}</TdCifra>
+                  <TdCifra className="text-right whitespace-nowrap">
+                    {formatearBs(c.capital)}
+                  </TdCifra>
+                  <TdCifra className="text-right whitespace-nowrap">
+                    {formatearBs(c.interes)}
+                  </TdCifra>
+                  <TdCifra className="text-right whitespace-nowrap">{formatearBs(c.monto)}</TdCifra>
+                  <TdCifra className="text-right whitespace-nowrap">
+                    {formatearBs(c.pagado)}
+                  </TdCifra>
                   <Td>
                     {c.pendiente === 0 ? (
                       <Etiqueta tono="exito">Pagada</Etiqueta>
@@ -118,9 +124,7 @@ export function DetalleCreditoVista({
                         Vencida · {c.dias_atraso} {c.dias_atraso === 1 ? "día" : "días"}
                       </Etiqueta>
                     ) : (
-                      <span className="cifra text-[13px]">
-                        Pendiente {formatearBs(c.pendiente)}
-                      </span>
+                      <Etiqueta tono="neutro">Pendiente {formatearBs(c.pendiente)}</Etiqueta>
                     )}
                   </Td>
                 </tr>

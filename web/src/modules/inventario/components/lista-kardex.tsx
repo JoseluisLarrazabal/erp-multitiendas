@@ -11,7 +11,7 @@ import {
 } from "../domain";
 import { BotonRevertirConsumo } from "./boton-revertir-consumo";
 
-const COLUMNAS = "md:grid-cols-[9rem_11rem_8rem_6rem_9rem_minmax(0,1fr)]";
+const COLUMNAS = "md:grid-cols-[9rem_10rem_8rem_9rem_8rem_minmax(0,1fr)]";
 
 // Kardex: solo lectura. El costo aparece únicamente si la RPC lo devolvió (ver_costos).
 export function ListaKardex({
@@ -64,7 +64,7 @@ export function ListaKardex({
             <span className="sr-only">Cantidad: </span>
             {m.tipo === "ajuste_costo" ? "—" : formatearCantidadConSigno(m.cantidad, unidad)}
             {m.costoUnitario !== null && (
-              <span className="text-muted-foreground block text-[13px] font-normal">
+              <span className="text-muted-foreground block text-[13px] font-normal whitespace-nowrap">
                 Costo {formatearCostoUnitario(m.costoUnitario)}
               </span>
             )}

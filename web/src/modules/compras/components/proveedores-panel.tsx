@@ -31,7 +31,7 @@ export function NuevoProveedor({ negocioId }: { negocioId: string }) {
   );
 }
 
-const COLUMNAS = "md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_9rem_24rem]";
+const COLUMNAS = "md:grid-cols-[minmax(6rem,1.4fr)_minmax(2.5rem,1fr)_7.5rem_minmax(10.5rem,2fr)]";
 
 export function ListaProveedores({
   negocioId,
@@ -65,7 +65,7 @@ export function ListaProveedores({
             </div>
           ) : (
             <>
-              <span className="min-w-0 truncate font-semibold">
+              <span className="min-w-0 font-semibold break-words">
                 {p.nombre}
                 {!p.activo && (
                   <span className="text-muted-foreground font-normal"> (inactivo)</span>

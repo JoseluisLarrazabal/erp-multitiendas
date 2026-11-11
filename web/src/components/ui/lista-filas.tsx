@@ -3,20 +3,25 @@ import { cn } from "@/lib/utils";
 // Lista con aspecto de tabla densa y semántica de lista (`<ul aria-label>`): las specs y los lectores de pantalla
 // la encuentran por su nombre. Para datos tabulares puros con <table> real, usa `Tabla`.
 // `columnas` es la plantilla de escritorio, con clase literal: "md:grid-cols-[3rem_8rem_minmax(0,1fr)_9rem]".
+// `style` va al contenedor (cabecera y filas lo heredan: sirve para variables CSS); `id`, `tabIndex` y `className`, al <ul>.
 // `cabeceras` son los <span> de la fila de títulos (solo escritorio, oculta a lectores: cada celda lleva su rótulo sr-only).
 export function ListaFilas({
   etiqueta,
   columnas,
   cabeceras,
   children,
+  id,
+  tabIndex,
+  style,
+  className,
 }: {
   etiqueta: string;
   columnas: string;
   cabeceras?: React.ReactNode;
   children: React.ReactNode;
-}) {
+} & Pick<React.ComponentProps<"ul">, "id" | "tabIndex" | "style" | "className">) {
   return (
-    <div>
+    <div style={style}>
       {cabeceras && (
         <div
           aria-hidden
@@ -28,7 +33,7 @@ export function ListaFilas({
           {cabeceras}
         </div>
       )}
-      <ul className="divide-y" aria-label={etiqueta}>
+      <ul id={id} tabIndex={tabIndex} className={cn("divide-y", className)} aria-label={etiqueta}>
         {children}
       </ul>
     </div>

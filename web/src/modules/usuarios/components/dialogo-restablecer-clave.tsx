@@ -74,7 +74,7 @@ export function DialogoRestablecerClave({
 
   return (
     <AlertDialog open={abierto} onOpenChange={cambiarAbierto}>
-      <AlertDialogTrigger render={<Button variant="outline" size="sm" className="min-h-10" />}>
+      <AlertDialogTrigger render={<Button variant="outline" />}>
         Restablecer contraseña
       </AlertDialogTrigger>
       <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
