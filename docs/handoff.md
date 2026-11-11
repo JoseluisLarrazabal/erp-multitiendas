@@ -2,7 +2,7 @@
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
-desplegado en producción; rediseño en implementación, tramo R3).
+desplegado en producción; rediseño: R1 a R3 hechos en `feat/rediseno-base`, revisión de R3 en curso).
 
 ## Próxima sesión (arrancar acá)
 
@@ -55,18 +55,41 @@ desplegado en producción; rediseño en implementación, tramo R3).
       callaban un fallo de lectura; caja abierta hace más de un año; orden del stock bajo; pruebas con permisos
       irreales; objetivos táctiles de 44 px). Contraste AA calculado en todos los pares de texto (mínimo 5,2:1).
       **Codex: no verificado (sin cuota).**
-    - Verificación local tras integrar `main`: lint, formato, tipos, Vitest 551, pgTAP, build e integración en verde;
-      E2E 271 pasan y 1 cortó por tiempo (`credito.spec.ts` E2E-12, una prueba de 24 s sin margen bajo el límite de 30
-      s; la traza no muestra ningún paso colgado). Se le sube el límite como a sus hermanas; **falta repetir la corrida
-      completa en verde antes de dar R2 por cerrado.**
+    - Verificación local de R1 y R2 tras integrar `main` (`5dd3d8c`): los 8 pasos del CI en verde, E2E 277/277. A
+      `credito.spec.ts` E2E-12 (24 s, sin margen bajo el límite de 30 s) se le subió el límite como a sus hermanas.
     - Decidido sobre la marcha: sin aviso de "tipo de cambio sin registrar hoy" (RN-02: rige el último registrado;
       sería una alerta inventada); sin aviso de "caja cerrada con diferencia" (no hay marca de "revisada"; sería una
       regla nueva con migración); "Ayer, día completo" sin porcentaje (no hay ventas por hora).
-    - **Sigue:** R3 (pantallas del panel por módulo, 6 lotes de archivos disjuntos), R4 (punto de venta y acceso, solo
-      piel; iconos de la aplicación al color nuevo) y R5 (capturas y textos del manual).
-    - No verificado: frial en el navegador con lotes reales; aviso de órdenes de lavandería con datos; el camino de
-      error de "Por atender"; peso de las fuentes nuevas en el precache del punto de venta; salto de las cifras al
-      cargar IBM Plex Mono; un celular real.
+    - **R3, pantallas del panel: hecho y empujado (`55cfbf6`, 2026-11-11).** Primero los primitivos de lista y
+      Productos como pantalla de referencia (`c4f1f0e`: `BarraFiltros`, `CampoFiltro`, `ListaFilas`, `Fila`,
+      `Etiqueta`); después seis lotes en paralelo, cada uno en su worktree (catálogo, inventario, ventas del panel,
+      cajas con créditos y clientes, compras con reportes, usuarios con dispositivos), y un cierre de integración.
+      100 archivos; solo marcado y clases. Las listas del panel siguen siendo listas con nombre accesible (las specs
+      dependen de ese rol), no tablas.
+      - Verificación sobre `55cfbf6`: los 8 pasos del CI en verde (Vitest 551, pgTAP 2.608, integración, E2E
+        277/277). Unas 70 capturas a 1280 y 390 px sin desbordes
+        (`/tmp/.../scratchpad/r3/final/`, se pierden al reiniciar).
+      - Cambios que no son solo piel, aceptados: en la lista de cajas la diferencia sale en rojo solo cuando falta
+        dinero (antes, con cualquier diferencia); bajo "Controla número de serie" hay una ayuda nueva, comprobada
+        contra el código ("Al vender, dar salida o trasladar, se elige el número de serie de cada unidad"); la
+        cabecera decorativa de cuotas vencidas dice "Vencimiento".
+      - **Riesgo anotado para el CI de diciembre:** con la máquina cargada (varios subagentes a la vez) fallaron
+        `reportes.spec.ts:209` (clic en la pestaña Stock, reporte de ~2.175 filas sin paginar) y
+        `usuarios.spec.ts:76` (prueba larga). Medido contra el commit anterior al tramo: mismos tiempos de servidor y
+        de navegador; el reporte de stock pesa ahora 11 % menos que antes del rediseño. Con la máquina libre la suite
+        pasó cuatro veces seguidas. Causa probable, la carga; no se pudo reproducir. En CI un fallo que pasa al
+        reintento cuenta como fallo.
+      - Revisión de R3 (`/code-review`, `/ponytail-review`, `web-design-guidelines`, `impeccable audit`): **en
+        curso**; los hallazgos se aplican en un commit aparte. Codex: no verificado (sin cuota).
+      - Costo del método: seis lotes verificando por turnos sobre una sola base local hicieron cola de unos 45
+        minutos. Para un tramo así conviene una base por worktree o un solo verificador al final.
+    - **Sigue:** aplicar los hallazgos de la revisión de R3; R4 (punto de venta y acceso, solo piel; iconos de la
+      aplicación al color nuevo; botones de cambiar contraseña, cerrar sesión y selector de negocio, que comparten
+      panel y punto de venta) y R5 (capturas y textos del manual).
+    - No verificado: frial en el navegador con lotes reales (no hay sesión de un negocio frial entre los archivos de
+      prueba); aviso de órdenes de lavandería con datos; el camino de error de "Por atender"; formularios de pago y
+      de edición de proveedor abiertos; diálogos de anular y devolver a ojo; peso de las fuentes nuevas en el
+      precache del punto de venta; salto de las cifras al cargar IBM Plex Mono; un celular real.
   - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
