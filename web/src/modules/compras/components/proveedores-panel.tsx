@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Banknote, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { formatearBs } from "@/lib/format/moneda";
 import type { FilaProveedor } from "../queries";
 import { AnularPagoProveedor } from "./anular-pago-proveedor";
@@ -30,6 +31,8 @@ export function NuevoProveedor({ negocioId }: { negocioId: string }) {
   );
 }
 
+const COLUMNAS = "md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_9rem_24rem]";
+
 export function ListaProveedores({
   negocioId,
   proveedores,
@@ -42,29 +45,44 @@ export function ListaProveedores({
   const [abierto, setAbierto] = useState<{ id: string; modo: "editar" | "pagar" } | null>(null);
   const cerrar = () => setAbierto(null);
   return (
-    <ul aria-label="Proveedores" className="bg-card shadow-card divide-y rounded-xl border">
+    <ListaFilas
+      etiqueta="Proveedores"
+      columnas={COLUMNAS}
+      cabeceras={
+        <>
+          <span>Proveedor</span>
+          <span>Contacto</span>
+          <span className="text-right">Deuda</span>
+          <span />
+        </>
+      }
+    >
       {proveedores.map((p) => (
-        <li key={p.id} className="px-4 py-3">
+        <Fila key={p.id} columnas={`grid-cols-[1fr_auto] ${COLUMNAS}`}>
           {abierto?.id === p.id && abierto.modo === "editar" ? (
-            <FormProveedor negocioId={negocioId} proveedor={p} alTerminar={cerrar} />
+            <div className="col-span-full">
+              <FormProveedor negocioId={negocioId} proveedor={p} alTerminar={cerrar} />
+            </div>
           ) : (
-            <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_9rem_auto]">
-              <span className="min-w-0 truncate font-medium">
+            <>
+              <span className="min-w-0 truncate font-semibold">
                 {p.nombre}
-                {!p.activo && <span className="text-muted-foreground"> (inactivo)</span>}
+                {!p.activo && (
+                  <span className="text-muted-foreground font-normal"> (inactivo)</span>
+                )}
               </span>
               <span className="text-muted-foreground min-w-0 truncate text-sm max-md:order-3 max-md:col-span-2">
                 {p.contacto ?? ""}
               </span>
-              <span className="text-sm tabular-nums max-md:order-2 md:text-right">
-                Deuda {formatearBs(p.deuda)}
+              <span
+                className={`cifra text-[13px] max-md:order-2 md:text-right ${p.deuda > 0 ? "" : "text-muted-foreground"}`}
+              >
+                <span className="font-sans">Deuda</span> {formatearBs(p.deuda)}
               </span>
-              <div className="flex gap-2 max-md:order-4 max-md:col-span-2">
+              <div className="flex flex-wrap gap-2 max-md:order-4 max-md:col-span-2 md:justify-end">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="min-h-9 md:min-h-8"
                   disabled={p.deuda <= 0}
                   aria-label={`Registrar pago a ${p.nombre}`}
                   onClick={() => setAbierto({ id: p.id, modo: "pagar" })}
@@ -74,8 +92,6 @@ export function ListaProveedores({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="min-h-9 md:min-h-8"
                   aria-label={`Editar a ${p.nombre}`}
                   onClick={() => setAbierto({ id: p.id, modo: "editar" })}
                 >
@@ -83,15 +99,15 @@ export function ListaProveedores({
                 </Button>
                 {puedeAnular && <AnularPagoProveedor proveedorId={p.id} nombre={p.nombre} />}
               </div>
-            </div>
+            </>
           )}
           {abierto?.id === p.id && abierto.modo === "pagar" && (
-            <div className="mt-3">
+            <div className="bg-surface order-last col-span-full mt-2 rounded-lg border p-4">
               <FormPago negocioId={negocioId} proveedor={p} alTerminar={cerrar} />
             </div>
           )}
-        </li>
+        </Fila>
       ))}
-    </ul>
+    </ListaFilas>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador } from "@/modules/catalogo/panel";
@@ -37,7 +38,7 @@ export default async function PaginaCompras({
         titulo="Compras"
         descripcion={`Compras a proveedores de ${activo.nombre}. Cada compra suma stock y recalcula el costo promedio.`}
         acciones={
-          <Link href="/panel/compras/nueva" className={buttonVariants({ className: "h-10" })}>
+          <Link href="/panel/compras/nueva" className={buttonVariants()}>
             <Plus aria-hidden /> Nueva compra
           </Link>
         }
@@ -53,9 +54,7 @@ export default async function PaginaCompras({
             {lista.error}
           </p>
         ) : lista.data.filas.length === 0 ? (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-            Aún no hay compras.
-          </p>
+          <EstadoVacio>Aún no hay compras.</EstadoVacio>
         ) : (
           <>
             <ListaCompras compras={lista.data.filas} puedeAnular={permisos.includes("anular")} />

@@ -14,8 +14,7 @@ export function AnularCompra({ compraId, proveedor }: { compraId: string; provee
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="text-destructive min-h-9 md:min-h-8"
+        className="text-destructive"
         aria-label={`Anular la compra de ${proveedor}`}
         onClick={() => setAbierto(true)}
       >

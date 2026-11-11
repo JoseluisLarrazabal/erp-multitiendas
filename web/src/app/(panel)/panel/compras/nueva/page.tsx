@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { hoyEnBolivia } from "@/lib/format/fecha";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
@@ -9,8 +10,6 @@ import { FormCompra } from "@/modules/compras/panel";
 import { exigirPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Nueva compra · ERP Multitiendas" };
-
-const tarjeta = "text-muted-foreground bg-card rounded-xl border p-6 text-sm";
 
 export default async function PaginaNuevaCompra() {
   const { activo } = await exigirPermiso("gestionar_compras");
@@ -38,10 +37,7 @@ export default async function PaginaNuevaCompra() {
         titulo="Nueva compra"
         descripcion="Registra lo que compraste a un proveedor: suma stock y recalcula el costo promedio."
         acciones={
-          <Link
-            href="/panel/compras"
-            className={buttonVariants({ variant: "outline", className: "h-10" })}
-          >
+          <Link href="/panel/compras" className={buttonVariants({ variant: "outline" })}>
             <ArrowLeft aria-hidden /> Compras
           </Link>
         }
@@ -52,16 +48,16 @@ export default async function PaginaNuevaCompra() {
         </p>
       )}
       {!error && activos.length === 0 && (
-        <p className={tarjeta}>
+        <EstadoVacio>
           Primero crea un proveedor activo en{" "}
           <Link href="/panel/proveedores" className="text-primary underline underline-offset-4">
             Proveedores
           </Link>
           .
-        </p>
+        </EstadoVacio>
       )}
       {!error && activos.length > 0 && ubicaciones.ok && ubicaciones.data.length === 0 && (
-        <p className={tarjeta}>Este negocio no tiene ubicaciones. Se crean por script o seed.</p>
+        <EstadoVacio>Este negocio no tiene ubicaciones. Se crean por script o seed.</EstadoVacio>
       )}
       {!error && activos.length > 0 && ubicaciones.ok && ubicaciones.data.length > 0 && (
         <FormCompra

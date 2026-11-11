@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Hourglass } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { formatearDia, hoyEnBolivia } from "@/lib/format/fecha";
 import { createClient } from "@/lib/supabase/server";
@@ -65,7 +66,7 @@ export default async function PaginaReportes({
           activo.tipo === "frial" && (
             <Link
               href="/panel/inventario/vencimientos"
-              className={buttonVariants({ variant: "outline", className: "h-10" })}
+              className={buttonVariants({ variant: "outline" })}
             >
               <Hourglass aria-hidden /> Vencimientos
             </Link>
@@ -73,7 +74,7 @@ export default async function PaginaReportes({
         }
       />
       <div className="flex min-w-0 flex-col gap-5">
-        <nav aria-label="Reporte" className="flex flex-wrap items-center gap-2">
+        <nav aria-label="Reporte" className="flex flex-wrap gap-x-5 gap-y-1 border-b">
           {lista.map((d) => (
             <Link
               key={d.id}
@@ -84,8 +85,10 @@ export default async function PaginaReportes({
               })}
               aria-current={d.id === filtros.r ? "page" : undefined}
               className={cn(
-                buttonVariants({ variant: d.id === filtros.r ? "default" : "outline", size: "sm" }),
-                "min-h-9 md:min-h-8",
+                "-mb-px inline-flex min-h-10 items-center border-b-2 px-1 text-sm font-semibold",
+                d.id === filtros.r
+                  ? "border-primary text-foreground"
+                  : "text-muted-foreground hover:text-foreground border-transparent",
               )}
             >
               {d.etiqueta}
@@ -110,7 +113,7 @@ export default async function PaginaReportes({
           </p>
         ))}
         {tabla && tabla.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             No hay datos para este reporte con los filtros elegidos. Prueba con otro rango, por
             ejemplo{" "}
             <Link
@@ -120,7 +123,7 @@ export default async function PaginaReportes({
               Este mes
             </Link>
             .
-          </p>
+          </EstadoVacio>
         )}
         {tabla && tabla.filas.length > 0 && (
           <>
