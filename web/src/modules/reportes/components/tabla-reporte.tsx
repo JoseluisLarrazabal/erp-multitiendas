@@ -1,3 +1,4 @@
+import { Td, TdCifra, Th } from "@/components/ui/tabla";
 import { cn } from "@/lib/utils";
 import { esNumerica, textoCelda, type TablaDatos } from "../tabla";
 
@@ -8,22 +9,36 @@ export function TablaReporte({ tabla, nombre }: { tabla: TablaDatos; nombre: str
   // Números y fechas no se parten; los textos pueden envolver.
   const clase = (i: number) =>
     cn(
-      "px-3 py-2",
       columnas[i]!.tipo === "texto"
         ? "min-w-32 text-left break-words whitespace-normal"
         : "whitespace-nowrap",
-      esNumerica(columnas[i]!.tipo) ? "text-right tabular-nums" : "text-left",
+      esNumerica(columnas[i]!.tipo) ? "text-right" : "text-left",
     );
   const celda = (v: string | number | null, i: number, esTotal: boolean) => {
     const contenido = esTotal && v === null ? "" : textoCelda(columnas[i]!.tipo, v);
+    const filete = esTotal && "border-t-foreground border-t-2";
     return i === 0 ? (
-      <th key={i} scope="row" className={cn(clase(i), "font-normal", esTotal && "font-semibold")}>
+      <th
+        key={i}
+        scope="row"
+        className={cn(
+          "h-11 border-b px-3 first:pl-0 last:pr-0",
+          clase(i),
+          "font-normal",
+          esTotal && "font-semibold",
+          filete,
+        )}
+      >
         {contenido}
       </th>
-    ) : (
-      <td key={i} className={clase(i)}>
+    ) : esNumerica(columnas[i]!.tipo) ? (
+      <TdCifra key={i} className={cn(clase(i), filete)}>
         {contenido}
-      </td>
+      </TdCifra>
+    ) : (
+      <Td key={i} className={cn(clase(i), "text-[13px]", filete)}>
+        {contenido}
+      </Td>
     );
   };
   return (
@@ -31,29 +46,27 @@ export function TablaReporte({ tabla, nombre }: { tabla: TablaDatos; nombre: str
       tabIndex={0}
       role="region"
       aria-label={`Tabla de ${nombre}`}
-      className="bg-card focus-visible:ring-ring shadow-card overflow-x-auto rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
+      className="focus-visible:ring-ring overflow-x-auto rounded-sm focus-visible:ring-2 focus-visible:outline-none"
     >
       <table className="w-full text-sm">
         <caption className="sr-only">{nombre}</caption>
         <thead>
-          <tr className="text-muted-foreground border-b text-xs font-semibold">
+          <tr>
             {columnas.map((c, i) => (
-              <th key={c.titulo} scope="col" className={clase(i)}>
+              <Th key={c.titulo} scope="col" className={clase(i)}>
                 {c.titulo}
-              </th>
+              </Th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y">
+        <tbody>
           {tabla.filas.map((fila, n) => (
             <tr key={n}>{fila.map((v, i) => celda(v, i, false))}</tr>
           ))}
         </tbody>
         {tabla.totales && (
           <tfoot>
-            <tr className="border-t-2 font-semibold">
-              {tabla.totales.map((v, i) => celda(v, i, true))}
-            </tr>
+            <tr className="font-semibold">{tabla.totales.map((v, i) => celda(v, i, true))}</tr>
           </tfoot>
         )}
       </table>

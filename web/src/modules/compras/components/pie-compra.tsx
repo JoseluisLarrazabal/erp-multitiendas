@@ -15,8 +15,8 @@ export function PieCompra({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-lg font-semibold tabular-nums">
-        Total: {total === null ? "—" : formatearBs(total / 100)}
+      <p className="border-foreground border-t-2 pt-3 text-lg font-semibold">
+        Total: <span className="cifra">{total === null ? "—" : formatearBs(total / 100)}</span>
       </p>
       <PieOperacion etiqueta="Registrar compra" pendiente={pendiente} error={error} exito={exito} />
     </div>

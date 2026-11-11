@@ -115,7 +115,6 @@ export function DialogoMotivo({
                 onChange={(e) => setMotivo(e.target.value)}
                 maxLength={200}
                 autoComplete="off"
-                className="h-10"
                 {...propsCampo(`${id}-motivo`, errores)}
               />
             </Campo>

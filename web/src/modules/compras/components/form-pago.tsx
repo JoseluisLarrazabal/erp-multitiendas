@@ -60,7 +60,6 @@ export function FormPago({
           id={`${id}-monto`}
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={monto}
           onChange={(e) => setMonto(e.target.value)}
           {...propsCampo(`${id}-monto`, errorMonto ? { [`${id}-monto`]: errorMonto } : {}, true)}
@@ -84,11 +83,11 @@ export function FormPago({
           {error}
         </p>
         <div className="flex gap-2">
-          <Button type="submit" disabled={pendiente} className="h-10">
+          <Button type="submit" disabled={pendiente}>
             {pendiente && <Loader2 className="animate-spin" aria-hidden />}
             Registrar pago
           </Button>
-          <Button type="button" variant="outline" className="h-10" onClick={alTerminar}>
+          <Button type="button" variant="outline" onClick={alTerminar}>
             Cancelar
           </Button>
         </div>

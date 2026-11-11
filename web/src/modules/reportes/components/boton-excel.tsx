@@ -41,7 +41,6 @@ export function BotonExcel({
       <Button
         type="button"
         variant="outline"
-        className="h-10"
         aria-disabled={estaGenerando}
         aria-busy={estaGenerando}
         onClick={descargar}

@@ -135,7 +135,7 @@ export function FormCompra({
       aria-label="Registrar compra"
       className="flex max-w-4xl flex-col gap-5"
     >
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="bg-card shadow-card grid gap-5 rounded-xl border p-5 sm:grid-cols-2 md:p-6">
         <Campo id="cmp-proveedor" etiqueta="Proveedor" error={errores["cmp-proveedor"]}>
           <SelectNativo
             id="cmp-proveedor"
@@ -183,26 +183,27 @@ export function FormCompra({
           </Campo>
         )}
       </div>
-      <div className="flex flex-col gap-3">
-        {items.map((i) => (
-          <FilaCompra
-            key={i.clave}
-            negocioId={negocioId}
-            esFrial={esFrial}
-            hoy={hoy}
-            item={i}
-            errores={errores}
-            puedeQuitar={items.length > 1}
-            alCambiar={(c) => cambiar(i.clave, c)}
-            alQuitar={() => setItems((prev) => prev.filter((x) => x.clave !== i.clave))}
-          />
-        ))}
+      <div className="bg-card shadow-card flex flex-col gap-4 rounded-xl border p-5 md:p-6">
+        <div className="divide-y">
+          {items.map((i) => (
+            <FilaCompra
+              key={i.clave}
+              negocioId={negocioId}
+              esFrial={esFrial}
+              hoy={hoy}
+              item={i}
+              errores={errores}
+              puedeQuitar={items.length > 1}
+              alCambiar={(c) => cambiar(i.clave, c)}
+              alQuitar={() => setItems((prev) => prev.filter((x) => x.clave !== i.clave))}
+            />
+          ))}
+        </div>
         <div>
           <Button
             type="button"
             id="cmp-agregar"
             variant="outline"
-            className="h-10"
             onClick={() =>
               setItems((prev) => [...prev, nueva(Math.max(...prev.map((x) => x.clave)) + 1)])
             }
