@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { codigoErp, mensajeErp } from "@/lib/erp-errores";
 import { createClient } from "@/lib/supabase/server";
-import { validar, type Resultado } from "@/modules/usuarios/panel";
+import { detalleDeError, validar, type Resultado } from "@/modules/usuarios/panel";
 import { mensajeDeVentas, type AccionVentas } from "./domain-panel";
 import { anularOrdenSchema } from "./schemas-ordenes";
 import {
@@ -17,9 +17,17 @@ import {
   topeSchema,
 } from "./schemas-panel";
 
-const fallo = (accion: AccionVentas, error: { message: string } | null): Resultado<never> => {
+const fallo = (
+  accion: AccionVentas,
+  error: { message: string; code?: string } | null,
+): Resultado<never> => {
   const codigo = codigoErp(error ?? undefined);
-  return { ok: false, error: mensajeDeVentas(accion, codigo) ?? mensajeErp(codigo), codigo };
+  return {
+    ok: false,
+    error: mensajeDeVentas(accion, codigo) ?? mensajeErp(codigo),
+    codigo,
+    ...detalleDeError(error),
+  };
 };
 const invalido = (accion: AccionVentas): Resultado<never> =>
   fallo(accion, { message: "ERP_DATOS_INVALIDOS" });

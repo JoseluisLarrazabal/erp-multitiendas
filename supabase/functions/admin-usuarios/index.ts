@@ -54,6 +54,12 @@ const codigoDeRpc = (mensaje: string | undefined) => {
   return c && CODIGOS_RPC.has(c) ? c : "ERP_INTERNO";
 };
 
+// Rastro de un fallo interno: solo la acción y el código/estado, nunca message, correos, claves ni ids.
+const interno = (accion: string, e?: { code?: string; status?: number } | null) => {
+  console.error("admin-usuarios ERP_INTERNO", { accion, code: e?.code, status: e?.status });
+  return falla("ERP_INTERNO");
+};
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return falla("ERP_METODO");
 
@@ -61,7 +67,7 @@ Deno.serve(async (req) => {
   const anon = Deno.env.get("SUPABASE_ANON_KEY");
   const servicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const jwt = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!url || !anon || !servicio) return falla("ERP_INTERNO");
+  if (!url || !anon || !servicio) return interno("config");
   if (!jwt) return falla("ERP_SIN_SESION");
 
   const sinSesion = { auth: { persistSession: false, autoRefreshToken: false } };
@@ -95,14 +101,14 @@ Deno.serve(async (req) => {
         p_negocio_id: datos.negocio_id,
         p_rol: datos.rol,
       });
-      if (error) return falla("ERP_INTERNO");
+      if (error) return interno("crear", error);
       if (permitido !== true) {
         // Solo en el camino de rechazo se pregunta por qué, para dar el código claro.
         const { data: conPermiso, error: errorPermiso } = await llamador.rpc("tiene_permiso", {
           p_negocio_id: datos.negocio_id,
           p_permiso: "usuarios",
         });
-        if (errorPermiso) return falla("ERP_INTERNO");
+        if (errorPermiso) return interno("crear", errorPermiso);
         if (conPermiso !== true) return falla("ERP_SIN_PERMISO");
         return falla(
           datos.rol === "dueno" || datos.rol === "encargado"
@@ -120,7 +126,7 @@ Deno.serve(async (req) => {
       if (errorCrear || !creada.user) {
         if (errorCrear?.code === "email_exists") return falla("ERP_CORREO_EXISTE");
         if (errorCrear?.code === "weak_password") return falla("ERP_CLAVE_DEBIL");
-        return falla("ERP_INTERNO");
+        return interno("crear", errorCrear);
       }
 
       const { error: errorAsignar } = await llamador.rpc("asignar_usuario", {
@@ -132,7 +138,9 @@ Deno.serve(async (req) => {
         // Fallo real (carrera, red): la cuenta recién creada no debe quedar sin negocio.
         const { error: errorBorrar } = await admin.deleteUser(creada.user.id);
         // Si la limpieza falla queda una cuenta sin negocio: se avisa, no se oculta.
-        return falla(errorBorrar ? "ERP_CUENTA_HUERFANA" : codigoDeRpc(errorAsignar.message));
+        if (errorBorrar) return falla("ERP_CUENTA_HUERFANA");
+        const codigo = codigoDeRpc(errorAsignar.message);
+        return codigo === "ERP_INTERNO" ? interno("crear", errorAsignar) : falla(codigo);
       }
       return responder({ ok: true, data: { usuario_id: creada.user.id } });
     }
@@ -142,7 +150,7 @@ Deno.serve(async (req) => {
     const { data: puede, error } = await llamador.rpc(permiso, {
       p_usuario_id: datos.usuario_id,
     });
-    if (error) return falla("ERP_INTERNO");
+    if (error) return interno(datos.accion, error);
     if (puede !== true) return falla("ERP_SIN_PERMISO");
 
     if (datos.accion === "restablecer_clave") {
@@ -151,7 +159,7 @@ Deno.serve(async (req) => {
         password: datos.clave,
       });
       if (errorClave) {
-        return falla(errorClave.code === "weak_password" ? "ERP_CLAVE_DEBIL" : "ERP_INTERNO");
+        return errorClave.code === "weak_password" ? falla("ERP_CLAVE_DEBIL") : interno(datos.accion, errorClave);
       }
       // La clave ya cambió: si la auditoría falla se avisa, no se oculta ni se deshace.
       const { error: errorAuditoria } = await clienteServicio.rpc("auditar_clave", {
@@ -163,13 +171,15 @@ Deno.serve(async (req) => {
     }
 
     // Solo desactivar y reactivar llegan aquí; una acción nueva no debe caer en el baneo por descuido.
-    if (datos.accion !== "desactivar" && datos.accion !== "reactivar") return falla("ERP_INTERNO");
+    if (datos.accion !== "desactivar" && datos.accion !== "reactivar") return interno("accion_desconocida");
     const { error: errorBan } = await admin.updateUserById(datos.usuario_id, {
       ban_duration: datos.accion === "desactivar" ? "876000h" : "none",
     });
     // El trigger que sincroniza el baneo lanza ERP_ULTIMO_DUENO si dejaría un negocio sin dueño activo.
     if (errorBan) {
-      return falla(errorBan.message?.includes("ERP_ULTIMO_DUENO") ? "ERP_ULTIMO_DUENO" : "ERP_INTERNO");
+      return errorBan.message?.includes("ERP_ULTIMO_DUENO")
+        ? falla("ERP_ULTIMO_DUENO")
+        : interno(datos.accion, errorBan);
     }
     // El baneo ya rige: si la auditoría falla se avisa, no se oculta ni se deshace.
     const { error: errorAuditoria } = await clienteServicio.rpc("auditar_cuenta", {
@@ -179,7 +189,8 @@ Deno.serve(async (req) => {
     });
     if (errorAuditoria) return falla("ERP_AUDITORIA");
     return responder({ ok: true, data: { usuario_id: datos.usuario_id } });
-  } catch {
-    return falla("ERP_INTERNO");
+  } catch (e) {
+    // Solo el nombre del error: el mensaje puede traer datos del usuario.
+    return interno(datos.accion, { code: e instanceof Error ? e.name : typeof e });
   }
 });

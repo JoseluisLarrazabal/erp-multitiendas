@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   codigoDeMensaje,
+  detalleDeError,
   mensajeDeError as mensajeBase,
   validar,
   type Resultado,
@@ -33,7 +34,15 @@ import {
 } from "./schemas";
 
 const mensaje = (codigo?: string) => mensajeDeInventario(codigo) ?? mensajeBase(codigo);
-const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensaje(codigo) });
+const fallo = (
+  codigo?: string,
+  errorRpc?: Parameters<typeof detalleDeError>[0],
+): Resultado<never> => ({
+  ok: false,
+  error: mensaje(codigo),
+  codigo: codigo ?? null,
+  ...detalleDeError(errorRpc),
+});
 const REVALIDAR = "/panel/inventario";
 const listo = (): Resultado<null> => {
   revalidatePath(REVALIDAR, "layout");
@@ -63,7 +72,7 @@ export async function registrarEntrada(entrada: unknown): Promise<Resultado<null
           p_vence: d.vence,
         })
       : await supabase.rpc("registrar_entrada", comunes);
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   return listo();
 }
 
@@ -76,7 +85,7 @@ export async function revertirConsumo(entrada: unknown): Promise<Resultado<null>
     p_movimiento_id: d.movimientoId,
     p_motivo: d.motivo,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath(REVALIDAR, "layout");
   return { ok: true, data: null };
 }
@@ -95,7 +104,7 @@ export async function registrarSalida(entrada: unknown): Promise<Resultado<null>
     p_motivo: d.motivo,
     p_serie_ids: d.serieIds ?? undefined,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   return listo();
 }
 
@@ -113,7 +122,7 @@ export async function trasladar(entrada: unknown): Promise<Resultado<null>> {
     p_motivo: d.motivo as string,
     p_serie_ids: d.serieIds ?? undefined,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   return listo();
 }
 
@@ -132,7 +141,7 @@ export async function registrarConteo(entrada: unknown): Promise<Resultado<{ aju
     })),
     p_motivo: d.motivo as string,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath(REVALIDAR, "layout");
   return { ok: true, data: { ajustes: data } };
 }
@@ -149,7 +158,7 @@ export async function registrarSeries(
     p_ubicacion_id: d.ubicacionId,
     p_series: d.series,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath(REVALIDAR, "layout");
   return { ok: true, data: { registradas: data } };
 }

@@ -509,6 +509,26 @@ isOneToOne: false
       referencedColumns: ["negocio_id","id"]
     }
                   ]
+                },"errores_app": {
+                  Row: {
+                    "codigo": string | null,"contexto": Json | null,"created_at": string,"id": number,"mensaje": string,"negocio_id": string | null,"origen": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "codigo"?: string | null,"contexto"?: Json | null,"created_at"?: string,"id"?: never,"mensaje": string,"negocio_id"?: string | null,"origen": string,"usuario_id": string
+                  }
+                  Update: {
+                    "codigo"?: string | null,"contexto"?: Json | null,"created_at"?: string,"id"?: never,"mensaje"?: string,"negocio_id"?: string | null,"origen"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "errores_app_negocio_id_fkey"
+      columns: ["negocio_id"]
+isOneToOne: false
+      referencedRelation: "negocios"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"lotes": {
                   Row: {
                     "cantidad": number,"codigo": string,"created_at": string,"id": string,"movimiento_id": string,"negocio_id": string,"producto_id": string,"ubicacion_id": string,"usuario_id": string | null,"vence": string
@@ -1576,6 +1596,9 @@ isOneToOne: false
                            },
 "registrar_entrada_lote":
 { Args: { "p_cantidad": number,"p_costo_unitario": number,"p_lote": string,"p_motivo": string,"p_negocio_id": string,"p_operacion_id": string,"p_producto_id": string,"p_ubicacion_id": string,"p_vence": string }; Returns: string
+                           },
+"registrar_error":
+{ Args: { "p_codigo": string,"p_contexto"?: Json,"p_mensaje": string,"p_negocio_id"?: string,"p_origen": string }; Returns: undefined
                            },
 "registrar_movimiento_caja":
 { Args: { "p_id": string,"p_monto": number,"p_motivo": string,"p_offline"?: Json,"p_sesion_id": string,"p_tipo": string }; Returns: string

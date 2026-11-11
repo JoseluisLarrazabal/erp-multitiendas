@@ -1,3 +1,5 @@
+import { registrarError } from "@/lib/registro-errores";
+
 // Errores de las RPC (`raise exception 'ERP_*'`) -> mensajes para el cajero. Un código desconocido da un mensaje
 // genérico: el texto crudo de Postgres no se muestra (puede traer datos del negocio o del cliente).
 type ErrorRpc = { message?: string; code?: string } | null | undefined;
@@ -54,5 +56,7 @@ export function errorRpc(error: NonNullable<ErrorRpc>): {
 } {
   const codigo = codigoErp(error);
   const red = esFalloDeRed(error);
+  // Ni un rechazo de negocio (ERP_*) ni un fallo de red son inesperados. Solo code y message: nunca details ni hint.
+  if (codigo === null && !red) registrarError("rpc", error.code, error.message || "sin mensaje");
   return { ok: false, codigo, red, error: red ? MENSAJE_RED : mensajeErp(codigo) };
 }

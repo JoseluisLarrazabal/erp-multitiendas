@@ -6,6 +6,7 @@ import { parsearMonto } from "@/lib/format/moneda";
 import { createClient } from "@/lib/supabase/server";
 import {
   codigoDeMensaje,
+  detalleDeError,
   mensajeDeError as mensajeBase,
   validar,
   type Resultado,
@@ -19,9 +20,14 @@ import {
   saldoInicialSchema,
 } from "./schemas";
 
-const fallo = (codigo?: string): Resultado<never> => ({
+const fallo = (
+  codigo?: string,
+  errorRpc?: Parameters<typeof detalleDeError>[0],
+): Resultado<never> => ({
   ok: false,
   error: mensajeDeCredito(codigo) ?? mensajeBase(codigo),
+  codigo: codigo ?? null,
+  ...detalleDeError(errorRpc),
 });
 const listo = (): Resultado<null> => {
   revalidatePath("/panel/creditos");
@@ -43,7 +49,7 @@ export async function guardarCreditoConfig(entrada: unknown): Promise<Resultado<
     p_max_cuotas: d.maxCuotas,
     p_interes_mensual_pct: interes / 100,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? fallo(codigoDeMensaje(error.message), error) : listo();
 }
 
 export async function crearCreditoInicial(entrada: unknown): Promise<Resultado<null>> {
@@ -60,7 +66,7 @@ export async function crearCreditoInicial(entrada: unknown): Promise<Resultado<n
     p_cuotas: d.cuotas,
     p_primera: d.primera,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? fallo(codigoDeMensaje(error.message), error) : listo();
 }
 
 export async function anularCreditoInicial(entrada: unknown): Promise<Resultado<null>> {
@@ -73,7 +79,7 @@ export async function anularCreditoInicial(entrada: unknown): Promise<Resultado<
     p_credito_id: d.creditoId,
     p_motivo: d.motivo,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? fallo(codigoDeMensaje(error.message), error) : listo();
 }
 
 export async function anularPagoCuota(entrada: unknown): Promise<Resultado<null>> {
@@ -88,7 +94,7 @@ export async function anularPagoCuota(entrada: unknown): Promise<Resultado<null>
     p_dispositivo_id: d.dispositivoId,
     p_motivo: d.motivo,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? fallo(codigoDeMensaje(error.message), error) : listo();
 }
 
 export async function marcarDocumentosCredito(entrada: unknown): Promise<Resultado<null>> {
@@ -102,5 +108,5 @@ export async function marcarDocumentosCredito(entrada: unknown): Promise<Resulta
     p_domicilio: d.domicilio,
     p_pagare: d.pagare,
   });
-  return error ? fallo(codigoDeMensaje(error.message)) : listo();
+  return error ? fallo(codigoDeMensaje(error.message), error) : listo();
 }

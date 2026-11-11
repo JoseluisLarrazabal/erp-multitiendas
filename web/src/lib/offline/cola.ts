@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { registrarError } from "@/lib/registro-errores";
 import { baseOffline } from "./db";
 import { avisarRed } from "./red";
 
@@ -265,7 +266,8 @@ async function enviarFila(
   let r: ResultadoEnvio;
   try {
     r = await enviador(fila);
-  } catch {
+  } catch (e) {
+    registrarError("cola", null, e instanceof Error ? e.message : String(e));
     // respondio:true a propósito: una excepción local persistente debe acabar en rechazo visible, no en bucle infinito.
     r = { t: "red", error: "No se pudo enviar. Se reintentará.", respondio: true };
   }
