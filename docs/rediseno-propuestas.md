@@ -1,7 +1,15 @@
 # Rediseño visual: las dos propuestas y la deliberación
 
-Registro de la fase 3.2 de `docs/plan-paralelo-rediseno.md`. Estado al 2026-11-10: **las dos maquetas están
-publicadas y falta la elección del CTO**. Hasta esa elección no se escribe código del producto para el rediseño.
+Registro de la fase 3.2 de `docs/plan-paralelo-rediseno.md`.
+
+**Decisión del CTO, 2026-11-10: el híbrido recomendado.** Base A en todo el producto, más tres piezas del tablero de B
+(avisos con detalle y un botón por aviso, cajas abiertas con las ventas de cada una, stock bajo como tabla compacta).
+Del punto de venta de B no se toma nada. El CTO eligió sin haber podido abrir la página publicada de B (dijo "no veo la
+propuesta b"); se le enviaron cuatro capturas suyas. La causa de que no la viera no se averiguó.
+
+Ajustes que el chairman suma a la base A por los defectos vistos: etiquetas del gráfico de 7 días legibles, acciones
+frecuentes arriba también en el celular, iconos de `lucide-react` (los que ya usa el proyecto) en lugar de los SVG
+propios de la maqueta, y las fuentes servidas por `next/font` porque la CSP del producto no admite Google Fonts.
 
 ## Las maquetas
 
@@ -71,7 +79,7 @@ estilo.
 
 ## Lo que falta
 
-- **El CTO elige A, B, el híbrido recomendado, o pide una tercera propuesta.**
+- Implementación por tramos (R1 a R5 del plan), en ramas empujadas sin PR; los PR se abren desde el 2026-12-01.
 - Por verificar antes de construir el tablero: que las ventas por caja abierta y el monto de la diferencia de una caja
   cerrada salgan de consultas que ya existen (`sesionesAbiertas`, `listarCajaPorRevisar`); el plan no admite una RPC
   nueva para el tablero.

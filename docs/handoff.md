@@ -14,11 +14,11 @@ errores en curso).
     noviembre por los minutos de Actions.
   - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con una lista que prepara Claude),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: esperando la elección del CTO.** Las dos propuestas están publicadas y
-    deliberadas; enlaces, diferencias, defectos y recomendación (base A con tres piezas del tablero de B) en
-    `docs/rediseno-propuestas.md`. Las dos llegaron al mismo concepto, así que la elección es de ejecución y no de
-    dirección. Nada de código del rediseño antes de esa elección. Después: implementación por tramos en ramas sin PR;
-    los PR B, C y D se abren desde el 2026-12-01.
+  - **Fase 3, rediseño visual y tablero: en implementación.** El CTO eligió el 2026-11-10 el híbrido recomendado:
+    base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
+    deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
+    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Sigue: plan detallado de R1 (base) y R2 (tablero),
+    implementación por tramos en ramas sin PR; los PR B, C y D se abren desde el 2026-12-01.
   - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
