@@ -163,6 +163,7 @@ export function ReservasPos({
                 {puedeCancelar ? (
                   <ConfirmarAccion
                     etiqueta="Cancelar"
+                    size="lg"
                     titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
                     descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
                     confirmar="Cancelar reserva"

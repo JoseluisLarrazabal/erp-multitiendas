@@ -99,9 +99,9 @@ export function Cobro({
               });
           }}
         >
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-2">
             <AlertDialogTitle className="text-lg font-semibold">{titulo}</AlertDialogTitle>
-            <p className="cifra text-3xl">{bs(total)}</p>
+            <p className="cifra text-2xl min-[360px]:text-3xl">{bs(total)}</p>
           </div>
           {detalle && (
             <p className="bg-muted rounded-lg px-3 py-2 text-sm tabular-nums">{detalle}</p>
@@ -180,12 +180,14 @@ export function Cobro({
           </fieldset>
 
           <p
-            className={`flex items-baseline justify-between rounded-lg px-3 py-3 text-base font-semibold ${calculo?.ok ? "bg-success-soft text-success" : "bg-muted"}`}
+            className={`flex items-baseline justify-between gap-2 rounded-lg px-3 py-3 text-base font-semibold ${calculo?.ok ? "bg-success-soft text-success" : "bg-muted"}`}
             aria-live="polite"
             aria-atomic="true"
           >
             <span>Vuelto</span>
-            <span className="cifra text-3xl">{calculo?.ok ? bs(calculo.vuelto) : "—"}</span>
+            <span className="cifra text-2xl min-[360px]:text-3xl">
+              {calculo?.ok ? bs(calculo.vuelto) : "—"}
+            </span>
           </p>
 
           <p role="status" className="text-foreground text-[13px] font-medium empty:hidden">

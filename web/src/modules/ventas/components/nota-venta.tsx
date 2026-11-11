@@ -44,7 +44,7 @@ export function NotaVentaVista({
               key={p}
               type="button"
               variant={papel === p ? "secondary" : "outline"}
-              className="h-10"
+              className="h-11"
               aria-pressed={papel === p}
               onClick={() => setPapel(p)}
             >
@@ -52,15 +52,15 @@ export function NotaVentaVista({
             </Button>
           ))}
         </fieldset>
-        <Button type="button" className="h-10" onClick={() => window.print()}>
+        <Button type="button" className="h-11" onClick={() => window.print()}>
           <Printer /> Imprimir
         </Button>
         {alVerPlan && (
-          <Button type="button" variant="outline" className="h-10" onClick={alVerPlan}>
+          <Button type="button" variant="outline" className="h-11" onClick={alVerPlan}>
             <CalendarDays /> Plan de cuotas
           </Button>
         )}
-        <Button type="button" variant="outline" className="h-10" onClick={alNueva} autoFocus>
+        <Button type="button" variant="outline" className="h-11" onClick={alNueva} autoFocus>
           <Plus /> {orden ? "Nueva orden" : "Nueva venta"}
         </Button>
       </div>

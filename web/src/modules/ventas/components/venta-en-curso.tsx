@@ -258,11 +258,13 @@ export function VentaEnCurso({
 
       {!v.consulta && !aparte && (
         <div className="bg-card fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
-          <p className="cifra flex-1 text-2xl">{bs(totales?.total ?? 0)}</p>
+          <p className="cifra min-w-0 flex-1 text-xl min-[360px]:text-2xl">
+            {bs(totales?.total ?? 0)}
+          </p>
           <Button
             type="button"
             size="xl"
-            className="px-8"
+            className="px-6 min-[360px]:px-8"
             disabled={!v.puedeCobrar}
             onClick={v.abrirCobro}
           >

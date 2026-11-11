@@ -41,7 +41,7 @@ export function useDolarParalelo(): Lectura {
 export function DolarParalelo() {
   const l = useDolarParalelo();
   return (
-    <p className="text-muted-foreground text-xs whitespace-nowrap print:hidden">
+    <p className="text-muted-foreground text-[13px] whitespace-nowrap print:hidden">
       {l === undefined ? (
         "Paralelo…"
       ) : l === null ? (
