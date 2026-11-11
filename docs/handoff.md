@@ -2,7 +2,7 @@
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 Última actualización: 2026-11-11 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
-desplegado en producción; rediseño: R1 a R4 hechos y verificados en `feat/rediseno-base`; R5, el manual, en curso).
+desplegado en producción; rediseño completo (R1 a R5) en `feat/rediseno-base`, verificado en local; sus PR se abren desde el 2026-12-01).
 
 ## Próxima sesión (arrancar acá)
 
@@ -34,7 +34,7 @@ desplegado en producción; rediseño: R1 a R4 hechos y verificados en `feat/redi
       globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
   - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: en implementación.** El CTO eligió el 2026-11-10 el híbrido recomendado:
+  - **Fase 3, rediseño visual y tablero: implementado en rama, pendiente de PR.** El CTO eligió el 2026-11-10 el híbrido recomendado:
     base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
     deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
     `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
@@ -109,8 +109,20 @@ desplegado en producción; rediseño: R1 a R4 hechos y verificados en `feat/redi
         elegida (Enter sigue agregando el primero).
       - Anotado para después del paralelo (cambio de flujo): en celular hay mucho encabezado antes del buscador del
         punto de venta (ir al panel, contraseña, cerrar sesión, tipo de cambio, equipo, pestañas).
-    - **Sigue:** R5 (textos del manual donde el Inicio era una grilla de accesos, y las 25 capturas), en curso. Después,
-      los PR B, C y D desde el 2026-12-01.
+    - **R5, manual: hecho y empujado (`74361ce`, 2026-11-11).** `docs/manual/encargado-y-dueno.md` explica el tablero
+      bloque por bloque y el menú por grupos; `contador.md` y `docs/capacitacion.md` se ajustan a lo mismo;
+      `vendedor.md` y `lavanderia.md` no necesitaron cambios. Las 25 capturas se regeneraron contra la base local del
+      seed y hay una nueva (`panel-inicio-lavanderia.png`); son 26, todas citadas. Los cuatro PDF se exportan sin
+      errores (vendedor 19 páginas, lavandería 11, encargado y dueño 36, contador 6); `docs/manual/dist/` no se
+      versiona: hay que volver a generarlos antes de entregarlos. `docs/decisiones-manual.md` recoge que el aviso de
+      ventas por revisar ya no trae vendedor y motivo en el Inicio.
+    - **El rediseño está completo en `feat/rediseno-base` (R1 a R5), sin PR.** Es una sola rama con todo: al abrir los
+      PR desde el 2026-12-01 hay que decidir si va en uno (un CI de ~17 minutos) o partido en B, C y D como decía el
+      plan (tres CI). Recomendación del chairman: uno solo, porque los tramos dependen entre sí (R3 y R4 usan los
+      primitivos de R1) y partirlos exige rehacer la historia. Antes de abrirlo: integrar `main`, correr
+      `verificar.sh` y, cuando vuelva la cuota (2026-12-03), Codex sobre el diff.
+    - **Después del merge del rediseño:** verificación en producción con Playwright (solo lectura), y los equipos que
+      ya tengan el punto de venta instalado toman el diseño nuevo solos cuando estén sin uso.
     - No verificado: frial en el navegador con lotes reales (no hay sesión de un negocio frial entre los archivos de
       prueba); aviso de órdenes de lavandería con datos; el camino de error de "Por atender"; formularios de pago y
       de edición de proveedor abiertos; diálogos de anular y devolver a ojo; peso de las fuentes nuevas en el
