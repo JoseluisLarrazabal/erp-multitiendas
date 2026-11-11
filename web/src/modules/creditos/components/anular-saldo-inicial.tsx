@@ -14,7 +14,7 @@ export function AnularSaldoInicial({ creditoId }: { creditoId: string }) {
   return (
     <section
       aria-label="Anular saldo inicial"
-      className="bg-card flex flex-wrap items-end gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card flex flex-wrap items-end gap-3 rounded-xl border p-5"
     >
       <div className="flex min-w-56 flex-1 flex-col gap-1.5">
         <Label htmlFor="anular-motivo">Motivo de la anulación</Label>
@@ -22,7 +22,6 @@ export function AnularSaldoInicial({ creditoId }: { creditoId: string }) {
           id="anular-motivo"
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
         />

@@ -24,10 +24,7 @@ export default async function PaginaCaja({ params }: { params: Promise<{ id: str
         titulo="Sesión de caja"
         descripcion={`Detalle en ${activo.nombre}.`}
         acciones={
-          <Link
-            href="/panel/cajas"
-            className={buttonVariants({ variant: "outline", className: "h-10" })}
-          >
+          <Link href="/panel/cajas" className={buttonVariants({ variant: "outline" })}>
             <ArrowLeft aria-hidden /> Cajas
           </Link>
         }

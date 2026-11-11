@@ -22,7 +22,7 @@ export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; i
   return (
     <section
       aria-label="Documentos del crédito"
-      className="bg-card flex flex-col gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-5"
     >
       <h2 className="text-[15px] font-semibold">Documentos entregados</h2>
       <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -30,7 +30,7 @@ export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; i
           <label key={x.clave} className="flex min-h-10 items-center gap-2 text-sm">
             <input
               type="checkbox"
-              className="size-4"
+              className="accent-primary size-4"
               checked={docs[x.clave]}
               onChange={(e) => {
                 setHecho(false);
@@ -49,7 +49,7 @@ export function DocumentosCredito({ creditoId, inicial }: { creditoId: string; i
       </p>
       <Button
         type="button"
-        className="h-10 self-start"
+        className="self-start"
         disabled={!cambio || pendiente}
         onClick={() =>
           ejecutar(

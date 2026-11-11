@@ -4,12 +4,14 @@ import { useState, type FormEvent } from "react";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { Campo, propsCampo } from "@/components/panel/campo";
 import { useAccion } from "@/components/panel/use-accion";
 import { guardarCliente } from "../actions";
 import type { FilaCliente } from "../lecturas-panel";
 import { clientePanelSchema } from "../schemas";
 
+const COLUMNAS = "md:grid-cols-[minmax(0,1.4fr)_9rem_9rem_minmax(0,1fr)_6rem]";
 const FALTA_NOMBRE = "Escribe el nombre del cliente.";
 
 // Alta (id undefined) o edición de un cliente. Editar reemplaza los cuatro campos.
@@ -54,7 +56,6 @@ function FormCliente({
           id={`${p}-nombre`}
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={v.nombre}
           onChange={set("nombre")}
           {...propsCampo(`${p}-nombre`, errorNombre ? { [`${p}-nombre`]: errorNombre } : {})}
@@ -65,7 +66,6 @@ function FormCliente({
           id={`${p}-doc`}
           autoComplete="off"
           maxLength={30}
-          className="h-10"
           value={v.ci_nit}
           onChange={set("ci_nit")}
         />
@@ -76,7 +76,6 @@ function FormCliente({
           inputMode="tel"
           autoComplete="off"
           maxLength={30}
-          className="h-10"
           value={v.telefono}
           onChange={set("telefono")}
         />
@@ -86,7 +85,6 @@ function FormCliente({
           id={`${p}-dir`}
           autoComplete="off"
           maxLength={300}
-          className="h-10"
           value={v.direccion}
           onChange={set("direccion")}
         />
@@ -96,12 +94,12 @@ function FormCliente({
           {error}
         </p>
         <div className="flex gap-2">
-          <Button type="submit" disabled={pendiente} className="h-10">
+          <Button type="submit" disabled={pendiente}>
             {pendiente && <Loader2 className="animate-spin" aria-hidden />}
             {cliente ? "Guardar cambios" : "Guardar cliente"}
           </Button>
           {cliente && (
-            <Button type="button" variant="outline" className="h-10" onClick={alTerminar}>
+            <Button type="button" variant="outline" onClick={alTerminar}>
               Cancelar
             </Button>
           )}
@@ -143,39 +141,49 @@ export function ListaClientes({
 }) {
   const [editando, setEditando] = useState<string | null>(null);
   return (
-    <ul aria-label="Clientes" className="bg-card shadow-card divide-y rounded-xl border">
-      {clientes.map((c) => (
-        <li key={c.id} className="px-4 py-3">
-          {editando === c.id ? (
+    <ListaFilas
+      etiqueta="Clientes"
+      columnas={COLUMNAS}
+      cabeceras={
+        <>
+          <span>Nombre</span>
+          <span>CI o NIT</span>
+          <span>Teléfono</span>
+          <span>Dirección</span>
+          <span />
+        </>
+      }
+    >
+      {clientes.map((c) =>
+        editando === c.id ? (
+          <Fila key={c.id} columnas="grid-cols-1" className="py-4">
             <FormCliente negocioId={negocioId} cliente={c} alTerminar={() => setEditando(null)} />
-          ) : (
-            <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1.4fr)_9rem_9rem_minmax(0,1fr)_auto]">
-              <span className="min-w-0 truncate font-medium">{c.nombre}</span>
-              <span className="text-muted-foreground text-sm tabular-nums max-md:order-3 max-md:col-span-2">
-                {c.ci_nit ?? "Sin documento"}
-              </span>
-              <span className="text-muted-foreground text-sm tabular-nums max-md:order-4 max-md:col-span-2">
-                {c.telefono ?? ""}
-              </span>
-              <span className="text-muted-foreground min-w-0 truncate text-sm max-md:order-5 max-md:col-span-2">
-                {c.direccion ?? ""}
-              </span>
-              {puedeEditar && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="min-h-9 md:min-h-8"
-                  aria-label={`Editar a ${c.nombre}`}
-                  onClick={() => setEditando(c.id)}
-                >
-                  <Pencil aria-hidden /> Editar
-                </Button>
-              )}
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
+          </Fila>
+        ) : (
+          <Fila key={c.id} columnas={`grid-cols-[1fr_auto] ${COLUMNAS}`}>
+            <span className="min-w-0 truncate font-semibold">{c.nombre}</span>
+            <span className="text-muted-foreground font-mono text-[13px] max-md:order-3 max-md:col-span-2">
+              {c.ci_nit ?? "Sin documento"}
+            </span>
+            <span className="text-muted-foreground cifra text-[13px] max-md:order-4 max-md:col-span-2">
+              {c.telefono ?? ""}
+            </span>
+            <span className="text-muted-foreground min-w-0 truncate text-sm max-md:order-5 max-md:col-span-2">
+              {c.direccion ?? ""}
+            </span>
+            {puedeEditar && (
+              <Button
+                type="button"
+                variant="outline"
+                aria-label={`Editar a ${c.nombre}`}
+                onClick={() => setEditando(c.id)}
+              >
+                <Pencil aria-hidden /> Editar
+              </Button>
+            )}
+          </Fila>
+        ),
+      )}
+    </ListaFilas>
   );
 }

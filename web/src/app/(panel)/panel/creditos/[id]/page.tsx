@@ -48,10 +48,7 @@ export default async function PaginaDetalleCredito({
           titulo="Crédito"
           descripcion="Cuotas, pagos recibidos y saldo. Los pagos cubren las cuotas de la más vieja a la más nueva."
           acciones={
-            <Link
-              href="/panel/creditos"
-              className={buttonVariants({ variant: "outline", className: "h-10" })}
-            >
+            <Link href="/panel/creditos" className={buttonVariants({ variant: "outline" })}>
               <ArrowLeft aria-hidden /> Créditos
             </Link>
           }

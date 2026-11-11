@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { z } from "zod";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO, leerFiltros } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador } from "@/modules/catalogo/panel";
@@ -40,9 +41,7 @@ export default async function PaginaCajas({
           {lista.error}
         </p>
       ) : lista.data.filas.length === 0 ? (
-        <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-          Aún no hay sesiones de caja.
-        </p>
+        <EstadoVacio>Aún no hay sesiones de caja.</EstadoVacio>
       ) : (
         <div className="flex min-w-0 flex-col gap-5">
           <ListaSesiones sesiones={lista.data.filas} />
