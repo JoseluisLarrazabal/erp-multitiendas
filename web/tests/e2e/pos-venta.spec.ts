@@ -1024,6 +1024,8 @@ test("con una venta en la cola y el equipo sin elegir, el aviso sale y la venta 
   await context.setOffline(true);
   await confirmarVenta(page);
   await expect(sinEnviar(page, 1)).toBeVisible();
+  // La nota solo sale con la fila entregada: recargar antes interrumpiría el primer intento.
+  await expect(notaEnCola(page)).toBeVisible();
 
   // Vuelve la red pero el envío sigue sin llegar, y la lista de equipos trae otros: ninguno es el guardado.
   await context.route("**/rest/v1/rpc/registrar_venta", (route) => route.abort("connectionfailed"));
