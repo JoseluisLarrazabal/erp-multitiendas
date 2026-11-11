@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { registrarError } from "@/lib/registro-errores";
 import {
   codigoErp,
   errorRpc,
@@ -7,6 +8,8 @@ import {
   MENSAJE_RED,
   mensajeErp,
 } from "./erp-errores";
+
+vi.mock("@/lib/registro-errores", () => ({ registrarError: vi.fn() }));
 
 describe("erp-errores", () => {
   it("extrae el código ERP del mensaje", () => {
@@ -37,5 +40,22 @@ describe("erp-errores", () => {
       error: mensajeErp("ERP_CAJA_CERRADA"),
     });
     expect(errorRpc({ message: "boom", code: "42601" }).error).toBe(MENSAJE_GENERICO);
+  });
+
+  describe("registro de errores inesperados", () => {
+    beforeEach(() => vi.mocked(registrarError).mockClear());
+    it("no registra un rechazo ERP_ ni un fallo de red", () => {
+      errorRpc({ message: "ERP_STOCK_INSUFICIENTE", code: "P0001" });
+      errorRpc({ message: "TypeError: Failed to fetch", code: "" });
+      expect(registrarError).not.toHaveBeenCalled();
+    });
+    it("registra un error de base sin código ERP_ con origen rpc", () => {
+      errorRpc({ message: "boom", code: "XX000" });
+      expect(registrarError).toHaveBeenCalledWith("rpc", "XX000", "boom");
+    });
+    it("un error con código y sin mensaje registra un mensaje de reemplazo", () => {
+      errorRpc({ message: "", code: "XX000" });
+      expect(registrarError).toHaveBeenCalledWith("rpc", "XX000", "sin mensaje");
+    });
   });
 });

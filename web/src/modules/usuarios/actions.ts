@@ -5,7 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { codigoDeMensaje, mensajeDeError, validar, type Resultado } from "./domain";
+import { codigoDeMensaje, detalleDeError, mensajeDeError, validar, type Resultado } from "./domain";
 import {
   asignarUsuarioSchema,
   crearUsuarioSchema,
@@ -15,7 +15,15 @@ import {
   registrarDispositivoSchema,
 } from "./schemas";
 
-const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensajeDeError(codigo) });
+const fallo = (
+  codigo?: string,
+  errorRpc?: Parameters<typeof detalleDeError>[0],
+): Resultado<never> => ({
+  ok: false,
+  error: mensajeDeError(codigo),
+  codigo: codigo ?? null,
+  ...detalleDeError(errorRpc),
+});
 
 // Cuerpo { ok: false, error } de admin-usuarios; el SDK lo entrega dentro del error en respuestas no 2xx.
 async function invocarAdmin(cuerpo: Record<string, unknown>): Promise<Resultado<null>> {
@@ -28,13 +36,13 @@ async function invocarAdmin(cuerpo: Record<string, unknown>): Promise<Resultado<
   if (error instanceof FunctionsHttpError) {
     if (error.context.status === 401) return fallo("ERP_SIN_SESION");
     const resp = (await error.context.json().catch(() => null)) as { error?: string } | null;
-    return fallo(resp?.error);
+    return fallo(codigoDeMensaje(resp?.error));
   }
   return fallo();
 }
 
 function resultadoRpc(error: { message: string } | null, ruta: string): Resultado<null> {
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath(ruta);
   return { ok: true, data: null };
 }

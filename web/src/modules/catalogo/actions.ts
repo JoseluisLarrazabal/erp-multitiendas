@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   codigoDeMensaje,
+  detalleDeError,
   mensajeDeError as mensajeBase,
   validar,
   type Resultado,
@@ -21,7 +22,15 @@ import {
 } from "./schemas";
 
 const mensaje = (codigo?: string) => mensajeDeCatalogo(codigo) ?? mensajeBase(codigo);
-const fallo = (codigo?: string): Resultado<never> => ({ ok: false, error: mensaje(codigo) });
+const fallo = (
+  codigo?: string,
+  errorRpc?: Parameters<typeof detalleDeError>[0],
+): Resultado<never> => ({
+  ok: false,
+  error: mensaje(codigo),
+  codigo: codigo ?? null,
+  ...detalleDeError(errorRpc),
+});
 
 type Datos = ReturnType<typeof datosDeProducto>;
 const datosDeProducto = (d: {
@@ -65,7 +74,7 @@ export async function guardarProducto(entrada: unknown): Promise<Resultado<{ id:
     p_negocio_id: d.negocioId,
     p_datos: datos,
   });
-  if (error || !data) return fallo(codigoDeMensaje(error?.message));
+  if (error || !data) return fallo(codigoDeMensaje(error?.message), error);
   revalidatePath("/panel/productos");
   revalidatePath("/panel/precios");
   return { ok: true, data: { id: data } };
@@ -82,7 +91,7 @@ export async function asignarFoto(entrada: unknown): Promise<Resultado<null>> {
     // El generador de tipos marca p_foto_path como no nulo, pero la RPC acepta null (quitar).
     p_foto_path: d.fotoPath as string,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath("/panel/productos");
   return { ok: true, data: null };
 }
@@ -95,7 +104,7 @@ export async function cambiarEstadoProducto(entrada: unknown): Promise<Resultado
     p_producto_id: d.productoId,
     p_activo: d.activo,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath("/panel/productos");
   return { ok: true, data: null };
 }
@@ -110,7 +119,7 @@ export async function guardarCategoria(entrada: unknown): Promise<Resultado<null
     p_id: d.id as string,
     p_nombre: d.nombre,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath("/panel/productos", "layout");
   return { ok: true, data: null };
 }
@@ -123,7 +132,7 @@ export async function registrarTipoCambio(entrada: unknown): Promise<Resultado<n
     p_negocio_id: d.negocioId,
     p_valor: d.valor,
   });
-  if (error) return fallo(codigoDeMensaje(error.message));
+  if (error) return fallo(codigoDeMensaje(error.message), error);
   revalidatePath("/panel/tipo-cambio");
   revalidatePath("/panel/productos");
   revalidatePath("/panel/precios");
@@ -169,7 +178,7 @@ export async function guardarGrilla(entrada: unknown): Promise<Resultado<Resulta
     fallas.set(productoId, f);
   };
   let guardoAlgo = false;
-  let fatal: { codigo?: string } | null = null;
+  let fatal: { codigo?: string; error: { message: string; code?: string } } | null = null;
 
   for (const [campo, lote, llamar] of [
     ["precios", d.filas.filter((f) => f.precios), guardarPrecios],
@@ -183,7 +192,7 @@ export async function guardarGrilla(entrada: unknown): Promise<Resultado<Resulta
     }
     const codigo = codigoDeMensaje(error.message);
     if (!codigo || !RECUPERABLES.includes(codigo)) {
-      fatal ??= { codigo };
+      fatal ??= { codigo, error };
       for (const fila of lote) marcar(fila.productoId, campo, mensaje(codigo));
       continue;
     }
@@ -195,7 +204,8 @@ export async function guardarGrilla(entrada: unknown): Promise<Resultado<Resulta
   }
 
   // Nada se guardó y la causa es de todo el lote (permiso, sesión, conexión): un solo aviso, no fila por fila.
-  if (!guardoAlgo && fatal && fallas.size === d.filas.length) return fallo(fatal.codigo);
+  if (!guardoAlgo && fatal && fallas.size === d.filas.length)
+    return fallo(fatal.codigo, fatal.error);
   if (guardoAlgo) {
     revalidatePath("/panel/precios");
     revalidatePath("/panel/productos");

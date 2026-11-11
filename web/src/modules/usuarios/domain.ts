@@ -5,9 +5,18 @@ export const COOKIE_NEGOCIO = "negocio_activo";
 // Quien tiene alguno de estos permisos en el negocio activo entra al panel; el resto va al POS.
 const PERMISOS_PANEL = ["ver_reportes", "editar_productos", "usuarios"];
 
-// `codigo`: código ERP_* de la RPC cuando el fallo vino de la base (las acciones del panel no lo usan).
+// `codigo`: código ERP_* de la RPC cuando el fallo vino de la base (null si no hubo ninguno, o ERP_INTERNO si falló la función: `useAccion` registra ambos como error inesperado).
 export type Resultado<T> =
-  { ok: true; data: T } | { ok: false; error: string; codigo?: string | null; red?: boolean };
+  | { ok: true; data: T }
+  | {
+      ok: false;
+      error: string;
+      codigo?: string | null;
+      red?: boolean;
+      // `pg` y `detalle`: solo para el registro de errores del navegador, nunca se muestran al usuario.
+      pg?: string;
+      detalle?: string;
+    };
 
 // `red`: no hubo respuesta del servidor (fallo de transporte), no un error de la base.
 export const falla = (error: string, red?: boolean): Resultado<never> => ({
@@ -151,6 +160,15 @@ export const mensajeDeError = (codigo: string | undefined) =>
 
 // Los errores de RPC llegan como texto; solo cuenta el código ERP_* que contengan.
 export const codigoDeMensaje = (mensaje: string | undefined) => mensaje?.match(/ERP_[A-Z_]+/)?.[0];
+
+// Detalle de un error inesperado de Supabase para registrarlo (RNF-16). Vacío si trae un código ERP_*: ese ya se
+// traduce. La base vuelve a sanear el texto al guardarlo.
+export const detalleDeError = (
+  error: { message?: string; code?: string } | null | undefined,
+): { pg?: string; detalle?: string } =>
+  !error || codigoDeMensaje(error.message)
+    ? {}
+    : { pg: error.code, detalle: (error.message || "sin mensaje").slice(0, 300) };
 
 // Una verificación de fondo (evento `online`) que falla no puede sacar una sesión que ya estaba lista: desmontaría la
 // venta en curso. Solo una respuesta cierta de sesión perdida cambia de fase (ver `caducada` en use-pos-sesion).

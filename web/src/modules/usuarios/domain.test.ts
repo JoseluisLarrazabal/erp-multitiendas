@@ -4,6 +4,7 @@ import {
   codigoDeMensaje,
   conservarLista,
   destinoInicial,
+  detalleDeError,
   elegirNegocioActivo,
   MENSAJES_ERROR,
   negocioDeRecheck,
@@ -107,6 +108,21 @@ describe("errores ERP_*", () => {
   it("extrae el código del texto de Postgres", () => {
     expect(codigoDeMensaje("ERP_PREFIJO_DUPLICADO")).toBe("ERP_PREFIJO_DUPLICADO");
     expect(codigoDeMensaje("otra cosa")).toBeUndefined();
+  });
+});
+
+describe("detalleDeError", () => {
+  it("vacío con código ERP_*, o sin error", () => {
+    expect(detalleDeError({ message: "ERP_SIN_PERMISO", code: "P0001" })).toEqual({});
+    expect(detalleDeError(null)).toEqual({});
+  });
+  it("sin código ERP_* devuelve pg y detalle recortado a 300", () => {
+    expect(detalleDeError({ message: "boom", code: "23505" })).toEqual({
+      pg: "23505",
+      detalle: "boom",
+    });
+    expect(detalleDeError({ code: "X" })).toEqual({ pg: "X", detalle: "sin mensaje" });
+    expect(detalleDeError({ message: "a".repeat(500) }).detalle).toHaveLength(300);
   });
 });
 
