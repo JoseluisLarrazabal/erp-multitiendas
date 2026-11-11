@@ -91,12 +91,11 @@ export function FormTipoCambio({
               inputMode="decimal"
               autoComplete="off"
               placeholder="6,96"
-              className="h-10"
               {...propsCampo("tc-valor", errores, true)}
             />
           </Campo>
         </div>
-        <Button type="submit" disabled={pendiente} className="h-10 self-start sm:mt-[1.375rem]">
+        <Button type="submit" disabled={pendiente} className="self-start sm:mt-[1.375rem]">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Registrar tipo de cambio
         </Button>
@@ -117,7 +116,6 @@ export function FormTipoCambio({
           <Button
             type="button"
             variant="outline"
-            className="h-10"
             onClick={() => {
               // Solo llena el campo: guardar sigue el flujo de siempre (confirmación >20 % y RPC).
               if (campoValor.current)
