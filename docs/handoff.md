@@ -39,8 +39,36 @@ Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
   - **Fase 3, rediseño visual y tablero: en implementación.** El CTO eligió el 2026-11-10 el híbrido recomendado:
     base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
     deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
-    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Sigue: plan detallado de R1 (base) y R2 (tablero),
-    implementación por tramos en ramas sin PR; los PR B, C y D se abren desde el 2026-12-01.
+    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
+    PR B, C y D se abren desde el 2026-12-01 (minutos de Actions).
+    - **Rama `feat/rediseno-base` (empujada, sin PR), con `main` ya integrado.** Worktree local
+      `/home/shadowfreak/Documents/wt-rediseno`.
+    - **R1, base: hecho** (`8758136`). Tokens de la propuesta A sobre los nombres que ya usaba el proyecto, Figtree e
+      IBM Plex Mono por `next/font`, botones y campos de 40 px, menú en 5 grupos (`gruposVisibles` sobre
+      `itemsVisibles`: agrupar no cambia qué ve cada rol), sombras a `shadow-card` en 22 archivos.
+    - **R2, tablero: hecho** (`ed2dbf3`). El inicio del panel deja la grilla de enlaces: acciones frecuentes, ventas
+      de hoy con utilidad y gráfico de 7 días en SVG propio, **"Por atender"** (pedido del CTO: caja con detalle y
+      botón por aviso; siempre visible, con "Nada por atender" si no hay, y "No se pudo comprobar…" si una lectura
+      falla), cajas abiertas con lo cobrado por caja, créditos y pagos, stock bajo ordenado por faltante, más
+      vendidos; frial con lotes por vencer, lavandería con órdenes listas. Sin RPC nueva ni migración; unas 14
+      consultas por carga para el dueño de tienda (3 de contexto y 11 de bloques).
+    - Revisión de R1 y R2: `/code-review`, `/ponytail-review`, `web-design-guidelines` e `impeccable audit`; hallazgos
+      aplicados (botón `outline` sin borde al usarse como enlace, que afectaba a unas 10 pantallas; avisos que
+      callaban un fallo de lectura; caja abierta hace más de un año; orden del stock bajo; pruebas con permisos
+      irreales; objetivos táctiles de 44 px). Contraste AA calculado en todos los pares de texto (mínimo 5,2:1).
+      **Codex: no verificado (sin cuota).**
+    - Verificación local tras integrar `main`: lint, formato, tipos, Vitest 551, pgTAP, build e integración en verde;
+      E2E 271 pasan y 1 cortó por tiempo (`credito.spec.ts` E2E-12, una prueba de 24 s sin margen bajo el límite de 30
+      s; la traza no muestra ningún paso colgado). Se le sube el límite como a sus hermanas; **falta repetir la corrida
+      completa en verde antes de dar R2 por cerrado.**
+    - Decidido sobre la marcha: sin aviso de "tipo de cambio sin registrar hoy" (RN-02: rige el último registrado;
+      sería una alerta inventada); sin aviso de "caja cerrada con diferencia" (no hay marca de "revisada"; sería una
+      regla nueva con migración); "Ayer, día completo" sin porcentaje (no hay ventas por hora).
+    - **Sigue:** R3 (pantallas del panel por módulo, 6 lotes de archivos disjuntos), R4 (punto de venta y acceso, solo
+      piel; iconos de la aplicación al color nuevo) y R5 (capturas y textos del manual).
+    - No verificado: frial en el navegador con lotes reales; aviso de órdenes de lavandería con datos; el camino de
+      error de "Por atender"; peso de las fuentes nuevas en el precache del punto de venta; salto de las cifras al
+      cargar IBM Plex Mono; un celular real.
   - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
