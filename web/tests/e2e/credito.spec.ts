@@ -71,6 +71,8 @@ async function agregar(page: Page, codigo: string, veces = 1) {
 test("E2E-12: venta a crédito, plan imprimible, cuotas por caja, arqueo, saldo inicial y vencidas", async ({
   page,
 }) => {
+  // Recorre venta, cuotas, arqueo y saldo inicial: unos 24 s, sin margen bajo el límite de 30 s con la suite en paralelo.
+  test.setTimeout(90_000);
   // Contado 50, crédito 60, mínimo 45: el piso de crédito es 45 (el menor entre el mínimo y la lista).
   const producto = await crearProductoConPrecio({
     contado: 50,
