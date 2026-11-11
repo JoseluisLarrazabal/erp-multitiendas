@@ -27,7 +27,7 @@ export default async function PaginaProductoNuevo() {
         }
       />
       {categorias.ok ? (
-        <div className="bg-card shadow-card max-w-3xl rounded-xl border p-5 md:p-6">
+        <div className="bg-card shadow-card max-w-4xl rounded-xl border p-5 md:p-6">
           <FormProducto
             negocioId={activo.negocioId}
             esFrial={activo.tipo === "frial"}

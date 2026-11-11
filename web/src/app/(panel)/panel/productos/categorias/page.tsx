@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import {
   EncabezadoPagina,
@@ -40,7 +41,7 @@ export default async function PaginaCategorias() {
             <FormCategoria negocioId={activo.negocioId} />
           </Seccion>
           {categorias.data.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aún no hay categorías.</p>
+            <EstadoVacio>Aún no hay categorías.</EstadoVacio>
           ) : (
             <ul className="bg-card shadow-card divide-y rounded-xl border" aria-label="Categorías">
               {categorias.data.map((c) => (

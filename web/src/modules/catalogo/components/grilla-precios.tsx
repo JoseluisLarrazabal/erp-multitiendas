@@ -141,16 +141,11 @@ export function GrillaPrecios({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="bg-background/95 sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b py-2 backdrop-blur">
-        <Button
-          ref={botonGuardar}
-          onClick={guardar}
-          disabled={!sucio || pendiente}
-          className="h-10"
-        >
+        <Button ref={botonGuardar} onClick={guardar} disabled={!sucio || pendiente}>
           {pendiente ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
           Guardar cambios
         </Button>
-        <p className="text-sm tabular-nums" aria-live="polite">
+        <p className="cifra text-[13px]" aria-live="polite">
           {sucio
             ? `${modificadas.length} ${modificadas.length === 1 ? "fila modificada" : "filas modificadas"}`
             : "Sin cambios"}
