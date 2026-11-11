@@ -1,5 +1,13 @@
 export type Unidad = "unidad" | "kg";
 
+// Más urgente primero: lo que queda respecto de su mínimo (3 de 3,5 antes que 10 de 200). Mínimo 0 o nulo, al final.
+export function ordenarPorFaltante<T extends { cantidad: number; minimo: number | null }>(
+  filas: T[],
+): T[] {
+  const razon = (f: T) => (f.minimo ? f.cantidad / f.minimo : Infinity);
+  return [...filas].sort((a, b) => razon(a) - razon(b));
+}
+
 export type Ubicacion = { id: string; nombre: string };
 
 // Producto elegido en un formulario de operación.

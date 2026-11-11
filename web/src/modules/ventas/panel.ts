@@ -30,6 +30,13 @@ export { DetalleOrdenVista } from "./components/detalle-orden";
 export { FiltrosOrdenesForm } from "./components/filtros-ordenes";
 export { ListaOrdenes } from "./components/lista-ordenes";
 export { detalleOrden, listarOrdenes } from "./lecturas-ordenes";
-export { ANULABLES, hrefOrdenes, leerFiltrosOrdenes, PAGINA_ORDENES } from "./schemas-ordenes";
+export {
+  ANULABLES,
+  DIAS_SIN_RECOGER,
+  hrefOrdenes,
+  leerFiltrosOrdenes,
+  PAGINA_ORDENES,
+} from "./schemas-ordenes";
 export { cargarNegocio } from "./queries";
+export { cargarReservasActivas } from "./queries-reservas";
 export { hrefVentas, leerDesdeReconciliacion, leerFiltrosVentas } from "./schemas-panel";

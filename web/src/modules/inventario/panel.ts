@@ -15,6 +15,7 @@ export {
   contarStockBajo,
   leerKardex,
   leerLotesPorVencer,
+  listarStockBajo,
   listarStock,
   obtenerProductoInventario,
   stockPorUbicacion,

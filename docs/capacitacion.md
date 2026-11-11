@@ -131,6 +131,10 @@ cobrar, confirmar con el cliente.
 
 ## Encargado y dueño: panel
 
+El Inicio del panel es un tablero: "Ventas de hoy", "Por atender" (ventas y cajas por revisar, lotes por vencer, órdenes sin recoger),
+"Cajas abiertas", "Créditos y pagos", "Stock bajo" y "Más vendidos de la semana". Las pantallas están en el menú lateral, en cinco
+grupos: Ventas, Inventario, Compras, Dinero y Configuración ("Inicio" va suelto arriba). La tabla dice dónde está cada tarea.
+
 | Tarea | Dónde |
 |---|---|
 | Crear producto | "Productos", "Nuevo producto". Los precios van aparte |
@@ -147,7 +151,7 @@ cobrar, confirmar con el cliente.
 | Reportes | "Reportes": fechas, "Aplicar", "Descargar Excel". Costos y ganancia solo con permiso de costos |
 | Personal | "Usuarios": "Cuenta nueva" o "Agregar persona de otro negocio"; cambiar rol, "Desactivar", "Quitar", "Restablecer contraseña" por fila. A un encargado solo lo gestiona el dueño. Restablecer no cierra las sesiones abiertas |
 | Datos del negocio | "Datos del negocio" (dueño en tienda y frial): "NIT" y "Datos para la nota" (dirección, teléfono). Salen en la nota |
-| Cambiar la propia contraseña | "Cambiar contraseña" en la cabecera del panel o junto a "Cerrar sesión" en el punto de venta |
+| Cambiar la propia contraseña | "Cambiar contraseña", al pie del menú lateral del panel o junto a "Cerrar sesión" en el punto de venta |
 | Equipos de caja | "Dispositivos": nombre, prefijo (ej. C2) y ubicación |
 | Tope de descuento | "Descuento" |
 | Proveedores | "Proveedores": "Nuevo proveedor", editar, y "Registrar pago a …" (medio y "Monto en Bs"; no puede superar la deuda). El pago no pasa por la caja del POS: si sale del cajón, anotar además un gasto en la caja |

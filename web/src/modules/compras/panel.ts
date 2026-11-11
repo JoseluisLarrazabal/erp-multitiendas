@@ -3,5 +3,5 @@
 export { FormCompra } from "./components/form-compra";
 export { ListaCompras } from "./components/lista-compras";
 export { ListaProveedores, NuevoProveedor } from "./components/proveedores-panel";
-export { listarCompras, listarProveedores } from "./queries";
+export { listarCompras, listarProveedores, resumenDeudaProveedores } from "./queries";
 export { leerFiltrosCompras, PAGINA_COMPRAS } from "./schemas";

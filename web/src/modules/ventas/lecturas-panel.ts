@@ -30,14 +30,17 @@ export async function listarEquiposPanel(
 export async function sesionesAbiertas(
   supabase: Cliente,
   negocioId: string,
-): Promise<Resultado<{ id: string; dispositivoId: string }[]>> {
+): Promise<Resultado<{ id: string; dispositivoId: string; abiertaEn: string }[]>> {
   const { data, error } = await supabase
     .from("caja_sesiones")
-    .select("id, dispositivo_id")
+    .select("id, dispositivo_id, abierta_en")
     .eq("negocio_id", negocioId)
     .is("cerrada_en", null);
   if (error) return falla("No se pudieron leer las cajas abiertas.");
-  return { ok: true, data: data.map((s) => ({ id: s.id, dispositivoId: s.dispositivo_id })) };
+  return {
+    ok: true,
+    data: data.map((s) => ({ id: s.id, dispositivoId: s.dispositivo_id, abiertaEn: s.abierta_en })),
+  };
 }
 
 export type FilaVenta = {

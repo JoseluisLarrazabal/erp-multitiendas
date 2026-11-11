@@ -2,6 +2,7 @@
 
 import { BookmarkCheck, HandCoins, Landmark, ScanBarcode, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useSinRed } from "@/lib/offline/red";
 import type { Equipo } from "../queries";
 
@@ -30,19 +31,20 @@ export function BarraEquipo({
   conCreditos?: boolean;
 }) {
   const sinRed = useSinRed();
+  const clase = (m: ModoPos) => cn("h-11", modo === m && "border-primary font-bold");
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <p className="text-muted-foreground">
         Equipo{" "}
-        <span className="text-foreground font-medium">
+        <span className="text-foreground font-semibold">
           {equipo.nombre} ({equipo.prefijo})
         </span>{" "}
         · {cajaAbierta ? "caja abierta" : "caja cerrada"}
       </p>
       <Button
         type="button"
-        variant="ghost"
-        className="h-10"
+        variant="outline"
+        className="h-11"
         disabled={pendiente || sinRed}
         title={
           sinRed
@@ -59,7 +61,7 @@ export function BarraEquipo({
         <Button
           type="button"
           variant={modo === "vender" ? "secondary" : "outline"}
-          className="h-10"
+          className={clase("vender")}
           aria-pressed={modo === "vender"}
           onClick={() => alCambiarModo("vender")}
         >
@@ -68,7 +70,7 @@ export function BarraEquipo({
         <Button
           type="button"
           variant={modo === "consulta" ? "secondary" : "outline"}
-          className="h-10"
+          className={clase("consulta")}
           aria-pressed={modo === "consulta"}
           onClick={() => alCambiarModo("consulta")}
         >
@@ -78,7 +80,7 @@ export function BarraEquipo({
           <Button
             type="button"
             variant={modo === "reservas" ? "secondary" : "outline"}
-            className="h-10"
+            className={clase("reservas")}
             aria-pressed={modo === "reservas"}
             onClick={() => alCambiarModo("reservas")}
           >
@@ -89,7 +91,7 @@ export function BarraEquipo({
           <Button
             type="button"
             variant={modo === "creditos" ? "secondary" : "outline"}
-            className="h-10"
+            className={clase("creditos")}
             aria-pressed={modo === "creditos"}
             onClick={() => alCambiarModo("creditos")}
           >
@@ -99,7 +101,7 @@ export function BarraEquipo({
         <Button
           type="button"
           variant={modo === "caja" ? "secondary" : "outline"}
-          className="h-10"
+          className={clase("caja")}
           aria-pressed={modo === "caja"}
           onClick={() => alCambiarModo("caja")}
         >

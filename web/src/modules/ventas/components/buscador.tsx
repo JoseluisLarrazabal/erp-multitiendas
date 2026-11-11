@@ -29,7 +29,7 @@ export function CampoBusqueda({
   return (
     <div className="relative">
       <Search
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+        className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2"
         aria-hidden
       />
       <Input
@@ -44,7 +44,7 @@ export function CampoBusqueda({
         autoCapitalize="off"
         spellCheck={false}
         enterKeyHint="search"
-        className="h-12 pl-9 text-base"
+        className="h-12 pl-10 text-base max-[399px]:placeholder:text-sm"
         value={valor}
         onChange={(e) => alCambiar(e.target.value)}
         onKeyDown={(e) => {
@@ -80,26 +80,26 @@ export function ListaResultados({
   return (
     <ul
       aria-label="Resultados"
-      className="divide-border bg-card divide-y overflow-hidden rounded-xl border"
+      className="divide-border bg-card shadow-card divide-y overflow-hidden rounded-xl border"
     >
       {productos.map((p) => {
         const stock = p.stockPorUbicacion[ubicacionId] ?? 0;
         const motivo = motivoNoVendible(p, tipoNegocio, lista);
         return (
-          <li key={p.id} className="flex items-start gap-3 px-3 py-2.5">
+          <li key={p.id} className="flex items-start gap-3 px-3 py-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{p.nombre}</p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-[15px] font-semibold break-words">{p.nombre}</p>
+              <p className="text-muted-foreground font-mono text-sm">
                 {p.codigo}
                 {p.codigoBarras ? ` · ${p.codigoBarras}` : ""}
               </p>
               {consulta ? (
-                <div className="mt-1 grid gap-x-4 gap-y-0.5 text-xs sm:grid-cols-2">
+                <div className="mt-1 grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2">
                   <dl className="flex flex-wrap gap-x-3">
                     {LISTAS.filter((l) => p.precios[l] !== null).map((l) => (
                       <div key={l} className="flex gap-1">
                         <dt className="text-muted-foreground">{ETIQUETA_LISTA[l]}</dt>
-                        <dd className="font-medium tabular-nums">{bs(p.precios[l] ?? 0)}</dd>
+                        <dd className="cifra">{bs(p.precios[l] ?? 0)}</dd>
                       </div>
                     ))}
                     {motivo && <dd className="text-destructive">{motivo}</dd>}
@@ -108,23 +108,23 @@ export function ListaResultados({
                     {ubicaciones.map((u) => (
                       <div key={u.id} className="flex gap-1">
                         <dt className="text-muted-foreground">{u.nombre}</dt>
-                        <dd className="font-medium tabular-nums">
-                          {cantidad(p.stockPorUbicacion[u.id] ?? 0)}
-                        </dd>
+                        <dd className="cifra">{cantidad(p.stockPorUbicacion[u.id] ?? 0)}</dd>
                       </div>
                     ))}
                     <div className="flex gap-1">
                       <dt className="text-muted-foreground">Total</dt>
-                      <dd className="font-medium tabular-nums">{cantidad(p.stockTotal)}</dd>
+                      <dd className="cifra">{cantidad(p.stockTotal)}</dd>
                     </div>
                   </dl>
                 </div>
               ) : (
-                <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
+                <p className="text-muted-foreground mt-0.5 text-sm tabular-nums">
                   Stock aquí:{" "}
                   <span
                     className={
-                      stock <= 0 ? "text-destructive font-medium" : "text-foreground font-medium"
+                      stock <= 0
+                        ? "text-destructive font-semibold"
+                        : "text-foreground font-semibold"
                     }
                   >
                     {cantidad(stock)}
@@ -136,12 +136,11 @@ export function ListaResultados({
             {!consulta &&
               (motivo === null ? (
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-sm font-semibold tabular-nums">
-                    {bs(p.precios[lista] ?? 0)}
-                  </span>
+                  <span className="cifra text-base">{bs(p.precios[lista] ?? 0)}</span>
                   <Button
                     type="button"
-                    className="h-10 px-3"
+                    variant="outline"
+                    className="border-primary text-primary h-11 px-4"
                     aria-label={`Agregar ${p.nombre}`}
                     onClick={() => alAgregar(p)}
                   >
@@ -149,7 +148,7 @@ export function ListaResultados({
                   </Button>
                 </div>
               ) : (
-                <span className="text-destructive max-w-32 shrink-0 text-right text-xs font-medium">
+                <span className="text-destructive max-w-32 shrink-0 text-right text-sm font-semibold">
                   {motivo}
                 </span>
               ))}

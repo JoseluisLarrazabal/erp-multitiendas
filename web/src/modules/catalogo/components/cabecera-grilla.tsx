@@ -12,7 +12,7 @@ export function CabeceraGrilla({
 }) {
   return (
     <thead>
-      <tr className="text-muted-foreground border-b text-left text-xs font-semibold">
+      <tr className="text-muted-foreground border-foreground border-b-2 text-left text-[13px] font-semibold">
         <th
           scope="col"
           className="bg-card sticky left-0 z-10 w-36 min-w-36 px-2 py-2.5 md:w-48 md:min-w-48"

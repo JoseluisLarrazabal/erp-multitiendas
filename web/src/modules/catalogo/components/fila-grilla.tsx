@@ -56,7 +56,7 @@ export function FilaGrilla({
 
   return (
     <tr
-      className={cn("border-b", modificada && "bg-secondary/40", error && "bg-destructive/5")}
+      className={cn("border-b", modificada && "bg-secondary/40", error && "bg-destructive-soft")}
       data-modificada={modificada || undefined}
     >
       <th
@@ -73,7 +73,7 @@ export function FilaGrilla({
         <span className="line-clamp-2 text-sm font-semibold md:line-clamp-none">{fila.nombre}</span>
         {modificada && <span className="text-primary text-xs font-medium">Modificada</span>}
         {error && (
-          <span id={idError} role="alert" className="text-destructive block text-xs">
+          <span id={idError} role="alert" className="text-destructive block text-sm">
             {error}
           </span>
         )}
@@ -83,13 +83,12 @@ export function FilaGrilla({
           aria-label={`Moneda de ${fila.nombre}`}
           value={borrador.moneda}
           onChange={(e) => alCambiar({ moneda: e.target.value as Moneda })}
-          className="h-9 md:text-sm"
         >
           <option value="BOB">Bs</option>
           <option value="USD">USD</option>
         </SelectNativo>
         {sinTipoCambio && (
-          <span className="text-destructive mt-1 block text-xs">Falta tipo de cambio</span>
+          <span className="text-destructive mt-1 block text-sm">Falta tipo de cambio</span>
         )}
       </td>
       {listas.map((lista) => {
@@ -114,10 +113,10 @@ export function FilaGrilla({
                 error && idError,
               )}
               onChange={(e) => alCambiar({ lista, texto: e.target.value })}
-              className="h-9 text-right tabular-nums md:text-sm"
+              className="cifra text-right md:text-[13px]"
             />
             {malo && (
-              <span id={`${id}-error`} className="text-destructive mt-1 block text-xs">
+              <span id={`${id}-error`} className="text-destructive mt-1 block text-sm">
                 {mensajeDeMontoInvalido(texto)}
               </span>
             )}
@@ -152,12 +151,12 @@ export function FilaGrilla({
               error && idError,
             )}
             onChange={(e) => alCambiar({ costo: e.target.value })}
-            className="h-9 text-right tabular-nums md:text-sm"
+            className="cifra text-right md:text-[13px]"
           />
           {invalidas.includes("costo") && (
             <span
               id={`celda-${fila.id}-costo-error`}
-              className="text-destructive mt-1 block text-xs"
+              className="text-destructive mt-1 block text-sm"
             >
               {mensajeDeMontoInvalido(borrador.costo)}
             </span>

@@ -59,7 +59,7 @@ export function FormDatosNegocio({
         <Input
           id="neg-nit"
           autoComplete="off"
-          className="h-10 sm:max-w-64"
+          className="sm:max-w-64"
           value={textoNit}
           onChange={(e) => setTextoNit(e.target.value)}
           {...propsCampo("neg-nit", errores)}
@@ -77,12 +77,12 @@ export function FormDatosNegocio({
           onChange={(e) => setTextoNota(e.target.value)}
           rows={4}
           autoComplete="off"
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full rounded-lg border bg-transparent px-2.5 py-2 text-base outline-none focus-visible:ring-3 md:text-sm"
+          className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring aria-invalid:border-destructive w-full rounded-lg border px-3 py-2 text-base outline-none focus-visible:ring-3 md:text-sm"
           {...propsCampo("neg-nota", errores, true)}
         />
       </Campo>
       <div>
-        <Button type="submit" disabled={pendiente} className="h-10">
+        <Button type="submit" disabled={pendiente}>
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Guardar datos
         </Button>

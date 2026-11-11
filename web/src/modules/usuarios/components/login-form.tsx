@@ -2,7 +2,7 @@
 
 import { navegarA } from "@/lib/navegar";
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +70,7 @@ export function LoginForm() {
           autoComplete="username"
           autoFocus
           required
-          className="h-10"
+          className="h-12"
           aria-invalid={invalido}
           aria-describedby={invalido ? "login-error" : undefined}
         />
@@ -83,15 +83,20 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="h-10"
+          className="h-12"
           aria-invalid={invalido}
           aria-describedby={invalido ? "login-error" : undefined}
         />
       </div>
-      <p id="login-error" role="alert" className="text-destructive min-h-5 text-sm">
+      <p
+        id="login-error"
+        role="alert"
+        className="text-destructive flex min-h-5 items-start gap-2 text-sm font-medium"
+      >
+        {error && <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />}
         {error}
       </p>
-      <Button type="submit" size="lg" className="h-10 text-sm" disabled={enviando || !hidratado}>
+      <Button type="submit" size="xl" disabled={enviando || !hidratado}>
         {enviando && <Loader2 className="animate-spin" aria-hidden />}
         {enviando ? "Ingresando…" : "Ingresar"}
       </Button>

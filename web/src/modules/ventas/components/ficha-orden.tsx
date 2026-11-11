@@ -16,14 +16,14 @@ export function ClienteEscrito({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p role="status" className="text-muted-foreground text-xs">
+      <p role="status" className="text-muted-foreground text-sm">
         Sin conexión: escribe los datos del cliente.
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <Label className="flex-col items-stretch gap-0.5 text-xs">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Nombre</span>
           <Input
-            className="h-10"
+            className="h-11"
             autoComplete="off"
             maxLength={200}
             value={ficha.nombre}
@@ -31,10 +31,10 @@ export function ClienteEscrito({
             onChange={(e) => alCambiar({ ...ficha, nombre: e.target.value })}
           />
         </Label>
-        <Label className="flex-col items-stretch gap-0.5 text-xs">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Teléfono (opcional)</span>
           <Input
-            className="h-10"
+            className="h-11"
             type="tel"
             name="telefono"
             inputMode="tel"
@@ -65,24 +65,24 @@ export function FichaOrden({
   bloqueado: boolean;
 }) {
   return (
-    <fieldset className="border-border flex flex-col gap-2 rounded-lg border p-2.5">
-      <legend className="px-1 text-xs font-semibold">Datos de la orden</legend>
-      <Label className="min-h-10 justify-between text-sm">
+    <fieldset className="bg-surface flex flex-col gap-2 rounded-lg border p-3">
+      <legend className="px-1 text-sm font-semibold">Datos de la orden</legend>
+      <Label className="min-h-11 justify-between text-base">
         <span>Express</span>
         <input
           type="checkbox"
           role="switch"
-          className="focus-visible:ring-ring/50 size-5 outline-none focus-visible:ring-3"
+          className="focus-visible:ring-ring size-6 outline-none focus-visible:ring-3"
           checked={express}
           disabled={bloqueado}
           onChange={(e) => alCambiarExpress(e.target.checked)}
         />
       </Label>
       <div className="grid grid-cols-2 gap-2">
-        <Label className="flex-col items-stretch gap-0.5 text-xs">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Prendas</span>
           <Input
-            className="h-10 text-right tabular-nums"
+            className="cifra h-11 text-right"
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={3}
@@ -92,10 +92,10 @@ export function FichaOrden({
             onChange={(e) => alCambiar({ ...ficha, prendas: e.target.value })}
           />
         </Label>
-        <Label className="flex-col items-stretch gap-0.5 text-xs">
+        <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
           <span className="text-muted-foreground">Casillero (opcional)</span>
           <Input
-            className="h-10"
+            className="h-11"
             autoComplete="off"
             maxLength={20}
             value={ficha.casillero}
@@ -104,21 +104,21 @@ export function FichaOrden({
           />
         </Label>
       </div>
-      <Label className="flex-col items-stretch gap-0.5 text-xs">
+      <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
         <span className="text-muted-foreground">Fecha prometida</span>
         <Input
           type="date"
-          className="h-10"
+          className="h-11"
           min={hoyLaPaz()}
           value={ficha.fecha}
           disabled={bloqueado}
           onChange={(e) => alCambiar({ ...ficha, fecha: e.target.value })}
         />
       </Label>
-      <Label className="flex-col items-stretch gap-0.5 text-xs">
+      <Label className="min-w-0 flex-col items-stretch gap-1 text-sm">
         <span className="text-muted-foreground">Nota (opcional)</span>
         <Input
-          className="h-10"
+          className="h-11"
           autoComplete="off"
           maxLength={500}
           value={ficha.nota}

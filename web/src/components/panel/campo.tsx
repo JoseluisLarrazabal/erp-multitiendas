@@ -38,25 +38,30 @@ export function Campo({
   etiqueta,
   ayuda,
   error,
+  ocultarEtiqueta,
   children,
 }: {
   id: string;
   etiqueta: string;
   ayuda?: string;
   error?: string;
+  // Etiqueta solo para lectores de pantalla (filas repetidas de una lista).
+  ocultarEtiqueta?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{etiqueta}</Label>
+      <Label htmlFor={id} className={ocultarEtiqueta ? "sr-only" : undefined}>
+        {etiqueta}
+      </Label>
       {children}
       {ayuda && (
-        <p id={`${id}-ayuda`} className="text-muted-foreground text-xs">
+        <p id={`${id}-ayuda`} className="text-muted-foreground text-[13px]">
           {ayuda}
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-destructive text-xs">
+        <p id={`${id}-error`} className="text-destructive text-sm">
           {error}
         </p>
       )}

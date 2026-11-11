@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { buttonVariants } from "@/components/ui/button";
 import { itemsVisibles } from "@/components/panel/panel-items";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver, Seccion } from "@/modules/catalogo/panel";
 import {
   AnularVenta,
   detalleVenta,
@@ -37,14 +36,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
   ]);
   if (detalle.ok && detalle.data === null) notFound();
 
-  const volver = (
-    <Link
-      href="/panel/ventas"
-      className={buttonVariants({ variant: "outline", className: "h-10" })}
-    >
-      <ArrowLeft aria-hidden /> Ventas
-    </Link>
-  );
+  const volver = <EnlaceVolver href="/panel/ventas">Ventas</EnlaceVolver>;
   if (!detalle.ok || !equipos.ok || !abiertas.ok || !detalle.data) {
     const error = !detalle.ok
       ? detalle.error
@@ -100,7 +92,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
               {v.credito && puedeVerCreditos && (
                 <Link
                   href={`/panel/creditos/${v.credito.id}`}
-                  className={buttonVariants({ variant: "outline", className: "h-10 w-fit" })}
+                  className={buttonVariants({ variant: "outline", className: "w-fit" })}
                 >
                   Ver pagos del crédito
                 </Link>
@@ -115,7 +107,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
                 {v.cajaSesionAbierta ? (
                   <>
                     {v.fueraDePlazo && (
-                      <p className="bg-secondary rounded-lg p-3 text-sm">
+                      <p className="bg-warning-soft text-warning rounded-lg p-3 text-sm">
                         {AVISO_PLAZO.replace("devolver", "anular")}
                       </p>
                     )}

@@ -85,9 +85,9 @@ export function SelectorCliente({
 
   if (!abierto)
     return (
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-[15px]">
         <span className="text-muted-foreground shrink-0">Cliente:</span>
-        <span className="min-w-0 flex-1 truncate font-medium">
+        <span className="min-w-0 flex-1 font-semibold break-words">
           {valor
             ? `${valor.nombre}${valor.documento ? ` · ${valor.documento}` : ""}`
             : obligatorio
@@ -99,7 +99,7 @@ export function SelectorCliente({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-10"
+            className="size-11"
             aria-label="Quitar cliente"
             onClick={() => elegir(null)}
           >
@@ -109,7 +109,7 @@ export function SelectorCliente({
         <Button
           type="button"
           variant={obligatorio && !valor ? "default" : "outline"}
-          className="h-10"
+          className="h-11"
           disabled={sinRed}
           title={sinRed ? "Buscar o crear clientes necesita conexión" : undefined}
           onClick={() => {
@@ -120,7 +120,7 @@ export function SelectorCliente({
           {valor ? "Cambiar" : "Elegir"}
         </Button>
         {sinRed && (
-          <span role="status" className="text-muted-foreground w-full text-xs">
+          <span role="status" className="text-muted-foreground w-full text-sm">
             Elegir cliente necesita conexión.
           </span>
         )}
@@ -128,14 +128,14 @@ export function SelectorCliente({
     );
 
   return (
-    <div className="bg-muted flex flex-col gap-2 rounded-lg p-2.5">
+    <div className="bg-surface flex flex-col gap-2 rounded-lg p-3">
       {creando ? (
         <form onSubmit={guardar} className="flex flex-col gap-2">
           <Input
             aria-label="Nombre del cliente"
             placeholder="Nombre"
             autoFocus
-            className="h-10"
+            className="h-11"
             autoComplete="off"
             spellCheck={false}
             value={nuevo.nombre}
@@ -145,7 +145,7 @@ export function SelectorCliente({
             <Input
               aria-label="CI o NIT"
               placeholder="CI o NIT"
-              className="h-10"
+              className="h-11"
               autoComplete="off"
               spellCheck={false}
               value={nuevo.ci_nit}
@@ -155,19 +155,19 @@ export function SelectorCliente({
               aria-label="Teléfono"
               placeholder="Teléfono"
               inputMode="tel"
-              className="h-10"
+              className="h-11"
               value={nuevo.telefono}
               onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
             />
           </div>
           <div className="flex gap-2">
-            <Button type="submit" className="h-10 flex-1" disabled={guardando}>
+            <Button type="submit" size="lg" className="flex-1" disabled={guardando}>
               {guardando && <Loader2 className="animate-spin" aria-hidden />} Guardar cliente
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="h-10"
+              className="h-11"
               onClick={() => setCreando(false)}
             >
               Volver
@@ -185,7 +185,7 @@ export function SelectorCliente({
               ref={entrada}
               aria-label="Buscar cliente"
               placeholder="Nombre o documento"
-              className="h-10 pl-8"
+              className="h-11 pl-9"
               autoComplete="off"
               spellCheck={false}
               value={q}
@@ -195,13 +195,13 @@ export function SelectorCliente({
               }}
             />
           </div>
-          {buscando && <p className="text-muted-foreground text-xs">Buscando…</p>}
+          {buscando && <p className="text-muted-foreground text-sm">Buscando…</p>}
           <ul aria-label="Clientes encontrados" className="flex flex-col">
             {resultados.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
-                  className="hover:bg-card min-h-10 w-full rounded-md px-2 py-2 text-left text-sm"
+                  className="hover:bg-card min-h-11 w-full rounded-md px-2 py-2 text-left text-[15px]"
                   onClick={() => elegir(c)}
                 >
                   {c.nombre}
@@ -211,12 +211,12 @@ export function SelectorCliente({
             ))}
           </ul>
           {q.trim().length >= 2 && !buscando && resultados.length === 0 && (
-            <p className="text-muted-foreground text-xs">Sin resultados.</p>
+            <p className="text-muted-foreground text-sm">Sin resultados.</p>
           )}
         </>
       )}
       {(duplicado ?? error) && (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-destructive text-sm font-medium">
           {duplicado ?? error}
         </p>
       )}
@@ -225,7 +225,7 @@ export function SelectorCliente({
           <Button
             type="button"
             variant="outline"
-            className="h-10 flex-1"
+            className="h-11 flex-1"
             onClick={() => {
               setCreando(true);
               setDuplicado(null);
@@ -238,7 +238,7 @@ export function SelectorCliente({
           <Button
             type="button"
             variant="outline"
-            className="h-10 flex-1"
+            className="h-11 flex-1"
             onClick={() => elegir(null)}
           >
             Cliente general
@@ -247,7 +247,7 @@ export function SelectorCliente({
         <Button
           type="button"
           variant="ghost"
-          className="h-10"
+          className="h-11"
           onClick={() => {
             setAbierto(false);
             setCreando(false);

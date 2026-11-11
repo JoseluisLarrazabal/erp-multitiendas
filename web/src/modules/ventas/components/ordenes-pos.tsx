@@ -13,6 +13,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Etiqueta } from "@/components/ui/etiqueta";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MENSAJE_RED } from "@/lib/erp-errores";
@@ -102,7 +104,10 @@ export function OrdenesPos({
 
   if (sinRed)
     return (
-      <p role="status" className="bg-secondary rounded-lg p-3 text-sm">
+      <p
+        role="status"
+        className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px]"
+      >
         Las órdenes necesitan conexión.
       </p>
     );
@@ -111,7 +116,7 @@ export function OrdenesPos({
     <section aria-label="Órdenes activas" className="flex flex-col gap-3">
       <div className="relative max-w-md">
         <Search
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2"
           aria-hidden
         />
         <Input
@@ -121,7 +126,7 @@ export function OrdenesPos({
           enterKeyHint="search"
           aria-label="Buscar orden"
           placeholder="Número o cliente"
-          className="h-10 pl-8"
+          className="h-12 pl-10"
           autoComplete="off"
           spellCheck={false}
           value={busqueda}
@@ -129,32 +134,36 @@ export function OrdenesPos({
         />
       </div>
       <div role="status" className="flex flex-col gap-3 empty:hidden">
-        {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
+        {aviso && (
+          <p className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px] font-medium">
+            {aviso}
+          </p>
+        )}
         {ordenes === null && !error && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando órdenes…
           </p>
         )}
         {ordenes !== null && visibles.length === 0 && (
-          <p className="text-muted-foreground py-4 text-center text-sm">
+          <EstadoVacio>
             {busqueda.trim() ? "Ninguna orden coincide." : "No hay órdenes activas."}
-          </p>
+          </EstadoVacio>
         )}
       </div>
       {error && (
         <div
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
           <span>{error}</span>
-          <Button type="button" variant="outline" className="h-10" onClick={() => void cargar()}>
+          <Button type="button" variant="outline" className="h-11" onClick={() => void cargar()}>
             Reintentar
           </Button>
         </div>
       )}
       <ul
         aria-label="Órdenes"
-        className="divide-border bg-card divide-y rounded-xl border empty:hidden"
+        className="divide-border bg-card shadow-card divide-y rounded-xl border empty:hidden"
       >
         {visibles.map((o) => {
           const pasos = PASOS[o.estado];
@@ -164,25 +173,25 @@ export function OrdenesPos({
               key={o.id}
               aria-label={`Orden ${o.numero}`}
               aria-busy={ocupada === o.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3"
             >
               <div className="min-w-0 flex-1 basis-56">
-                <p className="text-sm font-semibold tabular-nums">
+                <p className="cifra text-[15px]">
                   {o.numero}
                   {o.express && (
-                    <span className="bg-primary text-primary-foreground ml-2 rounded px-1.5 py-0.5 text-xs font-medium">
+                    <Etiqueta tono="marca" className="ml-2">
                       Express
-                    </span>
+                    </Etiqueta>
                   )}
                 </p>
-                <p className="truncate text-sm">{o.cliente}</p>
-                <p className="text-muted-foreground text-xs tabular-nums">
+                <p className="text-[15px] break-words">{o.cliente}</p>
+                <p className="text-muted-foreground text-sm tabular-nums">
                   {o.prendas} {o.prendas === 1 ? "prenda" : "prendas"}
                   {o.casillero && ` · Casillero ${o.casillero}`} · {formatearBs(o.total)}
                 </p>
               </div>
-              <div className="text-sm tabular-nums">
-                <p className="font-medium">{ETIQUETA_ESTADO[o.estado]}</p>
+              <div className="text-[15px] tabular-nums">
+                <p className="font-semibold">{ETIQUETA_ESTADO[o.estado]}</p>
                 <p className={atrasada ? "text-destructive font-medium" : "text-muted-foreground"}>
                   Prometida {fechaCorta(o.fechaPrometida)}
                   {atrasada && " · atrasada"}
@@ -193,7 +202,7 @@ export function OrdenesPos({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-10"
+                    size="lg"
                     disabled={ocupada !== null}
                     aria-label={`Volver a ${ETIQUETA_ESTADO[pasos.anterior]} ${o.numero}`}
                     onClick={() => void cambiar(o, pasos.anterior!)}
@@ -204,7 +213,7 @@ export function OrdenesPos({
                 {puedeEstado && pasos.siguiente && (
                   <Button
                     type="button"
-                    className="h-10"
+                    size="lg"
                     disabled={ocupada !== null}
                     aria-label={`Pasar a ${ETIQUETA_ESTADO[pasos.siguiente]} ${o.numero}`}
                     onClick={() => void cambiar(o, pasos.siguiente!)}
@@ -215,7 +224,7 @@ export function OrdenesPos({
                 {puedeEstado && pasos.entregar && (
                   <Button
                     type="button"
-                    className="h-10"
+                    size="lg"
                     disabled={ocupada !== null}
                     aria-label={`Entregar ${o.numero}`}
                     onClick={() => setDialogo({ tipo: "entregar", orden: o })}
@@ -227,7 +236,8 @@ export function OrdenesPos({
                   <Button
                     type="button"
                     variant="outline"
-                    className="text-destructive h-10"
+                    size="lg"
+                    className="text-destructive"
                     disabled={ocupada !== null}
                     aria-label={`Anular ${o.numero}`}
                     onClick={() => setDialogo({ tipo: "anular", orden: o })}
@@ -326,13 +336,16 @@ function DialogoOrden({
             <AlertDialogDescription>{descripcion}</AlertDialogDescription>
           </AlertDialogHeader>
           {children(campo, errorId)}
-          <p id={errorId} role="alert" className="text-destructive min-h-5 text-sm">
+          <p id={errorId} role="alert" className="text-destructive min-h-5 text-sm font-medium">
             {error}
           </p>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pendiente}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel size="lg" disabled={pendiente}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               type="submit"
+              size="lg"
               variant={destructiva ? "destructive" : "default"}
               disabled={pendiente}
             >
@@ -383,7 +396,7 @@ function DialogoEntrega({
           <Label className="flex-col items-stretch gap-1">
             Quién retira
             <Input
-              className="h-10"
+              className="h-11"
               name="quien"
               autoComplete="off"
               maxLength={120}
@@ -397,11 +410,11 @@ function DialogoEntrega({
           <fieldset className="flex flex-wrap gap-4 text-sm">
             <legend className="mb-1 font-medium">Documento de retiro</legend>
             {(["boleta", "carnet"] as const).map((c) => (
-              <Label key={c} className="min-h-10 font-normal">
+              <Label key={c} className="min-h-11 text-base font-normal">
                 <input
                   type="radio"
                   name="retiro-con"
-                  className="size-4"
+                  className="size-5"
                   checked={retiro.con === c}
                   onChange={() => setRetiro({ ...retiro, con: c })}
                 />
@@ -413,7 +426,7 @@ function DialogoEntrega({
             <Label className="flex-col items-stretch gap-1">
               Documento
               <Input
-                className="h-10"
+                className="h-11"
                 name="documento"
                 autoComplete="off"
                 maxLength={30}
@@ -462,7 +475,7 @@ function DialogoAnulacion({
         <Label className="flex-col items-stretch gap-1">
           Motivo
           <Input
-            className="h-10"
+            className="h-11"
             name="motivo"
             autoComplete="off"
             maxLength={200}

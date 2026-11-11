@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Printer, Plus } from "lucide-react";
+import { CalendarDays, CircleCheck, Printer, Plus, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatearFechaHora } from "@/lib/format/fecha";
@@ -33,7 +33,18 @@ export function NotaVentaVista({
   return (
     <div className="flex flex-col items-center gap-3 print:block">
       <div className="flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
-        <p role="status" className="mr-auto text-sm font-medium">
+        <p
+          role="status"
+          className={cn(
+            "mr-auto flex items-center gap-2 rounded-lg px-3 py-2 text-[15px] font-medium",
+            enCola ? "bg-warning-soft text-warning" : "bg-success-soft text-success",
+          )}
+        >
+          {enCola ? (
+            <TriangleAlert className="size-4 shrink-0" aria-hidden />
+          ) : (
+            <CircleCheck className="size-4 shrink-0" aria-hidden />
+          )}
           {enCola
             ? `${cosa} ${nota.numero} guardada en este equipo. Se enviará al volver la conexión.`
             : `${cosa} ${nota.numero} registrada`}
@@ -44,7 +55,7 @@ export function NotaVentaVista({
               key={p}
               type="button"
               variant={papel === p ? "secondary" : "outline"}
-              className="h-10"
+              className="h-11"
               aria-pressed={papel === p}
               onClick={() => setPapel(p)}
             >
@@ -52,15 +63,15 @@ export function NotaVentaVista({
             </Button>
           ))}
         </fieldset>
-        <Button type="button" className="h-10" onClick={() => window.print()}>
+        <Button type="button" className="h-11" onClick={() => window.print()}>
           <Printer /> Imprimir
         </Button>
         {alVerPlan && (
-          <Button type="button" variant="outline" className="h-10" onClick={alVerPlan}>
+          <Button type="button" variant="outline" className="h-11" onClick={alVerPlan}>
             <CalendarDays /> Plan de cuotas
           </Button>
         )}
-        <Button type="button" variant="outline" className="h-10" onClick={alNueva} autoFocus>
+        <Button type="button" variant="outline" className="h-11" onClick={alNueva} autoFocus>
           <Plus /> {orden ? "Nueva orden" : "Nueva venta"}
         </Button>
       </div>

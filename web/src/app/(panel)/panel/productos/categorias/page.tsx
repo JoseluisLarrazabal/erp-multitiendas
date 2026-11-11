@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import {
   EncabezadoPagina,
+  EnlaceVolver,
   FormCategoria,
   listarCategorias,
   Seccion,
@@ -21,14 +21,7 @@ export default async function PaginaCategorias() {
       <EncabezadoPagina
         titulo="Categorías"
         descripcion={`Agrupan los productos de ${activo.nombre}. No se pueden borrar, solo renombrar.`}
-        acciones={
-          <Link
-            href="/panel/productos"
-            className="text-primary inline-flex min-h-10 items-center gap-1 text-sm underline-offset-4 hover:underline"
-          >
-            <ArrowLeft className="size-4" aria-hidden /> Productos
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/productos">Productos</EnlaceVolver>}
       />
       {!categorias.ok ? (
         <p role="alert" className="text-destructive text-sm">
@@ -40,12 +33,9 @@ export default async function PaginaCategorias() {
             <FormCategoria negocioId={activo.negocioId} />
           </Seccion>
           {categorias.data.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aún no hay categorías.</p>
+            <EstadoVacio>Aún no hay categorías.</EstadoVacio>
           ) : (
-            <ul
-              className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
-              aria-label="Categorías"
-            >
+            <ul className="bg-card shadow-card divide-y rounded-xl border" aria-label="Categorías">
               {categorias.data.map((c) => (
                 <li key={`${c.id}-${c.nombre}`} className="px-4 py-3">
                   <FormCategoria negocioId={activo.negocioId} categoria={c} />

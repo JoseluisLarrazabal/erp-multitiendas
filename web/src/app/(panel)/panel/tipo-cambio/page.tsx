@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Tabla, Td, TdCifra, Th } from "@/components/ui/tabla";
 import { createClient } from "@/lib/supabase/server";
 import { formatearFecha, formatearTipoCambio } from "@/modules/catalogo";
 import {
@@ -31,10 +33,7 @@ export default async function PaginaTipoCambio() {
           <Seccion titulo="Vigente">
             {vigente ? (
               <p>
-                <span
-                  className="text-3xl font-bold tracking-tight tabular-nums"
-                  data-testid="tc-vigente"
-                >
+                <span className="cifra text-3xl" data-testid="tc-vigente">
                   Bs {formatearTipoCambio(vigente.valor)}
                 </span>
                 <span className="text-muted-foreground ml-3 text-sm">
@@ -52,37 +51,29 @@ export default async function PaginaTipoCambio() {
           </Seccion>
           <Seccion titulo="Historial">
             {historial.data.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Sin registros todavía.</p>
+              <EstadoVacio>Sin registros todavía.</EstadoVacio>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <caption className="sr-only">Últimos 20 tipos de cambio</caption>
-                  <thead>
-                    <tr className="text-muted-foreground border-b text-left text-xs font-semibold">
-                      <th scope="col" className="py-2 pr-4">
-                        Fecha
-                      </th>
-                      <th scope="col" className="py-2 pr-4 text-right">
-                        Bs por USD
-                      </th>
-                      <th scope="col" className="py-2">
-                        Registró
-                      </th>
+              <Tabla>
+                <caption className="sr-only">Últimos 20 tipos de cambio</caption>
+                <thead>
+                  <tr>
+                    <Th scope="col">Fecha</Th>
+                    <Th scope="col" className="text-right">
+                      Bs por USD
+                    </Th>
+                    <Th scope="col">Registró</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.data.map((t) => (
+                    <tr key={t.id}>
+                      <Td className="text-[13px] tabular-nums">{formatearFecha(t.vigenteDesde)}</Td>
+                      <TdCifra className="text-right">{formatearTipoCambio(t.valor)}</TdCifra>
+                      <Td>{t.usuario}</Td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {historial.data.map((t) => (
-                      <tr key={t.id} className="border-b last:border-0">
-                        <td className="py-2 pr-4 tabular-nums">{formatearFecha(t.vigenteDesde)}</td>
-                        <td className="py-2 pr-4 text-right tabular-nums">
-                          {formatearTipoCambio(t.valor)}
-                        </td>
-                        <td className="py-2">{t.usuario}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </Tabla>
             )}
           </Seccion>
         </div>

@@ -48,7 +48,6 @@ export function FormProveedor({
           id={`${p}-nombre`}
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           {...propsCampo(`${p}-nombre`, errorNombre ? { [`${p}-nombre`]: errorNombre } : {})}
@@ -59,14 +58,18 @@ export function FormProveedor({
           id={`${p}-contacto`}
           autoComplete="off"
           maxLength={300}
-          className="h-10"
           value={contacto}
           onChange={(e) => setContacto(e.target.value)}
         />
       </Campo>
       {proveedor && (
-        <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
+        <label className="flex min-h-10 items-center gap-2 text-sm sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={activo}
+            onChange={(e) => setActivo(e.target.checked)}
+            className="accent-primary border-input focus-visible:ring-ring size-4 rounded focus-visible:ring-3"
+          />
           Activo (aparece al registrar compras)
         </label>
       )}
@@ -75,12 +78,12 @@ export function FormProveedor({
           {error}
         </p>
         <div className="flex gap-2">
-          <Button type="submit" disabled={pendiente} className="h-10">
+          <Button type="submit" disabled={pendiente}>
             {pendiente && <Loader2 className="animate-spin" aria-hidden />}
             {proveedor ? "Guardar cambios" : "Guardar proveedor"}
           </Button>
           {proveedor && (
-            <Button type="button" variant="outline" className="h-10" onClick={alTerminar}>
+            <Button type="button" variant="outline" onClick={alTerminar}>
               Cancelar
             </Button>
           )}

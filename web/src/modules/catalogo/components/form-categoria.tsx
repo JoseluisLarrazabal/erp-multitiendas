@@ -77,6 +77,7 @@ export function FormCategoria({ negocioId, categoria, alTerminar }: Props) {
             id={idCampo}
             etiqueta={categoria ? "Nombre" : "Nombre de la categoría"}
             error={errores[idCampo]}
+            ocultarEtiqueta={!!categoria}
           >
             <Input
               id={idCampo}
@@ -84,17 +85,11 @@ export function FormCategoria({ negocioId, categoria, alTerminar }: Props) {
               required
               defaultValue={categoria?.nombre}
               autoComplete="off"
-              className="h-10"
               {...propsCampo(idCampo, errores)}
             />
           </Campo>
         </div>
-        <Button
-          type="submit"
-          disabled={pendiente}
-          className="h-10"
-          variant={categoria ? "outline" : "default"}
-        >
+        <Button type="submit" disabled={pendiente} variant={categoria ? "outline" : "default"}>
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           {categoria ? "Renombrar" : "Crear categoría"}
         </Button>

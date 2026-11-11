@@ -82,7 +82,7 @@ export function VentaEnCurso({
   const congelado = montosCongelados(pendiente, envio.estado);
   const planCredito = v.credito?.ok ? v.credito.plan : null;
   return (
-    <div className="flex flex-col gap-3 pb-20 lg:pb-0 print:hidden">
+    <div className="flex flex-col gap-3 pb-24 lg:pb-0 print:hidden">
       <BarraEquipo
         equipo={equipo}
         cajaAbierta={!!cajaId}
@@ -118,9 +118,9 @@ export function VentaEnCurso({
           <div
             key={clave}
             role="alert"
-            className="border-destructive flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
+            className="border-warning-line bg-warning-soft flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
           >
-            <p className="text-destructive min-w-0 flex-1">
+            <p className="text-warning min-w-0 flex-1 font-medium">
               Cobro sin confirmar: {p.nota.numero}, {bs(aCentavos(p.payload.total))}
               {p.nota.cliente ? `, ${p.nota.cliente.nombre}` : ""}. No entregues el producto hasta
               verificar.
@@ -128,6 +128,7 @@ export function VentaEnCurso({
             <Button
               type="button"
               variant="outline"
+              className="h-11"
               disabled={envio.estado.t === "enviando" || envio.estado.t === "verificando"}
               onClick={() => void envio.descartarYVerificar(clave)}
             >
@@ -257,10 +258,13 @@ export function VentaEnCurso({
 
       {!v.consulta && !aparte && (
         <div className="bg-card fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
-          <p className="flex-1 text-xl font-bold tabular-nums">{bs(totales?.total ?? 0)}</p>
+          <p className="cifra min-w-0 flex-1 text-xl min-[360px]:text-2xl">
+            {bs(totales?.total ?? 0)}
+          </p>
           <Button
             type="button"
-            className="h-12 px-6 text-base"
+            size="xl"
+            className="px-6 min-[360px]:px-8"
             disabled={!v.puedeCobrar}
             onClick={v.abrirCobro}
           >

@@ -1,17 +1,9 @@
-import { cn } from "@/lib/utils";
+import { Etiqueta } from "@/components/ui/etiqueta";
 import { ETIQUETA_ESTADO } from "../domain-panel";
 
+// Verde solo para completada; reserva y otros estados intermedios van en marca.
+const TONO: Record<string, "exito" | "peligro"> = { completada: "exito", anulada: "peligro" };
+
 export function EstadoVenta({ estado }: { estado: string }) {
-  return (
-    <span
-      className={cn(
-        "w-fit rounded-md px-2 py-0.5 text-xs font-semibold",
-        estado === "anulada"
-          ? "bg-destructive/10 text-destructive"
-          : "bg-secondary text-secondary-foreground",
-      )}
-    >
-      {ETIQUETA_ESTADO[estado] ?? estado}
-    </span>
-  );
+  return <Etiqueta tono={TONO[estado] ?? "marca"}>{ETIQUETA_ESTADO[estado] ?? estado}</Etiqueta>;
 }

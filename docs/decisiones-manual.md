@@ -352,7 +352,9 @@ de la preentrega (`PP`, `AUDP`): las reglas que cambiaron se corrigieron y las n
 - **Un QR confirmado en el mostrador (anticipo de reserva, cuota de crédito, venta en línea) no se puede marcar rechazado
   después;** solo el QR pendiente de una venta sin conexión tiene camino de rechazo. _Vigente / pendiente de decisión CTO_ ·
   H:28; PF-7:79, 106-107
-- **El Inicio del panel avisa "N ventas por revisar"** a quien las revisa, con vendedor y motivo. _Vigente_ · AUD:28, 88
+- **El Inicio del panel avisa "N ventas por revisar"** a quien las revisa, dentro del bloque "Por atender", con el
+  número y el total de la primera venta y un botón "Reconciliar". El vendedor y el motivo se ven en "Reconciliación".
+  _Vigente; cambió con el tablero del rediseño (2026-11-11): antes el aviso traía vendedor y motivo_ · AUD:28, 88
 - **Una venta sin motivos y sin QR pendiente no entra a revisión.** _Vigente_ · PF-3:57
 
 ## 8. Catálogo, precios y dólar

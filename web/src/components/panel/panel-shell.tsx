@@ -73,7 +73,7 @@ export function PanelShell({ negocio, usuario, permisos, tipo, children }: Props
       <aside
         id="menu-lateral"
         className={cn(
-          "bg-card fixed inset-y-0 left-0 z-20 flex w-[248px] flex-col gap-6 overflow-y-auto border-r px-3.5 pt-5 pb-3.5 duration-200 md:visible md:sticky md:top-0 md:h-dvh md:translate-x-0 print:hidden",
+          "bg-surface fixed inset-y-0 left-0 z-20 flex w-[232px] flex-col gap-6 overflow-y-auto border-r px-3.5 pt-5 pb-3.5 duration-200 md:visible md:sticky md:top-0 md:h-dvh md:translate-x-0 print:hidden",
           abierto
             ? "visible translate-x-0 transition-transform" // visible sin transición: así admite foco ya
             : "invisible -translate-x-full transition-[transform,visibility]",
@@ -101,7 +101,7 @@ export function PanelShell({ negocio, usuario, permisos, tipo, children }: Props
           {/* <a>, no next/link: ir a /pos con navegación suave dejaría el service worker mal enlazado. */}
           <a
             href="/pos"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-10 items-center gap-3 rounded-lg px-3 text-[13px] outline-none focus-visible:ring-3"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm outline-none focus-visible:ring-3"
           >
             <ShoppingCart className="size-[17px]" aria-hidden />
             Punto de venta

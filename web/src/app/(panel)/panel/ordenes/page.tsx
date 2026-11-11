@@ -3,9 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
 import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 import {
@@ -19,7 +19,7 @@ import {
 
 export const metadata: Metadata = { title: "Órdenes · ERP Multitiendas" };
 
-const boton = cn(buttonVariants({ variant: "outline", size: "sm" }), "min-h-9 md:min-h-8");
+const boton = buttonVariants({ variant: "outline" });
 
 export default async function PaginaOrdenes({
   searchParams,
@@ -54,13 +54,13 @@ export default async function PaginaOrdenes({
           </p>
         )}
         {lista.ok && lista.data.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {hayFiltros
               ? "Ninguna orden coincide con los filtros."
               : desde
                 ? "No hay más órdenes."
                 : "No hay órdenes activas."}
-          </p>
+          </EstadoVacio>
         )}
         {lista.ok && lista.data.filas.length > 0 && <ListaOrdenes ordenes={lista.data.filas} />}
         {lista.ok && (desde || lista.data.siguiente) && (

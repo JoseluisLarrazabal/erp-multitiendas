@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
+import { Seccion } from "@/modules/catalogo/panel";
 import {
   exigirPermiso,
   FormPersonaExistente,
@@ -12,15 +14,6 @@ import {
 } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Usuarios · ERP Multitiendas" };
-
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-card flex flex-col gap-4 rounded-xl border p-5 shadow-[0_2px_5px_#34345a0d] md:p-6">
-      <h2 className="text-[15px] font-semibold tracking-tight">{titulo}</h2>
-      {children}
-    </section>
-  );
-}
 
 export default async function PaginaUsuarios() {
   const { activo, usuario } = await exigirPermiso("usuarios");
@@ -64,10 +57,10 @@ export default async function PaginaUsuarios() {
       ) : (
         <div className="flex flex-col gap-6">
           {filas.data.length <= 1 && (
-            <p className="text-muted-foreground text-sm">
+            <EstadoVacio>
               Aún no hay otras personas en este negocio. Crea una cuenta o agrega a alguien de tus
               otros negocios.
-            </p>
+            </EstadoVacio>
           )}
           <UsuariosTabla
             filas={filas.data}

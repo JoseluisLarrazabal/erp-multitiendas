@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNativo } from "@/components/ui/select-nativo";
-import { cn } from "@/lib/utils";
 import { DIAS_SIN_MOVIMIENTO, etiquetaAgrupar, type DefReporte } from "../domain";
 import { hrefReportes, rangosRapidos, type FiltrosReporte } from "../schemas";
 
@@ -29,13 +29,12 @@ export function FiltrosReporteForm({
   const rangos = rangosRapidos(hoy);
   return (
     <div className="flex flex-col gap-3">
-      <form
+      <BarraFiltros
         key={JSON.stringify(filtros)}
         method="get"
         action="/panel/reportes"
         role="search"
         aria-label="Filtros del reporte"
-        className="flex flex-wrap items-end gap-x-4 gap-y-3"
       >
         <input type="hidden" name="r" value={filtros.r} />
         {/* Lo que este reporte no muestra se conserva, para que cambiar de reporte no pierda los filtros. */}
@@ -54,7 +53,7 @@ export function FiltrosReporteForm({
         )}
         {!esStock && (
           <>
-            <div className="flex min-w-36 flex-1 flex-col gap-1.5 sm:max-w-44">
+            <CampoFiltro>
               <Label htmlFor="fr-desde">Desde</Label>
               <Input
                 id="fr-desde"
@@ -62,10 +61,9 @@ export function FiltrosReporteForm({
                 type="date"
                 defaultValue={filtros.desde}
                 max={filtros.hasta}
-                className="h-10"
               />
-            </div>
-            <div className="flex min-w-36 flex-1 flex-col gap-1.5 sm:max-w-44">
+            </CampoFiltro>
+            <CampoFiltro>
               <Label htmlFor="fr-hasta">Hasta</Label>
               <Input
                 id="fr-hasta"
@@ -73,13 +71,12 @@ export function FiltrosReporteForm({
                 type="date"
                 defaultValue={filtros.hasta}
                 min={filtros.desde}
-                className="h-10"
               />
-            </div>
+            </CampoFiltro>
           </>
         )}
         {def.agrupar && (
-          <div className="flex min-w-36 flex-1 flex-col gap-1.5 sm:max-w-44">
+          <CampoFiltro>
             <Label htmlFor="fr-agrupar">Agrupar por</Label>
             <SelectNativo id="fr-agrupar" name="agrupar" defaultValue={filtros.agrupar}>
               {def.agrupar.map((a) => (
@@ -88,19 +85,19 @@ export function FiltrosReporteForm({
                 </option>
               ))}
             </SelectNativo>
-          </div>
+          </CampoFiltro>
         )}
         {esStock && (
           <>
-            <div className="flex min-w-36 flex-1 flex-col gap-1.5 sm:max-w-44">
+            <CampoFiltro>
               <Label htmlFor="fr-filtro">Mostrar</Label>
               <SelectNativo id="fr-filtro" name="filtro" defaultValue={filtros.filtro}>
                 <option value="todo">Todo</option>
                 <option value="bajo">Stock bajo</option>
                 <option value="sin">Sin movimiento</option>
               </SelectNativo>
-            </div>
-            <div className="flex min-w-36 flex-1 flex-col gap-1.5 sm:max-w-44">
+            </CampoFiltro>
+            <CampoFiltro>
               <Label htmlFor="fr-dias">Sin salidas hace</Label>
               <SelectNativo id="fr-dias" name="dias" defaultValue={String(filtros.dias)}>
                 {DIAS_SIN_MOVIMIENTO.map((d) => (
@@ -109,23 +106,18 @@ export function FiltrosReporteForm({
                   </option>
                 ))}
               </SelectNativo>
-            </div>
+            </CampoFiltro>
           </>
         )}
-        <Button type="submit" className="h-10">
-          Aplicar
-        </Button>
-      </form>
+        <Button type="submit">Aplicar</Button>
+      </BarraFiltros>
       {!esStock && (
         <nav aria-label="Atajos de fecha" className="flex flex-wrap items-center gap-2">
           {ATAJOS.map(([k, etiqueta]) => (
             <Link
               key={k}
               href={hrefReportes({ ...filtros, ...rangos[k] })}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "min-h-9 md:min-h-8",
-              )}
+              className={buttonVariants({ variant: "outline" })}
             >
               {etiqueta}
             </Link>

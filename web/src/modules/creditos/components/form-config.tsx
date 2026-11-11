@@ -61,14 +61,13 @@ export function FormConfigCredito({
       onSubmit={enviar}
       noValidate
       aria-label="Parámetros del crédito"
-      className="grid gap-4 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
     >
       <Campo id="cfg-inicial" etiqueta="Inicial mínima (%)" error={errores.inicial}>
         <Input
           id="cfg-inicial"
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={inicialPct}
           onChange={(e) => setInicial(e.target.value)}
           {...propsCampo("cfg-inicial", errores.inicial ? { "cfg-inicial": errores.inicial } : {})}
@@ -79,7 +78,6 @@ export function FormConfigCredito({
           id="cfg-interes"
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={interesPct}
           onChange={(e) => setInteres(e.target.value)}
           {...propsCampo("cfg-interes", errores.interes ? { "cfg-interes": errores.interes } : {})}
@@ -90,7 +88,6 @@ export function FormConfigCredito({
           id="cfg-plazo"
           inputMode="numeric"
           autoComplete="off"
-          className="h-10"
           value={plazoCuotas}
           onChange={(e) => setPlazo(e.target.value)}
           {...propsCampo("cfg-plazo", errores.plazo ? { "cfg-plazo": errores.plazo } : {})}
@@ -106,13 +103,12 @@ export function FormConfigCredito({
           id="cfg-max"
           inputMode="numeric"
           autoComplete="off"
-          className="h-10"
           value={maxCuotas}
           onChange={(e) => setMax(e.target.value)}
           {...propsCampo("cfg-max", errores.max ? { "cfg-max": errores.max } : {}, true)}
         />
       </Campo>
-      <div className="flex flex-col gap-2 sm:col-span-2">
+      <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-4">
         <p role="alert" className="text-destructive text-sm empty:hidden">
           {error}
         </p>
@@ -120,7 +116,7 @@ export function FormConfigCredito({
           {hecho ? "Parámetros guardados." : ""}
         </p>
         <div>
-          <Button type="submit" disabled={pendiente} className="h-10">
+          <Button type="submit" disabled={pendiente}>
             {pendiente && <Loader2 className="animate-spin" aria-hidden />}
             Guardar parámetros
           </Button>

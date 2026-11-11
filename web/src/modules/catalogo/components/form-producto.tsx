@@ -126,7 +126,7 @@ export function FormProducto({
       onSubmit={enviar}
       noValidate
       aria-label="Datos del producto"
-      className="grid gap-4 sm:grid-cols-2"
+      className="flex flex-col gap-5"
     >
       <CamposProducto
         tipos={tipos}
@@ -140,14 +140,14 @@ export function FormProducto({
         alElegirFoto={(archivo) => (foto.current = archivo)}
         alProcesarFoto={setProcesandoFoto}
       />
-      <div className="flex flex-col gap-2 sm:col-span-2">
+      <div className="flex flex-col gap-2">
         <p role="alert" className="text-destructive text-sm empty:hidden">
           {mensaje}
         </p>
         <p role="status" className="text-sm font-medium">
           {guardado && !mensaje ? "Producto guardado." : ""}
         </p>
-        <Button type="submit" disabled={pendiente || procesandoFoto} className="h-10 self-start">
+        <Button type="submit" disabled={pendiente || procesandoFoto} className="self-start">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           {producto ? "Guardar cambios" : "Crear producto"}
         </Button>

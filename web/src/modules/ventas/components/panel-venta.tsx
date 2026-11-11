@@ -81,20 +81,20 @@ export function PanelVenta({
   return (
     <aside
       aria-label="Venta"
-      className={`bg-card flex flex-col gap-3 rounded-xl border p-3 lg:sticky lg:top-3 lg:max-h-[calc(100dvh-1.5rem)] lg:self-start lg:overflow-y-auto ${consulta ? "max-lg:hidden" : ""}`}
+      className={`bg-card shadow-card flex min-w-0 flex-col gap-3 rounded-xl border p-4 lg:sticky lg:top-3 lg:max-h-[calc(100dvh-1.5rem)] lg:self-start lg:overflow-y-auto ${consulta ? "max-lg:hidden" : ""}`}
     >
       <h2
         ref={tituloRef}
         tabIndex={-1}
-        className="flex items-center gap-2 text-sm font-semibold outline-none"
+        className="flex items-center gap-2 text-base font-semibold outline-none"
       >
         <ShoppingCart className="size-4" aria-hidden /> Venta actual
-        <span className="text-muted-foreground font-normal tabular-nums">
+        <span className="text-muted-foreground text-sm font-normal tabular-nums">
           ({cantidadLineas} {cantidadLineas === 1 ? "línea" : "líneas"})
         </span>
       </h2>
       {reserva && (
-        <div className="bg-muted flex flex-col gap-1.5 rounded-lg p-2.5 text-sm">
+        <div className="bg-muted flex flex-col gap-2 rounded-lg p-3 text-sm">
           <p>
             Completando la reserva de <span className="font-medium">{reserva.cliente}</span>.
             Anticipo recibido: <span className="tabular-nums">{bs(reserva.anticipo)}</span>.
@@ -102,7 +102,7 @@ export function PanelVenta({
           <Button
             type="button"
             variant="outline"
-            className="h-9 self-start"
+            className="h-11 self-start"
             onClick={reserva.alQuitar}
           >
             Descartar reserva
@@ -154,42 +154,42 @@ export function PanelVenta({
         />
       )}
       {hayLineas && !permisos.puedeDescontar && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-sm">
           Sin permiso de descuento: para bajar precios o descontar, pide a un encargado que venda
           desde su sesión.
         </p>
       )}
       {hayLineas && permisos.puedeDescontar && permisos.tope === 0 && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-sm">
           Los descuentos están desactivados (tope 0 %). Un encargado puede configurarlo.
         </p>
       )}
       {hayLineas && puedeBajar && !reserva && (
-        <label className="flex items-center justify-between gap-2 text-sm">
+        <label className="flex items-center justify-between gap-2 text-[15px]">
           <span>Descuento de la venta (Bs)</span>
           <Input
             aria-label="Descuento de la venta"
             inputMode="decimal"
             placeholder="0,00"
-            className="h-10 w-28 text-right tabular-nums"
+            className="cifra h-11 w-28 text-right"
             value={descuentoTexto}
             disabled={bloqueado}
             onChange={(e) => alCambiarDescuento(e.target.value)}
           />
         </label>
       )}
-      <div className="border-t pt-2">
+      <div className="border-foreground/80 border-t-2 pt-3">
         {totales && totales.subtotal !== totales.total && (
-          <p className="text-muted-foreground flex justify-between text-xs tabular-nums">
+          <p className="text-muted-foreground flex justify-between text-sm">
             <span>Subtotal</span>
-            <span>{bs(totales.subtotal)}</span>
+            <span className="cifra">{bs(totales.subtotal)}</span>
           </p>
         )}
         <p className="flex items-baseline justify-between">
-          <span className="text-sm font-medium">Total</span>
+          <span className="text-base font-semibold">Total</span>
           {/* Solo el total de escritorio es región viva: la barra móvil repite el valor y se anunciaría dos veces. */}
           <span
-            className="text-3xl font-bold tabular-nums"
+            className="cifra text-3xl lg:text-4xl"
             data-testid="total"
             aria-live="polite"
             aria-atomic="true"
@@ -198,12 +198,13 @@ export function PanelVenta({
           </span>
         </p>
       </div>
-      <p role="status" className="text-destructive text-xs empty:hidden">
+      <p role="status" className="text-destructive text-[15px] font-medium empty:hidden">
         {motivoBloqueo}
       </p>
       <Button
         type="button"
-        className="h-12 text-base max-lg:hidden"
+        size="xl"
+        className="max-lg:hidden"
         disabled={!puedeCobrar}
         onClick={abrirCobro}
       >

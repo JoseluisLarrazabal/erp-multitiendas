@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Input } from "@/components/ui/input";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import {
@@ -34,11 +35,7 @@ export function CarritoLineas({
   const puedeBajar = permisos.puedeDescontar && permisos.tope > 0;
   const usadas = new Set(lineas.map((l) => l.linea.serieId).filter((s): s is string => s !== null));
   if (lineas.length === 0)
-    return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        El carrito está vacío. Escanea un código o busca un producto.
-      </p>
-    );
+    return <EstadoVacio>El carrito está vacío. Escanea un código o busca un producto.</EstadoVacio>;
   return (
     <ul aria-label="Carrito" className="divide-border divide-y">
       {lineas.map(({ linea: l, entrada, precioLista, error }) => {
@@ -51,27 +48,27 @@ export function CarritoLineas({
           : null;
         return (
           <li key={l.id} className="flex flex-col gap-2 py-2.5">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{l.producto.nombre}</p>
-                <p className="text-muted-foreground text-xs">
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-1 min-[360px]:flex-nowrap">
+              <div className="min-w-0 basis-full min-[360px]:flex-1 min-[360px]:basis-0">
+                <p className="text-[15px] font-semibold break-words">{l.producto.nombre}</p>
+                <p className="text-muted-foreground text-sm">
                   {l.producto.codigo} · lista {bs(precioLista)}
                   {l.producto.unidad === "kg" && " / kg"}
                 </p>
               </div>
-              <p className="text-sm font-semibold tabular-nums">
+              <p className="cifra ml-auto text-base min-[360px]:ml-0">
                 {total === null ? "—" : bs(total)}
               </p>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-10"
+                className="size-11"
                 aria-label={`Quitar ${l.producto.nombre}`}
                 disabled={bloqueado}
                 onClick={() => despachar({ tipo: "quitar", id: l.id })}
               >
-                <Trash2 />
+                <Trash2 className="size-5" />
               </Button>
             </div>
             <div
@@ -83,24 +80,24 @@ export function CarritoLineas({
                 } as React.CSSProperties
               }
             >
-              <label className="flex flex-col gap-0.5 text-xs">
-                <span className="text-muted-foreground">{etiquetaCantidad}</span>
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
+                <span className="text-muted-foreground font-medium">{etiquetaCantidad}</span>
                 <Input
                   aria-label={`${etiquetaCantidad} de ${l.producto.nombre}`}
                   inputMode={l.producto.unidad === "kg" ? "decimal" : "numeric"}
-                  className="h-10 text-right tabular-nums"
+                  className="cifra h-11 text-right"
                   value={l.cantidadTexto}
                   disabled={bloqueado || l.producto.controlaSerie}
                   aria-invalid={error?.startsWith("Cantidad") || undefined}
                   onChange={(e) => cambiar({ cantidadTexto: e.target.value })}
                 />
               </label>
-              <label className="flex flex-col gap-0.5 text-xs">
-                <span className="text-muted-foreground">Precio</span>
+              <label className="flex min-w-0 flex-col gap-1 text-sm">
+                <span className="text-muted-foreground font-medium">Precio</span>
                 <Input
                   aria-label={`Precio de ${l.producto.nombre}`}
                   inputMode="decimal"
-                  className="h-10 text-right tabular-nums"
+                  className="cifra h-11 text-right"
                   value={l.precioTexto}
                   disabled={bloqueado}
                   aria-invalid={
@@ -111,13 +108,13 @@ export function CarritoLineas({
                 />
               </label>
               {puedeBajar && (
-                <label className="flex flex-col gap-0.5 text-xs">
-                  <span className="text-muted-foreground">Descuento</span>
+                <label className="flex min-w-0 flex-col gap-1 text-sm">
+                  <span className="text-muted-foreground font-medium">Descuento</span>
                   <Input
                     aria-label={`Descuento de ${l.producto.nombre}`}
                     inputMode="decimal"
                     placeholder="0,00"
-                    className="h-10 text-right tabular-nums"
+                    className="cifra h-11 text-right"
                     value={l.descuentoTexto}
                     disabled={bloqueado}
                     onChange={(e) => cambiar({ descuentoTexto: e.target.value })}
@@ -125,11 +122,11 @@ export function CarritoLineas({
                 </label>
               )}
               {listas.length > 1 && !listaFija && (
-                <label className="flex flex-col gap-0.5 text-xs">
-                  <span className="text-muted-foreground">Lista</span>
+                <label className="flex min-w-0 flex-col gap-1 text-sm">
+                  <span className="text-muted-foreground font-medium">Lista</span>
                   <SelectNativo
                     aria-label={`Lista de ${l.producto.nombre}`}
-                    className="h-10"
+                    className="h-11"
                     value={l.lista}
                     disabled={bloqueado}
                     onChange={(e) =>
@@ -155,7 +152,7 @@ export function CarritoLineas({
               />
             )}
             {error && (
-              <p role="alert" className="text-destructive text-xs">
+              <p role="alert" className="text-destructive text-sm font-medium">
                 {error}
               </p>
             )}

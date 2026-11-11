@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { buttonVariants } from "@/components/ui/button";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
 import { listarCajaPorRevisar, ListaCajaPorRevisar } from "@/modules/caja/panel";
 import { listarStock, ListaStock } from "@/modules/inventario/panel";
@@ -19,7 +19,6 @@ import {
 export const metadata: Metadata = { title: "Reconciliación · ERP Multitiendas" };
 
 const LIMITE_NEGATIVOS = 25;
-const vacio = "text-muted-foreground text-sm";
 
 export default async function PaginaReconciliacion({
   searchParams,
@@ -79,10 +78,7 @@ export default async function PaginaReconciliacion({
               {desde && (
                 <Link
                   href="/panel/reconciliacion"
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "min-h-9 md:min-h-8",
-                  )}
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   Volver al inicio
                 </Link>
@@ -90,10 +86,7 @@ export default async function PaginaReconciliacion({
               {ventas.data.siguiente && (
                 <Link
                   href={`/panel/reconciliacion?desde=${ventas.data.siguiente}`}
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "min-h-9 md:min-h-8",
-                  )}
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   Siguientes <ChevronRight aria-hidden />
                 </Link>
@@ -118,7 +111,7 @@ export default async function PaginaReconciliacion({
               {!negativos.ok ? negativos.error : !ubicaciones.ok ? ubicaciones.error : null}
             </p>
           ) : negativos.data.filas.length === 0 ? (
-            <p className={vacio}>Ningún producto tiene stock negativo.</p>
+            <EstadoVacio>Ningún producto tiene stock negativo.</EstadoVacio>
           ) : (
             <>
               <ListaStock

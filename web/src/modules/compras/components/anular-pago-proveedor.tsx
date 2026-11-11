@@ -57,8 +57,6 @@ export function AnularPagoProveedor({
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="min-h-9 md:min-h-8"
         aria-label={`Anular el último pago a ${nombre}`}
         onClick={abrir}
       >

@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { formatearBs } from "@/lib/format/moneda";
 import { useSinRed } from "@/lib/offline/red";
@@ -73,7 +74,10 @@ export function ReservasPos({
 
   if (sinRed)
     return (
-      <p role="status" className="bg-secondary rounded-lg p-3 text-sm">
+      <p
+        role="status"
+        className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px]"
+      >
         Las reservas necesitan conexión: no se pueden crear, cancelar ni completar sin red.
       </p>
     );
@@ -92,30 +96,32 @@ export function ReservasPos({
         alRepetida={() => void cargar()}
       />
       <div role="status" className="flex flex-col gap-3 empty:hidden">
-        {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
+        {aviso && (
+          <p className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px] font-medium">
+            {aviso}
+          </p>
+        )}
         {reservas === null && !error && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando reservas…
           </p>
         )}
-        {reservas?.length === 0 && (
-          <p className="text-muted-foreground py-2 text-center text-sm">No hay reservas activas.</p>
-        )}
+        {reservas?.length === 0 && <EstadoVacio>No hay reservas activas.</EstadoVacio>}
       </div>
       {error && (
         <div
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
           <span>{error}</span>
-          <Button type="button" variant="outline" className="h-10" onClick={() => void cargar()}>
+          <Button type="button" variant="outline" className="h-11" onClick={() => void cargar()}>
             Reintentar
           </Button>
         </div>
       )}
       <ul
         aria-label="Reservas activas"
-        className="divide-border bg-card divide-y rounded-xl border empty:hidden"
+        className="divide-border bg-card shadow-card divide-y rounded-xl border empty:hidden"
       >
         {reservas?.map((r) => {
           const aqui = r.ubicacionId === ubicacionId;
@@ -124,23 +130,23 @@ export function ReservasPos({
             <li
               key={r.id}
               aria-label={`Reserva de ${r.clienteNombre}`}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3"
             >
               <div className="min-w-0 flex-1 basis-56">
-                <p className="truncate text-sm font-semibold">{r.clienteNombre}</p>
-                <p className="truncate text-sm">
+                <p className="text-[15px] font-semibold break-words">{r.clienteNombre}</p>
+                <p className="text-[15px] break-words">
                   {r.productoNombre} × {formatearCantidad(aMilesimas(r.cantidad))}
                 </p>
-                <p className="text-muted-foreground text-xs tabular-nums">
+                <p className="text-muted-foreground text-sm tabular-nums">
                   Total {bs(totalReserva(r))} · anticipo {formatearBs(r.anticipo)} (
                   {ETIQUETA_MEDIO[r.medio]}) · saldo {bs(saldoReserva(r))}
                 </p>
-                {!aqui && <p className="text-muted-foreground text-xs">Reservada en {donde}</p>}
+                {!aqui && <p className="text-muted-foreground text-sm">Reservada en {donde}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  className="h-10"
+                  size="lg"
                   disabled={hayCarrito || !cajaId || !aqui}
                   title={
                     !aqui
@@ -157,6 +163,7 @@ export function ReservasPos({
                 {puedeCancelar ? (
                   <ConfirmarAccion
                     etiqueta="Cancelar"
+                    size="lg"
                     titulo={`¿Cancelar la reserva de ${r.clienteNombre}?`}
                     descripcion={`Se libera el stock y se devuelve el anticipo de ${formatearBs(r.anticipo)} por ${ETIQUETA_MEDIO[r.medio].toLowerCase()} desde la caja abierta.`}
                     confirmar="Cancelar reserva"
@@ -199,7 +206,7 @@ export function ReservasPos({
                     }}
                   />
                 ) : (
-                  <p className="text-muted-foreground self-center text-xs">
+                  <p className="text-muted-foreground self-center text-sm">
                     {MENSAJE_SIN_PERMISO_CANCELAR}
                   </p>
                 )}

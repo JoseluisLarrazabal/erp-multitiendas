@@ -35,45 +35,45 @@ export function FormCreditoVenta({
 }) {
   const id = useId();
   return (
-    <fieldset className="flex flex-col gap-2 rounded-lg border p-2.5" disabled={bloqueado}>
+    <fieldset className="bg-surface flex flex-col gap-2 rounded-lg border p-3" disabled={bloqueado}>
       <legend className="sr-only">Venta a crédito</legend>
-      <label className="flex items-center gap-2 text-sm font-medium">
+      <label className="flex min-h-11 items-center gap-2 text-base font-semibold">
         <input
           type="checkbox"
-          className="size-5"
+          className="size-6"
           checked={form.activo}
           disabled={sinRed}
           onChange={(e) => alAlternar(e.target.checked)}
         />
         <HandCoins className="size-4" aria-hidden /> Vender a crédito
       </label>
-      {sinRed && <p className="text-muted-foreground text-xs">El crédito necesita conexión.</p>}
+      {sinRed && <p className="text-muted-foreground text-sm">El crédito necesita conexión.</p>}
       {form.activo && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor={`${id}-inicial`} className="text-xs">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label htmlFor={`${id}-inicial`} className="text-sm">
                 Inicial (Bs)
               </Label>
               <Input
                 id={`${id}-inicial`}
                 inputMode="decimal"
                 autoComplete="off"
-                className="h-10 text-right tabular-nums"
+                className="cifra h-11 text-right"
                 placeholder={plan ? textoMonto(plan.minimo) : "Mínima"}
                 value={form.inicialTexto}
                 onChange={(e) => alCambiar({ inicialTexto: e.target.value })}
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor={`${id}-cuotas`} className="text-xs">
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label htmlFor={`${id}-cuotas`} className="text-sm">
                 Cuotas{parametros ? ` (1 a ${parametros.maxCuotas})` : ""}
               </Label>
               <Input
                 id={`${id}-cuotas`}
                 inputMode="numeric"
                 autoComplete="off"
-                className="h-10 text-right tabular-nums"
+                className="cifra h-11 text-right"
                 placeholder={parametros ? String(parametros.plazoCuotas) : ""}
                 value={form.cuotasTexto}
                 onChange={(e) => alCambiar({ cuotasTexto: e.target.value })}
@@ -81,11 +81,11 @@ export function FormCreditoVenta({
             </div>
           </div>
           <div
-            className="flex flex-col gap-1 text-sm"
+            className="flex flex-col gap-1 text-[15px]"
             role="group"
             aria-label="Documentos del crédito"
           >
-            <p className="text-muted-foreground text-xs">Documentos recibidos</p>
+            <p className="text-muted-foreground text-sm font-medium">Documentos recibidos</p>
             {(
               [
                 ["docsCi", "Cédula de identidad"],
@@ -93,10 +93,10 @@ export function FormCreditoVenta({
                 ["docsPagare", "Pagaré firmado"],
               ] as const
             ).map(([clave, etiqueta]) => (
-              <label key={clave} className="flex items-center gap-2">
+              <label key={clave} className="flex min-h-11 items-center gap-2">
                 <input
                   type="checkbox"
-                  className="size-5"
+                  className="size-6"
                   checked={form[clave]}
                   onChange={(e) => alCambiar({ [clave]: e.target.checked })}
                 />
@@ -108,7 +108,7 @@ export function FormCreditoVenta({
             <Button
               type="button"
               variant="outline"
-              className="h-10 self-start"
+              className="h-11 self-start"
               onClick={alReintentar}
             >
               Reintentar el cálculo del plan
@@ -122,7 +122,7 @@ export function FormCreditoVenta({
               <p>
                 Inicial {bs(plan.inicial)} · a financiar {bs(plan.financiado)}
               </p>
-              <ul className="text-muted-foreground mt-1 text-xs">
+              <ul className="text-muted-foreground mt-1 text-sm">
                 {plan.plan.slice(0, 4).map((p) => (
                   <li key={p.fila.numero}>
                     Cuota {p.fila.numero}: {bs(p.fila.monto)} · vence {formatearDia(p.vence)}
@@ -130,7 +130,7 @@ export function FormCreditoVenta({
                 ))}
                 {plan.plan.length > 4 && <li>… {plan.plan.length - 4} cuotas más</li>}
               </ul>
-              <p className="text-muted-foreground mt-1 text-xs">Plan calculado por el servidor.</p>
+              <p className="text-muted-foreground mt-1 text-sm">Plan calculado por el servidor.</p>
             </div>
           )}
         </>

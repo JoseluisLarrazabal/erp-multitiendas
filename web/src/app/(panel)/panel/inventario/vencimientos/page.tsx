@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
-import { EncabezadoPagina } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import { DIAS_VENCIMIENTO, leerFiltrosVencimientos } from "@/modules/inventario";
 import { leerLotesPorVencer, ListaVencimientos } from "@/modules/inventario/panel";
 import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
@@ -28,14 +28,7 @@ export default async function PaginaVencimientos({
       <EncabezadoPagina
         titulo="Vencimientos"
         descripcion={`Lotes de ${activo.nombre} que vencen en los próximos ${filtros.dias} días, vencidos incluidos. El saldo es estimado: la venta no elige lote.`}
-        acciones={
-          <Link
-            href="/panel/inventario"
-            className="text-primary inline-flex min-h-10 items-center gap-1 text-sm underline-offset-4 hover:underline"
-          >
-            <ArrowLeft className="size-4" aria-hidden /> Inventario
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/inventario">Inventario</EnlaceVolver>}
       />
       <div className="flex min-w-0 flex-col gap-5">
         <nav aria-label="Plazo" className="flex flex-wrap items-center gap-2">
@@ -47,9 +40,7 @@ export default async function PaginaVencimientos({
               className={cn(
                 buttonVariants({
                   variant: d === filtros.dias ? "default" : "outline",
-                  size: "sm",
                 }),
-                "min-h-9 md:min-h-8",
               )}
             >
               {d} días
@@ -67,9 +58,7 @@ export default async function PaginaVencimientos({
           </p>
         )}
         {lotes.ok && lotes.data.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-            Ningún lote vence en los próximos {filtros.dias} días.
-          </p>
+          <EstadoVacio>Ningún lote vence en los próximos {filtros.dias} días.</EstadoVacio>
         )}
         {lotes.ok && lotes.data.length > 0 && <ListaVencimientos lotes={lotes.data} />}
       </div>

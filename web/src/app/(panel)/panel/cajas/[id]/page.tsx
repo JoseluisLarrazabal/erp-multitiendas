@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { z } from "zod";
-import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import { detalleSesion, DetalleSesionVista } from "@/modules/caja/panel";
 import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 
@@ -23,14 +20,7 @@ export default async function PaginaCaja({ params }: { params: Promise<{ id: str
       <EncabezadoPagina
         titulo="Sesión de caja"
         descripcion={`Detalle en ${activo.nombre}.`}
-        acciones={
-          <Link
-            href="/panel/cajas"
-            className={buttonVariants({ variant: "outline", className: "h-10" })}
-          >
-            <ArrowLeft aria-hidden /> Cajas
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/cajas">Cajas</EnlaceVolver>}
       />
       {!d.ok || !d.data ? (
         <p role="alert" className="text-destructive text-sm">

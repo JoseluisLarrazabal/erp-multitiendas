@@ -1,7 +1,12 @@
+import { Etiqueta } from "@/components/ui/etiqueta";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { formatearBs } from "@/lib/format/moneda";
 import { formatearFechaHora } from "@/lib/format/fecha";
 import type { FilaCompra } from "../queries";
 import { AnularCompra } from "./anular-compra";
+
+const CON_TOTAL = "md:grid-cols-[10rem_minmax(0,1fr)_9rem_8rem_9rem]";
+const SIN_TOTAL = "md:grid-cols-[10rem_minmax(0,1fr)_9rem_9rem]";
 
 // Sin estado propio. El total solo llega con ver_costos; sin él no hay columna. "Anular compra" solo con `anular`.
 export function ListaCompras({
@@ -11,36 +16,50 @@ export function ListaCompras({
   compras: readonly FilaCompra[];
   puedeAnular: boolean;
 }) {
+  const conTotal = compras.some((c) => c.total !== null);
+  const columnas = conTotal ? CON_TOTAL : SIN_TOTAL;
   return (
-    <ul
+    <ListaFilas
+      etiqueta="Compras"
+      columnas={columnas}
+      // El foco tras anular cae aquí (focoTrasExito).
       id="lista-compras"
       tabIndex={-1}
-      aria-label="Compras"
-      className="bg-card divide-y rounded-xl border shadow-[0_2px_5px_#34345a0d]"
+      className="outline-none"
+      cabeceras={
+        <>
+          <span>Fecha</span>
+          <span>Proveedor</span>
+          <span>Condición</span>
+          {conTotal && <span className="text-right">Total</span>}
+          <span />
+        </>
+      }
     >
       {compras.map((c) => (
-        <li
+        <Fila
           key={c.id}
-          className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 md:grid-cols-[10rem_minmax(0,1fr)_8rem_9rem_9rem]"
+          columnas={`grid-cols-[1fr_auto] ${columnas}`}
+          className="md:min-h-[3.25rem]"
         >
-          <span className="text-muted-foreground text-sm tabular-nums">
+          <span className="text-muted-foreground text-[13px] tabular-nums">
             {formatearFechaHora(c.creadaEn)}
           </span>
-          <span className="min-w-0 truncate font-medium max-md:order-first">{c.proveedor}</span>
-          <span className="text-sm">
+          <span className="min-w-0 truncate font-semibold max-md:order-first">{c.proveedor}</span>
+          <span className="flex flex-wrap items-center gap-2 text-sm">
             {c.condicion === "contado" ? "Contado" : "Crédito"}
-            {c.anulada && <span className="text-destructive font-medium"> · Anulada</span>}
+            {c.anulada && <Etiqueta tono="peligro">Anulada</Etiqueta>}
           </span>
           {c.total !== null && (
-            <span className="text-sm tabular-nums md:text-right">{formatearBs(c.total)}</span>
+            <span className="cifra text-[13px] md:text-right">{formatearBs(c.total)}</span>
           )}
           {puedeAnular && !c.anulada && (
-            <span className="max-md:col-span-2 md:text-right">
+            <span className="max-md:col-span-2 md:justify-self-end">
               <AnularCompra compraId={c.id} proveedor={c.proveedor} />
             </span>
           )}
-        </li>
+        </Fila>
       ))}
-    </ul>
+    </ListaFilas>
   );
 }

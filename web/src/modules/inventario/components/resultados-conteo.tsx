@@ -1,5 +1,6 @@
 "use client";
 
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { PAGINA_CONTEO } from "../domain";
 import type { FilaConteo } from "../queries";
 import { ListaConteo, type Borrador } from "./lista-conteo";
@@ -43,11 +44,11 @@ export function ResultadosConteo({
         </p>
       )}
       {datos && filas.length === 0 && (
-        <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+        <EstadoVacio>
           {hayBusqueda
             ? "Ningún producto coincide con la búsqueda."
             : "Aún no hay productos para contar."}
-        </p>
+        </EstadoVacio>
       )}
       {filas.length > 0 && (
         <ListaConteo filas={filas} borradores={borradores} malos={malos} alEscribir={alEscribir} />

@@ -21,7 +21,11 @@ conexión a internet).
 
 ## 2. Qué ve el contador
 
-El contador ve costos y reportes. En el Inicio aparece un acceso a cada pantalla que su rol puede mirar:
+El contador ve costos y reportes. El Inicio es un tablero con el día del negocio: el botón "Ver reportes", "Ventas de hoy"
+(con "Utilidad de hoy" si hay costos cargados), "Por atender" (ventas y movimientos de caja por revisar, y los lotes por vencer
+o las órdenes sin recoger según el negocio), "Cajas abiertas", "Créditos y pagos" (solo las cuotas vencidas), "Stock bajo" y
+"Más vendidos de la semana". Los botones de "Por atender" llevan a "Reconciliación" (sección 6), donde sí puede revisar. Las
+pantallas que su rol puede mirar están en el menú de la izquierda, agrupadas en "Ventas", "Inventario" y "Dinero":
 
 | Pantalla | Qué puede hacer |
 |---|---|

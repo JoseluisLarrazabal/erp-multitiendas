@@ -44,10 +44,10 @@ export function PestanasPos({ nueva, ordenes }: { nueva: ReactNode; ordenes: Rea
             aria-controls={activa === p.id ? `panel-${p.id}` : undefined}
             tabIndex={activa === p.id ? 0 : -1}
             className={cn(
-              "focus-visible:ring-ring/50 -mb-px min-h-11 border-b-2 px-4 text-sm font-medium outline-none focus-visible:ring-3",
+              "focus-visible:ring-ring -mb-px min-h-12 rounded-t-lg border-b-2 px-5 text-base font-semibold outline-none focus-visible:ring-3",
               activa === p.id
-                ? "border-primary text-foreground"
-                : "text-muted-foreground hover:text-foreground border-transparent",
+                ? "border-primary bg-secondary text-secondary-foreground"
+                : "text-foreground hover:bg-muted border-transparent",
             )}
             onClick={() => setActiva(p.id)}
             onKeyDown={(e) => alTeclear(e, i)}

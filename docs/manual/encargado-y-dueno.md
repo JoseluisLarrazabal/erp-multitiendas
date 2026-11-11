@@ -35,13 +35,61 @@ Para salir, pulsar "Cerrar sesión". Hace falta conexión a internet. Al lado es
 
 ## 3. Inicio
 
-El Inicio muestra el nombre del negocio, su rol y un acceso a cada pantalla que usted puede usar. Si no ve una pantalla, es
-porque su rol no tiene el permiso.
+El Inicio es un tablero: muestra de un vistazo cómo va el día del negocio y qué falta atender. Arriba están la fecha de hoy,
+el nombre del negocio y su rol. Cada persona ve solo los bloques que su rol puede usar (ver "Qué ve cada persona", abajo).
 
-![Inicio del panel con los accesos del negocio](img/panel-inicio.png)
+![Inicio del panel de la tienda con el tablero](img/panel-inicio.png)
 
-Quien puede ver reportes (dueño, encargado y contador) ve en el Inicio un aviso como "3 ventas por revisar" o "1 movimiento de caja por
-revisar". Pulsarlo lleva a "Reconciliación" (sección 10).
+Los bloques, de arriba hacia abajo:
+
+- **Acciones frecuentes.** Botones para lo que más se hace: "Abrir punto de venta", "Nueva compra", "Entrada de inventario" y
+  "Ver reportes". Cada uno aparece solo si su rol puede hacer eso.
+- **"Ventas de hoy".** El total vendido hoy, "Ayer, día completo" para comparar, la cantidad de ventas y un gráfico de los
+  últimos 7 días (el día de hoy es la barra marcada "Hoy"). "Utilidad de hoy" aparece solo para quien ve costos, y solo si el
+  sistema conoce el costo de lo vendido. "Ver ventas" lleva a "Ventas".
+- **"Por atender".** Lo que espera una decisión suya. Cada aviso tiene una línea de detalle y un botón que lleva a resolverlo:
+  - "N ventas por revisar" o "N movimientos de caja por revisar" (botones "Reconciliar" y "Revisar"; ver "Reconciliación",
+    sección 10);
+  - "N lotes vencen en 7 días o menos" en el frial (botón "Ver lotes"; ver "Vencimientos", sección 7);
+  - "N órdenes sin recoger" en la lavandería, las listas hace más de 30 días (botón "Ver órdenes").
+
+  Si hay más de uno del mismo tipo, la línea de detalle muestra el primero y agrega "y N más".
+
+  Si no hay nada, dice "Nada por atender". Si el sistema no puede comprobar algo, lo dice ("No se pudo comprobar…") y el
+  botón "Abrir" lleva a esa pantalla para mirarlo ahí. Cuando hay algo por atender, el bloque se ve en color ámbar.
+- **"Cajas abiertas".** Las cajas que están abiertas ahora: "Equipo", "Cajero", "Desde" (la hora de apertura) y "Cobrado en
+  ventas". Si no hay ninguna, dice "No hay cajas abiertas ahora." "Ver cajas" lleva a "Cajas".
+- **"Créditos y pagos".** "Cuotas vencidas" (cuántos créditos y clientes, y cuánto suman; el monto sale en rojo),
+  "Reservas activas" (cuántas, con el total de anticipos) y "Por pagar a proveedores" (cuánto se debe y a cuántos proveedores).
+  Cada línea dice "Sin cuotas vencidas", "Sin reservas activas" o "Sin deudas con proveedores" cuando no hay nada. En la lavandería no hay créditos ni reservas: el bloque
+  se llama "Pagos a proveedores".
+- **"Stock bajo".** Los productos que tienen menos que su mínimo: "Producto", "Hay" y "Mínimo". Si ninguno lo está, dice
+  "Ningún producto está bajo su mínimo."
+- **"Más vendidos de la semana".** Los 5 productos que más se vendieron en los últimos 7 días. Si no hubo ventas, dice "Sin ventas
+  en los últimos 7 días." No aparece en la lavandería.
+- **"Lotes por vencer"** (solo el frial). Los lotes que vencen en los próximos 7 días, con su producto y su fecha. Un lote ya
+  vencido sale en rojo.
+- **"Órdenes listas"** (solo la lavandería). "Listas para recoger" (ropa terminada que el cliente aún no retira) y "Sin
+  recoger hace más de 30 días" ("Conviene avisar al cliente"; si hay alguna, el número sale en rojo).
+
+![Inicio del panel de la lavandería: órdenes listas, cajas abiertas y pagos a proveedores](img/panel-inicio-lavanderia.png)
+
+Un bloque que no puede cargarse muestra su propio aviso de error y no impide ver los demás.
+
+### El menú lateral
+
+A la izquierda están las pantallas, en cinco grupos. "Inicio" va suelto, arriba de todos. Si no ve una pantalla, es porque su
+rol no tiene el permiso. En el celular el menú se abre con el botón de menú (tres rayas).
+
+| Grupo | Pantallas |
+|---|---|
+| Ventas | "Ventas", "Reconciliación", "Clientes", "Descuento" y, en lavandería, "Órdenes" |
+| Inventario | "Productos", "Inventario", "Precios" |
+| Compras | "Compras", "Proveedores" |
+| Dinero | "Cajas", "Créditos" (tienda y frial), "Tipo de cambio", "Reportes" |
+| Configuración | "Usuarios", "Dispositivos", "Datos del negocio" |
+
+Más abajo del menú están "Punto de venta", "Cambiar contraseña" y "Cerrar sesión".
 
 ### Qué ve cada persona
 
@@ -66,7 +114,7 @@ dueño. El vendedor y el empleado no entran al panel: trabajan en el punto de ve
 ## 4. Productos
 
 Para ver el catálogo: "Productos". Se busca escribiendo o escaneando un código de barras; la búsqueda no distingue tildes ("cafe" encuentra "café"). Los filtros son "Categoría", "Marca",
-"Sin precio" e "Incluir inactivos". "Quitar filtros" los limpia.
+"Sin precio" e "Incluir inactivos". "Quitar filtros" los limpia. Un producto sin precio en alguna lista lleva una etiqueta ámbar ("Sin precio").
 
 ### Crear un producto
 
@@ -75,7 +123,7 @@ Para ver el catálogo: "Productos". Se busca escribiendo o escaneando un código
    "Unidad" ("Unidad" o "Kilogramo").
 3. "Stock mínimo": cuando el stock baje de ese número, el producto sale en la lista de stock bajo. Si lo deja vacío, no avisa.
 4. "Garantía (meses)": número entero. Sale impresa en la nota de venta.
-5. Marcar "Controla número de serie" solo si cada unidad lleva su serie (por ejemplo, equipos).
+5. Marcar "Controla número de serie" solo si cada unidad lleva su serie (por ejemplo, equipos). Bajo ese campo, la pantalla explica: "Al vender, dar salida o trasladar, se elige el número de serie de cada unidad."
 6. En el frial, un producto por "Unidad" tiene el campo "Peso del paquete (kg)", para paquetes de peso fijo.
 7. Pulsar "Crear producto".
 
@@ -285,11 +333,11 @@ negativo y aparece en "Reconciliación" para que usted lo revise y lo corrija co
 "Estado" ("Completada" o "Anulada"), "Equipo", "Desde" y "Hasta". Entrar a una venta muestra su detalle: líneas, pagos y
 devoluciones.
 
-En la lista, una venta a crédito sale marcada "Crédito" y una venta que completó una reserva, "Reserva". En su detalle no hay
+En la lista, el estado de cada venta sale como una etiqueta de color ("Completada" en verde, "Anulada" en rojo). Una venta a crédito sale marcada "Crédito" y una venta que completó una reserva, "Reserva". En su detalle no hay
 "Anular venta" ni "Devolver": aparece una explicación (la inicial, las cuotas o el anticipo ya quedaron registrados) y, en
 las de crédito, el enlace "Ver pagos del crédito" (si su rol ve "Créditos").
 
-![Detalle de una venta con los botones Anular venta y Devolver](img/panel-venta-detalle.png)
+![Detalle de una venta ya cerrada: la pantalla explica que no se puede anular y que hay que usar una devolución](img/panel-venta-detalle.png)
 
 Quien vende en el punto de venta (vendedor o empleado) no anula ni devuelve, ni siquiera dentro de las primeras 24 horas. Si
 hace falta, lo hace usted o el encargado. Un cambio de esto exige crear un permiso aparte.
@@ -372,7 +420,7 @@ Cómo leerla:
   anulada sale del esperado.
 - "Contado" y "Diferencia" aparecen cuando el cajero cierra la caja. El cajero hace un arqueo ciego: no ve el esperado
   mientras la caja está abierta. En el panel, el esperado de una caja abierta es el de ese momento.
-- La diferencia sale como "Sin diferencia", "Sobrante" o "Faltante".
+- La diferencia sale como "Sin diferencia", "Sobrante" o "Faltante". En la lista de cajas, la diferencia sale en rojo si falta dinero y en ámbar si sobra.
 - Ver el esperado y el desglose exige poder ver reportes (dueño, encargado y contador).
 - Cerrar la caja es definitivo: no se edita.
 
@@ -720,7 +768,7 @@ lavandería que también trabajan en la tienda se asignan a ambos negocios; es u
 
 ### Datos del negocio
 
-"Datos del negocio" (en el Inicio y en el menú) guarda lo que sale impreso en la nota de venta y en la boleta de lavandería.
+"Datos del negocio" (en el menú, grupo "Configuración") guarda lo que sale impreso en la nota de venta y en la boleta de lavandería.
 Cada negocio tiene los suyos; mire cuál es el negocio activo antes de guardar.
 
 1. Escribir el "NIT" (hasta 20 caracteres, en una sola línea).

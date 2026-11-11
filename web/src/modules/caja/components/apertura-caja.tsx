@@ -89,12 +89,12 @@ export function AperturaCaja({
   return (
     <form
       onSubmit={abrir}
-      className="bg-card mx-auto flex w-full max-w-sm flex-col gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card mx-auto flex w-full max-w-sm flex-col gap-3 rounded-xl border p-5"
     >
-      <h2 className="flex items-center gap-2 text-base font-semibold">
+      <h2 className="flex items-center gap-2 text-lg font-semibold">
         <Wallet className="size-4" aria-hidden /> Abrir caja · {nombreEquipo}
       </h2>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-muted-foreground text-[15px]">
         Cuenta el efectivo inicial del cajón y regístralo para empezar a vender.
       </p>
       <div className="flex flex-col gap-1.5">
@@ -104,14 +104,14 @@ export function AperturaCaja({
           inputMode="decimal"
           autoComplete="off"
           autoFocus
-          className="h-11 text-right tabular-nums"
+          className="cifra h-12 text-right text-lg md:text-lg"
           placeholder="0,00"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
       </div>
       {sinRed && (
-        <p role="status" className="text-muted-foreground text-sm">
+        <p role="status" className="bg-secondary text-secondary-foreground rounded-lg p-3 text-sm">
           Sin red: la apertura se guarda en este equipo y se envía al volver la conexión.
         </p>
       )}
@@ -120,7 +120,7 @@ export function AperturaCaja({
           {error}
         </p>
       )}
-      <Button type="submit" className="h-11" disabled={enviando}>
+      <Button type="submit" size="xl" disabled={enviando}>
         {enviando && <Loader2 className="animate-spin" aria-hidden />} Abrir caja
       </Button>
     </form>

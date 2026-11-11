@@ -215,22 +215,25 @@ export function PanelCaja({
   return (
     <div className="flex flex-col gap-4 print:hidden">
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="outline" className="h-10" onClick={alVolver}>
+        <Button type="button" variant="outline" className="h-11" onClick={alVolver}>
           <ArrowLeft aria-hidden /> Volver a vender
         </Button>
-        <h2 className="text-base font-semibold">Caja · {nombreEquipo}</h2>
+        <h2 className="text-lg font-semibold">Caja · {nombreEquipo}</h2>
       </div>
       {!sesionId ? (
-        <p role="alert" className="bg-secondary rounded-lg p-3 text-sm">
+        <p
+          role="alert"
+          className="border-warning-line bg-warning-soft text-warning rounded-lg border p-3 text-[15px] font-medium"
+        >
           Este equipo no tiene la caja abierta.
         </p>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <section
             aria-label="Movimientos"
-            className="bg-card flex flex-col gap-3 rounded-xl border p-4"
+            className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-4"
           >
-            <h3 className="text-sm font-semibold">Movimientos de caja</h3>
+            <h3 className="text-base font-semibold">Movimientos de caja</h3>
             <form onSubmit={registrar} className="flex flex-col gap-3" noValidate>
               <div className="grid grid-cols-[8rem_1fr] gap-2">
                 <div className="flex flex-col gap-1.5">
@@ -252,7 +255,7 @@ export function PanelCaja({
                     inputMode="decimal"
                     autoComplete="off"
                     placeholder="0,00"
-                    className="h-10 text-right tabular-nums"
+                    className="cifra h-11 text-right"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
                   />
@@ -264,7 +267,7 @@ export function PanelCaja({
                   id="mov-motivo"
                   autoComplete="off"
                   maxLength={200}
-                  className="h-10"
+                  className="h-11"
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                 />
@@ -275,7 +278,7 @@ export function PanelCaja({
               <p role="status" className="text-sm font-medium empty:hidden">
                 {avisoMov}
               </p>
-              <Button type="submit" className="h-10 self-start" disabled={registrando}>
+              <Button type="submit" size="lg" className="self-start" disabled={registrando}>
                 {registrando && <Loader2 className="animate-spin" aria-hidden />} Registrar
                 movimiento
               </Button>
@@ -295,7 +298,7 @@ export function PanelCaja({
                       <span className="font-medium">{ETIQUETA_MOVIMIENTO[m.tipo]}</span>
                       <span className="text-muted-foreground"> · {m.motivo} · sin enviar</span>
                     </span>
-                    <span className="font-medium tabular-nums">{textoMontoCola(m)}</span>
+                    <span className="cifra">{textoMontoCola(m)}</span>
                   </li>
                 ))}
               </ul>
@@ -313,7 +316,7 @@ export function PanelCaja({
                       <span className="font-medium">{ETIQUETA_MOVIMIENTO[m.tipo]}</span>
                       <span className="text-muted-foreground"> · {m.motivo}</span>
                     </span>
-                    <span className="font-medium tabular-nums">
+                    <span className="cifra">
                       {m.tipo === "ingreso" ? "+" : "−"}
                       {formatearBs(m.monto)}
                     </span>
@@ -322,7 +325,7 @@ export function PanelCaja({
               </ul>
             )}
             {totalMovimientos > movimientos.length && (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-sm">
                 Mostrando {movimientos.length} de {totalMovimientos} movimientos (los más
                 recientes).
               </p>
@@ -331,9 +334,9 @@ export function PanelCaja({
 
           <section
             aria-label="Cierre de caja"
-            className="bg-card flex flex-col gap-3 rounded-xl border p-4"
+            className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-4"
           >
-            <h3 className="text-sm font-semibold">Cerrar caja</h3>
+            <h3 className="text-base font-semibold">Cerrar caja</h3>
             <p className="text-muted-foreground text-sm">{AYUDA_ARQUEO}</p>
             <form onSubmit={pedirCierre} className="flex flex-col gap-3" noValidate>
               <div className="flex flex-col gap-1.5">
@@ -343,25 +346,31 @@ export function PanelCaja({
                   inputMode="decimal"
                   autoComplete="off"
                   placeholder="0,00"
-                  className="h-11 text-right tabular-nums"
+                  className="cifra h-12 text-right text-xl md:text-xl"
                   value={contado}
                   onChange={(e) => setContado(e.target.value)}
                 />
               </div>
               {ventaPendiente && (
-                <p role="alert" className="text-destructive text-sm">
+                <p role="alert" className="text-destructive text-sm font-medium">
                   {lecturaColaFallida
                     ? "No se pudo leer la cola de ventas de este equipo, así que no se sabe si hay ventas sin enviar. Recarga la página antes de cerrar la caja."
                     : "Hay operaciones sin enviar, una apertura de caja rechazada o cobros sin confirmar en este equipo. Resuélvelos antes de cerrar la caja."}
                 </p>
               )}
               {rechazadas.cantidad > 0 && (
-                <p role="status" className="text-sm">
+                <p
+                  role="status"
+                  className="border-warning-line bg-warning-soft text-warning rounded-lg border p-3 text-sm font-medium"
+                >
                   {`Hay ${rechazadas.cantidad} ${rechazadas.cantidad === 1 ? "operación rechazada" : "operaciones rechazadas"} sin resolver${rechazadas.totalVentas > 0 ? ` (ventas por ${formatearBs(rechazadas.totalVentas)})` : ""}. El esperado no las cuenta. Avisa a un encargado para que las reintente o las descarte.`}
                 </p>
               )}
               {rechazadas.anteriores > 0 && (
-                <p role="status" className="text-sm">
+                <p
+                  role="status"
+                  className="border-warning-line bg-warning-soft text-warning rounded-lg border p-3 text-sm font-medium"
+                >
                   {`Además hay ${rechazadas.anteriores} ${rechazadas.anteriores === 1 ? "operación rechazada" : "operaciones rechazadas"} de cajas anteriores sin resolver en este equipo.`}
                 </p>
               )}
@@ -375,7 +384,8 @@ export function PanelCaja({
               </p>
               <Button
                 type="submit"
-                className="h-11 self-start"
+                size="xl"
+                className="self-start"
                 disabled={ventaPendiente || cerrando || sinRed}
               >
                 {cerrando && <Loader2 className="animate-spin" aria-hidden />} Cerrar caja
@@ -435,24 +445,24 @@ function ResultadoCierre({
   return (
     <section
       aria-label="Resultado del cierre"
-      className="bg-card mx-auto flex w-full max-w-md flex-col gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card mx-auto flex w-full max-w-md flex-col gap-3 rounded-xl border p-5"
     >
-      <h2 className="text-base font-semibold">Caja cerrada · {nombreEquipo}</h2>
+      <h2 className="text-lg font-semibold">Caja cerrada · {nombreEquipo}</h2>
       <dl className="divide-y text-sm">
         <div className={fila}>
           <dt>Efectivo esperado</dt>
-          <dd className="font-medium tabular-nums" data-testid="cierre-esperado">
+          <dd className="cifra" data-testid="cierre-esperado">
             {formatearBs(r.cierre.monto_esperado)}
           </dd>
         </div>
         <div className={fila}>
           <dt>Efectivo contado</dt>
-          <dd className="font-medium tabular-nums">{formatearBs(r.contado)}</dd>
+          <dd className="cifra">{formatearBs(r.contado)}</dd>
         </div>
         <div className={fila}>
           <dt>{estado}</dt>
           <dd
-            className={`text-lg font-bold tabular-nums ${dif === 0 ? "" : "text-destructive"}`}
+            className={`cifra text-xl ${dif === 0 ? "" : "text-destructive"}`}
             data-testid="cierre-diferencia"
           >
             {formatearBs(dif)}
@@ -460,12 +470,12 @@ function ResultadoCierre({
         </div>
         <div className={fila}>
           <dt>Cobrado por QR (neto)</dt>
-          <dd className="font-medium tabular-nums" data-testid="cierre-qr">
+          <dd className="cifra" data-testid="cierre-qr">
             {formatearBs(r.cierre.total_qr)}
           </dd>
         </div>
       </dl>
-      <Button type="button" className="h-11" onClick={alVolver}>
+      <Button type="button" size="xl" onClick={alVolver}>
         Listo
       </Button>
     </section>

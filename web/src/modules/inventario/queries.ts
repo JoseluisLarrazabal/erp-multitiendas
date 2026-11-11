@@ -4,6 +4,7 @@ import { sinTildes } from "@/lib/texto";
 import { sanearBusqueda } from "@/modules/catalogo";
 import { falla, type Resultado } from "@/modules/usuarios/panel";
 import {
+  ordenarPorFaltante,
   valorDeStock,
   type FilaStock,
   type Movimiento,
@@ -128,6 +129,47 @@ export async function contarStockBajo(
   );
   if (error) return falla("No se pudo contar el stock bajo.");
   return { ok: true, data: count ?? 0 };
+}
+
+// Los `limite` productos más urgentes (cantidad / mínimo) y cuántos están bajo su mínimo, en una sola petición.
+// shortcut: la urgencia se ordena entre los 50 más bajos por cantidad, no entre todos; mejorar si un negocio pasa de 50.
+const POOL_STOCK_BAJO = 50;
+export async function listarStockBajo(
+  supabase: Cliente,
+  negocioId: string,
+  limite: number,
+): Promise<
+  Resultado<{
+    total: number;
+    filas: {
+      productoId: string;
+      codigo: string;
+      nombre: string;
+      cantidad: number;
+      minimo: number;
+    }[];
+  }>
+> {
+  const { data, count, error } = await supabase
+    .rpc("productos_stock_bajo", { p_negocio_id: negocioId }, { count: "exact" })
+    .order("cantidad")
+    .limit(POOL_STOCK_BAJO);
+  if (error) return falla("No se pudo leer el stock bajo.");
+  return {
+    ok: true,
+    data: {
+      total: count ?? data.length,
+      filas: ordenarPorFaltante(
+        data.map((f) => ({
+          productoId: f.producto_id,
+          codigo: f.codigo,
+          nombre: f.nombre,
+          cantidad: f.cantidad,
+          minimo: f.stock_minimo,
+        })),
+      ).slice(0, limite),
+    },
+  };
 }
 
 export async function obtenerProductoInventario(

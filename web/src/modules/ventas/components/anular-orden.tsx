@@ -33,7 +33,6 @@ export function AnularOrden({ ordenId, numero }: { ordenId: string; numero: stri
           id="anular-orden-motivo"
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
           {...propsCampo(
@@ -43,7 +42,7 @@ export function AnularOrden({ ordenId, numero }: { ordenId: string; numero: stri
           )}
         />
       </Campo>
-      <Button type="submit" variant="outline" className="text-destructive h-10 self-start">
+      <Button type="submit" variant="outline" className="text-destructive self-start">
         <Ban aria-hidden /> Anular orden
       </Button>
       <ConfirmarAccion

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatearBs } from "@/lib/format/moneda";
+import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { cn } from "@/lib/utils";
 import { formatearCantidad, type FilaStock, type Ubicacion } from "../domain";
 import { CantidadStock } from "./cantidad-stock";
@@ -15,74 +16,77 @@ export function ListaStock({
   ubicaciones: readonly Ubicacion[];
   verCostos: boolean;
 }) {
-  const columnas = {
-    gridTemplateColumns: `minmax(0,1fr) repeat(${ubicaciones.length}, 6.5rem) 8rem${verCostos ? " 8rem" : ""}`,
-  };
+  const cols = {
+    "--cols-stock": `minmax(0,1fr) repeat(${ubicaciones.length}, 6.5rem) 8rem${verCostos ? " 8rem" : ""}`,
+  } as React.CSSProperties;
   return (
-    <div className="bg-card rounded-xl border shadow-[0_2px_5px_#34345a0d]">
-      <div
-        aria-hidden
-        style={columnas}
-        className="text-muted-foreground hidden gap-x-3 border-b px-4 py-2 text-xs font-semibold md:grid"
-      >
-        <span>Producto</span>
-        {ubicaciones.map((u) => (
-          <span key={u.id} className="text-right">
-            {u.nombre}
-          </span>
-        ))}
-        <span className="text-right">Total</span>
-        {verCostos && <span className="text-right">Valor</span>}
-      </div>
-      <ul className="divide-y" aria-label="Stock por producto">
-        {filas.map((p) => (
-          <li
-            key={p.id}
-            style={columnas}
-            className={cn(
-              "flex flex-col gap-1 px-4 py-3 md:grid md:items-center md:gap-x-3",
-              !p.activo && "bg-muted/60",
-            )}
-          >
-            <div className="min-w-0">
-              <Link
-                href={`/panel/inventario/${p.id}`}
-                className="focus-visible:ring-ring rounded font-semibold outline-none hover:underline focus-visible:ring-3"
-              >
-                {p.nombre}
-              </Link>
-              <p className="text-muted-foreground text-xs">
-                <span className="font-mono">{p.codigo}</span>
-                {!p.activo && " · Inactivo"}
-                {p.bajo && p.stockMinimo !== null && (
-                  <strong className="text-foreground">
-                    {" "}
-                    · Stock bajo (mínimo {formatearCantidad(p.stockMinimo, p.unidad)})
-                  </strong>
-                )}
-              </p>
-            </div>
+    <ListaFilas
+      style={cols}
+      etiqueta="Stock por producto"
+      columnas="md:grid-cols-(--cols-stock)"
+      cabeceras={
+        <>
+          <span>Producto</span>
+          {ubicaciones.map((u) => (
+            <span key={u.id} className="text-right">
+              {u.nombre}
+            </span>
+          ))}
+          <span className="text-right">Total</span>
+          {verCostos && <span className="text-right">Valor</span>}
+        </>
+      }
+    >
+      {filas.map((p) => (
+        <Fila
+          key={p.id}
+          columnas="flex flex-col items-stretch md:grid md:items-center md:grid-cols-(--cols-stock)"
+          className={cn(!p.activo && "bg-muted/60")}
+        >
+          <div className="min-w-0">
+            <Link
+              href={`/panel/inventario/${p.id}`}
+              className="focus-visible:ring-ring rounded font-semibold outline-none hover:underline focus-visible:ring-3"
+            >
+              {p.nombre}
+            </Link>
+            <p className="text-muted-foreground text-[13px]">
+              <span className="font-mono">{p.codigo}</span>
+              {!p.activo && " · Inactivo"}
+              {p.bajo && p.stockMinimo !== null && (
+                <strong className="text-warning">
+                  {" "}
+                  · Stock bajo (mínimo {formatearCantidad(p.stockMinimo, p.unidad)})
+                </strong>
+              )}
+            </p>
+          </div>
+          {/* En celular: ubicaciones en una línea que envuelve y total y valor juntos; desde md, `contents` deja cada cifra en su columna. */}
+          <div className="max-md:text-muted-foreground flex flex-wrap gap-x-3 md:contents">
             {ubicaciones.map((u) => (
-              <p key={u.id} className="flex justify-between gap-2 text-sm md:justify-end">
+              <p
+                key={u.id}
+                className="cifra flex gap-1.5 text-[13px] max-md:not-last:after:pl-1.5 max-md:not-last:after:content-['·'] md:justify-end"
+              >
                 <span className="text-muted-foreground md:sr-only">{u.nombre}</span>
                 <CantidadStock valor={p.porUbicacion[u.id] ?? 0} unidad={p.unidad} />
               </p>
             ))}
-            <p className="flex justify-between gap-2 text-sm font-semibold md:justify-end">
+          </div>
+          <div className="mt-1 flex flex-wrap gap-x-4 md:contents">
+            <p className="cifra flex gap-1.5 text-[13px] font-semibold md:justify-end">
               <span className="text-muted-foreground font-normal md:sr-only">Total</span>
               <CantidadStock valor={p.total} unidad={p.unidad} />
             </p>
             {verCostos && (
-              <p className="flex justify-between gap-2 text-sm md:justify-end">
-                <span className="text-muted-foreground md:sr-only">Valor</span>
-                <span className="tabular-nums">
-                  {p.valor === null ? "—" : formatearBs(p.valor)}
-                </span>
+              <p className="cifra flex gap-1.5 text-[13px] max-md:font-semibold md:justify-end">
+                <span className="text-muted-foreground font-normal md:sr-only">Valor</span>
+                <span>{p.valor === null ? "—" : formatearBs(p.valor)}</span>
               </p>
             )}
-          </li>
-        ))}
-      </ul>
-    </div>
+          </div>
+        </Fila>
+      ))}
+    </ListaFilas>
   );
 }

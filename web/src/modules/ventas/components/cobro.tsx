@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Loader2, QrCode } from "lucide-react";
+import { Banknote, Loader2, QrCode, TriangleAlert } from "lucide-react";
 import { useRef, useState } from "react";
 import {
   AlertDialog,
@@ -99,9 +99,9 @@ export function Cobro({
               });
           }}
         >
-          <div className="flex items-baseline justify-between">
-            <AlertDialogTitle>{titulo}</AlertDialogTitle>
-            <p className="text-2xl font-bold tabular-nums">{bs(total)}</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <AlertDialogTitle className="text-lg font-semibold">{titulo}</AlertDialogTitle>
+            <p className="cifra text-2xl min-[360px]:text-3xl">{bs(total)}</p>
           </div>
           {detalle && (
             <p className="bg-muted rounded-lg px-3 py-2 text-sm tabular-nums">{detalle}</p>
@@ -123,14 +123,15 @@ export function Cobro({
                   inputMode="decimal"
                   placeholder="0,00"
                   autoComplete="off"
-                  className="h-11 text-right text-lg tabular-nums"
+                  className="cifra h-12 text-right text-xl md:text-xl"
                   value={qrTexto}
                   onChange={(e) => cambiarQr(e.target.value)}
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11"
+                  size="lg"
+                  className="h-12"
                   onClick={() => cambiarQr(textoMonto(total))}
                 >
                   Todo QR
@@ -143,10 +144,10 @@ export function Cobro({
                 </p>
               )}
               {qr !== null && qr > 0 && !sinRed && (
-                <label className="flex items-start gap-2 text-sm">
+                <label className="flex min-h-11 items-start gap-2 text-base">
                   <input
                     type="checkbox"
-                    className="mt-0.5 size-5"
+                    className="mt-0.5 size-6"
                     checked={qrOk}
                     onChange={(e) => setQrOk(e.target.checked)}
                   />
@@ -164,7 +165,7 @@ export function Cobro({
                 ref={primero}
                 inputMode="decimal"
                 autoComplete="off"
-                className="h-11 text-right text-lg tabular-nums"
+                className="cifra h-12 text-right text-xl md:text-xl"
                 value={recibidoTexto}
                 onChange={(e) => {
                   setRecibidoTexto(e.target.value);
@@ -172,51 +173,54 @@ export function Cobro({
                 }}
                 onFocus={(e) => e.currentTarget.select()}
               />
-              <p className="text-muted-foreground text-xs tabular-nums">
+              <p className="text-muted-foreground text-sm tabular-nums">
                 Efectivo a cobrar: {bs(aplicado)}
               </p>
             </div>
           </fieldset>
 
           <p
-            className="bg-muted flex items-baseline justify-between rounded-lg px-3 py-2 text-sm"
+            className={`flex items-baseline justify-between gap-2 rounded-lg px-3 py-3 text-base font-semibold ${calculo?.ok ? "bg-success-soft text-success" : "bg-muted"}`}
             aria-live="polite"
             aria-atomic="true"
           >
             <span>Vuelto</span>
-            <span className="text-xl font-bold tabular-nums">
+            <span className="cifra text-2xl min-[360px]:text-3xl">
               {calculo?.ok ? bs(calculo.vuelto) : "—"}
             </span>
           </p>
 
-          <p role="status" className="text-muted-foreground text-xs empty:hidden">
+          <p role="status" className="text-foreground text-sm font-medium empty:hidden">
             {calculo && !calculo.ok ? calculo.error : null}
           </p>
           {congelado && (
-            <p className="bg-muted rounded-lg px-3 py-2 text-sm">
-              Cobro sin confirmar: los montos quedaron fijos ({bs(congelado.efectivo)} en efectivo
-              {congelado.qr > 0 ? ` y ${bs(congelado.qr)} por QR` : ""}). Reintenta o verifica si
-              quedó registrado.
+            <p className="border-warning-line bg-warning-soft text-warning flex items-start gap-2 rounded-lg border px-3 py-2 text-[15px] font-medium">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                Cobro sin confirmar: los montos quedaron fijos ({bs(congelado.efectivo)} en efectivo
+                {congelado.qr > 0 ? ` y ${bs(congelado.qr)} por QR` : ""}). Reintenta o verifica si
+                quedó registrado.
+              </span>
             </p>
           )}
           {estado.t === "rechazada" && (
             <p
               role="alert"
-              className="border-destructive text-destructive rounded-lg border p-2.5 text-sm"
+              className="border-destructive bg-destructive-soft text-destructive rounded-lg border p-3 text-sm font-medium"
             >
               {estado.mensaje}
             </p>
           )}
 
-          <div className="flex gap-2">
-            <AlertDialogCancel className="h-12" disabled={ocupado}>
+          <div className="flex flex-wrap gap-2">
+            <AlertDialogCancel size="xl" disabled={ocupado}>
               Volver
             </AlertDialogCancel>
             {congelado && (
               <Button
                 type="button"
                 variant="outline"
-                className="h-12"
+                size="xl"
                 disabled={ocupado}
                 onClick={alVerificar}
               >
@@ -226,7 +230,8 @@ export function Cobro({
             {/* aria-disabled y no disabled: al enviar el foco no se pierde; la guarda real está en onSubmit. */}
             <Button
               type="submit"
-              className="h-12 flex-1 text-base aria-disabled:opacity-50"
+              size="xl"
+              className="flex-1"
               aria-disabled={!calculo?.ok || ocupado}
             >
               {ocupado && <Loader2 className="animate-spin" aria-hidden />}{" "}

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
@@ -49,15 +51,14 @@ export default async function PaginaClientes({
         <Seccion titulo="Nuevo cliente">
           <NuevoCliente negocioId={activo.negocioId} />
         </Seccion>
-        <form
+        <BarraFiltros
           key={filtros.q}
           method="get"
           action="/panel/clientes"
           role="search"
           aria-label="Buscar clientes"
-          className="flex flex-wrap items-end gap-3"
         >
-          <div className="flex min-w-60 flex-1 flex-col gap-1.5 sm:max-w-md">
+          <CampoFiltro className="min-w-60 flex-[2] sm:max-w-md">
             <Label htmlFor="cli-q">Buscar</Label>
             <Input
               id="cli-q"
@@ -66,10 +67,9 @@ export default async function PaginaClientes({
               defaultValue={filtros.q}
               placeholder="Nombre o documento"
               autoComplete="off"
-              className="h-10"
             />
-          </div>
-          <Button type="submit" className="h-10">
+          </CampoFiltro>
+          <Button type="submit">
             <Search aria-hidden /> Buscar
           </Button>
           {(filtros.q || invalido) && (
@@ -80,7 +80,7 @@ export default async function PaginaClientes({
               Quitar filtros
             </Link>
           )}
-        </form>
+        </BarraFiltros>
         {invalido && (
           <p role="status" className="text-sm font-medium">
             {AVISO_FILTRO_INVALIDO}
@@ -91,9 +91,9 @@ export default async function PaginaClientes({
             {lista.error}
           </p>
         ) : lista.data.filas.length === 0 ? (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {filtros.q ? "Ningún cliente coincide con la búsqueda." : "Aún no hay clientes."}
-          </p>
+          </EstadoVacio>
         ) : (
           <>
             <ListaClientes

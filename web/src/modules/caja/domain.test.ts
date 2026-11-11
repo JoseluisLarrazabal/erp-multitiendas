@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsearMontoInicial, parsearMontoPositivo, textoTardias } from "./domain";
+import { colorDiferencia, parsearMontoInicial, parsearMontoPositivo, textoTardias } from "./domain";
 
 describe("parsearMontoInicial", () => {
   it("vacío es cero; acepta coma y punto; rechaza el resto", () => {
@@ -40,5 +40,14 @@ describe("textoTardias", () => {
       /1 venta sin conexión por .*10,00 y 2 movimientos de caja\. El arqueo/,
     );
     expect(textoTardias(0, 0, 0)).toContain("hubo cambios");
+  });
+});
+
+describe("colorDiferencia", () => {
+  it("decide el color con el valor a centavos", () => {
+    for (const n of [null, 0, -0, 0.004, -0.004]) expect(colorDiferencia(n)).toBe("");
+    expect(colorDiferencia(0.01)).toBe("text-warning");
+    expect(colorDiferencia(35)).toBe("text-warning");
+    expect(colorDiferencia(-0.01)).toBe("text-destructive");
   });
 });

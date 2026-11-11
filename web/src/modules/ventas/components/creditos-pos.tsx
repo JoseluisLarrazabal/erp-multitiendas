@@ -111,7 +111,10 @@ export function CreditosPos({
 
   if (sinRed)
     return (
-      <p role="status" className="bg-secondary rounded-lg p-3 text-sm">
+      <p
+        role="status"
+        className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px]"
+      >
         Cobrar cuotas necesita conexión: no se puede cobrar ni consultar saldos sin red.
       </p>
     );
@@ -258,8 +261,8 @@ export function CreditosPos({
 
   return (
     <section aria-label="Cobrar cuotas" className="flex flex-col gap-3">
-      <div className="bg-card flex max-w-xl flex-col gap-2 rounded-xl border p-3">
-        <p className="text-sm font-medium">Cliente con crédito</p>
+      <div className="bg-card shadow-card flex max-w-xl flex-col gap-2 rounded-xl border p-4">
+        <p className="text-[15px] font-semibold">Cliente con crédito</p>
         <SelectorCliente
           negocioId={negocioId}
           obligatorio
@@ -274,14 +277,14 @@ export function CreditosPos({
       {sinConfirmar.length > 0 && (
         <ul
           aria-label="Cobros sin confirmar"
-          className="border-destructive divide-border bg-card divide-y rounded-xl border"
+          className="border-warning-line divide-warning-line bg-warning-soft divide-y rounded-xl border"
         >
           {sinConfirmar.map((p) => (
             <li
               key={p.payload.id}
-              className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm"
+              className="flex flex-wrap items-center gap-3 px-3 py-3 text-[15px]"
             >
-              <span className="min-w-0 flex-1 basis-56">
+              <span className="text-warning min-w-0 flex-1 basis-56">
                 Cobro sin confirmar de {bs(aCentavos(p.payload.efectivo + p.payload.qr))} a{" "}
                 <span className="font-medium">{p.cliente}</span> ({p.detalle}): no des el recibo por
                 válido hasta saber qué pasó.
@@ -289,7 +292,7 @@ export function CreditosPos({
               <Button
                 type="button"
                 variant="outline"
-                className="h-10"
+                className="h-11"
                 disabled={!cajaId}
                 onClick={() => {
                   setAviso(null);
@@ -310,14 +313,18 @@ export function CreditosPos({
         </ul>
       )}
       <div role="status" className="flex flex-col gap-3 empty:hidden">
-        {aviso && <p className="bg-secondary rounded-lg p-3 text-sm font-medium">{aviso}</p>}
+        {aviso && (
+          <p className="bg-secondary text-secondary-foreground rounded-lg p-3 text-[15px] font-medium">
+            {aviso}
+          </p>
+        )}
         {cliente && cuentas === null && !error && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando créditos…
           </p>
         )}
         {cuentas?.length === 0 && (
-          <p className="text-muted-foreground py-2 text-sm">
+          <p className="text-muted-foreground py-2 text-[15px]">
             {cliente?.nombre} no tiene créditos con saldo.
           </p>
         )}
@@ -325,13 +332,13 @@ export function CreditosPos({
       {error && (
         <div
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
           <span>{error}</span>
           <Button
             type="button"
             variant="outline"
-            className="h-10"
+            className="h-11"
             onClick={() => void cargar(cliente)}
           >
             Reintentar
@@ -340,25 +347,25 @@ export function CreditosPos({
       )}
       <ul
         aria-label="Créditos con saldo"
-        className="divide-border bg-card divide-y rounded-xl border empty:hidden"
+        className="divide-border bg-card shadow-card divide-y rounded-xl border empty:hidden"
       >
         {cuentas?.map((c) => (
           <li
             key={c.creditoId}
             aria-label={`Crédito ${c.ventaNumero ?? "saldo inicial"} de ${c.clienteNombre}`}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3"
           >
             <div className="min-w-0 flex-1 basis-56">
-              <p className="truncate text-sm font-semibold">
+              <p className="text-[15px] font-semibold break-words">
                 {c.ventaNumero ? `Venta ${c.ventaNumero}` : "Saldo inicial"}
               </p>
-              <p className="text-muted-foreground text-xs tabular-nums">
+              <p className="text-muted-foreground text-sm tabular-nums">
                 Saldo {formatearBs(c.saldo)}
                 {c.proximaVence &&
                   ` · próxima cuota ${formatearBs(c.proximoMonto)} (${formatearDia(c.proximaVence)})`}
               </p>
               {c.cuotasVencidas > 0 && (
-                <p className="text-destructive text-xs tabular-nums">
+                <p className="text-destructive text-sm font-medium tabular-nums">
                   {c.cuotasVencidas} {c.cuotasVencidas === 1 ? "cuota vencida" : "cuotas vencidas"}:{" "}
                   {formatearBs(c.montoVencido)}, {c.diasAtraso}{" "}
                   {c.diasAtraso === 1 ? "día" : "días"} de atraso
@@ -367,7 +374,7 @@ export function CreditosPos({
             </div>
             <Button
               type="button"
-              className="h-10"
+              size="lg"
               disabled={!cajaId}
               title={!cajaId ? "Abre la caja para cobrar" : undefined}
               aria-label={`Cobrar cuota de ${c.clienteNombre} (${c.ventaNumero ?? "saldo inicial"})`}
@@ -390,7 +397,7 @@ export function CreditosPos({
               }}
             >
               <AlertDialogTitle>Cobrar cuota</AlertDialogTitle>
-              <p className="text-sm tabular-nums">
+              <p className="text-[15px] tabular-nums">
                 {elegida.clienteNombre} · saldo {formatearBs(elegida.saldo ?? 0)}
               </p>
               <div className="flex flex-col gap-1.5">
@@ -400,24 +407,20 @@ export function CreditosPos({
                   autoFocus
                   inputMode="decimal"
                   autoComplete="off"
-                  className="h-11 text-right text-lg tabular-nums"
+                  className="cifra h-12 text-right text-xl md:text-xl"
                   value={montoTexto}
                   onChange={(e) => setMontoTexto(e.target.value)}
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <p role="status" className="text-muted-foreground text-xs empty:hidden">
+                <p role="status" className="text-muted-foreground text-sm empty:hidden">
                   {montoTexto.trim() !== "" && !montoValido
                     ? `Escribe un monto mayor a 0 y hasta el saldo (${formatearBs(elegida.saldo ?? 0)}).`
                     : "Un pago parcial se aplica a la cuota más vieja."}
                 </p>
               </div>
               <div className="flex gap-2">
-                <AlertDialogCancel className="h-12">Volver</AlertDialogCancel>
-                <Button
-                  type="submit"
-                  className="h-12 flex-1 aria-disabled:opacity-50"
-                  aria-disabled={!montoValido}
-                >
+                <AlertDialogCancel size="xl">Volver</AlertDialogCancel>
+                <Button type="submit" size="xl" className="flex-1" aria-disabled={!montoValido}>
                   Continuar
                 </Button>
               </div>

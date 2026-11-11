@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import { cargarDetalle, DetalleCreditoVista } from "@/modules/creditos/panel";
 import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 import { cargarNegocio, listarEquiposPanel, sesionesAbiertas } from "@/modules/ventas/panel";
@@ -47,14 +44,7 @@ export default async function PaginaDetalleCredito({
         <EncabezadoPagina
           titulo="Crédito"
           descripcion="Cuotas, pagos recibidos y saldo. Los pagos cubren las cuotas de la más vieja a la más nueva."
-          acciones={
-            <Link
-              href="/panel/creditos"
-              className={buttonVariants({ variant: "outline", className: "h-10" })}
-            >
-              <ArrowLeft aria-hidden /> Créditos
-            </Link>
-          }
+          acciones={<EnlaceVolver href="/panel/creditos">Créditos</EnlaceVolver>}
         />
       </div>
       {detalle.ok ? (

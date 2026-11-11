@@ -42,7 +42,7 @@ export function FilaCompra({
   const id = `cmp-${item.clave}`;
   const linea = lineaCentavos(item.cantidad, item.costo);
   return (
-    <div className="grid gap-4 rounded-lg border p-3 md:grid-cols-[minmax(0,2fr)_8rem_9rem_auto] md:items-start">
+    <div className="grid gap-4 py-4 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,2fr)_8rem_9rem_auto] md:items-start">
       <SelectorProducto
         negocioId={negocioId}
         id={`${id}-producto`}
@@ -56,7 +56,6 @@ export function FilaCompra({
           id={`${id}-cantidad`}
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={item.cantidad}
           onChange={(e) => alCambiar({ cantidad: e.target.value })}
           {...propsCampo(`${id}-cantidad`, errores)}
@@ -72,7 +71,6 @@ export function FilaCompra({
           id={`${id}-costo`}
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={item.costo}
           onChange={(e) => alCambiar({ costo: e.target.value })}
           {...propsCampo(`${id}-costo`, errores, true)}
@@ -82,7 +80,8 @@ export function FilaCompra({
         <Button
           type="button"
           variant="outline"
-          className="h-10 md:mt-[1.65rem]"
+          size="icon"
+          className="justify-self-end md:mt-[1.65rem] md:justify-self-start"
           aria-label="Quitar línea"
           onClick={alQuitar}
         >
@@ -98,7 +97,6 @@ export function FilaCompra({
               autoComplete="off"
               autoCapitalize="characters"
               spellCheck={false}
-              className="h-10"
               value={item.lote}
               onChange={(e) => alCambiar({ lote: e.target.value })}
               {...propsCampo(`${id}-lote`, errores, true)}
@@ -109,7 +107,6 @@ export function FilaCompra({
               id={`${id}-vence`}
               type="date"
               min={hoy}
-              className="h-10"
               value={item.vence}
               onChange={(e) => alCambiar({ vence: e.target.value })}
               {...propsCampo(`${id}-vence`, errores, true)}

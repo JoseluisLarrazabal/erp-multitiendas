@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
 import { listarProveedores, ListaProveedores, NuevoProveedor } from "@/modules/compras/panel";
@@ -25,9 +26,7 @@ export default async function PaginaProveedores() {
             {lista.error}
           </p>
         ) : lista.data.length === 0 ? (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
-            Aún no hay proveedores.
-          </p>
+          <EstadoVacio>Aún no hay proveedores.</EstadoVacio>
         ) : (
           <ListaProveedores
             negocioId={activo.negocioId}

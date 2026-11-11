@@ -40,21 +40,21 @@ export function PlanCreditoVista({
   return (
     <div className="flex flex-col items-center gap-3 print:block">
       <div className="flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
-        <p role="status" className="mr-auto text-sm font-medium">
+        <p role="status" className="mr-auto text-[15px] font-semibold">
           Plan de cuotas de la venta {numeroVenta}
         </p>
-        <Button type="button" variant="outline" className="h-10" onClick={alVolver}>
+        <Button type="button" variant="outline" className="h-11" onClick={alVolver}>
           <ArrowLeft /> Nota de venta
         </Button>
         <Button
           type="button"
-          className="h-10"
+          className="h-11"
           disabled={estado.t !== "listo"}
           onClick={() => window.print()}
         >
           <Printer /> Imprimir
         </Button>
-        <Button type="button" variant="outline" className="h-10" onClick={alNueva}>
+        <Button type="button" variant="outline" className="h-11" onClick={alNueva}>
           <Plus /> Nueva venta
         </Button>
       </div>
@@ -72,7 +72,7 @@ export function PlanCreditoVista({
           <Button
             type="button"
             variant="outline"
-            className="h-10"
+            className="h-11"
             onClick={() => {
               setEstado({ t: "cargando" });
               setIntento(intento + 1);

@@ -143,13 +143,7 @@ export function SelectorProducto({
               {valor.activo ? "" : " (inactivo)"}
             </span>
           </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="min-h-9 shrink-0"
-            onClick={() => alElegir(null)}
-          >
+          <Button type="button" variant="ghost" className="shrink-0" onClick={() => alElegir(null)}>
             <X aria-hidden /> Cambiar
           </Button>
         </div>
@@ -171,14 +165,13 @@ export function SelectorProducto({
             onKeyDown={alTeclear}
             onBlur={() => setAbierto(false)}
             placeholder="Código, código de barras o nombre"
-            className="h-10"
           />
           <ul
             id={lista}
             role="listbox"
             aria-label="Productos"
             hidden={!abierto || opciones.length === 0}
-            className="bg-popover absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border p-1 shadow-md"
+            className="bg-popover shadow-card absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border p-1"
           >
             {opciones.map((p, i) => (
               <li
@@ -209,7 +202,7 @@ export function SelectorProducto({
             <p className="text-muted-foreground mt-1 text-xs">Ningún producto coincide.</p>
           )}
           {falla && (
-            <p role="alert" className="text-destructive mt-1 text-xs">
+            <p role="alert" className="text-destructive mt-1 text-sm">
               {falla}
             </p>
           )}

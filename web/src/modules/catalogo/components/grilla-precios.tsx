@@ -141,16 +141,11 @@ export function GrillaPrecios({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="bg-background/95 sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b py-2 backdrop-blur">
-        <Button
-          ref={botonGuardar}
-          onClick={guardar}
-          disabled={!sucio || pendiente}
-          className="h-10"
-        >
+        <Button ref={botonGuardar} onClick={guardar} disabled={!sucio || pendiente}>
           {pendiente ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
           Guardar cambios
         </Button>
-        <p className="text-sm tabular-nums" aria-live="polite">
+        <p className="text-[13px] tabular-nums" aria-live="polite">
           {sucio
             ? `${modificadas.length} ${modificadas.length === 1 ? "fila modificada" : "filas modificadas"}`
             : "Sin cambios"}
@@ -170,7 +165,7 @@ export function GrillaPrecios({
         aria-label="Tabla de precios, desplazable"
         tabIndex={0}
         // scroll-pl = ancho de la columna fija: el foco que llega por scroll no queda tapado por ella.
-        className="bg-card focus-visible:ring-ring/50 scroll-pl-36 overflow-x-auto rounded-xl border shadow-[0_2px_5px_#34345a0d] outline-none focus-visible:ring-3 md:scroll-pl-48"
+        className="bg-card focus-visible:ring-ring shadow-card scroll-pl-36 overflow-x-auto rounded-xl border outline-none focus-visible:ring-3 md:scroll-pl-48"
       >
         <table
           ref={tabla}

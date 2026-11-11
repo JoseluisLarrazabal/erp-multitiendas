@@ -34,6 +34,15 @@ const foto = async (page: Page, nombre: string) => {
   await page.waitForTimeout(400); // deja terminar transiciones y que se oculte algún aviso
   await page.screenshot({ path: `${IMG}/${nombre}.png`, fullPage: false });
 };
+// El tablero del Inicio es largo: ventana alta para verlo entero (el menú lateral mide el alto de la ventana) y con
+// las cargas ya resueltas.
+async function fotoTablero(page: Page, nombre: string) {
+  await page.setViewportSize({ width: 1280, height: 1250 });
+  await ir(page, "/panel");
+  await expect(page.getByRole("heading", { name: "Por atender" })).toBeVisible();
+  await expect(page.locator(".animate-pulse")).toHaveCount(0); // ningún bloque a medio cargar
+  await foto(page, nombre);
+}
 
 test.describe.configure({ mode: "serial" });
 test.beforeEach(async ({ page }) => {
@@ -291,7 +300,7 @@ test.describe("crédito y cuotas (encargado de tienda)", () => {
     });
   });
 
-  test("pos-credito y pos-cobro-cuota", async ({ page }) => {
+  test("pos-credito, pos-cobro-cuota y panel-inicio", async ({ page }) => {
     const tablet = await crearProductoConPrecio({
       contado: 50,
       credito: 60,
@@ -310,7 +319,10 @@ test.describe("crédito y cuotas (encargado de tienda)", () => {
     await page.getByLabel("Cédula de identidad").check();
     await page.getByLabel("Pagaré firmado").check();
     await expect(page.getByLabel("Plan de cuotas")).toContainText("Cuota 1:");
+    // Ventana alta: el plan de cuotas queda debajo de los documentos y no debe salir cortado.
+    await page.setViewportSize({ width: 1280, height: 1000 });
     await foto(page, "pos-credito");
+    await page.setViewportSize({ width: 1280, height: 800 });
 
     await abrirCobro(page);
     await page
@@ -333,6 +345,8 @@ test.describe("crédito y cuotas (encargado de tienda)", () => {
       .getByRole("button", { name: "Confirmar cobro" })
       .click();
     await expect(page.getByRole("status").filter({ hasText: "Cuota cobrada" })).toBeVisible();
+    // Inicio del panel con la caja C2 abierta, la venta sin conexión por revisar y la reserva del POS.
+    await fotoTablero(page, "panel-inicio");
   });
 });
 
@@ -351,7 +365,7 @@ test.describe("lavandería (encargado)", () => {
     for (const id of creadas) await anularOrdenApi(id);
   });
 
-  test("lav-nueva-orden y lav-ordenes", async ({ page }) => {
+  test("lav-nueva-orden, lav-ordenes y panel-inicio-lavanderia", async ({ page, context }) => {
     await fijarEquipoL1(page, equipoId);
     await page.goto("/pos");
     await page.getByLabel("Efectivo inicial (Bs)").fill("100");
@@ -388,6 +402,15 @@ test.describe("lavandería (encargado)", () => {
     await primera.getByRole("button", { name: /^Pasar a En lavado/ }).click();
     await expect(primera).toContainText("En lavado");
     await foto(page, "lav-ordenes");
+
+    // Una orden lista para recoger, para que el tablero de la lavandería muestre algo.
+    for (const estado of ["en_lavado", "lista"])
+      await apiComo("encargadoLavanderia", "rpc/cambiar_estado_orden", {
+        metodo: "POST",
+        cuerpo: { p_orden_id: creadas[0], p_estado: estado },
+      });
+    await elegirNegocio(context, NEGOCIOS.lavanderia.id);
+    await fotoTablero(page, "panel-inicio-lavanderia");
   });
 });
 
@@ -437,11 +460,6 @@ test.describe("panel (dueño)", () => {
   test.use({ storageState: rutaAuth("dueno") });
   test.beforeEach(async ({ context }) => {
     await elegirNegocio(context, NEGOCIOS.tienda.id);
-  });
-
-  test("panel-inicio", async ({ page }) => {
-    await ir(page, "/panel");
-    await foto(page, "panel-inicio");
   });
 
   test("panel-precios", async ({ page }) => {
@@ -519,6 +537,7 @@ test.describe("panel (dueño)", () => {
   });
 
   test("panel-usuarios", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1000 }); // que se vea también "Cuenta nueva" completa
     await ir(page, "/panel/usuarios");
     await foto(page, "panel-usuarios");
   });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SelectNativo } from "@/components/ui/select-nativo";
@@ -18,7 +19,7 @@ type Props = {
 };
 
 const casilla =
-  "accent-primary size-4 rounded border-input focus-visible:ring-ring/50 focus-visible:ring-3";
+  "accent-primary size-4 rounded border-input focus-visible:ring-ring focus-visible:ring-3";
 
 // GET puro: sin JavaScript. El lector de códigos USB escribe y pulsa Enter, que envía el formulario.
 export function FiltrosBusqueda({
@@ -32,21 +33,20 @@ export function FiltrosBusqueda({
   const hayFiltros =
     filtros.q || filtros.categoria || filtros.marca || filtros.sinPrecio || filtros.inactivos;
   return (
-    <form
+    <BarraFiltros
       // Los selects y casillas no son controlados: la key los reinicia cuando cambian los filtros (p. ej. "Quitar filtros").
       key={hrefConFiltros("", filtros, { pagina: 1 })}
       method="get"
       action={ruta}
       role="search"
       aria-label="Buscar productos"
-      className="flex flex-wrap items-end gap-x-4 gap-y-3"
     >
-      <div className="flex min-w-60 flex-[2] flex-col gap-1.5">
+      <CampoFiltro className="min-w-60 flex-[2] sm:max-w-none">
         <Label htmlFor="filtro-q">Buscar</Label>
         <CampoBusqueda defaultValue={filtros.q} enfocar={enfocarBusqueda} />
-      </div>
+      </CampoFiltro>
       {categorias && (
-        <div className="flex min-w-40 flex-1 flex-col gap-1.5 sm:max-w-56">
+        <CampoFiltro className="min-w-40 sm:max-w-56">
           <Label htmlFor="filtro-categoria">Categoría</Label>
           <SelectNativo id="filtro-categoria" name="categoria" defaultValue={filtros.categoria}>
             <option value="">Todas</option>
@@ -56,10 +56,10 @@ export function FiltrosBusqueda({
               </option>
             ))}
           </SelectNativo>
-        </div>
+        </CampoFiltro>
       )}
       {marcas && (
-        <div className="flex min-w-40 flex-1 flex-col gap-1.5 sm:max-w-56">
+        <CampoFiltro className="min-w-40 sm:max-w-56">
           <Label htmlFor="filtro-marca">Marca</Label>
           <SelectNativo id="filtro-marca" name="marca" defaultValue={filtros.marca}>
             <option value="">Todas</option>
@@ -69,7 +69,7 @@ export function FiltrosBusqueda({
               </option>
             ))}
           </SelectNativo>
-        </div>
+        </CampoFiltro>
       )}
       <label className="flex min-h-10 items-center gap-2 text-sm">
         <input
@@ -93,7 +93,7 @@ export function FiltrosBusqueda({
           Incluir inactivos
         </label>
       )}
-      <Button type="submit" className="h-10">
+      <Button type="submit" className="max-sm:w-full">
         <Search aria-hidden />
         Buscar
       </Button>
@@ -105,6 +105,6 @@ export function FiltrosBusqueda({
           Quitar filtros
         </Link>
       )}
-    </form>
+    </BarraFiltros>
   );
 }

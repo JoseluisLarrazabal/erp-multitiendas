@@ -94,7 +94,7 @@ export function BotonCambiarClave({ deshabilitado = false }: { deshabilitado?: b
           <Button
             type="button"
             variant="outline"
-            className="h-10"
+            className="h-11"
             disabled={deshabilitado}
             title={deshabilitado ? "Necesitas conexión para cambiar la contraseña" : undefined}
           />
@@ -112,7 +112,7 @@ export function BotonCambiarClave({ deshabilitado = false }: { deshabilitado?: b
         </AlertDialogHeader>
         {hecho ? (
           <AlertDialogFooter>
-            <AlertDialogCancel>Cerrar</AlertDialogCancel>
+            <AlertDialogCancel size="lg">Cerrar</AlertDialogCancel>
           </AlertDialogFooter>
         ) : (
           <form onSubmit={(e) => void enviar(e)} noValidate className="flex flex-col gap-4">
@@ -125,16 +125,18 @@ export function BotonCambiarClave({ deshabilitado = false }: { deshabilitado?: b
                   type="password"
                   autoComplete={auto}
                   required
-                  className="h-10"
+                  className="h-12"
                 />
               </div>
             ))}
-            <p role="alert" className="text-destructive min-h-5 text-sm">
+            <p role="alert" className="text-destructive min-h-5 text-sm font-medium">
               {error}
             </p>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={pendiente}>Cancelar</AlertDialogCancel>
-              <Button type="submit" disabled={pendiente}>
+              <AlertDialogCancel size="lg" disabled={pendiente}>
+                Cancelar
+              </AlertDialogCancel>
+              <Button type="submit" size="lg" disabled={pendiente}>
                 {pendiente && <Loader2 className="animate-spin" aria-hidden />}
                 Cambiar contraseña
               </Button>

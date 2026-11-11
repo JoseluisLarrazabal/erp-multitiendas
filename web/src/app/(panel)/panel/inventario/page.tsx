@@ -9,6 +9,7 @@ import {
   PackagePlus,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador } from "@/modules/catalogo/panel";
 import { filtrosStockSchema, hrefStock, PAGINA_STOCK } from "@/modules/inventario";
@@ -39,7 +40,7 @@ export default async function PaginaInventario({
   ]);
   const error = !lista.ok ? lista.error : !ubicaciones.ok ? ubicaciones.error : null;
   const hayFiltros = filtros.q !== "" || filtros.bajo;
-  const enlace = buttonVariants({ variant: "outline", className: "h-10" });
+  const enlace = buttonVariants({ variant: "outline" });
 
   return (
     <>
@@ -87,13 +88,13 @@ export default async function PaginaInventario({
           </p>
         )}
         {lista.ok && lista.data.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {filtros.bajo && filtros.q === ""
               ? "Ningún producto está bajo su mínimo."
               : hayFiltros
                 ? "Ningún producto coincide con la búsqueda o el filtro."
                 : "Aún no hay productos con stock para mostrar."}
-          </p>
+          </EstadoVacio>
         )}
         {lista.ok && ubicaciones.ok && lista.data.filas.length > 0 && (
           <ListaStock

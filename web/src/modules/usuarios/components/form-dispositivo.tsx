@@ -79,7 +79,6 @@ export function FormDispositivo({ negocioId, ubicaciones }: Props) {
           name="nombre"
           required
           autoComplete="off"
-          className="h-10"
           {...propsCampo("disp-nombre", errores)}
         />
       </Campo>
@@ -95,7 +94,7 @@ export function FormDispositivo({ negocioId, ubicaciones }: Props) {
           required
           autoComplete="off"
           maxLength={3}
-          className="h-10 uppercase"
+          className="uppercase"
           {...propsCampo("disp-prefijo", errores, true)}
         />
       </Campo>
@@ -120,7 +119,7 @@ export function FormDispositivo({ negocioId, ubicaciones }: Props) {
         <p role="status" className="text-sm font-medium">
           {hecho && !mensaje ? "Dispositivo registrado." : ""}
         </p>
-        <Button type="submit" disabled={pendiente} className="h-10 self-start">
+        <Button type="submit" disabled={pendiente} className="self-start">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Registrar dispositivo
         </Button>

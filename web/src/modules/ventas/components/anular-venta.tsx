@@ -33,13 +33,12 @@ export function AnularVenta({ ventaId, numero }: { ventaId: string; numero: stri
           id="anular-motivo"
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
           {...propsCampo("anular-motivo", error ? { "anular-motivo": error } : {}, true)}
         />
       </Campo>
-      <Button type="submit" variant="outline" className="text-destructive h-10 self-start">
+      <Button type="submit" variant="outline" className="text-destructive self-start">
         <Ban aria-hidden /> Anular venta
       </Button>
       <ConfirmarAccion

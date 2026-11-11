@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Etiqueta } from "@/components/ui/etiqueta";
 import { ConfirmarAccion } from "@/components/panel/confirmar-accion";
 import { useAccion } from "@/components/panel/use-accion";
 import { formatearFechaHora } from "@/lib/format/fecha";
@@ -40,15 +42,15 @@ function FilaVenta({
       </p>
     );
   return (
-    <li className="flex flex-col gap-3 px-4 py-4" data-testid="reco-venta">
+    <li className="flex flex-col gap-3 py-4" data-testid="reco-venta">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <Link
           href={`/panel/ventas/${v.id}`}
-          className="focus-visible:ring-ring rounded font-mono text-sm font-semibold outline-none hover:underline focus-visible:ring-3"
+          className="focus-visible:ring-ring rounded font-mono text-[13px] font-semibold outline-none hover:underline focus-visible:ring-3"
         >
           {v.numero}
         </Link>
-        <span className="font-semibold tabular-nums">{formatearBs(v.total)}</span>
+        <span className="cifra text-[13px]">{formatearBs(v.total)}</span>
       </div>
       <p className="text-muted-foreground text-xs">
         Vendida {formatearFechaHora(v.creadaEn)} · recibida {formatearFechaHora(v.recibidaEn)} ·{" "}
@@ -58,11 +60,8 @@ function FilaVenta({
       {v.motivos.length > 0 && (
         <ul aria-label="Motivos de revisión" className="flex flex-wrap gap-1.5">
           {v.motivos.map((m) => (
-            <li
-              key={m}
-              className="bg-secondary text-secondary-foreground rounded-md px-2 py-0.5 text-xs font-semibold"
-            >
-              {textoMotivo(m)}
+            <li key={m}>
+              <Etiqueta tono="aviso">{textoMotivo(m)}</Etiqueta>
             </li>
           ))}
         </ul>
@@ -74,17 +73,14 @@ function FilaVenta({
       {v.pagosPendientes.map((p) => (
         <div
           key={p.id}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+          className="border-warning-line bg-warning-soft flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
         >
           <p className="text-sm">
-            QR pendiente de verificar{" "}
-            <strong className="tabular-nums">{formatearBs(p.monto)}</strong>
+            QR pendiente de verificar <strong className="cifra">{formatearBs(p.monto)}</strong>
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="min-h-9 md:min-h-8"
               disabled={pendiente}
               onClick={() =>
                 lanzar(
@@ -120,8 +116,7 @@ function FilaVenta({
       {porRevisar && (
         <Button
           variant="outline"
-          size="sm"
-          className="min-h-9 self-start md:min-h-8"
+          className="self-start"
           disabled={pendiente}
           onClick={() =>
             lanzar(
@@ -170,9 +165,9 @@ export function ListaReconciliacion({
         {aviso}
       </p>
       {ventas.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{textoVacio}</p>
+        <EstadoVacio>{textoVacio}</EstadoVacio>
       ) : (
-        <ul aria-label="Ventas a revisar" className="divide-y rounded-lg border">
+        <ul aria-label="Ventas a revisar" className="divide-y">
           {ventas.map((v) => (
             <FilaVenta key={v.id} v={v} alResolver={setAviso} />
           ))}

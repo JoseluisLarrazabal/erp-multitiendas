@@ -23,6 +23,8 @@ type Props = {
   confirmar: string;
   accion: () => Promise<Resultado<null>>;
   destructiva?: boolean;
+  // Tamaño del disparador (el POS pide 44 px: "lg").
+  size?: "default" | "lg";
   // Solo con botón propio: deshabilita el disparador (p. ej. mientras corre otra acción de la misma fila).
   deshabilitado?: boolean;
   // Tras una acción exitosa el foco va aquí (p. ej. al título cuando la fila desaparece); por defecto vuelve al botón.
@@ -43,6 +45,7 @@ export function ConfirmarAccion({
   confirmar,
   accion,
   destructiva = true,
+  size,
   deshabilitado,
   focoFinal,
   abierto,
@@ -72,9 +75,9 @@ export function ConfirmarAccion({
           render={
             <Button
               variant="outline"
-              size="sm"
+              size={size}
               disabled={deshabilitado}
-              className={cn("min-h-9 md:min-h-8", destructiva && "text-destructive")}
+              className={cn(destructiva && "text-destructive")}
             />
           }
         >

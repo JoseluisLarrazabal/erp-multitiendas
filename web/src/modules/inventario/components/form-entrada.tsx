@@ -175,7 +175,6 @@ export function FormEntrada({
           valor={cantidadTexto}
           alCambiar={setCantidadTexto}
           errores={errores}
-          className="h-10"
         />
       </div>
       {verCostos && (
@@ -191,7 +190,7 @@ export function FormEntrada({
             onChange={(e) => setCostoTexto(e.target.value)}
             inputMode="decimal"
             autoComplete="off"
-            className="h-10 sm:max-w-64"
+            className="sm:max-w-64"
             {...propsCampo("ent-costo", errores, true)}
           />
         </Campo>
@@ -212,7 +211,6 @@ export function FormEntrada({
               autoComplete="off"
               autoCapitalize="characters"
               spellCheck={false}
-              className="h-10"
               {...propsCampo("ent-lote", errores, true)}
             />
           </Campo>
@@ -223,7 +221,7 @@ export function FormEntrada({
               value={vence}
               onChange={(e) => setVence(e.target.value)}
               min={hoy}
-              className="h-10 sm:max-w-48"
+              className="sm:max-w-48"
               {...propsCampo("ent-vence", errores)}
             />
           </Campo>

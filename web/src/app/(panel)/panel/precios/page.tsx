@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import {
   FILTROS_VACIOS,
@@ -65,17 +66,17 @@ export default async function PaginaPrecios({
           </p>
         )}
         {tipoCambio.ok && tipoCambio.data === null && (
-          <p className="bg-secondary text-secondary-foreground rounded-lg px-3 py-2 text-sm">
+          <p className="bg-warning-soft text-warning border-warning-line rounded-lg border px-3 py-2 text-sm">
             No hay tipo de cambio registrado: los precios en USD no tendrán equivalente en Bs hasta
             registrarlo.
           </p>
         )}
         {lista.ok && tipoCambio.ok && filas?.ok && filas.data.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {hayFiltros
               ? "Ningún producto coincide con la búsqueda."
               : "Aún no hay productos para ponerles precio."}
-          </p>
+          </EstadoVacio>
         )}
         {lista.ok && tipoCambio.ok && filas?.ok && filas.data.length > 0 && (
           <GrillaPrecios
