@@ -127,7 +127,7 @@ export async function Avisos({ negocioId, bloques }: { negocioId: string; bloque
       <h2
         id={idTitulo}
         className={cn(
-          "flex items-center justify-between gap-2 px-4 pt-4 pb-1 text-[15px] font-semibold",
+          "flex items-center gap-2 px-4 pt-4 pb-1 text-[15px] font-semibold",
           urgente && "text-warning",
         )}
       >
@@ -135,7 +135,6 @@ export async function Avisos({ negocioId, bloques }: { negocioId: string; bloque
           {urgente && <TriangleAlert className="size-4" aria-hidden />}
           {TITULO}
         </span>
-        {urgente && <span className="cifra text-sm">{avisos.length}</span>}
       </h2>
       {!urgente && fallas.length === 0 && (
         <p className="text-muted-foreground px-4 pt-1 pb-4 text-sm">Nada por atender</p>
@@ -160,7 +159,7 @@ export async function Avisos({ negocioId, bloques }: { negocioId: string; bloque
                   )}
                 </span>
               </span>
-              <span className={buttonVariants({ variant: "outline", size: "sm" })}>{a.accion}</span>
+              <span className={buttonVariants({ variant: "outline" })}>{a.accion}</span>
             </Link>
           </li>
         ))}
@@ -170,7 +169,7 @@ export async function Avisos({ negocioId, bloques }: { negocioId: string; bloque
               <span className="text-muted-foreground min-w-0 flex-1 text-[13px] leading-snug">
                 No se pudo comprobar {f.que}
               </span>
-              <span className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir</span>
+              <span className={buttonVariants({ variant: "outline" })}>Abrir</span>
             </Link>
           </li>
         ))}

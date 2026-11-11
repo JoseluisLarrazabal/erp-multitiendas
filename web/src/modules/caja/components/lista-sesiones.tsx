@@ -50,7 +50,7 @@ export function ListaSesiones({ sesiones }: { sesiones: readonly FilaSesion[] })
               <span
                 className={cn(
                   "cifra font-semibold",
-                  s.diferencia !== null && s.diferencia < 0 && "text-destructive",
+                  s.diferencia && (s.diferencia < 0 ? "text-destructive" : "text-warning"),
                 )}
               >
                 {bsONulo(s.diferencia)}

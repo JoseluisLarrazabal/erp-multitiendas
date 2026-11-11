@@ -72,7 +72,7 @@ export function FichaOrden({
         <input
           type="checkbox"
           role="switch"
-          className="focus-visible:ring-ring/50 size-5 outline-none focus-visible:ring-3"
+          className="focus-visible:ring-ring size-5 outline-none focus-visible:ring-3"
           checked={express}
           disabled={bloqueado}
           onChange={(e) => alCambiarExpress(e.target.checked)}

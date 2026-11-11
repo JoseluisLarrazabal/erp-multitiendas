@@ -1,8 +1,5 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
-import { buttonVariants } from "@/components/ui/button";
-import { EncabezadoPagina } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import type { Resultado } from "@/modules/usuarios";
 import type { Ubicacion } from "../domain";
 
@@ -27,11 +24,7 @@ export function PaginaOperacion({
       <EncabezadoPagina
         titulo={titulo}
         descripcion={descripcion}
-        acciones={
-          <Link href="/panel/inventario" className={buttonVariants({ variant: "outline" })}>
-            <ArrowLeft aria-hidden /> Inventario
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/inventario">Inventario</EnlaceVolver>}
       />
       {!ubicaciones.ok && (
         <p role="alert" className="text-destructive text-sm">

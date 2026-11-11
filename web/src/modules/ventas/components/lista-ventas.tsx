@@ -29,7 +29,7 @@ export function ListaVentas({
           <span>Número</span>
           <span>Fecha</span>
           <span>Equipo</span>
-          <span className="text-right">Total</span>
+          <span className="text-right md:pr-4">Total</span>
           <span>Estado</span>
         </>
       }
@@ -47,7 +47,7 @@ export function ListaVentas({
             <span className="min-w-0 truncate text-sm max-md:order-4">
               {equipo(v.dispositivoId)}
             </span>
-            <span className="cifra text-right text-[13px] max-md:order-2">
+            <span className="cifra text-right text-[13px] max-md:order-2 md:pr-4">
               {formatearBs(v.total)}
             </span>
             <span className="flex flex-wrap gap-1.5 max-md:order-5 max-md:col-span-2">

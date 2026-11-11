@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { tiposDeProducto } from "@/modules/catalogo";
 import {
   EncabezadoPagina,
+  EnlaceVolver,
   EstadoProducto,
   FormProducto,
   listarCategorias,
@@ -45,12 +44,7 @@ export default async function PaginaProducto({ params }: { params: Promise<{ id:
         }
         acciones={
           <>
-            <Link
-              href="/panel/productos"
-              className="text-primary inline-flex min-h-10 items-center gap-1 text-sm underline-offset-4 hover:underline"
-            >
-              <ArrowLeft className="size-4" aria-hidden /> Productos
-            </Link>
+            <EnlaceVolver href="/panel/productos">Productos</EnlaceVolver>
             {producto.ok && producto.data && (
               <EstadoProducto
                 productoId={producto.data.id}

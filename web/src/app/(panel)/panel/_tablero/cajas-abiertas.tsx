@@ -63,7 +63,7 @@ export async function CajasAbiertas({ negocioId }: { negocioId: string }) {
             <tr key={f.sesion_id}>
               <Td className="font-semibold">{f.equipo}</Td>
               <Td>{f.cajero}</Td>
-              <TdCifra>{formatearHora(f.abierta_en)}</TdCifra>
+              <Td className="text-[13px] tabular-nums">{formatearHora(f.abierta_en)}</Td>
               <TdCifra className="text-right">
                 {formatearBs(f.ventas_efectivo + f.ventas_qr)}
               </TdCifra>

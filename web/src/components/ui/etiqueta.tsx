@@ -7,7 +7,7 @@ const etiquetaVariants = cva(
     variants: {
       tono: {
         neutro: "bg-muted text-foreground",
-        marca: "bg-secondary text-secondary-foreground",
+        marca: "border-primary/40 bg-card text-primary border px-[7px] py-[1px]",
         exito: "bg-success-soft text-success",
         aviso: "bg-warning-soft text-warning",
         peligro: "bg-destructive-soft text-destructive",

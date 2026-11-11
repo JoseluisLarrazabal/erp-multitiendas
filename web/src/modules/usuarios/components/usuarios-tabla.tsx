@@ -65,7 +65,7 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
                 <th
                   scope="row"
                   role="rowheader"
-                  className="min-w-0 text-left font-semibold md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                  className="min-w-0 text-left font-semibold md:table-cell md:h-[3.25rem] md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   <span className="block truncate">{fila.nombre}</span>
                   {fila.esYo && (
@@ -74,7 +74,7 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
                 </th>
                 <td
                   role="cell"
-                  className="text-muted-foreground col-start-2 row-start-1 md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                  className="text-muted-foreground col-start-2 row-start-1 md:table-cell md:h-[3.25rem] md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   {acciones.cambiarRol ? (
                     <CambiarRol
@@ -90,7 +90,7 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
                 </td>
                 <td
                   role="cell"
-                  className="md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                  className="md:table-cell md:h-[3.25rem] md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   <Etiqueta tono={fila.activo ? "exito" : "neutro"}>
                     {fila.activo ? "Activo" : "Desactivado"}
@@ -98,7 +98,7 @@ export function UsuariosTabla({ filas, negocioId, negocioNombre, roles, llamador
                 </td>
                 <td
                   role="cell"
-                  className="col-span-2 md:table-cell md:h-11 md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
+                  className="col-span-2 md:table-cell md:h-[3.25rem] md:px-3 md:py-1.5 md:first:pl-0 md:last:pr-0"
                 >
                   {hayAcciones && (
                     <AccionesFila

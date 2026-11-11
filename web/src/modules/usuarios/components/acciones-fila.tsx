@@ -53,7 +53,7 @@ export function AccionesFila({ fila, negocioId, negocioNombre, acciones }: Props
           />
         )}
       </div>
-      <p role="alert" className="text-destructive text-xs empty:hidden">
+      <p role="alert" className="text-destructive text-sm empty:hidden">
         {error}
       </p>
     </div>

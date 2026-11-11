@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { buttonVariants } from "@/components/ui/button";
 import { itemsVisibles } from "@/components/panel/panel-items";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver, Seccion } from "@/modules/catalogo/panel";
 import {
   AnularVenta,
   detalleVenta,
@@ -37,11 +36,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
   ]);
   if (detalle.ok && detalle.data === null) notFound();
 
-  const volver = (
-    <Link href="/panel/ventas" className={buttonVariants({ variant: "outline" })}>
-      <ArrowLeft aria-hidden /> Ventas
-    </Link>
-  );
+  const volver = <EnlaceVolver href="/panel/ventas">Ventas</EnlaceVolver>;
   if (!detalle.ok || !equipos.ok || !abiertas.ok || !detalle.data) {
     const error = !detalle.ok
       ? detalle.error

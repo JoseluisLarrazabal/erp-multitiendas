@@ -76,7 +76,7 @@ export function FotoCampo({ urlActual, nombre, alElegir, alProcesar }: Props) {
         <div className="flex min-w-0 flex-col items-center gap-1.5">
           <label
             htmlFor="producto-foto"
-            className={`${buttonVariants({ variant: "outline" })} focus-within:ring-ring/50 w-fit cursor-pointer focus-within:ring-3`}
+            className={`${buttonVariants({ variant: "outline" })} focus-within:ring-ring w-fit cursor-pointer focus-within:ring-3`}
           >
             <ImagePlus aria-hidden />
             {imagen ? "Cambiar foto" : "Elegir foto"}
@@ -98,7 +98,7 @@ export function FotoCampo({ urlActual, nombre, alElegir, alProcesar }: Props) {
       <p role="status" className="text-muted-foreground text-xs empty:hidden">
         {procesando ? "Preparando la foto…" : ""}
       </p>
-      <p role="alert" className="text-destructive text-xs empty:hidden">
+      <p role="alert" className="text-destructive text-sm empty:hidden">
         {error}
       </p>
     </div>

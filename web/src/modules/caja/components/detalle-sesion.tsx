@@ -48,7 +48,8 @@ export function DetalleSesionVista({
     movimientosTardios > 0 ||
     (r.esperado !== null && s.montoEsperado !== null && r.esperado !== s.montoEsperado);
   const fila = "flex items-baseline justify-between gap-3 py-2";
-  const faltante = s.diferencia !== null && s.diferencia < 0;
+  // Faltante en rojo, sobrante en ámbar, cero sin color; el signo y el monto ya lo dicen.
+  const colorDif = !s.diferencia ? "" : s.diferencia < 0 ? "text-destructive" : "text-warning";
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Seccion titulo="Sesión">
@@ -133,10 +134,7 @@ export function DetalleSesionVista({
           </div>
           <div className={fila}>
             <dt>Diferencia</dt>
-            <dd
-              className={cn("cifra font-bold", faltante && "text-destructive")}
-              data-testid="sesion-diferencia"
-            >
+            <dd className={cn("cifra font-bold", colorDif)} data-testid="sesion-diferencia">
               {bsONulo(s.diferencia)}
             </dd>
           </div>
@@ -182,7 +180,7 @@ export function DetalleSesionVista({
           <ul aria-label="Movimientos" className="divide-y text-sm">
             {d.movimientos.map((m) => (
               <li key={m.id} className="flex items-baseline gap-3 py-2">
-                <span className="text-muted-foreground cifra w-12 shrink-0 text-[13px]">
+                <span className="text-muted-foreground w-12 shrink-0 text-[13px] tabular-nums">
                   {formatearHora(m.creadoEn)}
                 </span>
                 <span className="min-w-0 flex-1">

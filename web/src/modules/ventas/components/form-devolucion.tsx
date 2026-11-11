@@ -136,7 +136,7 @@ export function FormDevolucion({
                   />
                 </div>
                 {errores[i.id] && (
-                  <p id={`${id}-error`} className="text-destructive col-span-2 text-xs">
+                  <p id={`${id}-error`} className="text-destructive col-span-2 text-sm">
                     {errores[i.id]}
                   </p>
                 )}

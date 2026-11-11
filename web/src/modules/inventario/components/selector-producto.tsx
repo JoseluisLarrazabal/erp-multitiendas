@@ -202,7 +202,7 @@ export function SelectorProducto({
             <p className="text-muted-foreground mt-1 text-xs">Ningún producto coincide.</p>
           )}
           {falla && (
-            <p role="alert" className="text-destructive mt-1 text-xs">
+            <p role="alert" className="text-destructive mt-1 text-sm">
               {falla}
             </p>
           )}

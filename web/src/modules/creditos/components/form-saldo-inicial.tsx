@@ -67,7 +67,7 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
     >
       <div className="flex flex-col gap-1.5 sm:col-span-2">
         <SelectorCliente negocioId={negocioId} obligatorio valor={cliente} alCambiar={setCliente} />
-        <p role="alert" className="text-destructive text-xs empty:hidden">
+        <p role="alert" className="text-destructive text-sm empty:hidden">
           {errores.cliente}
         </p>
       </div>

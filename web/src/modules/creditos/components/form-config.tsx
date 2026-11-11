@@ -61,7 +61,7 @@ export function FormConfigCredito({
       onSubmit={enviar}
       noValidate
       aria-label="Parámetros del crédito"
-      className="grid gap-4 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
     >
       <Campo id="cfg-inicial" etiqueta="Inicial mínima (%)" error={errores.inicial}>
         <Input
@@ -108,7 +108,7 @@ export function FormConfigCredito({
           {...propsCampo("cfg-max", errores.max ? { "cfg-max": errores.max } : {}, true)}
         />
       </Campo>
-      <div className="flex flex-col gap-2 sm:col-span-2">
+      <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-4">
         <p role="alert" className="text-destructive text-sm empty:hidden">
           {error}
         </p>

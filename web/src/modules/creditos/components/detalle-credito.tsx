@@ -2,7 +2,7 @@ import { Etiqueta } from "@/components/ui/etiqueta";
 import { Tabla, Td, TdCifra, Th } from "@/components/ui/tabla";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { formatearBs } from "@/lib/format/moneda";
-import { Dato } from "@/modules/catalogo/panel";
+import { Dato, Seccion } from "@/modules/catalogo/panel";
 import { formatearDia, formatearFechaHora } from "@/lib/format/fecha";
 import { agruparPagos, ETIQUETA_ORIGEN } from "../domain";
 import { AnularPagoCuota, type EquipoAbierto } from "./anular-pago-cuota";
@@ -87,8 +87,10 @@ export function DetalleCreditoVista({
           d.origen === "saldo_inicial" &&
           d.estado === "activo" &&
           d.pagos.length === 0 && <AnularSaldoInicial creditoId={d.id} />}
-        <section aria-label="Cuotas" className="flex flex-col gap-2">
-          <h2 className="text-[15px] font-semibold">Cuotas</h2>
+        <Seccion titulo="Cuotas" aria-label="Cuotas">
+          <p className="text-muted-foreground text-xs md:hidden">
+            Desliza hacia la derecha para ver todas las columnas.
+          </p>
           <Tabla>
             <thead>
               <tr>
@@ -105,7 +107,7 @@ export function DetalleCreditoVista({
               {d.cuotas.map((c) => (
                 <tr key={c.numero}>
                   <TdCifra>{c.numero}</TdCifra>
-                  <TdCifra>{formatearDia(c.vence_en)}</TdCifra>
+                  <Td className="text-[13px] tabular-nums">{formatearDia(c.vence_en)}</Td>
                   <TdCifra className="text-right whitespace-nowrap">
                     {formatearBs(c.capital)}
                   </TdCifra>
@@ -131,9 +133,8 @@ export function DetalleCreditoVista({
               ))}
             </tbody>
           </Tabla>
-        </section>
-        <section aria-label="Pagos" className="flex flex-col gap-2">
-          <h2 className="text-[15px] font-semibold">Pagos recibidos</h2>
+        </Seccion>
+        <Seccion titulo="Pagos recibidos" aria-label="Pagos">
           {pagos.length === 0 ? (
             <EstadoVacio>Aún no hay pagos de cuotas.</EstadoVacio>
           ) : (
@@ -162,7 +163,7 @@ export function DetalleCreditoVista({
               ))}
             </ul>
           )}
-        </section>
+        </Seccion>
       </div>
       {d.venta_numero && (
         <div className="hidden print:block">

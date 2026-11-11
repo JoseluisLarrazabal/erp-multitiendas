@@ -37,8 +37,12 @@ export function ListaCompras({
       }
     >
       {compras.map((c) => (
-        <Fila key={c.id} columnas={`grid-cols-[1fr_auto] ${columnas}`}>
-          <span className="text-muted-foreground cifra text-[13px]">
+        <Fila
+          key={c.id}
+          columnas={`grid-cols-[1fr_auto] ${columnas}`}
+          className="md:min-h-[3.25rem]"
+        >
+          <span className="text-muted-foreground text-[13px] tabular-nums">
             {formatearFechaHora(c.creadaEn)}
           </span>
           <span className="min-w-0 truncate font-semibold max-md:order-first">{c.proveedor}</span>

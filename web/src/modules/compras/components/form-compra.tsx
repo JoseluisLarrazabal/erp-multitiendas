@@ -211,7 +211,7 @@ export function FormCompra({
             <Plus aria-hidden /> Agregar producto
           </Button>
           {errores["cmp-agregar"] && (
-            <p className="text-destructive mt-1 text-xs">{errores["cmp-agregar"]}</p>
+            <p className="text-destructive mt-1 text-sm">{errores["cmp-agregar"]}</p>
           )}
         </div>
       </div>

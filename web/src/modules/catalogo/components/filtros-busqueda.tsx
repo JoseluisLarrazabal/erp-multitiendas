@@ -19,7 +19,7 @@ type Props = {
 };
 
 const casilla =
-  "accent-primary size-4 rounded border-input focus-visible:ring-ring/50 focus-visible:ring-3";
+  "accent-primary size-4 rounded border-input focus-visible:ring-ring focus-visible:ring-3";
 
 // GET puro: sin JavaScript. El lector de códigos USB escribe y pulsa Enter, que envía el formulario.
 export function FiltrosBusqueda({
@@ -93,7 +93,7 @@ export function FiltrosBusqueda({
           Incluir inactivos
         </label>
       )}
-      <Button type="submit">
+      <Button type="submit" className="max-sm:w-full">
         <Search aria-hidden />
         Buscar
       </Button>

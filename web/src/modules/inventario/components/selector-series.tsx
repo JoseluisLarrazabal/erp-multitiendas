@@ -56,7 +56,7 @@ export function SelectorSeries({
           : `Marcadas ${seleccion.length} de ${necesarias}. Disponibles: ${series.datos?.length ?? 0}.`}
       </p>
       {series.error && (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-destructive text-sm">
           {series.error}
         </p>
       )}
@@ -90,7 +90,7 @@ export function SelectorSeries({
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-destructive text-xs">
+        <p id={`${id}-error`} className="text-destructive text-sm">
           {error}
         </p>
       )}

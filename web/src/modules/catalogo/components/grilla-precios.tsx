@@ -145,7 +145,7 @@ export function GrillaPrecios({
           {pendiente ? <Loader2 className="animate-spin" aria-hidden /> : <Save aria-hidden />}
           Guardar cambios
         </Button>
-        <p className="cifra text-[13px]" aria-live="polite">
+        <p className="text-[13px] tabular-nums" aria-live="polite">
           {sucio
             ? `${modificadas.length} ${modificadas.length === 1 ? "fila modificada" : "filas modificadas"}`
             : "Sin cambios"}
@@ -165,7 +165,7 @@ export function GrillaPrecios({
         aria-label="Tabla de precios, desplazable"
         tabIndex={0}
         // scroll-pl = ancho de la columna fija: el foco que llega por scroll no queda tapado por ella.
-        className="bg-card focus-visible:ring-ring/50 shadow-card scroll-pl-36 overflow-x-auto rounded-xl border outline-none focus-visible:ring-3 md:scroll-pl-48"
+        className="bg-card focus-visible:ring-ring shadow-card scroll-pl-36 overflow-x-auto rounded-xl border outline-none focus-visible:ring-3 md:scroll-pl-48"
       >
         <table
           ref={tabla}

@@ -78,7 +78,7 @@ export function FormSeries({
           rows={5}
           autoComplete="off"
           spellCheck={false}
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full rounded-lg border bg-transparent px-2.5 py-2 font-mono text-base outline-none focus-visible:ring-3 md:text-sm"
+          className="border-input focus-visible:border-ring focus-visible:ring-ring aria-invalid:border-destructive w-full rounded-lg border bg-transparent px-2.5 py-2 font-mono text-base outline-none focus-visible:ring-3 md:text-sm"
           {...propsCampo("ser-texto", errores, true)}
         />
       </Campo>

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { hoyEnBolivia } from "@/lib/format/fecha";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import { FormCompra } from "@/modules/compras/panel";
 import { exigirPermiso, listarUbicaciones } from "@/modules/usuarios/panel";
 
@@ -36,11 +34,7 @@ export default async function PaginaNuevaCompra() {
       <EncabezadoPagina
         titulo="Nueva compra"
         descripcion="Registra lo que compraste a un proveedor: suma stock y recalcula el costo promedio."
-        acciones={
-          <Link href="/panel/compras" className={buttonVariants({ variant: "outline" })}>
-            <ArrowLeft aria-hidden /> Compras
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/compras">Compras</EnlaceVolver>}
       />
       {error && (
         <p role="alert" className="text-destructive text-sm">

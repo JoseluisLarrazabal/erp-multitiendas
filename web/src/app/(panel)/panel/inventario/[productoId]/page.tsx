@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SelectNativo } from "@/components/ui/select-nativo";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
-import { EncabezadoPagina, Seccion } from "@/modules/catalogo/panel";
+import { EncabezadoPagina, EnlaceVolver, Seccion } from "@/modules/catalogo/panel";
 import { filtrosKardexSchema, formatearCantidad, PAGINA_KARDEX } from "@/modules/inventario";
 import {
   FormSeries,
@@ -76,11 +76,7 @@ export default async function PaginaKardex({
       <EncabezadoPagina
         titulo={p ? p.nombre : "Kardex"}
         descripcion={p ? `Código ${p.codigo}. Historial de movimientos: solo lectura.` : undefined}
-        acciones={
-          <Link href="/panel/inventario" className={buttonVariants({ variant: "outline" })}>
-            <ArrowLeft aria-hidden /> Inventario
-          </Link>
-        }
+        acciones={<EnlaceVolver href="/panel/inventario">Inventario</EnlaceVolver>}
       />
       <div className="flex min-w-0 flex-col gap-5">
         {error && (

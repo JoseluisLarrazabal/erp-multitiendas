@@ -58,7 +58,11 @@ export function ListaProveedores({
       }
     >
       {proveedores.map((p) => (
-        <Fila key={p.id} columnas={`grid-cols-[1fr_auto] ${COLUMNAS}`}>
+        <Fila
+          key={p.id}
+          columnas={`grid-cols-[1fr_auto] ${COLUMNAS}`}
+          className="md:min-h-[3.25rem]"
+        >
           {abierto?.id === p.id && abierto.modo === "editar" ? (
             <div className="col-span-full">
               <FormProveedor negocioId={negocioId} proveedor={p} alTerminar={cerrar} />

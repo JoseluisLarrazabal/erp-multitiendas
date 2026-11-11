@@ -67,7 +67,7 @@ export default async function PaginaTipoCambio() {
                 <tbody>
                   {historial.data.map((t) => (
                     <tr key={t.id}>
-                      <TdCifra>{formatearFecha(t.vigenteDesde)}</TdCifra>
+                      <Td className="text-[13px] tabular-nums">{formatearFecha(t.vigenteDesde)}</Td>
                       <TdCifra className="text-right">{formatearTipoCambio(t.valor)}</TdCifra>
                       <Td>{t.usuario}</Td>
                     </tr>

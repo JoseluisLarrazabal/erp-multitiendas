@@ -68,7 +68,7 @@ export function FormProveedor({
             type="checkbox"
             checked={activo}
             onChange={(e) => setActivo(e.target.checked)}
-            className="accent-primary border-input focus-visible:ring-ring/50 size-4 rounded focus-visible:ring-3"
+            className="accent-primary border-input focus-visible:ring-ring size-4 rounded focus-visible:ring-3"
           />
           Activo (aparece al registrar compras)
         </label>

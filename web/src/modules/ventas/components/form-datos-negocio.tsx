@@ -77,7 +77,7 @@ export function FormDatosNegocio({
           onChange={(e) => setTextoNota(e.target.value)}
           rows={4}
           autoComplete="off"
-          className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full rounded-lg border px-3 py-2 text-base outline-none focus-visible:ring-3 md:text-sm"
+          className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring aria-invalid:border-destructive w-full rounded-lg border px-3 py-2 text-base outline-none focus-visible:ring-3 md:text-sm"
           {...propsCampo("neg-nota", errores, true)}
         />
       </Campo>

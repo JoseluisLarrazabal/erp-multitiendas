@@ -44,7 +44,7 @@ export function ListaKardex({
     >
       {movimientos.map((m) => (
         <Fila key={m.id} columnas={`grid-cols-2 text-sm md:items-start ${COLUMNAS}`}>
-          <span className="cifra text-muted-foreground text-[13px]">
+          <span className="text-muted-foreground text-[13px] tabular-nums">
             <span className="sr-only">Fecha: </span>
             {formatearFechaHora(m.fecha)}
           </span>

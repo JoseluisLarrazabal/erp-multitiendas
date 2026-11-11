@@ -40,7 +40,7 @@ export function ListaVencimientos({ lotes }: { lotes: readonly LoteVencimiento[]
             <span className="sr-only">Entró en: </span>
             {l.ubicacion}
           </span>
-          <span className="cifra text-[13px]">
+          <span className="text-[13px] tabular-nums">
             <span className="sr-only">Vence: </span>
             {formatearDia(l.vence)}
           </span>

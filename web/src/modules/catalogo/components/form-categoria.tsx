@@ -77,6 +77,7 @@ export function FormCategoria({ negocioId, categoria, alTerminar }: Props) {
             id={idCampo}
             etiqueta={categoria ? "Nombre" : "Nombre de la categoría"}
             error={errores[idCampo]}
+            ocultarEtiqueta={!!categoria}
           >
             <Input
               id={idCampo}

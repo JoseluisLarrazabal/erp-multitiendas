@@ -108,7 +108,11 @@ export default async function PaginaReportes({
           </p>
         )}
         {tabla?.avisos.map((a) => (
-          <p key={a} role="status" className="text-sm font-medium">
+          <p
+            key={a}
+            role="status"
+            className="bg-warning-soft text-warning border-warning-line rounded-lg border px-3 py-2 text-sm"
+          >
             {a}
           </p>
         ))}

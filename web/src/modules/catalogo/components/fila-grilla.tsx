@@ -73,7 +73,7 @@ export function FilaGrilla({
         <span className="line-clamp-2 text-sm font-semibold md:line-clamp-none">{fila.nombre}</span>
         {modificada && <span className="text-primary text-xs font-medium">Modificada</span>}
         {error && (
-          <span id={idError} role="alert" className="text-destructive block text-xs">
+          <span id={idError} role="alert" className="text-destructive block text-sm">
             {error}
           </span>
         )}
@@ -88,7 +88,7 @@ export function FilaGrilla({
           <option value="USD">USD</option>
         </SelectNativo>
         {sinTipoCambio && (
-          <span className="text-destructive mt-1 block text-xs">Falta tipo de cambio</span>
+          <span className="text-destructive mt-1 block text-sm">Falta tipo de cambio</span>
         )}
       </td>
       {listas.map((lista) => {
@@ -116,7 +116,7 @@ export function FilaGrilla({
               className="cifra text-right md:text-[13px]"
             />
             {malo && (
-              <span id={`${id}-error`} className="text-destructive mt-1 block text-xs">
+              <span id={`${id}-error`} className="text-destructive mt-1 block text-sm">
                 {mensajeDeMontoInvalido(texto)}
               </span>
             )}
@@ -156,7 +156,7 @@ export function FilaGrilla({
           {invalidas.includes("costo") && (
             <span
               id={`celda-${fila.id}-costo-error`}
-              className="text-destructive mt-1 block text-xs"
+              className="text-destructive mt-1 block text-sm"
             >
               {mensajeDeMontoInvalido(borrador.costo)}
             </span>

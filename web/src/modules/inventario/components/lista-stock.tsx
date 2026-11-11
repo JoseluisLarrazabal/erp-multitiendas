@@ -61,22 +61,30 @@ export function ListaStock({
               )}
             </p>
           </div>
-          {ubicaciones.map((u) => (
-            <p key={u.id} className="cifra flex justify-between gap-2 text-[13px] md:justify-end">
-              <span className="text-muted-foreground md:sr-only">{u.nombre}</span>
-              <CantidadStock valor={p.porUbicacion[u.id] ?? 0} unidad={p.unidad} />
+          {/* En celular: ubicaciones en una línea que envuelve y total y valor juntos; desde md, `contents` deja cada cifra en su columna. */}
+          <div className="text-muted-foreground flex flex-wrap gap-x-3 md:contents">
+            {ubicaciones.map((u) => (
+              <p
+                key={u.id}
+                className="cifra flex gap-1.5 text-[13px] max-md:not-last:after:pl-1.5 max-md:not-last:after:content-['·'] md:justify-end"
+              >
+                <span className="text-muted-foreground md:sr-only">{u.nombre}</span>
+                <CantidadStock valor={p.porUbicacion[u.id] ?? 0} unidad={p.unidad} />
+              </p>
+            ))}
+          </div>
+          <div className="mt-1 flex flex-wrap gap-x-4 md:contents">
+            <p className="cifra flex gap-1.5 text-[13px] font-semibold md:justify-end">
+              <span className="text-muted-foreground font-normal md:sr-only">Total</span>
+              <CantidadStock valor={p.total} unidad={p.unidad} />
             </p>
-          ))}
-          <p className="cifra flex justify-between gap-2 text-[13px] font-semibold md:justify-end">
-            <span className="text-muted-foreground font-normal md:sr-only">Total</span>
-            <CantidadStock valor={p.total} unidad={p.unidad} />
-          </p>
-          {verCostos && (
-            <p className="cifra flex justify-between gap-2 text-[13px] md:justify-end">
-              <span className="text-muted-foreground md:sr-only">Valor</span>
-              <span>{p.valor === null ? "—" : formatearBs(p.valor)}</span>
-            </p>
-          )}
+            {verCostos && (
+              <p className="cifra flex gap-1.5 text-[13px] max-md:font-semibold md:justify-end">
+                <span className="text-muted-foreground font-normal md:sr-only">Valor</span>
+                <span>{p.valor === null ? "—" : formatearBs(p.valor)}</span>
+              </p>
+            )}
+          </div>
         </Fila>
       ))}
     </ListaFilas>

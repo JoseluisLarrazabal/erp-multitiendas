@@ -1,6 +1,6 @@
 // Segunda entrada del módulo, solo para páginas de /panel. Arrastra las server actions: si estuviera en
 // index.ts, /pos y /login (precacheados) cargarían sus referencias aunque no las usen.
-export { Dato, EncabezadoPagina, Seccion } from "./components/encabezado-pagina";
+export { Dato, EncabezadoPagina, EnlaceVolver, Seccion } from "./components/encabezado-pagina";
 export { EstadoProducto } from "./components/estado-producto";
 export { FiltrosBusqueda } from "./components/filtros-busqueda";
 export { FormCategoria } from "./components/form-categoria";
