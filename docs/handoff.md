@@ -2,24 +2,22 @@
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
-**falta aplicar su migración y desplegar `admin-usuarios` en producción**; rediseño en implementación).
+desplegado en producción; rediseño en implementación, tramo R3).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
   paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
   - **Fase 0, documentos: cerrada el 2026-11-10.** El plan, estas decisiones y `docs/preguntas-cliente.md`.
-  - **Fase 1, PR A, registro de errores (M-15, RNF-16): mergeado el 2026-11-10 (PR #103, `543824d`); despliegue de
-    base y función PENDIENTE.** Tabla propia `errores_app` (RLS sin políticas) y RPC `registrar_error`; sin proveedor
-    externo.
-    - **Lo que falta en producción:** `supabase db push --linked` (una sola migración, `20261110140000_errores_app.sql`;
-      el `--dry-run` del 2026-11-10 la lista sola y sin seeds) y `supabase functions deploy admin-usuarios`. El backup
-      manual previo quedó en verde (corrida 42945368153, 02:24 UTC del 2026-11-11). La sesión de Claude no pudo
-      ejecutarlos: el clasificador de permisos del harness negó el comando. Los corre el CTO o autoriza el permiso.
-      Mientras tanto la web ya publicada llama a una RPC que no existe: el registro falla en silencio (está hecho para
-      eso) y nada más cambia; la función vieja sigue funcionando.
-    - Después de aplicarla: `supabase migration list --linked` igual en local y remoto, y comprobar que `errores_app`
-      existe y que la web no la lee.
+  - **Fase 1, PR A, registro de errores (M-15, RNF-16): cerrada el 2026-11-10 (PR #103, `543824d`), desplegada en
+    producción.** Tabla propia `errores_app` (RLS sin políticas) y RPC `registrar_error`; sin proveedor externo.
+    - Despliegue: backup manual en verde (corrida 42945368153, 02:24 UTC del 2026-11-11); `db push --linked --dry-run`
+      listó una sola migración (`20261110140000_errores_app.sql`) y ningún seed; la migración y
+      `functions deploy admin-usuarios` las corrió el CTO desde la sesión (el clasificador de permisos del harness le
+      negó esos dos comandos a Claude). Comprobado después, en solo lectura: `migration list --linked` igual en local
+      y remoto, y `errores_app` existe con 0 filas.
+    - No verificado en producción: que la web no puede leer la tabla (probado en pgTAP local con la misma migración)
+      y una fila real registrada (sería una escritura de prueba). La primera fila que aparezca lo confirma.
     - Verificado en producción tras el merge (Playwright, solo lectura): despliegue de Vercel completo, `/login`
       responde 200, `/panel` carga con 0 errores de consola.
     - Verificación local antes del PR: los 8 pasos del CI en verde (Vitest 525, pgTAP 2.608, integración 19, E2E 271).
