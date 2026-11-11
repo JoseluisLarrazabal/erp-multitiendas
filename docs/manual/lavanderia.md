@@ -82,7 +82,7 @@ el sistema. Si un servicio no tiene precio, no se puede vender: avise al encarga
 
 5. **Entregar la boleta.** Al terminar sale la "BOLETA" con el número de la orden, por ejemplo "L1-000123", el cliente,
    las prendas, el casillero y la entrega. El NIT y los demás datos del negocio salen en la boleta solo si el
-   dueño los cargó en "Datos del negocio"; la fecha sale como la da el navegador, por ejemplo "9/11/26, 5:29 p. m.".
+   dueño los cargó en "Datos del negocio"; la fecha sale con la hora de Bolivia, por ejemplo "09/11/2026 17:29".
    Elegir el tamaño en "Tamaño de papel" ("Ticket 80 mm" o "A4") y pulsar "Imprimir". Luego "Nueva orden". El cliente necesita la boleta para retirar su ropa.
 
 La lavandería no tiene impresora por ahora (a confirmar con el cliente). Si no se puede imprimir, se usa el talonario

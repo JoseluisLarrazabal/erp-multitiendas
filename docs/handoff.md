@@ -1,21 +1,132 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; fase 0 cerrada, PR A de registro de
-errores en curso).
+Última actualización: 2026-11-11 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
+desplegado en producción; rediseño completo (R1 a R5) en `feat/rediseno-base`, verificado en local; sus PR se abren desde el 2026-12-01).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
   paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
   - **Fase 0, documentos: cerrada el 2026-11-10.** El plan, estas decisiones y `docs/preguntas-cliente.md`.
-  - **Fase 1, PR A, registro de errores (M-15, RNF-16): hito activo.** Rama `feat/registro-errores`. Tabla propia
-    `errores_app` en Supabase con RPC `registrar_error`; sin proveedor externo. Es el único PR de código que cabe en
-    noviembre por los minutos de Actions.
-  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con una lista que prepara Claude),
+  - **Fase 1, PR A, registro de errores (M-15, RNF-16): cerrada el 2026-11-10 (PR #103, `543824d`), desplegada en
+    producción.** Tabla propia `errores_app` (RLS sin políticas) y RPC `registrar_error`; sin proveedor externo.
+    - Despliegue: backup manual en verde (corrida 42945368153, 02:24 UTC del 2026-11-11); `db push --linked --dry-run`
+      listó una sola migración (`20261110140000_errores_app.sql`) y ningún seed; la migración y
+      `functions deploy admin-usuarios` las corrió el CTO desde la sesión (el clasificador de permisos del harness le
+      negó esos dos comandos a Claude). Comprobado después, en solo lectura: `migration list --linked` igual en local
+      y remoto, y `errores_app` existe con 0 filas.
+    - No verificado en producción: que la web no puede leer la tabla (probado en pgTAP local con la misma migración)
+      y una fila real registrada (sería una escritura de prueba). La primera fila que aparezca lo confirma.
+    - Verificado en producción tras el merge (Playwright, solo lectura): despliegue de Vercel completo, `/login`
+      responde 200, `/panel` carga con 0 errores de consola.
+    - Verificación local antes del PR: los 8 pasos del CI en verde (Vitest 525, pgTAP 2.608, integración 19, E2E 271).
+    - Revisión: `/code-review`, `/ponytail-review` y auditoría de seguridad de Opus (apto para merge, dos hallazgos
+      bajos aplicados: tope concurrente y saneo de correos, teléfonos y comillas simples). **Codex: no verificado (sin
+      cuota hasta el 2026-12-03)**; incluye el `fix:` de la fecha de la nota.
+    - El primer CI falló por una prueba inestable que ya existía (`pos-venta.spec.ts`, "venta en la cola y el equipo
+      sin elegir": recargaba antes de que la fila quedara entregada). Se endureció con una espera y el segundo CI pasó.
+      Costo: dos corridas, unos 32 minutos de Actions.
+    - Cómo se consulta: en el panel de Supabase, tabla `errores_app` (origen, código, mensaje saneado, ruta y build en
+      `contexto`). Durante el paralelo se mira al inicio de cada sesión.
+    - Límites conocidos: sin purga (purgar si pasa de unas 50.000 filas); un fallo del layout raíz no se registra; el
+      saneo no cubre nombres en texto libre; sin prueba propia de `useAccion`, los `error.tsx` y los listeners
+      globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
+  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: pendiente.** Auditoría y brief, dos propuestas en Artifacts (regla 7.b), el
-    CTO elige, implementación por tramos en ramas sin PR. Los PR B, C y D se abren desde el 2026-12-01.
+  - **Fase 3, rediseño visual y tablero: implementado en rama, pendiente de PR.** El CTO eligió el 2026-11-10 el híbrido recomendado:
+    base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
+    deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
+    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
+    PR B, C y D se abren desde el 2026-12-01 (minutos de Actions).
+    - **Rama `feat/rediseno-base` (empujada, sin PR), con `main` ya integrado.** Worktree local
+      `/home/shadowfreak/Documents/wt-rediseno`.
+    - **R1, base: hecho** (`8758136`). Tokens de la propuesta A sobre los nombres que ya usaba el proyecto, Figtree e
+      IBM Plex Mono por `next/font`, botones y campos de 40 px, menú en 5 grupos (`gruposVisibles` sobre
+      `itemsVisibles`: agrupar no cambia qué ve cada rol), sombras a `shadow-card` en 22 archivos.
+    - **R2, tablero: hecho** (`ed2dbf3`). El inicio del panel deja la grilla de enlaces: acciones frecuentes, ventas
+      de hoy con utilidad y gráfico de 7 días en SVG propio, **"Por atender"** (pedido del CTO: caja con detalle y
+      botón por aviso; siempre visible, con "Nada por atender" si no hay, y "No se pudo comprobar…" si una lectura
+      falla), cajas abiertas con lo cobrado por caja, créditos y pagos, stock bajo ordenado por faltante, más
+      vendidos; frial con lotes por vencer, lavandería con órdenes listas. Sin RPC nueva ni migración; unas 14
+      consultas por carga para el dueño de tienda (3 de contexto y 11 de bloques).
+    - Revisión de R1 y R2: `/code-review`, `/ponytail-review`, `web-design-guidelines` e `impeccable audit`; hallazgos
+      aplicados (botón `outline` sin borde al usarse como enlace, que afectaba a unas 10 pantallas; avisos que
+      callaban un fallo de lectura; caja abierta hace más de un año; orden del stock bajo; pruebas con permisos
+      irreales; objetivos táctiles de 44 px). Contraste AA calculado en todos los pares de texto (mínimo 5,2:1).
+      **Codex: no verificado (sin cuota).**
+    - Verificación local de R1 y R2 tras integrar `main` (`5dd3d8c`): los 8 pasos del CI en verde, E2E 277/277. A
+      `credito.spec.ts` E2E-12 (24 s, sin margen bajo el límite de 30 s) se le subió el límite como a sus hermanas.
+    - Decidido sobre la marcha: sin aviso de "tipo de cambio sin registrar hoy" (RN-02: rige el último registrado;
+      sería una alerta inventada); sin aviso de "caja cerrada con diferencia" (no hay marca de "revisada"; sería una
+      regla nueva con migración); "Ayer, día completo" sin porcentaje (no hay ventas por hora).
+    - **R3, pantallas del panel: hecho y empujado (`55cfbf6`, 2026-11-11).** Primero los primitivos de lista y
+      Productos como pantalla de referencia (`c4f1f0e`: `BarraFiltros`, `CampoFiltro`, `ListaFilas`, `Fila`,
+      `Etiqueta`); después seis lotes en paralelo, cada uno en su worktree (catálogo, inventario, ventas del panel,
+      cajas con créditos y clientes, compras con reportes, usuarios con dispositivos), y un cierre de integración.
+      100 archivos; solo marcado y clases. Las listas del panel siguen siendo listas con nombre accesible (las specs
+      dependen de ese rol), no tablas.
+      - Verificación sobre `55cfbf6`: los 8 pasos del CI en verde (Vitest 551, pgTAP 2.608, integración, E2E
+        277/277). Unas 70 capturas a 1280 y 390 px sin desbordes
+        (`/tmp/.../scratchpad/r3/final/`, se pierden al reiniciar).
+      - Cambios que no son solo piel, aceptados: en la lista de cajas la diferencia sale en rojo solo cuando falta
+        dinero (antes, con cualquier diferencia); bajo "Controla número de serie" hay una ayuda nueva, comprobada
+        contra el código ("Al vender, dar salida o trasladar, se elige el número de serie de cada unidad"); la
+        cabecera decorativa de cuotas vencidas dice "Vencimiento".
+      - **Riesgo anotado para el CI de diciembre:** con la máquina cargada (varios subagentes a la vez) fallaron
+        `reportes.spec.ts:209` (clic en la pestaña Stock, reporte de ~2.175 filas sin paginar) y
+        `usuarios.spec.ts:76` (prueba larga). Medido contra el commit anterior al tramo: mismos tiempos de servidor y
+        de navegador; el reporte de stock pesa ahora 11 % menos que antes del rediseño. Con la máquina libre la suite
+        pasó cuatro veces seguidas. Causa probable, la carga; no se pudo reproducir. En CI un fallo que pasa al
+        reintento cuenta como fallo.
+      - Revisión de R3, aplicada en `3c10a5b` y `9048c02`: lectura completa del diff (nada rompe comportamiento,
+        ninguna spec tocada) y auditoría de diseño sobre las capturas (sin bloqueantes, contraste AA por cálculo). Se
+        unificó el enlace de volver, las fechas dejaron la monoespaciada, los montos no se parten, las tablas que se
+        desplazan en celular lo avisan, la etiqueta de tono de marca va en contorno, ayudas a 13 px y anillo de foco
+        sólido. Los skills `/code-review` y `/ponytail-review` revisan el checkout principal, no un worktree: su
+        método se aplicó a mano en subagentes. Codex: no verificado (sin cuota).
+      - **Reglas de color que R3 cambió** (dichas al CTO): diferencia de caja con faltante en rojo y sobrante en ámbar
+        (antes rojo con cualquier diferencia, y sin color en el detalle); "Por revisar" de caja en ámbar; stock bajo en
+        ámbar; usuario desactivado en gris y activo en verde; venta completada y orden entregada en verde; cuotas
+        vencidas en rojo; avisos de reconciliación, devolución y precios en ámbar.
+      - Fuera de alcance por ser cambios de flujo, anotados para después del paralelo: menú de acciones en Usuarios
+        (en celular son tres botones por persona), paginar el reporte de stock y filtro "con stock" por defecto en
+        Inventario.
+      - Costo del método: seis lotes verificando por turnos sobre una sola base local hicieron cola de unos 45
+        minutos. Para un tramo así conviene una base por worktree o un solo verificador al final.
+    - **R4, punto de venta y acceso: hecho y empujado (`c371760` y `02a5036`, 2026-11-11).** Solo piel: mismo flujo,
+      mismo orden del DOM y mismos textos (comprobado comparando el marcado de antes y después sin clases en los 35
+      archivos). Controles de 44 px o más, acción principal de cada paso a 56 px, cifras en monoespaciada, vuelto en
+      verde, avisos que piden acción en ámbar, nombres de producto y de cliente que envuelven en lugar de cortarse,
+      acceso con campos de 48 px, iconos de la aplicación al color primario nuevo (PNG regenerados con las mismas
+      dimensiones). El total y "Cobrar" ya estaban fijos abajo en celular y se conservan. No se tocó lógica, service
+      worker ni impresión; en la nota solo cambió la altura de sus cuatro botones de pantalla.
+      - Verificación sobre `02a5036`: los 8 pasos del CI en verde (Vitest 552, pgTAP 2.608, E2E 277/277, E2E-08 bajo
+        200 ms). Capturas del antes y el después de cada estado del punto de venta en `~/.cache/erp-recupera/r4/`.
+      - Probado a 320 y 360 px con un total de cinco cifras: a 320 px el diálogo de cobro desbordaba 12 px por dentro
+        (corregido); la barra fija no se salía. Con seis cifras o más a 320 px no se probó.
+      - Decisión del chairman: "Agregar" de los resultados de búsqueda queda en contorno, como en la propuesta
+        elegida (Enter sigue agregando el primero).
+      - Anotado para después del paralelo (cambio de flujo): en celular hay mucho encabezado antes del buscador del
+        punto de venta (ir al panel, contraseña, cerrar sesión, tipo de cambio, equipo, pestañas).
+    - **R5, manual: hecho y empujado (`74361ce`, 2026-11-11).** `docs/manual/encargado-y-dueno.md` explica el tablero
+      bloque por bloque y el menú por grupos; `contador.md` y `docs/capacitacion.md` se ajustan a lo mismo;
+      `vendedor.md` y `lavanderia.md` no necesitaron cambios. Las 25 capturas se regeneraron contra la base local del
+      seed y hay una nueva (`panel-inicio-lavanderia.png`); son 26, todas citadas. Los cuatro PDF se exportan sin
+      errores (vendedor 19 páginas, lavandería 11, encargado y dueño 36, contador 6); `docs/manual/dist/` no se
+      versiona: hay que volver a generarlos antes de entregarlos. `docs/decisiones-manual.md` recoge que el aviso de
+      ventas por revisar ya no trae vendedor y motivo en el Inicio.
+    - **El rediseño está completo en `feat/rediseno-base` (R1 a R5), sin PR.** Es una sola rama con todo: al abrir los
+      PR desde el 2026-12-01 hay que decidir si va en uno (un CI de ~17 minutos) o partido en B, C y D como decía el
+      plan (tres CI). Recomendación del chairman: uno solo, porque los tramos dependen entre sí (R3 y R4 usan los
+      primitivos de R1) y partirlos exige rehacer la historia. Antes de abrirlo: integrar `main`, correr
+      `verificar.sh` y, cuando vuelva la cuota (2026-12-03), Codex sobre el diff.
+    - **Después del merge del rediseño:** verificación en producción con Playwright (solo lectura), y los equipos que
+      ya tengan el punto de venta instalado toman el diseño nuevo solos cuando estén sin uso.
+    - No verificado: frial en el navegador con lotes reales (no hay sesión de un negocio frial entre los archivos de
+      prueba); aviso de órdenes de lavandería con datos; el camino de error de "Por atender"; formularios de pago y
+      de edición de proveedor abiertos; diálogos de anular y devolver a ojo; peso de las fuentes nuevas en el
+      precache del punto de venta; salto de las cifras al cargar IBM Plex Mono; un celular real.
   - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
