@@ -25,7 +25,6 @@ export function CampoBusqueda({
       defaultValue={defaultValue}
       placeholder="Código, código de barras o nombre"
       autoComplete="off"
-      className="h-10"
     />
   );
 }

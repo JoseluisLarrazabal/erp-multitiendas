@@ -17,7 +17,7 @@ export function Paginador({ pagina, porPagina, total, hrefDe, unidad = "producto
   const paginas = Math.max(1, Math.ceil(total / porPagina));
   const desde = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
   const hasta = Math.min(total, pagina * porPagina);
-  const boton = cn(buttonVariants({ variant: "outline" }), "h-10");
+  const boton = cn(buttonVariants({ variant: "outline" }));
   return (
     <nav aria-label="Paginación" className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-muted-foreground text-sm">

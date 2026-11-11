@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus, Tags } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { createClient } from "@/lib/supabase/server";
 import {
   filtrosSchema,
@@ -63,11 +64,11 @@ export default async function PaginaProductos({
             <>
               <Link
                 href="/panel/productos/categorias"
-                className={buttonVariants({ variant: "outline", className: "h-10" })}
+                className={buttonVariants({ variant: "outline" })}
               >
                 <Tags aria-hidden /> Categorías
               </Link>
-              <Link href="/panel/productos/nuevo" className={buttonVariants({ className: "h-10" })}>
+              <Link href="/panel/productos/nuevo" className={buttonVariants()}>
                 <Plus aria-hidden /> Nuevo producto
               </Link>
             </>
@@ -89,7 +90,7 @@ export default async function PaginaProductos({
           </p>
         )}
         {lista.ok && lista.data.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {hayFiltros
               ? "Ningún producto coincide con la búsqueda o los filtros."
               : "Aún no hay productos en este negocio."}
@@ -104,7 +105,7 @@ export default async function PaginaProductos({
                 </Link>
               </>
             )}
-          </p>
+          </EstadoVacio>
         )}
         {lista.ok && lista.data.filas.length > 0 && (
           <ListaProductos
