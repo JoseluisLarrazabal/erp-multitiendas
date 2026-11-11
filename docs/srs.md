@@ -253,7 +253,7 @@ que son quienes cubren al personal. Frial usa la grilla de Lider hasta que abra.
 | RNF-13 | Usabilidad | Interfaz en español de Bolivia. Moneda `Bs 1.234,50`, fecha `dd/mm/aaaa`. No se cumple hoy: la nota imprime la fecha en formato corto (por ejemplo "9/11/26, 5:29 p. m."). Límite conocido de la entrega | Revisión |
 | RNF-14 | Accesibilidad | Navegable por teclado, contraste WCAG AA, POS operable con lector | Auditoría `web-design-guidelines` |
 | RNF-15 | Compatibilidad | Chrome y Edge actuales en PC; Chrome en Android; Safari en iOS para el panel | E2E y prueba manual |
-| RNF-16 | Observabilidad | Errores de RPC registrados, sin datos personales en logs. No se cumple hoy: no hay registro de errores. Límite conocido de la entrega | Revisión |
+| RNF-16 | Observabilidad | Errores de RPC registrados, sin datos personales en logs. Cubierto desde el PR #103: tabla `errores_app` y RPC `registrar_error`, con saneo del mensaje; se consulta en el panel de Supabase | Revisión |
 
 ## 6. Restricciones
 

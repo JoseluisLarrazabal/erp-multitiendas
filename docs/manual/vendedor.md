@@ -162,8 +162,8 @@ avisa al encargado."
 
 La nota de venta lleva el nombre del negocio, número, vendedor, cliente, líneas, garantía, descuentos y pagos. El NIT y
 los demás datos del negocio (dirección, teléfono) salen solo si el dueño los cargó en "Datos del negocio"; si no, la
-nota sale sin ellos. La fecha sale como la da el navegador, por ejemplo "9/11/26, 5:29 p. m."; por ahora no se puede
-cambiar. No es una factura: el sistema no está conectado a Impuestos Nacionales.
+nota sale sin ellos. La fecha sale con día, mes, año y hora de Bolivia, por ejemplo "09/11/2026 17:29". No es una
+factura: el sistema no está conectado a Impuestos Nacionales.
 
 La nota se imprime por el navegador, o se guarda como PDF; el cajón de dinero no se abre solo al imprimir. Por ahora el
 ticket de 80 mm sale en papel de 80 × 297 mm. Qué impresora usará cada negocio está por confirmar con el

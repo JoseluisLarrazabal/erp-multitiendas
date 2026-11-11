@@ -1,18 +1,40 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; fase 0 cerrada, PR A de registro de
-errores en curso).
+Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
+**falta aplicar su migración y desplegar `admin-usuarios` en producción**; rediseño en implementación).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
   paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
   - **Fase 0, documentos: cerrada el 2026-11-10.** El plan, estas decisiones y `docs/preguntas-cliente.md`.
-  - **Fase 1, PR A, registro de errores (M-15, RNF-16): hito activo.** Rama `feat/registro-errores`. Tabla propia
-    `errores_app` en Supabase con RPC `registrar_error`; sin proveedor externo. Es el único PR de código que cabe en
-    noviembre por los minutos de Actions.
-  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con una lista que prepara Claude),
+  - **Fase 1, PR A, registro de errores (M-15, RNF-16): mergeado el 2026-11-10 (PR #103, `543824d`); despliegue de
+    base y función PENDIENTE.** Tabla propia `errores_app` (RLS sin políticas) y RPC `registrar_error`; sin proveedor
+    externo.
+    - **Lo que falta en producción:** `supabase db push --linked` (una sola migración, `20261110140000_errores_app.sql`;
+      el `--dry-run` del 2026-11-10 la lista sola y sin seeds) y `supabase functions deploy admin-usuarios`. El backup
+      manual previo quedó en verde (corrida 42945368153, 02:24 UTC del 2026-11-11). La sesión de Claude no pudo
+      ejecutarlos: el clasificador de permisos del harness negó el comando. Los corre el CTO o autoriza el permiso.
+      Mientras tanto la web ya publicada llama a una RPC que no existe: el registro falla en silencio (está hecho para
+      eso) y nada más cambia; la función vieja sigue funcionando.
+    - Después de aplicarla: `supabase migration list --linked` igual en local y remoto, y comprobar que `errores_app`
+      existe y que la web no la lee.
+    - Verificado en producción tras el merge (Playwright, solo lectura): despliegue de Vercel completo, `/login`
+      responde 200, `/panel` carga con 0 errores de consola.
+    - Verificación local antes del PR: los 8 pasos del CI en verde (Vitest 525, pgTAP 2.608, integración 19, E2E 271).
+    - Revisión: `/code-review`, `/ponytail-review` y auditoría de seguridad de Opus (apto para merge, dos hallazgos
+      bajos aplicados: tope concurrente y saneo de correos, teléfonos y comillas simples). **Codex: no verificado (sin
+      cuota hasta el 2026-12-03)**; incluye el `fix:` de la fecha de la nota.
+    - El primer CI falló por una prueba inestable que ya existía (`pos-venta.spec.ts`, "venta en la cola y el equipo
+      sin elegir": recargaba antes de que la fila quedara entregada). Se endureció con una espera y el segundo CI pasó.
+      Costo: dos corridas, unos 32 minutos de Actions.
+    - Cómo se consulta: en el panel de Supabase, tabla `errores_app` (origen, código, mensaje saneado, ruta y build en
+      `contexto`). Durante el paralelo se mira al inicio de cada sesión.
+    - Límites conocidos: sin purga (purgar si pasa de unas 50.000 filas); un fallo del layout raíz no se registra; el
+      saneo no cubre nombres en texto libre; sin prueba propia de `useAccion`, los `error.tsx` y los listeners
+      globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
+  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
   - **Fase 3, rediseño visual y tablero: en implementación.** El CTO eligió el 2026-11-10 el híbrido recomendado:
     base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
