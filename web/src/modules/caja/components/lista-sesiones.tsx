@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { formatearFechaHora } from "@/lib/format/fecha";
 import { cn } from "@/lib/utils";
-import { bsONulo } from "../domain";
+import { bsONulo, colorDiferencia } from "../domain";
 import type { FilaSesion } from "../lecturas-panel";
 
 const COLUMNAS = "md:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1fr)_6.5rem_6.5rem_6.5rem]";
@@ -47,12 +47,7 @@ export function ListaSesiones({ sesiones }: { sesiones: readonly FilaSesion[] })
             </span>
             <span className="text-[13px] md:text-right">
               <span className="text-muted-foreground md:sr-only">Diferencia </span>
-              <span
-                className={cn(
-                  "cifra font-semibold",
-                  s.diferencia && (s.diferencia < 0 ? "text-destructive" : "text-warning"),
-                )}
-              >
+              <span className={cn("cifra font-semibold", colorDiferencia(s.diferencia))}>
                 {bsONulo(s.diferencia)}
               </span>
             </span>

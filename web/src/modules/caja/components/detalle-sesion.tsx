@@ -6,6 +6,7 @@ import { formatearFechaHora, formatearHora } from "@/lib/format/fecha";
 import { formatearBs } from "@/lib/format/moneda";
 import { cn } from "@/lib/utils";
 import {
+  colorDiferencia,
   bsONulo,
   ETIQUETA_MOVIMIENTO,
   ETIQUETA_REVISION_MOVIMIENTO,
@@ -49,7 +50,7 @@ export function DetalleSesionVista({
     (r.esperado !== null && s.montoEsperado !== null && r.esperado !== s.montoEsperado);
   const fila = "flex items-baseline justify-between gap-3 py-2";
   // Faltante en rojo, sobrante en ámbar, cero sin color; el signo y el monto ya lo dicen.
-  const colorDif = !s.diferencia ? "" : s.diferencia < 0 ? "text-destructive" : "text-warning";
+  const colorDif = colorDiferencia(s.diferencia);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Seccion titulo="Sesión">

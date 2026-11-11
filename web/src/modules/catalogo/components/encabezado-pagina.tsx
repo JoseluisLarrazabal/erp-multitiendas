@@ -37,7 +37,7 @@ export function Seccion({
   titulo,
   children,
   ...props
-}: { titulo: string } & React.ComponentProps<"section">) {
+}: { titulo: string } & Omit<React.ComponentProps<"section">, "className">) {
   return (
     <section
       {...props}

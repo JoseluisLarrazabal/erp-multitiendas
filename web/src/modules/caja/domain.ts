@@ -16,6 +16,12 @@ export function parsearMontoPositivo(texto: string): number | null {
   return c === null || c === 0 ? null : c;
 }
 
+// Color de la diferencia según el valor a centavos, como se muestra: faltante rojo, sobrante ámbar, cero o nulo sin color.
+export function colorDiferencia(n: number | null): string {
+  const c = n === null ? 0 : Math.round(n * 100);
+  return c < 0 ? "text-destructive" : c > 0 ? "text-warning" : "";
+}
+
 // Bs (o null) -> texto; "—" si no hay dato.
 export const bsONulo = (n: number | null) => (n === null ? "—" : formatearBs(n));
 

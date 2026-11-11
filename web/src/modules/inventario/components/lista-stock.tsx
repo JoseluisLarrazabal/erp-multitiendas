@@ -62,7 +62,7 @@ export function ListaStock({
             </p>
           </div>
           {/* En celular: ubicaciones en una línea que envuelve y total y valor juntos; desde md, `contents` deja cada cifra en su columna. */}
-          <div className="text-muted-foreground flex flex-wrap gap-x-3 md:contents">
+          <div className="max-md:text-muted-foreground flex flex-wrap gap-x-3 md:contents">
             {ubicaciones.map((u) => (
               <p
                 key={u.id}
