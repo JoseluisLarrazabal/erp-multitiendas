@@ -32,10 +32,7 @@ export default async function PaginaOrden({ params }: { params: Promise<{ id: st
   if (orden.ok && orden.data === null) notFound();
 
   const volver = (
-    <Link
-      href="/panel/ordenes"
-      className={buttonVariants({ variant: "outline", className: "h-10" })}
-    >
+    <Link href="/panel/ordenes" className={buttonVariants({ variant: "outline" })}>
       <ArrowLeft aria-hidden /> Órdenes
     </Link>
   );
@@ -61,10 +58,7 @@ export default async function PaginaOrden({ params }: { params: Promise<{ id: st
         acciones={
           <div className="flex flex-wrap gap-2">
             {volver}
-            <Link
-              href={`/panel/ventas/${v.id}`}
-              className={buttonVariants({ variant: "outline", className: "h-10" })}
-            >
+            <Link href={`/panel/ventas/${v.id}`} className={buttonVariants({ variant: "outline" })}>
               <Receipt aria-hidden /> Ver venta
             </Link>
           </div>

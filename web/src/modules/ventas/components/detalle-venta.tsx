@@ -15,7 +15,10 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
     <div className="flex min-w-0 flex-col gap-6">
       <Seccion titulo="Venta">
         <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <Dato t="Número" d={<span className="font-mono font-semibold">{v.numero}</span>} />
+          <Dato
+            t="Número"
+            d={<span className="font-mono text-[13px] font-semibold">{v.numero}</span>}
+          />
           <Dato t="Estado" d={<EstadoVenta estado={v.estado} />} />
           <Dato
             t="Fecha"
@@ -27,18 +30,15 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
           <Dato t="Origen" d={ETIQUETA_ORIGEN[v.origen] ?? v.origen} />
           {v.especial && <Dato t="Tipo de venta" d={ETIQUETA_ESPECIAL[v.especial]} />}
           {v.credito && (
-            <Dato
-              t="Inicial"
-              d={<span className="tabular-nums">{formatearBs(v.credito.inicial)}</span>}
-            />
+            <Dato t="Inicial" d={<span className="cifra">{formatearBs(v.credito.inicial)}</span>} />
           )}
           <Dato
             t="Total"
-            d={<span className="text-lg font-bold tabular-nums">{formatearBs(v.total)}</span>}
+            d={<span className="cifra text-lg font-bold">{formatearBs(v.total)}</span>}
           />
         </dl>
         {v.estado === "anulada" && (
-          <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
+          <p className="bg-destructive-soft text-destructive rounded-lg p-3 text-sm">
             Anulada{v.anuladaEn ? ` el ${formatearFechaHora(v.anuladaEn)}` : ""}
             {v.motivoAnulacion ? `. Motivo: ${v.motivoAnulacion}` : ""}
           </p>
@@ -50,9 +50,7 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
           {v.items.map((i) => (
             <li key={i.id} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 py-2.5 text-sm">
               <span className="min-w-0 truncate font-medium">{i.nombre}</span>
-              <span className="text-right font-semibold tabular-nums">
-                {formatearBs(i.totalLinea)}
-              </span>
+              <span className="cifra text-right text-[13px]">{formatearBs(i.totalLinea)}</span>
               <span className="text-muted-foreground col-span-2 text-xs tabular-nums">
                 {i.codigo} · {mil(i.cantidad)}
                 {i.unidad === "kg" ? " kg" : ""} × {formatearBs(i.precioUnitario)}
@@ -65,12 +63,12 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
         <div className="flex flex-col gap-1 border-t pt-3 text-sm tabular-nums">
           <p className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>{formatearBs(v.subtotal)}</span>
+            <span className="cifra text-[13px]">{formatearBs(v.subtotal)}</span>
           </p>
           {v.descuento > 0 && (
             <p className="flex justify-between">
               <span className="text-muted-foreground">Descuento de la venta</span>
-              <span>−{formatearBs(v.descuento)}</span>
+              <span className="cifra text-[13px]">−{formatearBs(v.descuento)}</span>
             </p>
           )}
         </div>
@@ -79,9 +77,9 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
       <Seccion titulo="Pagos">
         <ul aria-label="Pagos" className="divide-y text-sm">
           {v.pagos.map((p) => (
-            <li key={p.id} className="flex justify-between py-2 tabular-nums">
+            <li key={p.id} className="flex justify-between py-2 text-sm">
               <span>{ETIQUETA_MEDIO[p.medio]}</span>
-              <span className="font-semibold">{formatearBs(p.monto)}</span>
+              <span className="cifra text-[13px]">{formatearBs(p.monto)}</span>
             </li>
           ))}
         </ul>
@@ -97,9 +95,7 @@ export function DetalleVentaVista({ v }: { v: DetalleVenta }) {
                 <span className="text-muted-foreground tabular-nums">
                   {formatearFechaHora(d.creadaEn)}
                 </span>
-                <span className="text-right font-semibold tabular-nums">
-                  {formatearBs(d.monto)}
-                </span>
+                <span className="cifra text-right text-[13px]">{formatearBs(d.monto)}</span>
                 <span className="min-w-0 truncate">{d.motivo}</span>
                 <span className="text-muted-foreground text-right text-xs tabular-nums">
                   {formatearBs(d.montoEfectivo)} en efectivo ·{" "}

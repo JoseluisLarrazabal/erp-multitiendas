@@ -24,10 +24,7 @@ export default async function PaginaDescuento() {
         <div className="flex max-w-3xl flex-col gap-6">
           <Seccion titulo="Vigente">
             <p>
-              <span
-                className="text-3xl font-bold tracking-tight tabular-nums"
-                data-testid="tope-vigente"
-              >
+              <span className="cifra text-3xl" data-testid="tope-vigente">
                 {String(negocio.data.topeDescuento).replace(".", ",")} %
               </span>
               <span className="text-muted-foreground ml-3 text-sm">del subtotal de la venta</span>
