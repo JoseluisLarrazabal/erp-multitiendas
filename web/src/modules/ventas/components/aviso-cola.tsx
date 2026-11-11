@@ -71,7 +71,7 @@ export function AvisoCola({
       <div role="status" aria-live="polite" className="empty:hidden">
         {estado.pendientes.ventas + estado.pendientes.aperturas + estado.pendientes.movimientos >
           0 && (
-          <p className="bg-secondary text-secondary-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
+          <p className="border-warning-line bg-warning-soft text-warning flex items-center gap-2 rounded-lg border px-3 py-3 text-[15px]">
             <CloudOff className="size-4 shrink-0" aria-hidden />
             <span>
               <strong>{textoPendientes(estado.pendientes)} sin enviar</strong>.{" "}
@@ -84,7 +84,7 @@ export function AvisoCola({
       </div>
       <div role="status" aria-live="polite" className="empty:hidden">
         {estado.ajenas > 0 && (
-          <p className="bg-secondary text-secondary-foreground rounded-lg px-3 py-2 text-sm">
+          <p className="border-warning-line bg-warning-soft text-warning rounded-lg border px-3 py-3 text-[15px]">
             {plural(estado.ajenas, "operación de otro negocio", "operaciones de otros negocios")}{" "}
             sin enviar: entra con la cuenta y el negocio que las hicieron.
           </p>
@@ -93,13 +93,13 @@ export function AvisoCola({
       {mensaje && (
         <p
           role="alert"
-          className="border-destructive text-destructive rounded-lg border px-3 py-2 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive rounded-lg border px-3 py-3 text-sm font-medium"
         >
           {mensaje}
         </p>
       )}
       {estado.ilegibles > 0 && (
-        <p className="border-destructive text-destructive flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm">
+        <p className="border-destructive bg-destructive-soft text-destructive flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-3 text-sm font-medium">
           <span className="min-w-0 flex-1 basis-48">
             {plural(estado.ilegibles, "registro dañado", "registros dañados")}
             {puedeDescartar ? "." : `. ${aEncargado}`}
@@ -108,7 +108,7 @@ export function AvisoCola({
             <Button
               type="button"
               variant="outline"
-              className="h-10"
+              className="h-11"
               onClick={() => setDescartando({ t: "ilegibles" })}
             >
               <Trash2 aria-hidden /> Descartar
@@ -119,27 +119,29 @@ export function AvisoCola({
       {estado.rechazadas.length > 0 && (
         <section
           aria-label="Operaciones rechazadas"
-          className="border-destructive flex flex-col gap-2 rounded-lg border p-3"
+          className="border-destructive bg-destructive-soft flex flex-col gap-2 rounded-lg border p-3"
         >
           <h2 className="text-destructive text-sm font-semibold">
             {plural(estado.rechazadas.length, "operación rechazada", "operaciones rechazadas")} al
             enviar
           </h2>
           {!puedeDescartar && (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-foreground text-sm">
               Para descartar una operación rechazada avisa al encargado.
             </p>
           )}
-          <ul className="divide-y text-sm">
+          <ul className="divide-destructive/20 divide-y text-sm">
             {estado.rechazadas.map((v) => (
               <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                <span className="font-medium tabular-nums">{v.titulo}</span>
-                {v.total !== null && <span className="tabular-nums">{formatearBs(v.total)}</span>}
-                <span className="text-muted-foreground min-w-0 flex-1 basis-48">{v.error}</span>
+                <span className="cifra text-[15px]">{v.titulo}</span>
+                {v.total !== null && (
+                  <span className="cifra text-[15px]">{formatearBs(v.total)}</span>
+                )}
+                <span className="text-foreground min-w-0 flex-1 basis-48">{v.error}</span>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10"
+                  className="h-11"
                   disabled={
                     revisando !== null ||
                     (descartando?.t === "venta" && descartando.venta.id === v.id)
@@ -153,7 +155,7 @@ export function AvisoCola({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-10"
+                    className="h-11"
                     disabled={revisando !== null}
                     aria-label={`Descartar ${etiqueta(v)}`}
                     onClick={() => void pedirDescarte(v)}

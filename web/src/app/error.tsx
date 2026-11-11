@@ -28,7 +28,9 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
       <p className="text-muted-foreground max-w-sm text-sm">
         No pudimos cargar esta pantalla. Revisa tu conexión e inténtalo de nuevo.
       </p>
-      <Button onClick={() => retry()}>Reintentar</Button>
+      <Button size="xl" onClick={() => retry()}>
+        Reintentar
+      </Button>
     </main>
   );
 }

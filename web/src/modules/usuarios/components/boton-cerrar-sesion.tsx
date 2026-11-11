@@ -36,7 +36,7 @@ export function BotonCerrarSesion({ deshabilitado = false }: { deshabilitado?: b
       <Button
         type="button"
         variant="outline"
-        className="h-10"
+        className="h-11"
         onClick={() => void salir()}
         disabled={pendiente || deshabilitado}
         title={deshabilitado ? "Necesitas conexión para cerrar sesión" : undefined}
@@ -45,7 +45,7 @@ export function BotonCerrarSesion({ deshabilitado = false }: { deshabilitado?: b
         {pendiente ? "Cerrando…" : "Cerrar sesión"}
       </Button>
       {error && (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-destructive text-[13px] font-medium">
           {error}
         </p>
       )}

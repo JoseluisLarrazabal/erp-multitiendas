@@ -31,12 +31,12 @@ export function SelectorSerie({
       cancelado = true;
     };
   }, [productoId, ubicacionId]);
-  if (error) return <p className="text-destructive text-xs">{error}</p>;
+  if (error) return <p className="text-destructive text-[13px]">{error}</p>;
   const opciones = (series ?? []).filter((s) => s.id === valor || !usadas.has(s.id));
   return (
     <SelectNativo
       aria-label="Serie"
-      className="h-10"
+      className="h-11"
       value={valor ?? ""}
       onChange={(e) =>
         alElegir(

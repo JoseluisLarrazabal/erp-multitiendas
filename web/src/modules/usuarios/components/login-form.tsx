@@ -70,7 +70,7 @@ export function LoginForm() {
           autoComplete="username"
           autoFocus
           required
-          className="h-10"
+          className="h-12"
           aria-invalid={invalido}
           aria-describedby={invalido ? "login-error" : undefined}
         />
@@ -83,15 +83,15 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="h-10"
+          className="h-12"
           aria-invalid={invalido}
           aria-describedby={invalido ? "login-error" : undefined}
         />
       </div>
-      <p id="login-error" role="alert" className="text-destructive min-h-5 text-sm">
+      <p id="login-error" role="alert" className="text-destructive min-h-5 text-sm font-medium">
         {error}
       </p>
-      <Button type="submit" size="lg" className="h-10 text-sm" disabled={enviando || !hidratado}>
+      <Button type="submit" size="xl" disabled={enviando || !hidratado}>
         {enviando && <Loader2 className="animate-spin" aria-hidden />}
         {enviando ? "Ingresando…" : "Ingresar"}
       </Button>

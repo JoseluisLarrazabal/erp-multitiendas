@@ -1,5 +1,6 @@
 "use client";
 
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import type { Catalogo } from "../schemas";
 import type { Lista, ProductoPos } from "../domain";
 import { CampoBusqueda, ListaResultados } from "./buscador";
@@ -40,13 +41,13 @@ export function ZonaProductos({
         modoConsulta={consulta}
       />
       {catalogo && catalogo.productos.length === 0 && (
-        <p className="text-muted-foreground py-4 text-center text-sm">
+        <EstadoVacio>
           Este negocio todavía no tiene productos con precio. Pide al encargado que los cargue en el
           panel.
-        </p>
+        </EstadoVacio>
       )}
       {catalogo && catalogo.productos.length > 0 && busqueda.trim() === "" && (
-        <p className="text-muted-foreground text-xs tabular-nums">
+        <p className="text-muted-foreground text-[13px] tabular-nums">
           {catalogo.productos.length} productos en el catálogo. Escanea o escribe para buscar.
         </p>
       )}
@@ -62,9 +63,7 @@ export function ZonaProductos({
         />
       )}
       {catalogo && busqueda.trim() !== "" && resultados.length === 0 && (
-        <p className="text-muted-foreground py-4 text-center text-sm">
-          Sin resultados para &quot;{busqueda.trim()}&quot;.
-        </p>
+        <EstadoVacio>Sin resultados para &quot;{busqueda.trim()}&quot;.</EstadoVacio>
       )}
     </section>
   );

@@ -28,11 +28,11 @@ export function AvisosVenta({
       </p>
       <div role="status" className="empty:hidden">
         {aviso && (
-          <div className="bg-secondary text-secondary-foreground flex items-center gap-2 rounded-lg px-3 py-1 text-sm">
+          <div className="bg-secondary text-secondary-foreground flex items-center gap-2 rounded-lg px-3 py-1 text-[15px]">
             <span className="flex-1 py-1">{aviso}</span>
             <button
               type="button"
-              className="min-h-10 px-3 text-xs underline"
+              className="min-h-11 px-3 text-[13px] font-semibold underline"
               onClick={alCerrarAviso}
             >
               Cerrar
@@ -43,7 +43,7 @@ export function AvisosVenta({
       {rechazo && (
         <p
           role="alert"
-          className="border-destructive text-destructive rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive rounded-lg border p-3 text-sm font-medium"
         >
           {rechazo}
         </p>
@@ -56,10 +56,10 @@ export function AvisosVenta({
       {catalogo.t === "error" && (
         <p
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
           {catalogo.mensaje}
-          <Button type="button" variant="outline" className="h-10" onClick={alReintentarCatalogo}>
+          <Button type="button" variant="outline" className="h-11" onClick={alReintentarCatalogo}>
             Reintentar
           </Button>
         </p>

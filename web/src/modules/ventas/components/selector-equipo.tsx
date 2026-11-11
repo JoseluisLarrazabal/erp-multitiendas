@@ -13,11 +13,11 @@ export function SelectorEquipo({
 }) {
   return (
     <section
-      className="bg-card mx-auto flex w-full max-w-sm flex-col gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card mx-auto flex w-full max-w-sm flex-col gap-3 rounded-xl border p-5"
       aria-label="Elegir equipo"
     >
-      <h2 className="text-base font-semibold">¿En qué equipo estás?</h2>
-      <p className="text-muted-foreground text-sm">
+      <h2 className="text-lg font-semibold">¿En qué equipo estás?</h2>
+      <p className="text-muted-foreground text-[15px]">
         El equipo fija la ubicación, la numeración de notas y la caja. Queda guardado en este
         navegador.
       </p>
@@ -27,7 +27,8 @@ export function SelectorEquipo({
             <Button
               type="button"
               variant="outline"
-              className="h-12 w-full justify-start"
+              size="xl"
+              className="w-full justify-start"
               onClick={() => alElegir(e.id)}
             >
               <Monitor /> {e.nombre} <span className="text-muted-foreground">({e.prefijo})</span>

@@ -170,7 +170,7 @@ export function AvisoActualizacion({
     <div className="flex flex-col gap-2 print:hidden">
       <div role="status" aria-live="polite" className="empty:hidden">
         {otraPestana && (
-          <div className="bg-secondary text-secondary-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
+          <div className="border-warning-line bg-warning-soft text-warning flex items-center gap-3 rounded-lg border px-3 py-3 text-[15px]">
             <RefreshCw className="size-4 shrink-0" aria-hidden />
             <span>
               <strong>La aplicación se actualizó en otra pestaña.</strong> Recarga la página.
@@ -178,7 +178,7 @@ export function AvisoActualizacion({
           </div>
         )}
         {enEspera && !otraPestana && (
-          <div className="bg-secondary text-secondary-foreground flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2 text-sm">
+          <div className="border-warning-line bg-warning-soft text-warning flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-3 text-[15px]">
             <RefreshCw className="size-4 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 basis-56">
               <strong>Actualización disponible.</strong>{" "}
@@ -189,7 +189,7 @@ export function AvisoActualizacion({
             <Button
               type="button"
               variant="outline"
-              className="h-10"
+              className="h-11"
               disabled={colaVacia !== true || aplicando}
               onClick={() => void alPulsar()}
             >
@@ -199,7 +199,7 @@ export function AvisoActualizacion({
         )}
       </div>
       {cobroSinConfirmar && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-destructive text-sm font-medium">
           Hay un cobro o una cuota sin confirmar en este navegador. Verifícalo antes de actualizar.
         </p>
       )}
@@ -214,7 +214,7 @@ export function AvisoActualizacion({
       {sinActivar && (
         <p
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium"
         >
           <TriangleAlert className="size-4 shrink-0" aria-hidden />
           <span>

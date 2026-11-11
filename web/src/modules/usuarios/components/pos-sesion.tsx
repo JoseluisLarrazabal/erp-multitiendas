@@ -33,14 +33,14 @@ export function PosBarra({
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 print:hidden">
       {titulo}
       {sesion.fase === "verificando" && (
-        <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
+        <p role="status" className="text-muted-foreground flex items-center gap-2 text-[15px]">
           <Loader2 className="size-4 animate-spin" aria-hidden /> Verificando sesión…
         </p>
       )}
       {sesion.fase === "sin-conexion" && sesion.contextoVencido && (
         <p
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm font-medium"
         >
           <WifiOff className="size-4 shrink-0" aria-hidden />
           {navigator.onLine
@@ -49,7 +49,10 @@ export function PosBarra({
         </p>
       )}
       {sesion.fase === "sin-conexion" && !sesion.contextoVencido && (
-        <p role="status" className="bg-secondary flex items-center gap-2 rounded-lg p-3 text-sm">
+        <p
+          role="status"
+          className="bg-secondary text-secondary-foreground flex items-center gap-2 rounded-lg p-3 text-[15px]"
+        >
           <WifiOff className="size-4 shrink-0" aria-hidden />
           Sin conexión. Puedes seguir trabajando; lo registrado se enviará al volver la red. Cerrar
           sesión necesita conexión.
@@ -59,10 +62,10 @@ export function PosBarra({
       {sesion.fase === "error" && (
         <div
           role="alert"
-          className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
         >
           <span>{sesion.mensaje}</span>
-          <Button type="button" variant="outline" className="h-10" onClick={reintentar}>
+          <Button type="button" variant="outline" className="h-11" onClick={reintentar}>
             Reintentar
           </Button>
         </div>
@@ -70,14 +73,14 @@ export function PosBarra({
       {sesion.fase === "lista" && sesion.caducada && (
         <p
           role="alert"
-          className="border-destructive text-destructive rounded-lg border p-3 text-sm"
+          className="border-destructive bg-destructive-soft text-destructive rounded-lg border p-3 text-sm font-medium"
         >
           Tu sesión caducó. La venta en pantalla no se pierde: inicia sesión en{" "}
           <a href="/login" target="_blank" rel="noopener" className="underline">
             otra pestaña
           </a>{" "}
           con la misma cuenta y vuelve aquí.
-          <Button type="button" variant="outline" className="ml-2 h-10" onClick={reintentar}>
+          <Button type="button" variant="outline" className="ml-2 h-11" onClick={reintentar}>
             Ya inicié sesión
           </Button>
         </p>
@@ -94,7 +97,7 @@ export function PosBarra({
             // <a> y no next/link: una navegación suave conservaría el controlador del service worker.
             <a
               href="/panel"
-              className="bg-card hover:bg-muted inline-flex h-10 items-center rounded-lg border px-3 text-sm font-medium"
+              className="bg-card border-input hover:bg-muted inline-flex h-11 items-center rounded-lg border px-4 text-sm font-semibold"
             >
               Ir al panel
             </a>
@@ -119,7 +122,10 @@ function AvisoSinRed({ catalogoDesde }: { catalogoDesde: number | null }) {
     return () => clearInterval(t);
   }, []);
   return (
-    <p role="status" className="bg-secondary flex items-center gap-2 rounded-lg p-3 text-sm">
+    <p
+      role="status"
+      className="bg-secondary text-secondary-foreground flex items-center gap-2 rounded-lg p-3 text-[15px]"
+    >
       <WifiOff className="size-4 shrink-0" aria-hidden />
       <span>
         Sin conexión.{" "}

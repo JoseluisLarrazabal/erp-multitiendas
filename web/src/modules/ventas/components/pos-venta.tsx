@@ -89,7 +89,7 @@ export function PosVenta({
     switch (fase.t) {
       case "cargando":
         return (
-          <p role="status" className="text-muted-foreground flex items-center gap-2 text-sm">
+          <p role="status" className="text-muted-foreground flex items-center gap-2 text-[15px]">
             <Loader2 className="size-4 animate-spin" aria-hidden /> Preparando el punto de venta…
           </p>
         );
@@ -97,23 +97,29 @@ export function PosVenta({
         return (
           <div
             role="alert"
-            className="border-destructive text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm"
+            className="border-destructive bg-destructive-soft text-destructive flex items-center gap-3 rounded-lg border p-3 text-sm font-medium"
           >
             <span>{fase.mensaje}</span>
-            <Button type="button" variant="outline" className="h-10" onClick={reintentar}>
+            <Button type="button" variant="outline" className="h-11" onClick={reintentar}>
               Reintentar
             </Button>
           </div>
         );
       case "sin-permiso":
         return (
-          <p role="alert" className="bg-secondary rounded-lg p-3 text-sm">
+          <p
+            role="alert"
+            className="border-warning-line bg-warning-soft text-warning rounded-lg border p-3 text-[15px] font-medium"
+          >
             {fase.mensaje}
           </p>
         );
       case "sin-equipos":
         return (
-          <p role="alert" className="bg-secondary rounded-lg p-3 text-sm">
+          <p
+            role="alert"
+            className="border-warning-line bg-warning-soft text-warning rounded-lg border p-3 text-[15px] font-medium"
+          >
             Este negocio no tiene equipos registrados. Pide a quien administra los usuarios que
             registre uno en el panel.
           </p>
