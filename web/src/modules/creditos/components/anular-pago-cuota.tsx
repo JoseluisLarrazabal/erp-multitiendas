@@ -28,7 +28,10 @@ export function AnularPagoCuota({
 
   if (!equipo) {
     return (
-      <section aria-label="Anular último pago" className="bg-card rounded-xl border p-4 text-sm">
+      <section
+        aria-label="Anular último pago"
+        className="bg-card shadow-card rounded-xl border p-5 text-sm"
+      >
         <p className="text-muted-foreground">
           {equipos === null
             ? "No se pudieron leer las cajas abiertas. Recarga la página."
@@ -51,7 +54,7 @@ export function AnularPagoCuota({
   return (
     <section
       aria-label="Anular último pago"
-      className="bg-card flex flex-col gap-3 rounded-xl border p-4"
+      className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-5"
     >
       <p className="text-sm">
         Último pago: <strong>{descripcionPago}</strong>. Anularlo deja un contraasiento (el pago
@@ -80,7 +83,6 @@ export function AnularPagoCuota({
             id="anular-pago-motivo"
             autoComplete="off"
             maxLength={200}
-            className="h-10"
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
           />

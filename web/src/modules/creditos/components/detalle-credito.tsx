@@ -1,3 +1,6 @@
+import { Etiqueta } from "@/components/ui/etiqueta";
+import { Tabla, Td, TdCifra, Th } from "@/components/ui/tabla";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { formatearBs } from "@/lib/format/moneda";
 import { Dato } from "@/modules/catalogo/panel";
 import { formatearDia, formatearFechaHora } from "@/lib/format/fecha";
@@ -51,10 +54,13 @@ export function DetalleCreditoVista({
             }
           />
           <Dato t="Interés mensual" d={`${d.interes_mensual_pct} %`} />
-          <Dato t="Inicial pagada" d={formatearBs(d.inicial)} />
-          <Dato t="Capital financiado" d={formatearBs(d.capital)} />
-          <Dato t="Total de cuotas" d={formatearBs(d.total)} />
-          <Dato t="Saldo" d={<strong>{formatearBs(d.saldo)}</strong>} />
+          <Dato t="Inicial pagada" d={<span className="cifra">{formatearBs(d.inicial)}</span>} />
+          <Dato
+            t="Capital financiado"
+            d={<span className="cifra">{formatearBs(d.capital)}</span>}
+          />
+          <Dato t="Total de cuotas" d={<span className="cifra">{formatearBs(d.total)}</span>} />
+          <Dato t="Saldo" d={<strong className="cifra">{formatearBs(d.saldo)}</strong>} />
           {d.origen === "venta" && !(puedeGestionar && editable) && (
             <Dato
               t="Documentos"
@@ -83,66 +89,70 @@ export function DetalleCreditoVista({
           d.pagos.length === 0 && <AnularSaldoInicial creditoId={d.id} />}
         <section aria-label="Cuotas" className="flex flex-col gap-2">
           <h2 className="text-[15px] font-semibold">Cuotas</h2>
-          <div className="bg-card overflow-x-auto rounded-xl border">
-            <table className="w-full text-sm tabular-nums">
-              <thead>
-                <tr className="text-muted-foreground border-b text-left text-xs">
-                  <th className="px-3 py-2 font-semibold">N.º</th>
-                  <th className="px-3 py-2 font-semibold">Vence</th>
-                  <th className="px-3 py-2 text-right font-semibold">Capital</th>
-                  <th className="px-3 py-2 text-right font-semibold">Interés</th>
-                  <th className="px-3 py-2 text-right font-semibold">Cuota</th>
-                  <th className="px-3 py-2 text-right font-semibold">Pagado</th>
-                  <th className="px-3 py-2 font-semibold">Estado</th>
+          <Tabla>
+            <thead>
+              <tr>
+                <Th>N.º</Th>
+                <Th>Vence</Th>
+                <Th className="text-right">Capital</Th>
+                <Th className="text-right">Interés</Th>
+                <Th className="text-right">Cuota</Th>
+                <Th className="text-right">Pagado</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.cuotas.map((c) => (
+                <tr key={c.numero}>
+                  <TdCifra>{c.numero}</TdCifra>
+                  <TdCifra>{formatearDia(c.vence_en)}</TdCifra>
+                  <TdCifra className="text-right">{formatearBs(c.capital)}</TdCifra>
+                  <TdCifra className="text-right">{formatearBs(c.interes)}</TdCifra>
+                  <TdCifra className="text-right">{formatearBs(c.monto)}</TdCifra>
+                  <TdCifra className="text-right">{formatearBs(c.pagado)}</TdCifra>
+                  <Td>
+                    {c.pendiente === 0 ? (
+                      <Etiqueta tono="exito">Pagada</Etiqueta>
+                    ) : c.dias_atraso > 0 ? (
+                      <Etiqueta tono="peligro">
+                        Vencida · {c.dias_atraso} {c.dias_atraso === 1 ? "día" : "días"}
+                      </Etiqueta>
+                    ) : (
+                      <span className="cifra text-[13px]">
+                        Pendiente {formatearBs(c.pendiente)}
+                      </span>
+                    )}
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {d.cuotas.map((c) => (
-                  <tr key={c.numero} className="border-b last:border-0">
-                    <td className="px-3 py-2">{c.numero}</td>
-                    <td className="px-3 py-2">{formatearDia(c.vence_en)}</td>
-                    <td className="px-3 py-2 text-right">{formatearBs(c.capital)}</td>
-                    <td className="px-3 py-2 text-right">{formatearBs(c.interes)}</td>
-                    <td className="px-3 py-2 text-right">{formatearBs(c.monto)}</td>
-                    <td className="px-3 py-2 text-right">{formatearBs(c.pagado)}</td>
-                    <td className="px-3 py-2">
-                      {c.pendiente === 0 ? (
-                        "Pagada"
-                      ) : c.dias_atraso > 0 ? (
-                        <span className="text-destructive font-medium">
-                          Vencida · {c.dias_atraso} {c.dias_atraso === 1 ? "día" : "días"}
-                        </span>
-                      ) : (
-                        `Pendiente ${formatearBs(c.pendiente)}`
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Tabla>
         </section>
         <section aria-label="Pagos" className="flex flex-col gap-2">
           <h2 className="text-[15px] font-semibold">Pagos recibidos</h2>
           {pagos.length === 0 ? (
-            <p className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
-              Aún no hay pagos de cuotas.
-            </p>
+            <EstadoVacio>Aún no hay pagos de cuotas.</EstadoVacio>
           ) : (
-            <ul className="bg-card divide-y rounded-xl border text-sm tabular-nums">
+            <ul className="divide-y border-y text-sm">
               {pagos.map((p) => (
                 <li
                   key={p.operacionId}
-                  className={`flex flex-wrap justify-between gap-x-3 px-4 py-2.5 ${p.anulado ? "text-muted-foreground" : ""}`}
+                  className={`flex flex-wrap items-center justify-between gap-x-3 py-2.5 ${p.anulado ? "text-muted-foreground" : ""}`}
                 >
                   <span className={p.anulado ? "line-through" : ""}>
                     {formatearFechaHora(p.creadoEn)} · {detalleMedios(p)}
                     {p.esReverso && p.motivo ? ` · ${p.motivo}` : ""}
                   </span>
                   <span>
-                    {p.esReverso && <strong className="mr-2">Anulación de pago</strong>}
-                    {p.anulado && <strong className="mr-2">Anulado</strong>}
-                    <span className={p.anulado ? "line-through" : ""}>{formatearBs(p.total)}</span>
+                    {p.esReverso && <Etiqueta className="mr-2">Anulación de pago</Etiqueta>}
+                    {p.anulado && (
+                      <Etiqueta tono="peligro" className="mr-2">
+                        Anulado
+                      </Etiqueta>
+                    )}
+                    <span className={`cifra text-[13px] ${p.anulado ? "line-through" : ""}`}>
+                      {formatearBs(p.total)}
+                    </span>
                   </span>
                 </li>
               ))}

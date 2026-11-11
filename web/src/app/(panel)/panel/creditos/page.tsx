@@ -18,8 +18,6 @@ import { exigirAlgunPermiso } from "@/modules/usuarios/panel";
 
 export const metadata: Metadata = { title: "Créditos · ERP Multitiendas" };
 
-const vacio = "text-muted-foreground bg-card rounded-xl border p-6 text-sm";
-
 export default async function PaginaCreditos({
   searchParams,
 }: {
@@ -82,7 +80,7 @@ export default async function PaginaCreditos({
             </Seccion>
             <Seccion titulo="Saldo por cliente">
               {saldos.length === 0 ? (
-                <p className={vacio}>Aún no hay créditos con saldo.</p>
+                <p className="text-muted-foreground text-sm">Aún no hay créditos con saldo.</p>
               ) : (
                 <>
                   <TablaSaldos saldos={saldos} creditos={cuentas.data.cuentas} />

@@ -76,7 +76,6 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
           id="si-capital"
           inputMode="decimal"
           autoComplete="off"
-          className="h-10"
           value={capital}
           onChange={(e) => setCapital(e.target.value)}
           {...propsCampo("si-capital", errores.capital ? { "si-capital": errores.capital } : {})}
@@ -87,7 +86,6 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
           id="si-cuotas"
           inputMode="numeric"
           autoComplete="off"
-          className="h-10"
           value={cuotas}
           onChange={(e) => setCuotas(e.target.value)}
           {...propsCampo("si-cuotas", errores.cuotas ? { "si-cuotas": errores.cuotas } : {})}
@@ -102,7 +100,6 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
         <Input
           id="si-primera"
           type="date"
-          className="h-10"
           value={primera}
           onChange={(e) => setPrimera(e.target.value)}
           {...propsCampo(
@@ -120,7 +117,7 @@ export function FormSaldoInicial({ negocioId }: { negocioId: string }) {
           {hecho}
         </p>
         <div>
-          <Button type="submit" disabled={pendiente} className="h-10">
+          <Button type="submit" disabled={pendiente}>
             {pendiente && <Loader2 className="animate-spin" aria-hidden />}
             Cargar saldo inicial
           </Button>
