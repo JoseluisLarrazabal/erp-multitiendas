@@ -16,17 +16,42 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
      error. No se recorrió el punto de venta ni las demás pantallas en producción. Si algo está roto:
      `git revert ee132a7` en un PR. Los equipos con el punto de venta instalado toman el diseño nuevo cuando estén
      sin uso.
-  2. **Segunda versión de la página "Prueba de equipos" para el cliente.** El CTO la va a compartir con enlace público
-     y pidió que traiga todo lo necesario y el paso a paso (hoy pide "instalar" y "entrar con la cuenta del vendedor"
-     sin decir cómo). No está empezada. Brief completo en `~/.cache/erp-recupera/artifacts/brief-equipos-v2.md`;
-     fuentes de la v1 en `~/.cache/erp-recupera/artifacts/src/`. La página nunca lleva contraseñas ni correos.
+  2. **Segunda versión de la página "Prueba de equipos" para el cliente: A MEDIAS, sin publicar** (segunda sesión del
+     2026-11-11, cerrada al 97 % del límite). Un subagente la estaba construyendo en
+     `~/.cache/erp-recupera/artifacts/src/` (edita en sitio; puede haber quedado a medio escribir). Respaldo intacto de
+     la v1 en `~/.cache/erp-recupera/artifacts/v2-a-medias/`. El brief y la **ampliación del CTO** (una cuenta de
+     vendedor por caja de cada negocio; qué equipo se usa para cada cosa; instalación separada por computadora y
+     celular; cada paso dice con qué cuenta y en qué equipo) están en
+     `~/.cache/erp-recupera/artifacts/brief-equipos-v2.md`. Para retomar: (a) ver si existe
+     `contenido-equipos-v2.md` y si cubre la ampliación; (b) `cd ~/.cache/erp-recupera/artifacts && node src/build.mjs
+     && node test.mjs`; (c) revisar el contenido contra los manuales y mirar `capturas-v2/`; (d) leer el HTML completo
+     y publicarlo como Artifact NUEVO con `capabilities: {db: {}}`; (e) anotar la dirección aquí. Si `src/` quedó roto:
+     copiar `v2-a-medias/src/` encima y relanzar el subagente con el brief. Nada de esto se verificó al cerrar.
+     La página nunca lleva contraseñas ni correos.
+     - **Decisión abierta del CTO:** quién crea las cuentas de vendedor. Quedó como camino principal que las crea el
+       dueño desde "Usuarios" (las contraseñas no pasan por nosotros), con la frase "si prefiere, las creamos
+       nosotros". Si las creamos nosotros hacen falta los correos del personal.
+     - **Decisión abierta:** con enlace público, cualquier persona con cuenta de Claude y el enlace puede leer las
+       respuestas guardadas en el almacén de la página. Se puede restringir la lectura a editores al publicar.
   3. Anotar en `docs/prueba-equipos.md` y `docs/preguntas-cliente.md` que la versión que usa el cliente son las páginas
      publicadas (abajo), y que la prueba de equipos la hace el cliente, no el CTO.
   4. Antes del paralelo: sacar el backup de los artifacts de Actions (ver "Repo público").
 - **Páginas para el cliente, publicadas como Artifacts privados el 2026-11-11** (el CTO las comparte desde el menú
   Compartir; eligió enlace público):
-  - Prueba de equipos (v1): <https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1>
-  - Preguntas antes de empezar: <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>
+  - **Esas dos direcciones (abajo) quedaron en la otra cuenta de Claude del CTO y no abren desde la cuenta en uso.**
+    Se reemplazan por páginas nuevas en la cuenta en uso:
+    - Preguntas antes de empezar (nueva, mismo contenido, publicada el 2026-11-11):
+      <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>. Privada hasta que el CTO la comparta. Almacén comprobado en
+      lectura (vacío); escritura real desde la página, no verificada. Fuente:
+      `~/.cache/erp-recupera/artifacts/v2-a-medias/preguntas-cliente.html`.
+    - Prueba de equipos (v2, nueva): pendiente, ver el punto 2.
+  - Viejas, otra cuenta: Prueba de equipos (v1) <https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1> y Preguntas
+    <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>.
+  - **Aviso de actualizar en Firefox (2026-11-11):** el CTO vio que el aviso tardó en Firefox. Sin defecto: el panel no
+    pasa por el service worker; el punto de venta busca la versión nueva al entrar a `/pos`, la descarga y recién
+    avisa o la aplica sola (`web/src/components/aviso-actualizacion.tsx`). Verificado solo por lo que observó el CTO.
+    **Pendiente a decidir:** no hay sondeo de versión; un punto de venta abierto todo el día sin navegar puede tardar
+    en enterarse de un despliegue.
   - Guardan en el equipo de quien las llena y un botón copia todo como texto para enviarlo por WhatsApp; si quien
     entra tiene cuenta y permiso de colaborador, además quedan en el almacén de la página (documentos
     `respuestas/prueba-equipos` y `respuestas/preguntas`), que Claude puede leer. Probadas en local (96
