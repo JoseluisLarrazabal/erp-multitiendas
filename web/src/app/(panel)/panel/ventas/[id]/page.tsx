@@ -38,10 +38,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
   if (detalle.ok && detalle.data === null) notFound();
 
   const volver = (
-    <Link
-      href="/panel/ventas"
-      className={buttonVariants({ variant: "outline", className: "h-10" })}
-    >
+    <Link href="/panel/ventas" className={buttonVariants({ variant: "outline" })}>
       <ArrowLeft aria-hidden /> Ventas
     </Link>
   );
@@ -100,7 +97,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
               {v.credito && puedeVerCreditos && (
                 <Link
                   href={`/panel/creditos/${v.credito.id}`}
-                  className={buttonVariants({ variant: "outline", className: "h-10 w-fit" })}
+                  className={buttonVariants({ variant: "outline", className: "w-fit" })}
                 >
                   Ver pagos del crédito
                 </Link>
@@ -115,7 +112,7 @@ export default async function PaginaVenta({ params }: { params: Promise<{ id: st
                 {v.cajaSesionAbierta ? (
                   <>
                     {v.fueraDePlazo && (
-                      <p className="bg-secondary rounded-lg p-3 text-sm">
+                      <p className="bg-warning-soft text-warning rounded-lg p-3 text-sm">
                         {AVISO_PLAZO.replace("devolver", "anular")}
                       </p>
                     )}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { BarraFiltros, CampoFiltro } from "@/components/ui/barra-filtros";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,15 +17,14 @@ export function FiltrosOrdenesForm({
 }) {
   const hayFiltros = invalido || filtros.q || filtros.estado;
   return (
-    <form
+    <BarraFiltros
       key={JSON.stringify(filtros)}
       method="get"
       action="/panel/ordenes"
       role="search"
       aria-label="Buscar órdenes"
-      className="flex flex-wrap items-end gap-x-4 gap-y-3"
     >
-      <div className="flex min-w-48 flex-1 flex-col gap-1.5 sm:max-w-64">
+      <CampoFiltro className="min-w-48 sm:max-w-64">
         <Label htmlFor="fo-q">Número o cliente</Label>
         <Input
           id="fo-q"
@@ -33,10 +33,9 @@ export function FiltrosOrdenesForm({
           defaultValue={filtros.q}
           placeholder="L1-000123 o nombre"
           autoComplete="off"
-          className="h-10"
         />
-      </div>
-      <div className="flex min-w-40 flex-1 flex-col gap-1.5 sm:max-w-52">
+      </CampoFiltro>
+      <CampoFiltro className="min-w-40 sm:max-w-52">
         <Label htmlFor="fo-estado">Estado</Label>
         <SelectNativo id="fo-estado" name="estado" defaultValue={filtros.estado}>
           <option value="">Activas</option>
@@ -47,8 +46,8 @@ export function FiltrosOrdenesForm({
           ))}
           <option value="sin_recoger">Sin recoger (más de 30 días)</option>
         </SelectNativo>
-      </div>
-      <Button type="submit" className="h-10">
+      </CampoFiltro>
+      <Button type="submit">
         <Search aria-hidden /> Buscar
       </Button>
       {hayFiltros && (
@@ -59,6 +58,6 @@ export function FiltrosOrdenesForm({
           Quitar filtros
         </Link>
       )}
-    </form>
+    </BarraFiltros>
   );
 }

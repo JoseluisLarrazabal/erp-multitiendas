@@ -42,14 +42,14 @@ export function FormTope({ negocioId, vigente }: { negocioId: string; vigente: n
               id="tope-valor"
               inputMode="decimal"
               autoComplete="off"
-              className="h-10 text-right tabular-nums"
+              className="cifra text-right"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               {...propsCampo("tope-valor", errores)}
             />
           </Campo>
         </div>
-        <Button type="submit" disabled={pendiente} className="h-10 self-start sm:mt-[1.375rem]">
+        <Button type="submit" disabled={pendiente} className="self-start sm:mt-[1.375rem]">
           {pendiente && <Loader2 className="animate-spin" aria-hidden />}
           Guardar tope
         </Button>

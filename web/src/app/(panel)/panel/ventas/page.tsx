@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, Paginador } from "@/modules/catalogo/panel";
@@ -59,9 +60,9 @@ export default async function PaginaVentas({
           </p>
         )}
         {lista.ok && lista.data.filas.length === 0 && (
-          <p className="text-muted-foreground bg-card rounded-xl border p-6 text-sm">
+          <EstadoVacio>
             {hayFiltros ? "Ninguna venta coincide con los filtros." : "Aún no hay ventas."}
-          </p>
+          </EstadoVacio>
         )}
         {lista.ok && equipos.ok && lista.data.filas.length > 0 && (
           <ListaVentas ventas={lista.data.filas} equipos={equipos.data} />

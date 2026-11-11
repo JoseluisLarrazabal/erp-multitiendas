@@ -98,21 +98,21 @@ export function FormDevolucion({
   return (
     <form onSubmit={enviar} noValidate aria-label="Devolver venta" className="flex flex-col gap-4">
       {aviso && (
-        <p role="note" className="bg-secondary rounded-lg p-3 text-sm">
+        <p role="note" className="bg-warning-soft text-warning rounded-lg p-3 text-sm">
           {aviso}
         </p>
       )}
       {quedan.length === 0 ? (
         <p className="text-muted-foreground text-sm">No queda nada por devolver en esta venta.</p>
       ) : (
-        <ul aria-label="Líneas a devolver" className="divide-y rounded-lg border">
+        <ul aria-label="Líneas a devolver" className="divide-y">
           {quedan.map((i) => {
             const queda = aMilesimas(i.cantidad) - aMilesimas(i.devuelta);
             const id = `dev-${i.id}`;
             return (
-              <li key={i.id} className="grid grid-cols-[1fr_7rem] items-start gap-x-3 gap-y-1 p-3">
+              <li key={i.id} className="grid grid-cols-[1fr_7rem] items-start gap-x-3 gap-y-1 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{i.nombre}</p>
+                  <p className="truncate text-sm font-semibold">{i.nombre}</p>
                   <p className="text-muted-foreground text-xs tabular-nums">
                     {i.codigo} · vendido {formatearCantidad(aMilesimas(i.cantidad))} · queda{" "}
                     {formatearCantidad(queda)}
@@ -128,7 +128,7 @@ export function FormDevolucion({
                     inputMode="decimal"
                     autoComplete="off"
                     placeholder="0"
-                    className="h-10 text-right tabular-nums"
+                    className="cifra text-right"
                     value={cantidades[i.id] ?? ""}
                     aria-invalid={errores[i.id] ? true : undefined}
                     aria-describedby={errores[i.id] ? `${id}-error` : undefined}
@@ -184,7 +184,6 @@ export function FormDevolucion({
           id="dev-motivo"
           autoComplete="off"
           maxLength={200}
-          className="h-10"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
         />
@@ -199,7 +198,7 @@ export function FormDevolucion({
             ? "Devolución registrada."
             : `Devolución registrada: ${formatearBs(hecho.monto)} en total, ${formatearBs(hecho.montoEfectivo)} en efectivo y ${formatearBs(Math.round((hecho.monto - hecho.montoEfectivo) * 100) / 100)} por QR.`)}
       </div>
-      <Button type="submit" className="h-10 self-start" disabled={enviando || quedan.length === 0}>
+      <Button type="submit" className="self-start" disabled={enviando || quedan.length === 0}>
         {enviando ? <Loader2 className="animate-spin" aria-hidden /> : <Undo2 aria-hidden />}{" "}
         Devolver
       </Button>

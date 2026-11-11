@@ -32,7 +32,7 @@ export function DetalleOrdenVista({
           />
           <Dato t="Cliente" d={o.clienteNombre} />
           <Dato t="Teléfono" d={o.clienteTelefono ?? "—"} />
-          <Dato t="Prendas" d={<span className="tabular-nums">{o.prendas}</span>} />
+          <Dato t="Prendas" d={<span className="cifra">{o.prendas}</span>} />
           <Dato t="Casillero" d={o.casillero ?? "—"} />
           <Dato t="Express" d={o.express ? "Sí" : "No"} />
           <Dato t="Fecha prometida" d={diaCalendario(o.fechaPrometida)} />
@@ -57,7 +57,7 @@ export function DetalleOrdenVista({
           </dl>
         )}
         {o.estado === "cancelada" && (
-          <div className="bg-destructive/10 text-destructive flex flex-col gap-1 rounded-lg p-3 text-sm">
+          <div className="bg-destructive-soft text-destructive flex flex-col gap-1 rounded-lg p-3 text-sm">
             <p>
               Anulada por {o.anuladaPor ?? "—"}. Motivo: {o.motivoAnulacion}
             </p>
