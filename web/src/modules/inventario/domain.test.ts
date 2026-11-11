@@ -5,6 +5,7 @@ import {
   formatearCostoUnitario,
   formatearFechaHora,
   hrefStock,
+  ordenarPorFaltante,
   parsearCantidad,
   textoDias,
   valorDeStock,
@@ -107,5 +108,22 @@ describe("textoDias", () => {
     expect(textoDias(0)).toBe("Vence hoy");
     expect(textoDias(1)).toBe("En 1\u00a0día");
     expect(textoDias(5)).toBe("En 5\u00a0días");
+  });
+});
+
+describe("ordenarPorFaltante", () => {
+  it("10 de mínimo 200 (5%) sale antes que 3 de mínimo 3,5 (86%), aunque 3 < 10", () => {
+    const grave = { id: "grave", cantidad: 10, minimo: 200 };
+    const leve = { id: "leve", cantidad: 3, minimo: 3.5 };
+    expect(ordenarPorFaltante([leve, grave]).map((f) => f.id)).toEqual(["grave", "leve"]);
+  });
+  it("mínimo 0 o nulo va al final y no muta la entrada", () => {
+    const filas = [
+      { id: "cero", cantidad: 0, minimo: 0 },
+      { id: "nulo", cantidad: 1, minimo: null },
+      { id: "bajo", cantidad: 1, minimo: 10 },
+    ];
+    expect(ordenarPorFaltante(filas).map((f) => f.id)).toEqual(["bajo", "cero", "nulo"]);
+    expect(filas[0]!.id).toBe("cero");
   });
 });

@@ -3,7 +3,7 @@ export function EncabezadoPagina({
   descripcion,
   acciones,
 }: {
-  titulo: string;
+  titulo: React.ReactNode;
   descripcion?: string;
   acciones?: React.ReactNode;
 }) {

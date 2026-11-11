@@ -127,4 +127,22 @@ describe("gruposVisibles", () => {
       "Configuración",
     ]);
   });
+  it("dentro de cada grupo el orden es el del diseño", () => {
+    const todos = ITEMS.flatMap((i) => i.permisos ?? []);
+    const orden = Object.fromEntries(
+      gruposVisibles(todos, "lavanderia").map((g) => [g.grupo, g.items.map((i) => i.etiqueta)]),
+    );
+    expect(orden).toEqual({
+      Ventas: ["Ventas", "Reconciliación", "Clientes", "Descuento", "Órdenes"],
+      Inventario: ["Productos", "Inventario", "Precios"],
+      Compras: ["Compras", "Proveedores"],
+      Dinero: ["Cajas", "Tipo de cambio", "Reportes"],
+      Configuración: ["Usuarios", "Dispositivos", "Datos del negocio"],
+    });
+    expect(
+      gruposVisibles(todos, "tienda")
+        .find((g) => g.grupo === "Dinero")!
+        .items.map((i) => i.etiqueta),
+    ).toEqual(["Cajas", "Créditos", "Tipo de cambio", "Reportes"]);
+  });
 });

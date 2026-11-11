@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  diaEnBolivia,
   formatearDia,
   formatearFechaHora,
   formatearHace,
@@ -23,6 +24,17 @@ describe("fechas en hora de Bolivia", () => {
     expect(limitesDelDia("2026-02-31")).toBeNull();
     expect(limitesDelDia("01/11/2026")).toBeNull();
     expect(limitesDelDia("")).toBeNull();
+  });
+});
+
+describe("diaEnBolivia", () => {
+  it.each([
+    ["2026-11-11T03:30:00Z", "2026-11-10"],
+    ["2026-11-11T01:00:00Z", "2026-11-10"],
+    ["2026-11-11T03:59:00Z", "2026-11-10"],
+    ["2026-11-11T04:00:00Z", "2026-11-11"],
+  ])("%s es el día %s en Bolivia", (iso, dia) => {
+    expect(diaEnBolivia(iso)).toBe(dia);
   });
 });
 

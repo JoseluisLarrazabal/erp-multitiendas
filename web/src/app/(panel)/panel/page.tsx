@@ -1,80 +1,106 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
-import { TriangleAlert } from "lucide-react";
-import { itemsVisibles } from "@/components/panel/panel-items";
 import { EncabezadoPagina } from "@/modules/catalogo/panel";
-import { createClient } from "@/lib/supabase/server";
 import { etiquetaRol } from "@/modules/usuarios";
-import { listarCajaPorRevisar } from "@/modules/caja/panel";
 import { exigirPanel } from "@/modules/usuarios/panel";
-import {
-  listarReconciliacion,
-  PAGINA_RECONCILIACION,
-  textoPorRevisar,
-} from "@/modules/ventas/panel";
+import { Acciones } from "./_tablero/acciones";
+import { Avisos } from "./_tablero/avisos";
+import { bloquesTablero } from "./_tablero/bloques";
+import { CajasAbiertas } from "./_tablero/cajas-abiertas";
+import { Esqueleto } from "./_tablero/comun";
+import { CreditosPagos } from "./_tablero/creditos-pagos";
+import { Lotes } from "./_tablero/lotes";
+import { MasVendidos } from "./_tablero/mas-vendidos";
+import { OrdenesListas } from "./_tablero/ordenes-listas";
+import { StockBajo } from "./_tablero/stock-bajo";
+import { VentasHoy } from "./_tablero/ventas-hoy";
 
 export const metadata: Metadata = { title: "Inicio · ERP Multitiendas" };
 
+const FECHA_LARGA = new Intl.DateTimeFormat("es-BO", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "America/La_Paz",
+});
+// "martes, 10 de noviembre" -> "Martes 10 de noviembre"
+const fechaLarga = () => {
+  const t = FECHA_LARGA.format(new Date()).replace(",", "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
 export default async function PanelInicio() {
   const { activo, permisos } = await exigirPanel();
-  // Los mismos accesos que el menú; "Inicio" es esta página.
-  const accesos = itemsVisibles(permisos, activo.tipo).filter((i) => i.href !== "/panel");
+  const b = bloquesTablero(permisos, activo.tipo);
+  const id = activo.negocioId;
+  const hayAvisos = b.porRevisar || b.lotes || b.ordenes;
   return (
     <>
       <EncabezadoPagina
-        titulo="Inicio"
+        titulo={
+          <>
+            <span className="sr-only">Inicio: </span>
+            {fechaLarga()}
+          </>
+        }
         descripcion={`${activo.nombre} · ${etiquetaRol(activo.rol)}`}
       />
-      {/* Mismo permiso que /panel/reconciliacion; no frena los accesos mientras se cuenta. */}
-      {permisos.includes("ver_reportes") && (
-        <Suspense fallback={null}>
-          <AvisoPorRevisar negocioId={activo.negocioId} />
-        </Suspense>
-      )}
-      <nav aria-label="Accesos">
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {accesos.map(({ href, etiqueta, icono: Icono }) => (
-            <li key={href}>
-              <Link
-                href={href}
-                className="bg-card hover:bg-muted focus-visible:ring-ring flex min-h-14 items-center gap-3 rounded-xl border p-4 text-sm font-semibold shadow-[0_2px_5px_#34345a0d] outline-none focus-visible:ring-3"
-              >
-                <span className="bg-secondary text-secondary-foreground grid size-9 place-items-center rounded-lg">
-                  <Icono className="size-[18px]" aria-hidden />
-                </span>
-                {etiqueta}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="flex flex-col gap-4">
+        <Acciones acciones={b.acciones} />
+        {/* La columna de "Por atender" existe siempre en escritorio; en celular va arriba, debajo de las acciones. */}
+        <div
+          className={
+            b.ventas && hayAvisos ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_23rem]" : "grid gap-4"
+          }
+        >
+          {hayAvisos && (
+            <div className={b.ventas ? "lg:col-start-2 lg:row-start-1" : undefined}>
+              <Suspense fallback={<Esqueleto className="h-40" />}>
+                <Avisos negocioId={id} bloques={b} />
+              </Suspense>
+            </div>
+          )}
+          {b.ventas && (
+            <div className="lg:col-start-1 lg:row-start-1">
+              <Suspense fallback={<Esqueleto className="h-64" />}>
+                <VentasHoy negocioId={id} verUtilidad={b.utilidad} />
+              </Suspense>
+            </div>
+          )}
+        </div>
+        <div className="grid items-stretch gap-4 lg:grid-cols-2">
+          {b.cajas && (
+            <Suspense fallback={<Esqueleto className="h-56" />}>
+              <CajasAbiertas negocioId={id} />
+            </Suspense>
+          )}
+          {b.creditos && (
+            <Suspense fallback={<Esqueleto className="h-56" />}>
+              <CreditosPagos negocioId={id} bloques={b} />
+            </Suspense>
+          )}
+          {b.ordenes && (
+            <Suspense fallback={<Esqueleto className="h-40" />}>
+              <OrdenesListas negocioId={id} />
+            </Suspense>
+          )}
+          {b.stockBajo && (
+            <Suspense fallback={<Esqueleto className="h-72" />}>
+              <StockBajo negocioId={id} />
+            </Suspense>
+          )}
+          {b.masVendidos && (
+            <Suspense fallback={<Esqueleto className="h-72" />}>
+              <MasVendidos negocioId={id} tipo={activo.tipo} />
+            </Suspense>
+          )}
+          {b.lotes && (
+            <Suspense fallback={<Esqueleto className="h-56" />}>
+              <Lotes negocioId={id} />
+            </Suspense>
+          )}
+        </div>
+      </div>
     </>
-  );
-}
-
-// Si una lectura falla se cuenta solo la otra: /panel/reconciliacion muestra el error.
-async function AvisoPorRevisar({ negocioId }: { negocioId: string }) {
-  const supabase = await createClient();
-  const [ventas, caja] = await Promise.all([
-    listarReconciliacion(supabase, negocioId, null, PAGINA_RECONCILIACION),
-    listarCajaPorRevisar(supabase, negocioId),
-  ]);
-  const aviso = textoPorRevisar(
-    ventas.ok ? ventas.data.filas.filter((f) => !f.revisada).length : 0,
-    ventas.ok && ventas.data.siguiente !== null,
-    caja.ok ? caja.data.filas.length : 0,
-    caja.ok && caja.data.hayMas,
-  );
-  if (!aviso) return null;
-  return (
-    <Link
-      href="/panel/reconciliacion"
-      data-testid="aviso-por-revisar"
-      className="bg-card hover:bg-muted focus-visible:ring-ring mb-4 flex min-h-12 items-center gap-3 rounded-xl border border-amber-500/60 p-4 text-sm font-semibold outline-none focus-visible:ring-3"
-    >
-      <TriangleAlert className="size-[18px]" aria-hidden />
-      {aviso}
-    </Link>
   );
 }

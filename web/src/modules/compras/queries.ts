@@ -41,6 +41,20 @@ export async function listarProveedores(
   return { ok: true, data: lista.data.map((p) => ({ ...p, deuda: deudaDe.get(p.id) ?? 0 })) };
 }
 
+// Cuántos proveedores tienen deuda y cuánto se les debe (solo la RPC de deudas; listarProveedores suma la lista).
+export async function resumenDeudaProveedores(
+  supabase: Cliente,
+  negocioId: string,
+): Promise<Resultado<{ proveedores: number; total: number }>> {
+  const { data, error } = await supabase.rpc("deudas_proveedores", { p_negocio_id: negocioId });
+  if (error) return { ok: false, error: "No se pudo leer lo que se debe a proveedores." };
+  const conDeuda = data.filter((d) => d.deuda > 0);
+  return {
+    ok: true,
+    data: { proveedores: conDeuda.length, total: conDeuda.reduce((t, d) => t + d.deuda, 0) },
+  };
+}
+
 export async function listarCompras(
   supabase: Cliente,
   negocioId: string,

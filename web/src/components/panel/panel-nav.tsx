@@ -9,7 +9,7 @@ import { gruposVisibles, ITEMS, itemDeRuta, type Item } from "./panel-items";
 export { ITEMS, itemDeRuta, itemsVisibles, gruposVisibles } from "./panel-items";
 
 const clase =
-  "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm outline-none focus-visible:ring-3";
+  "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm outline-none focus-visible:ring-3";
 
 export function PanelNav({
   permisos,
