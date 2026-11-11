@@ -1,21 +1,74 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; fase 0 cerrada, PR A de registro de
-errores en curso).
+Última actualización: 2026-11-10 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
+**falta aplicar su migración y desplegar `admin-usuarios` en producción**; rediseño en implementación).
 
 ## Próxima sesión (arrancar acá)
 
 - **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
   paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
   - **Fase 0, documentos: cerrada el 2026-11-10.** El plan, estas decisiones y `docs/preguntas-cliente.md`.
-  - **Fase 1, PR A, registro de errores (M-15, RNF-16): hito activo.** Rama `feat/registro-errores`. Tabla propia
-    `errores_app` en Supabase con RPC `registrar_error`; sin proveedor externo. Es el único PR de código que cabe en
-    noviembre por los minutos de Actions.
-  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con una lista que prepara Claude),
+  - **Fase 1, PR A, registro de errores (M-15, RNF-16): mergeado el 2026-11-10 (PR #103, `543824d`); despliegue de
+    base y función PENDIENTE.** Tabla propia `errores_app` (RLS sin políticas) y RPC `registrar_error`; sin proveedor
+    externo.
+    - **Lo que falta en producción:** `supabase db push --linked` (una sola migración, `20261110140000_errores_app.sql`;
+      el `--dry-run` del 2026-11-10 la lista sola y sin seeds) y `supabase functions deploy admin-usuarios`. El backup
+      manual previo quedó en verde (corrida 42945368153, 02:24 UTC del 2026-11-11). La sesión de Claude no pudo
+      ejecutarlos: el clasificador de permisos del harness negó el comando. Los corre el CTO o autoriza el permiso.
+      Mientras tanto la web ya publicada llama a una RPC que no existe: el registro falla en silencio (está hecho para
+      eso) y nada más cambia; la función vieja sigue funcionando.
+    - Después de aplicarla: `supabase migration list --linked` igual en local y remoto, y comprobar que `errores_app`
+      existe y que la web no la lee.
+    - Verificado en producción tras el merge (Playwright, solo lectura): despliegue de Vercel completo, `/login`
+      responde 200, `/panel` carga con 0 errores de consola.
+    - Verificación local antes del PR: los 8 pasos del CI en verde (Vitest 525, pgTAP 2.608, integración 19, E2E 271).
+    - Revisión: `/code-review`, `/ponytail-review` y auditoría de seguridad de Opus (apto para merge, dos hallazgos
+      bajos aplicados: tope concurrente y saneo de correos, teléfonos y comillas simples). **Codex: no verificado (sin
+      cuota hasta el 2026-12-03)**; incluye el `fix:` de la fecha de la nota.
+    - El primer CI falló por una prueba inestable que ya existía (`pos-venta.spec.ts`, "venta en la cola y el equipo
+      sin elegir": recargaba antes de que la fila quedara entregada). Se endureció con una espera y el segundo CI pasó.
+      Costo: dos corridas, unos 32 minutos de Actions.
+    - Cómo se consulta: en el panel de Supabase, tabla `errores_app` (origen, código, mensaje saneado, ruta y build en
+      `contexto`). Durante el paralelo se mira al inicio de cada sesión.
+    - Límites conocidos: sin purga (purgar si pasa de unas 50.000 filas); un fallo del layout raíz no se registra; el
+      saneo no cubre nombres en texto libre; sin prueba propia de `useAccion`, los `error.tsx` y los listeners
+      globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
+  - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: pendiente.** Auditoría y brief, dos propuestas en Artifacts (regla 7.b), el
-    CTO elige, implementación por tramos en ramas sin PR. Los PR B, C y D se abren desde el 2026-12-01.
+  - **Fase 3, rediseño visual y tablero: en implementación.** El CTO eligió el 2026-11-10 el híbrido recomendado:
+    base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
+    deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
+    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
+    PR B, C y D se abren desde el 2026-12-01 (minutos de Actions).
+    - **Rama `feat/rediseno-base` (empujada, sin PR), con `main` ya integrado.** Worktree local
+      `/home/shadowfreak/Documents/wt-rediseno`.
+    - **R1, base: hecho** (`8758136`). Tokens de la propuesta A sobre los nombres que ya usaba el proyecto, Figtree e
+      IBM Plex Mono por `next/font`, botones y campos de 40 px, menú en 5 grupos (`gruposVisibles` sobre
+      `itemsVisibles`: agrupar no cambia qué ve cada rol), sombras a `shadow-card` en 22 archivos.
+    - **R2, tablero: hecho** (`ed2dbf3`). El inicio del panel deja la grilla de enlaces: acciones frecuentes, ventas
+      de hoy con utilidad y gráfico de 7 días en SVG propio, **"Por atender"** (pedido del CTO: caja con detalle y
+      botón por aviso; siempre visible, con "Nada por atender" si no hay, y "No se pudo comprobar…" si una lectura
+      falla), cajas abiertas con lo cobrado por caja, créditos y pagos, stock bajo ordenado por faltante, más
+      vendidos; frial con lotes por vencer, lavandería con órdenes listas. Sin RPC nueva ni migración; unas 14
+      consultas por carga para el dueño de tienda (3 de contexto y 11 de bloques).
+    - Revisión de R1 y R2: `/code-review`, `/ponytail-review`, `web-design-guidelines` e `impeccable audit`; hallazgos
+      aplicados (botón `outline` sin borde al usarse como enlace, que afectaba a unas 10 pantallas; avisos que
+      callaban un fallo de lectura; caja abierta hace más de un año; orden del stock bajo; pruebas con permisos
+      irreales; objetivos táctiles de 44 px). Contraste AA calculado en todos los pares de texto (mínimo 5,2:1).
+      **Codex: no verificado (sin cuota).**
+    - Verificación local tras integrar `main`: lint, formato, tipos, Vitest 551, pgTAP, build e integración en verde;
+      E2E 271 pasan y 1 cortó por tiempo (`credito.spec.ts` E2E-12, una prueba de 24 s sin margen bajo el límite de 30
+      s; la traza no muestra ningún paso colgado). Se le sube el límite como a sus hermanas; **falta repetir la corrida
+      completa en verde antes de dar R2 por cerrado.**
+    - Decidido sobre la marcha: sin aviso de "tipo de cambio sin registrar hoy" (RN-02: rige el último registrado;
+      sería una alerta inventada); sin aviso de "caja cerrada con diferencia" (no hay marca de "revisada"; sería una
+      regla nueva con migración); "Ayer, día completo" sin porcentaje (no hay ventas por hora).
+    - **Sigue:** R3 (pantallas del panel por módulo, 6 lotes de archivos disjuntos), R4 (punto de venta y acceso, solo
+      piel; iconos de la aplicación al color nuevo) y R5 (capturas y textos del manual).
+    - No verificado: frial en el navegador con lotes reales; aviso de órdenes de lavandería con datos; el camino de
+      error de "Por atender"; peso de las fuentes nuevas en el precache del punto de venta; salto de las cifras al
+      cargar IBM Plex Mono; un celular real.
   - Regla de trabajo del plan: `ci.yml` corre solo en `pull_request`, así que una rama empujada sin PR cuesta 0
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):

@@ -118,7 +118,8 @@ Sigue abierto, sin maquillar:
 
 - **RF-TR-07**, PWA en Android o Safari reales: solo hay emulación. **RF-VEN-05**, impresora térmica real: no se probó.
 - **RNF-03**, estimación de tamaño de datos: no se hizo. **RNF-12**, limpieza `--linked` contra producción: no verificada.
-- **RNF-16**, registro de errores de RPC (M-15): fuera del plan de preentrega porque exige elegir un proveedor; límite conocido.
+- **RNF-16**, registro de errores de RPC (M-15): cerrado el 2026-11-10 con un registro propio, sin proveedor externo (PR #103;
+  `docs/plan-paralelo-rediseno.md`, fase 1).
 - **RF-TR-10**, dominio: decisión del CTO, diferido hasta el cierre.
 - Codex: no verificado (sin cuota hasta el 2026-12-03); cuando vuelva se corre sobre lo pendiente y, si encuentra algo, el
   arreglo va en un PR nuevo.
