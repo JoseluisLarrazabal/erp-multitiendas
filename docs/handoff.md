@@ -2,9 +2,57 @@
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
 Última actualización: 2026-11-11 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
-desplegado en producción; rediseño completo (R1 a R5) en `feat/rediseno-base`, verificado en local; sus PR se abren desde el 2026-12-01).
+desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver el bloque de cierre de sesión).
 
 ## Próxima sesión (arrancar acá)
+
+- **CIERRE DE SESIÓN DEL 2026-11-11 (regla 9.b: límite de uso). Lo de este bloque manda sobre lo de abajo si se
+  contradicen.** Siguiente paso concreto, en este orden:
+  1. **El rediseño ya está en producción y verificado.** El PR #109 (R1 a R5, squash `ee132a7`) se mergeó el
+     2026-11-11 con CI en verde, por decisión del CTO de no esperar a diciembre. No lleva migraciones. Verificado con
+     Playwright en solo lectura tras el despliegue de Vercel: `/login` responde 200; `/panel` carga el tablero (título
+     con la fecha, menú en cinco grupos, bloques "Por atender", "Ventas de hoy", "Cajas abiertas", "Créditos y pagos",
+     "Stock bajo" y "Más vendidos de la semana"), tipografía y fondo nuevos, 0 errores de consola, ningún bloque con
+     error. No se recorrió el punto de venta ni las demás pantallas en producción. Si algo está roto:
+     `git revert ee132a7` en un PR. Los equipos con el punto de venta instalado toman el diseño nuevo cuando estén
+     sin uso.
+  2. **Segunda versión de la página "Prueba de equipos" para el cliente.** El CTO la va a compartir con enlace público
+     y pidió que traiga todo lo necesario y el paso a paso (hoy pide "instalar" y "entrar con la cuenta del vendedor"
+     sin decir cómo). No está empezada. Brief completo en `~/.cache/erp-recupera/artifacts/brief-equipos-v2.md`;
+     fuentes de la v1 en `~/.cache/erp-recupera/artifacts/src/`. La página nunca lleva contraseñas ni correos.
+  3. Anotar en `docs/prueba-equipos.md` y `docs/preguntas-cliente.md` que la versión que usa el cliente son las páginas
+     publicadas (abajo), y que la prueba de equipos la hace el cliente, no el CTO.
+  4. Antes del paralelo: sacar el backup de los artifacts de Actions (ver "Repo público").
+- **Páginas para el cliente, publicadas como Artifacts privados el 2026-11-11** (el CTO las comparte desde el menú
+  Compartir; eligió enlace público):
+  - Prueba de equipos (v1): <https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1>
+  - Preguntas antes de empezar: <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>
+  - Guardan en el equipo de quien las llena y un botón copia todo como texto para enviarlo por WhatsApp; si quien
+    entra tiene cuenta y permiso de colaborador, además quedan en el almacén de la página (documentos
+    `respuestas/prueba-equipos` y `respuestas/preguntas`), que Claude puede leer. Probadas en local (96
+    comprobaciones); no probadas en un celular real ni la escritura real desde la página publicada.
+  - El CTO alterna entre dos cuentas de Claude: para actualizar una página sin cambiarle la dirección hay que estar en
+    la cuenta con la que se publicó.
+- **Repo público (decisión del CTO, 2026-11-11):** va a hacer público el repositorio para tener minutos de Actions
+  sin tope. Comprobado antes: `gitleaks` sobre todo el historial (161 commits, todas las ramas) sin hallazgos; ninguna
+  clave, token ni `.env` versionado; los secretos están en Secrets de Actions. Queda a la vista: el código y los
+  documentos (nombran los negocios del cliente), el identificador del proyecto de Supabase, un correo del CTO en este
+  handoff y 9 backups cifrados con `age` en los artifacts de Actions. Hoy esos backups solo traen el catálogo, las fotos
+  y una cuenta (producción tiene 0 ventas y 0 clientes). **Condición antes de que el cliente opere:** el backup debe
+  dejar de subirse a los artifacts de un repo público, o aceptar que el archivo cifrado sea descargable. Sin decidir:
+  rotar credenciales ahora o al cierre, y leer la cláusula decimotercera del contrato (confidencialidad).
+- **Regla nueva del CTO (9.b del `CLAUDE.md` global):** al 95 % del límite de uso de 5 horas se deja de abrir trabajo
+  y se cierra para que otra sesión arranque desde este handoff. En esta sesión el cierre llegó tarde: el CTO tuvo que
+  pedirlo. Claude no tiene medidor del cupo; pedir el porcentaje o cerrar en cada punto de corte.
+- **Lo que sobrevive a un reinicio** (el scratchpad de `/tmp` se borra): `~/.cache/erp-recupera/` trae
+  `rediseno/verificar.sh` (los 8 pasos del CI en local), `r3/lote.sh` (specs y capturas por rol bajo candado),
+  maquetas, capturas del rediseño (`r3/capturas`, `r4`) y los fuentes de las páginas del cliente (`artifacts/`).
+- **Revisión del rediseño:** lectura completa del diff de cada tramo y auditorías de diseño del panel y del punto de
+  venta, con sus hallazgos aplicados (los últimos, en `0109ca8`: botón primario deshabilitado legible, aviso de cobro
+  sin confirmar en ámbar, venta registrada en verde, textos del punto de venta a 14 px). **Codex: no verificado (sin
+  cuota hasta el 2026-12-03); correrlo sobre #103 y #109.**
+- **No verificado:** un celular real, pleno sol, lector e impresora; frial con lotes reales; totales de seis cifras a
+  320 px; el aviso de cobro sin confirmar en captura; que la web no pueda leer `errores_app` en producción.
 
 - **Plan activo: `docs/plan-paralelo-rediseno.md` (aprobado por el CTO el 2026-11-10).** Va de la preentrega al
   paralelo y suma un rediseño visual con tablero de métricas en el inicio del panel. Fases y estado:
@@ -34,7 +82,7 @@ desplegado en producción; rediseño completo (R1 a R5) en `feat/rediseno-base`,
       globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
   - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
     QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: implementado en rama, pendiente de PR.** El CTO eligió el 2026-11-10 el híbrido recomendado:
+  - **Fase 3, rediseño visual y tablero: mergeado en `main` el 2026-11-11 (PR #109).** El CTO eligió el 2026-11-10 el híbrido recomendado:
     base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
     deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
     `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
