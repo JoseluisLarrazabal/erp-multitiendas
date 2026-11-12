@@ -27,8 +27,14 @@ están en "Registro del 2026-11-11" y en los planes.
   desactivarlas cuando ya no hagan falta.
 - Las dos páginas del cliente las compartió el CTO con el cliente el 2026-11-11 (Prueba de equipos v2
   <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>, Preguntas <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>).
-  El cliente avisa cuando las llene. No consta cuál enlace de Preguntas recibió (el nuevo o el viejo de la otra
-  cuenta); las respuestas guardadas en la página vieja no se pueden leer desde la cuenta de Claude en uso.
+  El cliente avisa cuando las llene. No consta cuál enlace de Preguntas recibió (el nuevo o el viejo).
+- **Las páginas viven en dos cuentas de Claude distintas (comprobado el 2026-11-12, tras un cambio de cuenta por
+  `/login`).** La cuenta en uso desde el 2026-11-12 es dueña de las dos páginas viejas
+  (<https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1> y <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>): su
+  almacén de respuestas se leyó ese día y está **vacío**. Las dos páginas nuevas (las que se compartieron) son de la
+  otra cuenta: desde esta sesión no se puede leer su almacén ni republicarlas. Un almacén vacío no prueba que el
+  cliente no llenó nada: sin cuenta de Claude la página guarda solo en su navegador y manda el texto por WhatsApp.
+  Si hay que corregir una página nueva: entrar con la otra cuenta, o publicarla de nuevo desde esta (cambia el enlace).
 - Las cargas del cliente (precios, NIT y datos para la nota, catálogo del frial, precios de lavandería, tope de
   descuento, conteo, usuarios del personal) las hace el cliente cuando quiera y se las pasa al CTO. El CTO dijo el
   2026-11-11 que no bloquean el trabajo actual. **Siguen siendo requisito del día en que arranque el paralelo** (sin
@@ -46,12 +52,10 @@ están en "Registro del 2026-11-11" y en los planes.
    arreglo va en un PR nuevo.
 5. Antes de entregar los manuales: regenerar los PDF (`scripts/manual/exportar.sh`; `docs/manual/dist/` no se
    versiona).
-6. Limpieza menor pendiente (el harness negó el comando a Claude): borrar las ramas locales `docs/plan-fase-7`,
-   `feat/compras` y `fix/cola-intentos-red`; las remotas `docs/plan-fase-7`, `feat/backup-fotos`, `feat/compras`,
-   `feat/lavanderia-panel`, `fix/aviso-agregado-nueva-venta`, `fix/cola-intentos-red` y
-   `fix/e2e-catalogo-sin-contado`; y el worktree `.claude/worktrees/wt-push`. Todas tienen su PR mergeado con el mismo
-   commit. Hoy (2026-11-11) se borraron las locales `feat/backup-fotos`, `fix/aviso-agregado-nueva-venta`,
-   `fix/e2e-catalogo-sin-contado` y tres `worktree-agent-*`, todas contenidas en `main`.
+6. Limpieza de ramas: **hecha el 2026-11-12** (el comando lo corrió el CTO; el harness se lo negaba a Claude). Se
+   borraron el worktree `.claude/worktrees/wt-push`, las ramas locales `docs/plan-fase-7`, `feat/compras` y
+   `fix/cola-intentos-red`, y siete remotas ya mergeadas. Comprobado con `git fetch --prune`: local y remoto quedan
+   solo con `main`, sin worktrees extra.
 
 ### 3. Decisiones del CTO abiertas
 
