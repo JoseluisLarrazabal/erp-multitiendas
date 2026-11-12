@@ -295,7 +295,7 @@ Cada una tiene un supuesto para no frenar el diseño. Si el cliente responde otr
 | D-01 | Registrar por escrito lo que excede la cláusula tercera: Entrega B, venta sin conexión, precios en USD y referencia del dólar paralelo (RF-CAT-12) | Adenda o mención en el acta, según cláusula décima, antes de la fase 7. Define si entra en la garantía de 5 años |
 | D-02 | Entrega de frial sin catálogo | El sistema se entrega preparado para carnes al vacío (RF-FRI-01 a 07) y el cliente carga cortes y precios (CTO, 2026-11-01). Acordarlo por escrito para que no trabe el acta |
 | D-03 | Aviso de que el arranque depende de que el cliente cargue sus datos | Escrito al cliente. El cliente carga precios, servicios, series y tope de descuento desde el panel; no frena el desarrollo ni la importación (CTO, 2026-11-01) |
-| D-04 | Firma del contrato | Firmado; falta la fecha exacta (CTO, 2026-11-01). Hace falta para contar el plazo |
+| D-04 | Firma del contrato | Resuelta: firmado el 2026-11-01 (CTO, 2026-11-11). Contado desde la firma, el plazo de 30 días calendario vence el 2026-12-01. La cláusula también lo cuenta desde la recepción de la información, que sigue incompleta (frial sin catálogo ni respuestas); no se interpreta más que eso |
 
 ## 8. Trazabilidad con el contrato
 

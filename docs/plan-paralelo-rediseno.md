@@ -3,6 +3,10 @@
 Aprobado por el CTO el 2026-11-10. Estado por fase: `docs/handoff.md`, sección "Próxima sesión". Cuestionario del
 cliente: `docs/preguntas-cliente.md`.
 
+**Estado al 2026-11-11:** fase 0 cerrada (2026-11-10); fase 1 cerrada (PR #103); fase 3 cerrada, en un solo PR en vez
+de tres (ver 3.4); fase 2 pendiente, con el QA de roles en producción en curso. El texto de abajo se conserva como se
+aprobó, salvo donde dice "reemplazado".
+
 ## Contexto
 
 El plan de preentrega cerró el 2026-11-10 (PR #95, #97, #99 y #101). El CTO pidió el 2026-11-10 atacar lo que falta en
@@ -180,9 +184,14 @@ Trampas: las pruebas se apoyan en nombres accesibles (858 `getByRole`, 305 `getB
 "Abrir menú", "Cerrar menú" e "Inicio", o la prueba se actualiza en el mismo tramo. E2E-08 sigue bajo 200 ms. El POS
 instalado toma el diseño nuevo solo (PR 3) cuando el equipo está sin uso.
 
-**3.4 PRs, desde el 2026-12-01:** B (R1 y R2), C (R3), D (R4 y R5). Cada uno se abre una vez, con `verificar.sh` en
+**3.4 PRs, desde el 2026-12-01 (reemplazado el 2026-11-11):** B (R1 y R2), C (R3), D (R4 y R5). Cada uno se abre una vez, con `verificar.sh` en
 verde, `web-design-guidelines`, `impeccable audit`, `/code-review` y `/ponytail-review`. Tras cada merge, verificación
 en producción con Playwright y handoff.
+
+**Fase 3 cerrada el 2026-11-11, desvío del plan decidido por el CTO.** El rediseño completo (R1 a R5) se abrió y se
+mergeó en un solo PR, #109 (squash `ee132a7`), el 2026-11-11, con CI en verde, sin esperar al 2026-12-01 y sin
+partirlo en B, C y D. Motivo: los tramos dependen entre sí (R3 y R4 usan los primitivos de R1) y partirlos exige rehacer
+la historia; un solo CI de ~17 minutos en lugar de tres. No lleva migraciones. Si algo falla: `git revert ee132a7`.
 
 ## Verificación
 
@@ -195,7 +204,8 @@ en producción con Playwright y handoff.
 ## Riesgos y no verificado
 
 - El rediseño corre el arranque del paralelo si el cliente ya está listo antes de diciembre. La fecha exacta del
-  contrato sigue sin anotarse, así que el plazo no está medido.
+  contrato sigue sin anotarse, así que el plazo no está medido. (Reemplazado el 2026-11-11: el contrato se firmó el
+  2026-11-01, D-04.)
 - El tablero hace entre 8 y 10 consultas por carga. Aceptable con ~10 usuarios; si pesa, se consolida después.
 - No verificado: minutos facturados exactos (la cifra es por reloj); si Vercel expone el id de build al navegador;
   cuánto tiempo guarda Vercel Hobby los logs que cruzan con el `digest`; si los despliegues de vista previa de Vercel

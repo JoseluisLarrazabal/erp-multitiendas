@@ -21,6 +21,14 @@ diferencias sin explicar. Hasta el fin del paralelo **el cuaderno sigue siendo e
 - [ ] En cada equipo con el punto de venta instalado, "Actualizar ahora" una vez: la primera actualización es a mano
 - [ ] Comprobar que la primera venta real de cada equipo sea `<prefijo>-000001`
 
+**Estado al 2026-11-11.** Todas las cargas del cliente siguen siendo requisito del día en que arranque el paralelo:
+precios (sin precio un producto no se vende: `ERP_PRODUCTO_SIN_PRECIO`), NIT y datos para la nota, catálogo del frial,
+precios de lavandería, tope de descuento, conteo y usuarios del personal. El cliente las hace cuando quiera y se las
+pasa al CTO; el CTO dijo el 2026-11-11 que no bloquean el trabajo actual. La fecha de inicio del paralelo no está
+fijada (la decide el CTO). El contrato se firmó el 2026-11-01 (D-04). El repositorio ya es público y el CTO aceptó el
+2026-11-11 que el backup cifrado siga en los artifacts de Actions, así que eso ya no frena el paralelo (decisión en
+`docs/handoff.md`). Siguen abiertas: rotar credenciales y la cláusula decimotercera (confidencialidad).
+
 ## Cada día
 
 Cada venta se anota en el cuaderno **y** se registra en el sistema, en el momento. Lo mismo con entradas de mercadería,
