@@ -1,8 +1,9 @@
-# QA de roles en producción (2026-11-11)
+# QA de roles en producción (2026-11-11 y 2026-11-12)
 
 Qué puede y qué no puede tocar un vendedor y un encargado en los tres negocios, comprobado en producción
-(<https://erpmultitiendas.vercel.app>) en **solo lectura**. Lo pidió el CTO el 2026-11-11. Es el punto "QA con roles
-en producción" de la fase 2 de `docs/plan-paralelo-rediseno.md`.
+(<https://erpmultitiendas.vercel.app>). Lo pidió el CTO el 2026-11-11. Es el punto "QA con roles en producción" de la
+fase 2 de `docs/plan-paralelo-rediseno.md`. Tuvo dos pasadas: el 2026-11-11 en **solo lectura** y el 2026-11-12 con
+**escrituras de práctica** aprobadas por el CTO ese día (sección "Segunda pasada").
 
 ## Cómo se hizo
 
@@ -46,19 +47,68 @@ Matriz de `docs/srs.md` sección 4 más la separación de funciones habitual en 
 - El vendedor no recibe un mensaje de "acceso negado" en el panel: se lo devuelve al punto de venta sin aviso
   (`web/src/modules/usuarios/contexto.ts`).
 
-## No comprobado (exige escribir en producción)
+## Segunda pasada: escrituras de práctica (2026-11-12)
 
-Queda cubierto solo por las pruebas locales (pgTAP y Playwright):
+Aprobada por el CTO el 2026-11-12 ("apruebo las escrituras de práctica en producción"). Alcance pedido: abrir caja,
+venta de práctica, intentos prohibidos, anular, cerrar caja y desactivar las cuentas de prueba.
 
-- Los controles dentro del punto de venta del vendedor ("Vender a crédito", descuento, anular): con la caja cerrada el
-  punto de venta solo muestra "Abrir caja". Por permisos no los tiene; el control no se vio.
-- Que el servidor rechace una anulación, devolución o descuento enviado por un vendedor, y un cambio de rol sobre un
-  encargado o el dueño enviado por un encargado. Solo se vio que la interfaz no lo ofrece.
+**La venta de práctica no se pudo hacer, y con ella quedaron fuera la anulación, la devolución y el descuento.**
+Reconocimiento previo en solo lectura (`recon.mjs`): ningún producto tiene precio (0 filas en `producto_precios` en los
+tres negocios; el servidor rechazaría con `ERP_PRODUCTO_SIN_PRECIO`), lavandería y frial no tienen productos, no hay
+clientes ni tipo de cambio y el tope de descuento es 0 %. No se puso un precio ni se creó un producto de prueba: eso
+queda en el catálogo del cliente y la limpieza previa al paralelo no lo borra.
+
+Cómo se hizo: script `~/.cache/erp-recupera/qa-roles/escrituras.mjs`, revisado antes de correr, con modo seco, una
+compuerta que comprueba el negocio activo antes de cada escritura y una red de seguridad que cierra por API cualquier
+caja abierta por la cuenta de prueba. Dos corridas previas no escribieron nada: las cortó la propia compuerta por un
+selector mal especificado. Resultados en `resultado-escrituras.tienda.json`, `resultado-escrituras.lavfrial.json` y
+`resultado-escrituras.run1.json` (control de roles); capturas en `capturas-escrituras/`.
+
+| Rol y negocio | Comprobado | Resultado |
+|---|---|---|
+| Vendedor, los tres | Abre la caja de "Caja 1" con Bs 0 y la cierra con Bs 0 por la interfaz | Cumple |
+| Vendedor, tienda | Con la caja abierta: pestañas Vender, Consulta rápida, Reservas, Cuotas y Caja. No existe "Vender a crédito" (tampoco con un cliente elegido) ni campo de descuento. Nada de anular, devolver, costo ni ganancia en pantalla | Cumple |
+| Vendedor, lavandería | "Nueva orden" y "Órdenes"; Vender, Consulta rápida y Caja. Sin Reservas ni Cuotas, sin crédito ni descuento | Cumple |
+| Vendedor, frial | Igual que tienda | Cumple |
+| Vendedor, tienda | Crea un cliente desde el punto de venta ("QA Cliente (prueba)") | Cumple |
+| Vendedor, tienda | Venta a crédito enviada directo al servidor (`registrar_venta`, caja abierta, cliente real): `400 ERP_SIN_PERMISO`. Después: 0 ventas, 0 créditos, numeración en 0 | Cumple |
+| Encargado, tienda y frial | `asignar_usuario` sobre otra persona: `400 ERP_SIN_PERMISO` | Cumple |
+| Encargado, lavandería | `asignar_usuario` sobre el dueño: `400 ERP_DUENO_PROTEGIDO` | Cumple |
+| Encargado, lavandería | Subir un vendedor a encargado: `400 ERP_DUENO_PROTEGIDO` | Cumple |
+| Encargado | Desactivar una cuenta que también está en negocios donde no gestiona personal (`admin-usuarios`): `403 ERP_SIN_PERMISO` | Cumple |
+
+Los intentos del encargado usaron valores que, de pasar, no cambiaban nada (el rol actual) o solo tocaban la cuenta de
+prueba. Tras cada uno se releyeron los roles con las dos cuentas: sin cambios.
+
+Otras cosas vistas:
+
+- Sin precio, cada resultado de la búsqueda dice "Sin precio de contado" y no ofrece "Agregar"; "Cobrar" queda apagado.
+  En lavandería y frial el punto de venta avisa "Este negocio todavía no tiene productos con precio. Pide al encargado
+  que los cargue en el panel."
+- Al cerrar, el vendedor **sí ve** el efectivo esperado y la diferencia en "Caja cerrada" (después de escribir lo
+  contado, no antes).
+- **Defecto menor de pantalla (sin arreglar):** tras cerrar la caja, en los tres negocios, la tarjeta "Abrir caja"
+  aparece arriba de la barra del equipo al mismo tiempo que el resultado "Caja cerrada" abajo
+  (`capturas-escrituras/tienda-5-cierre.png`). Confunde: invita a abrir otra vez antes de leer el cierre.
+- Una cuenta desactivada que intenta entrar recibe "Correo o contraseña incorrectos.", el mismo mensaje que una clave
+  equivocada.
+
+## No comprobado
+
+Queda cubierto solo por las pruebas locales (pgTAP y Playwright). Lo de venta se puede completar en minutos cuando
+exista un producto con precio (reactivando las cuentas de prueba):
+
+- Venta de práctica, y que el servidor rechace una anulación, una devolución o un descuento enviados por un vendedor.
+  Anular y devolver están en el panel (`/panel/ventas/[id]`), al que el vendedor no entra; el rechazo del servidor no
+  se probó porque exige una venta real.
+- Los controles de la venta con una línea en el carrito (textos de descuento y tope).
+- La anulación hecha por un encargado y la revisión de caja.
 - El formulario "Agregar persona de otro negocio" visto como encargado de lavandería (no apareció: no había personas
   por agregar).
-- Abrir y cerrar caja, reservas, órdenes y cambio de estado.
+- Reservas, órdenes y cambio de estado.
 - Costos con datos reales: producción tiene 0 ventas.
 - Roles contador y empleado: no se crearon cuentas de prueba para ellos.
+- La red de seguridad del script: no hizo falta, las tres cajas cerraron por la interfaz.
 
 ## Observaciones de separación de funciones (no son defectos; a decidir por el CTO)
 
@@ -67,9 +117,22 @@ Queda cubierto solo por las pruebas locales (pgTAP y Playwright):
   (reconciliación, reportes y el registro de cambios).
 - En lavandería el vendedor da descuento hasta el tope y el encargado gestiona al personal. Es lo que pide la matriz
   del SRS.
-- El vendedor abre y cierra su caja solo; el cierre es a ciegas (no ve el esperado) y la revisión la hace el encargado.
+- El vendedor abre y cierra su caja solo. Escribe lo contado sin ver el esperado, y al cerrar la pantalla le muestra
+  el esperado y la diferencia (visto el 2026-11-12; la versión anterior de este documento decía que no los veía). La
+  revisión la hace el encargado.
 
-## Pendiente
+## Qué quedó en producción
 
-- Las dos cuentas de prueba siguen **activas** en producción. Desactivarlas desde "Usuarios" cuando ya no hagan falta, o
-  antes del paralelo. Reversible con "Reactivar".
+- **Cuentas de prueba: desactivadas el 2026-11-12** desde "Usuarios" con la sesión del dueño. Comprobado: las dos
+  figuran con "Reactivar" y ninguna puede iniciar sesión. Se reactivan con ese botón; las claves siguen en
+  `~/.cache/erp-recupera/qa-roles/cuentas.json`.
+- Tres sesiones de caja cerradas, una por negocio, abiertas y cerradas por "QA Vendedor (prueba)" con Bs 0 (primera
+  apertura `2026-11-12T12:46:56Z`, último cierre `2026-11-12T12:47:51Z`; 08:46 a 08:47 hora de Bolivia).
+- Un cliente en Multitienda Lider: "QA Cliente (prueba)", CI "0000000".
+- 0 ventas, 0 créditos; `dispositivos.ultimo_numero` sigue en 0 en C1, L1 y F1. Los intentos rechazados no dejaron
+  filas.
+
+**Efecto sobre la limpieza previa al paralelo** (`docs/despliegue.md`): con `--desde` anterior o igual a
+`2026-11-12T08:46:00-04:00` se borran las tres cajas y el cliente. Con un `--desde` posterior a las 08:48 de ese día
+quedan (cajas en cero y un cliente de práctica; no alteran la numeración). Un `--desde` entre las 08:46 y las 08:48
+de ese día hace abortar el script (caja abierta antes del corte y cerrada después).
