@@ -1273,8 +1273,15 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   await page.evaluate(() => {
     const w = window as unknown as { __aperturaVista: boolean };
     w.__aperturaVista = false;
-    new MutationObserver(() => {
-      if (document.getElementById("monto-inicial")) w.__aperturaVista = true;
+    // Se miran los nodos añadidos: al llegar el aviso el formulario ya puede haberse desmontado.
+    new MutationObserver((registros) => {
+      for (const reg of registros)
+        for (const n of reg.addedNodes)
+          if (
+            n instanceof Element &&
+            (n.id === "monto-inicial" || n.querySelector("#monto-inicial"))
+          )
+            w.__aperturaVista = true;
     }).observe(document.body, { childList: true, subtree: true });
   });
   await dialogo.getByRole("button", { name: "Cerrar caja" }).click();
