@@ -1269,11 +1269,31 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   await page.getByRole("button", { name: "Cerrar caja" }).first().click();
   const dialogo = page.getByRole("alertdialog");
   await expect(dialogo).toContainText("Bs 120,00");
+  // Anota si el formulario de apertura llega a montarse aunque sea un instante (parpadeo y robo de foco).
+  await page.evaluate(() => {
+    const w = window as unknown as { __aperturaVista: boolean };
+    w.__aperturaVista = false;
+    // Se miran los nodos añadidos: al llegar el aviso el formulario ya puede haberse desmontado.
+    new MutationObserver((registros) => {
+      for (const reg of registros)
+        for (const n of reg.addedNodes)
+          if (
+            n instanceof Element &&
+            (n.id === "monto-inicial" || n.querySelector("#monto-inicial"))
+          )
+            w.__aperturaVista = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
   await dialogo.getByRole("button", { name: "Cerrar caja" }).click();
 
   await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 114,50");
+  expect(
+    await page.evaluate(() => (window as unknown as { __aperturaVista: boolean }).__aperturaVista),
+  ).toBe(false);
   await expect(page.getByTestId("cierre-diferencia")).toHaveText("Bs 5,50");
   await expect(page.getByTestId("cierre-qr")).toHaveText("Bs 0,00");
+  // Mientras se lee el cierre la pantalla no invita a abrir otra caja; tras "Listo" sí.
+  await expect(page.getByRole("button", { name: "Abrir caja" })).toHaveCount(0);
   const fila = await apiComo(
     "vendedor",
     `caja_sesiones?select=monto_esperado,monto_contado,diferencia,cerrada_en&id=eq.${sesionId}`,
@@ -1291,7 +1311,8 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   ]);
   expect(s.cerrada_en).not.toBeNull();
 
-  // Queda en apertura.
+  // Tras "Listo" queda en apertura.
+  await page.getByRole("button", { name: "Listo" }).click();
   await expect(page.getByLabel("Efectivo inicial (Bs)")).toBeVisible();
   expect(await sesionAbierta(equipoId)).toBeNull();
 });

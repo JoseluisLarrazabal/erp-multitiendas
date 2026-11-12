@@ -58,6 +58,8 @@ export type OpcionesVenta = {
   recargarPermisos: () => Promise<void>;
   verificarCaja: (equipoId: string) => Promise<string | null>;
   cajaCerrada: (equipoId: string) => void;
+  // El resultado del cierre de caja está (o dejó de estar) en pantalla.
+  alVerCierre: (visible: boolean) => void;
   registrarGuarda: (g: GuardaVenta) => void;
   // Un diálogo de fuera de la venta (cambio de negocio) está abierto: F2 y "/" no deben actuar.
   atajosBloqueados: boolean;
