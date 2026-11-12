@@ -2,8 +2,9 @@
 
 Qué puede y qué no puede tocar un vendedor y un encargado en los tres negocios, comprobado en producción
 (<https://erpmultitiendas.vercel.app>). Lo pidió el CTO el 2026-11-11. Es el punto "QA con roles en producción" de la
-fase 2 de `docs/plan-paralelo-rediseno.md`. Tuvo dos pasadas: el 2026-11-11 en **solo lectura** y el 2026-11-12 con
-**escrituras de práctica** aprobadas por el CTO ese día (sección "Segunda pasada").
+fase 2 de `docs/plan-paralelo-rediseno.md`. Tuvo tres pasadas: el 2026-11-11 en **solo lectura**; el 2026-11-12 con
+**escrituras de práctica** aprobadas por el CTO ese día (sección "Segunda pasada"); y, el mismo 2026-11-12, con una
+**venta de práctica** y el recorrido de **contador y empleado** (sección "Tercera pasada").
 
 ## Cómo se hizo
 
@@ -33,7 +34,7 @@ Matriz de `docs/srs.md` sección 4 más la separación de funciones habitual en 
 |---|---|---|
 | Vendedor, los tres | Entra directo a `/pos`; las 28 rutas del panel lo devuelven a `/pos` | Cumple |
 | Vendedor, los tres | Permisos leídos con su sesión: tienda y frial `caja`, `gestionar_reservas`, `vender`; lavandería `caja`, `cambiar_estado_orden`, `descontar`, `vender` | Cumple |
-| Vendedor, los tres | No lee `errores_app` (403); no lee costos (`stock`, `venta_items.costo_unitario`, `movimientos_inventario.costo_unitario`: 403); `costos_stock`, `reporte_ventas` y `reporte_stock` responden `ERP_SIN_PERMISO` | Cumple |
+| Vendedor, los tres | No lee `errores_app` (403); no lee costos (`stock.costo_promedio`, `venta_items.costo_unitario`, `movimientos_inventario.costo_unitario`: 403); `costos_stock`, `reporte_ventas` y `reporte_stock` responden `ERP_SIN_PERMISO`. Sí lee la cantidad en `stock` (el punto de venta se la muestra): corregido el 2026-11-12, antes este documento daba `stock` entero como bloqueado | Cumple |
 | Encargado, tienda y frial | Abre las 12 áreas del panel; "Usuarios", "Dispositivos", "Descuento" y "Datos del negocio" no están en el menú y por dirección directa vuelven a `/panel` | Cumple |
 | Encargado, lavandería | Abre además "Usuarios", "Dispositivos", "Descuento", "Datos del negocio" y "Órdenes"; no ve "Créditos" | Cumple |
 | Encargado, lavandería | En "Usuarios", las filas del dueño y del encargado no tienen acciones; los selectores de rol ofrecen solo Contador, Vendedor y Empleado | Cumple |
@@ -93,22 +94,71 @@ Otras cosas vistas:
 - Una cuenta desactivada que intenta entrar recibe "Correo o contraseña incorrectos.", el mismo mensaje que una clave
   equivocada.
 
+## Tercera pasada: venta de práctica, contador y empleado (2026-11-12)
+
+Aprobada por el CTO el 2026-11-12 ("añade precio a un solo producto, para que puedas validar lo que faltó probar,
+luego pruebas los roles"). Solo en Multitienda Lider. El encargado de prueba puso por "Precios" un precio de contado de
+Bs 9.999,00 a un único producto (código 28) y lo quitó al terminar vaciando la celda: el catálogo vuelve a tener 0
+precios. Scripts `venta.mjs` y `venta2.mjs`, resultados `resultado-venta.json` y `resultado-venta2.json`, capturas en
+`capturas-venta/` y `capturas-venta2/`, todo en `~/.cache/erp-recupera/qa-roles/`.
+
+**Incidente de la primera corrida.** La venta `C1-000001` se cobró bien, pero el script falló justo después por un
+error introducido en su última corrección, que se autorizó sin revisar el diff. Quedaron sin correr la anulación y la
+segunda venta; la venta quedó completada con su caja ya cerrada. Se resolvió en una segunda corrida, revisada antes de
+ejecutar, con una devolución total hecha por el encargado. No fue un defecto del sistema.
+
+| Rol | Comprobado | Resultado |
+|---|---|---|
+| Encargado | Pone y quita un precio desde "Precios" | Cumple |
+| Vendedor | Venta en efectivo por la pantalla (`C1-000001` y `C1-000002`), con su nota | Cumple |
+| Vendedor | Con una línea en el carrito: sin campo de descuento, sin "Vender a crédito", con el texto "Sin permiso de descuento: para bajar precios o descontar, pide a un encargado que venda desde su sesión" | Cumple |
+| Vendedor | Venta con descuento enviada directo al servidor: `400 ERP_SIN_PERMISO` | Cumple |
+| Vendedor | `anular_venta` y `devolver_venta` sobre una venta real: `400 ERP_SIN_PERMISO` las dos | Cumple |
+| Vendedor | Abrir `/panel/ventas/<id>`: vuelve a `/pos` | Cumple |
+| Vendedor | Con datos reales: lee las líneas de su venta sin costo; `costo_unitario` 403; reportes `ERP_SIN_PERMISO` | Cumple |
+| Encargado | Venta con descuento sobre el tope (0 %): `400 ERP_DESCUENTO_TOPE` | Cumple |
+| Encargado | Venta con la caja ya cerrada: el panel no ofrece anular ("La caja de esta venta ya se cerró: no se puede anular. Usa una devolución.") y sí devolver. Devolución total en efectivo por la pantalla, con otra caja abierta | Cumple |
+| Encargado | Venta con la caja abierta: anulación por la pantalla con motivo | Cumple |
+| Encargado | En el detalle de la venta no ve costo ni ganancia | Cumple |
+| Vendedor | Cierre de caja cuadrado en las dos corridas (esperado igual a contado) | Cumple |
+| Empleado, los tres | Mismos permisos que el vendedor; entra directo a `/pos`; las 28 rutas del panel lo devuelven a `/pos`; reportes y costos `ERP_SIN_PERMISO` o 403 | Cumple |
+| Contador, los tres | Permisos `ver_costos` y `ver_reportes`. Entra a `/panel`; abre Ventas, Reconciliación, Productos, Inventario, Cajas, Reportes y Créditos (Órdenes en lavandería); el resto vuelve a `/panel` | Cumple |
+| Contador, tienda | Con datos reales: ve ventas, detalle, reportes, cajas y reconciliación. Ningún formulario ni botón que guarde; en el detalle de venta no se le ofrece anular ni devolver. Las rutas de escritura vuelven a `/panel` | Cumple |
+| Contador | `/pos` le dice "Tu rol no puede vender en este negocio" | Cumple |
+| Los cuatro roles | Ninguno lee `errores_app` (403) | Cumple |
+
+Contador y empleado se probaron cambiando el rol de las dos cuentas de prueba con la sesión del dueño (seis cambios, uno
+por cuenta y negocio) y devolviéndolas después a vendedor y encargado. Ese recorrido fue de solo lectura.
+
+Stock y kardex del producto usado: 4 al empezar y 4 al terminar; cuatro movimientos (venta, devolución, venta,
+anulación), neto 0.
+
+Otras cosas vistas:
+
+- **Arreglo del cierre de caja confirmado en producción** (PR #115): tras cerrar ya no aparece "Abrir caja" junto al
+  resultado (`capturas-venta2/paso9-cierre.png`).
+- "Cajas" del panel se quedó en "Cargando…" 30 segundos una vez, con la cuenta del encargado, justo después de cerrar
+  una caja. En la corrida siguiente cargó en menos de un segundo, sin errores de consola ni de red. No se reprodujo y
+  no se conoce la causa.
+- El contador abre `/panel/creditos` en lavandería escribiendo la dirección (el menú no lo muestra). Es de solo
+  lectura y está vacío: lavandería no tiene créditos.
+- La revisión de caja ("Marcar revisado") está en "Reconciliación" y solo aparece para cajas con movimientos hechos
+  sin conexión. Las cajas de práctica no los tuvieron, así que no se probó.
+
 ## No comprobado
 
-Queda cubierto solo por las pruebas locales (pgTAP y Playwright). Lo de venta se puede completar en minutos cuando
-exista un producto con precio (reactivando las cuentas de prueba):
+Queda cubierto solo por las pruebas locales (pgTAP y Playwright):
 
-- Venta de práctica, y que el servidor rechace una anulación, una devolución o un descuento enviados por un vendedor.
-  Anular y devolver están en el panel (`/panel/ventas/[id]`), al que el vendedor no entra; el rechazo del servidor no
-  se probó porque exige una venta real.
-- Los controles de la venta con una línea en el carrito (textos de descuento y tope).
-- La anulación hecha por un encargado y la revisión de caja.
-- El formulario "Agregar persona de otro negocio" visto como encargado de lavandería (no apareció: no había personas
-  por agregar).
-- Reservas, órdenes y cambio de estado.
-- Costos con datos reales: producción tiene 0 ventas.
-- Roles contador y empleado: no se crearon cuentas de prueba para ellos.
-- La red de seguridad del script: no hizo falta, las tres cajas cerraron por la interfaz.
+- Descuento permitido (un tope mayor que 0 %), venta a crédito hecha por quien sí puede, reservas, órdenes de
+  lavandería y cambio de estado.
+- Lavandería y frial con ventas: no tienen productos.
+- La revisión de caja y todo lo que nace sin conexión.
+- Costo y ganancia con valores: ningún producto tiene costo cargado; el reporte del contador avisa "1 línea sin costo
+  cargado: la ganancia está incompleta".
+- Lo que ve el empleado con la caja abierta, y que el servidor rechace escrituras de contador y empleado (su recorrido
+  fue de solo lectura; comparten matriz con lo ya probado para el vendedor, salvo el contador).
+- El formulario "Agregar persona de otro negocio" visto como encargado de lavandería.
+- La red de seguridad de los scripts: no hizo falta en ninguna corrida.
 
 ## Observaciones de separación de funciones (no son defectos; a decidir por el CTO)
 
@@ -120,19 +170,27 @@ exista un producto con precio (reactivando las cuentas de prueba):
 - El vendedor abre y cierra su caja solo. Escribe lo contado sin ver el esperado, y al cerrar la pantalla le muestra
   el esperado y la diferencia (visto el 2026-11-12; la versión anterior de este documento decía que no los veía). La
   revisión la hace el encargado.
+- Vendedor y empleado leen por la API, con su propia sesión, las ventas, devoluciones y cajas cerradas de todo el
+  negocio (con esperado, contado y diferencia), no solo las suyas: el filtro es por negocio, no por persona. La
+  pantalla no se lo muestra. Es lo habitual en un local chico; se anota por si el dueño quiere que cada cajero vea solo
+  lo suyo.
 
 ## Qué quedó en producción
 
-- **Cuentas de prueba: desactivadas el 2026-11-12** desde "Usuarios" con la sesión del dueño. Comprobado: las dos
-  figuran con "Reactivar" y ninguna puede iniciar sesión. Se reactivan con ese botón; las claves siguen en
+- **Cuentas de prueba: desactivadas** (2026-11-12, comprobado: figuran con "Reactivar" y ninguna inicia sesión), con
+  sus roles originales (vendedor y encargado en los tres negocios). Se reactivan con ese botón; las claves siguen en
   `~/.cache/erp-recupera/qa-roles/cuentas.json`.
-- Tres sesiones de caja cerradas, una por negocio, abiertas y cerradas por "QA Vendedor (prueba)" con Bs 0 (primera
-  apertura `2026-11-12T12:46:56Z`, último cierre `2026-11-12T12:47:51Z`; 08:46 a 08:47 hora de Bolivia).
-- Un cliente en Multitienda Lider: "QA Cliente (prueba)", CI "0000000".
-- 0 ventas, 0 créditos; `dispositivos.ultimo_numero` sigue en 0 en C1, L1 y F1. Los intentos rechazados no dejaron
-  filas.
+- Multitienda Lider: dos ventas de práctica de Bs 9.999 (`C1-000001` completada con devolución total, `C1-000002`
+  anulada), una devolución, tres cajas cerradas sin diferencia, cuatro movimientos de kardex con neto 0 y el cliente
+  "QA Cliente (prueba)". `dispositivos.ultimo_numero` de C1 quedó en **2**.
+- Lider Clean y Frial Lider: una caja cerrada en cero cada uno; numeración en 0.
+- 0 precios, 0 créditos. Los intentos rechazados no dejaron filas.
+- En el registro de cambios (`auditoria`), que la limpieza no borra: el precio puesto y quitado dos veces y los
+  cambios de rol de las cuentas de prueba.
+- Horas de las escrituras (hora de Bolivia, 2026-11-12): 08:46 a 08:48, 09:36 a 09:38 y 13:51 a 13:53.
 
-**Efecto sobre la limpieza previa al paralelo** (`docs/despliegue.md`): con `--desde` anterior o igual a
-`2026-11-12T08:46:00-04:00` se borran las tres cajas y el cliente. Con un `--desde` posterior a las 08:48 de ese día
-quedan (cajas en cero y un cliente de práctica; no alteran la numeración). Un `--desde` entre las 08:46 y las 08:48
-de ese día hace abortar el script (caja abierta antes del corte y cerrada después).
+**Efecto sobre la limpieza previa al paralelo** (`docs/despliegue.md`): hay que correrla con un `--desde` anterior o
+igual a `2026-11-12T08:46:00-04:00` (y posterior a la importación del 2026-11-04). Si no se hace, la primera venta real
+de Multitienda Lider sale como `C1-000003` y las ventas de práctica quedan en los reportes. Un `--desde` entre las
+08:46 y las 13:53 de ese día puede hacer abortar el script (caja o venta anterior al corte y cerrada, devuelta o
+anulada después). La limpieza no se corrió, ni en seco.

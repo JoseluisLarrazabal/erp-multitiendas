@@ -20,19 +20,22 @@ están en "Registro del 2026-11-11" y en los planes.
 - El objetivo de "terminar en 2 semanas" (CTO, 2026-11-01) venció sin replanteo.
 - El repositorio ya es público (comprobado el 2026-11-11). El CTO aceptó ese día que el backup cifrado se quede en los
   artifacts de Actions (decisión y cómo revertirla, en el registro de abajo).
-- **QA de roles en producción: dos pasadas, sin desvíos en lo observado** (`docs/qa-roles-produccion.md`).
-  2026-11-11, solo lectura: rutas del panel, permisos y lectura directa de costos y de `errores_app`. 2026-11-12, con
-  escrituras de práctica aprobadas por el CTO ese día: el vendedor abre y cierra caja en los tres negocios y no tiene
-  crédito ni descuento en pantalla; el servidor le rechaza una venta a crédito (`ERP_SIN_PERMISO`) y le rechaza al
-  encargado cambiar roles protegidos y desactivar cuentas (`ERP_SIN_PERMISO`, `ERP_DUENO_PROTEGIDO`).
-  **Quedó sin probar todo lo que exige una venta** (venta, anulación, devolución, descuento): en producción ningún
-  producto tiene precio y no se cargó uno de prueba porque la limpieza no lo borraría. Se completa en minutos cuando
-  el cliente cargue un precio, reactivando las cuentas.
+- **QA de roles en producción: tres pasadas, sin desvíos en lo observado** (`docs/qa-roles-produccion.md`).
+  2026-11-11, solo lectura. 2026-11-12, con escrituras de práctica aprobadas por el CTO ese día: cajas, crédito y
+  gestión de personas. 2026-11-12, con un precio de prueba en un solo producto de Multitienda Lider (puesto y quitado):
+  venta, descuento, anulación y devolución, más el recorrido de contador y empleado. Los cuatro roles cumplen la
+  matriz. Sigue sin probarse en producción lo que exige datos que no hay: descuento con tope mayor que 0, crédito,
+  reservas, órdenes, lavandería y frial con ventas, costo y ganancia con valores, revisión de caja.
 - Las cuentas "QA Vendedor (prueba)" y "QA Encargado (prueba)" están **desactivadas** desde el 2026-11-12 (comprobado:
-  no inician sesión). En producción quedaron tres cajas cerradas en cero y el cliente "QA Cliente (prueba)" en
-  Multitienda Lider; cómo afectan al `--desde` de la limpieza está en `docs/despliegue.md`.
-- **Defecto menor encontrado en ese QA, sin arreglar:** tras cerrar la caja, el punto de venta muestra la tarjeta
-  "Abrir caja" arriba y el resultado "Caja cerrada" abajo al mismo tiempo, en los tres negocios.
+  no inician sesión), con sus roles originales.
+- **Datos de práctica en producción y la limpieza:** en Multitienda Lider quedaron dos ventas de práctica (una
+  devuelta, una anulada), tres cajas cerradas, un cliente de práctica y la numeración de C1 en 2. **La limpieza previa
+  al paralelo tiene que correr con `--desde` anterior o igual a `2026-11-12T08:46:00-04:00`**; si no, la primera venta
+  real sale como `C1-000003` (`docs/despliegue.md`).
+- **Arreglo del cierre de caja: hecho y en producción** (PR #115, 2026-11-12). Tras cerrar la caja, el punto de venta
+  mostraba "Abrir caja" junto al resultado del cierre; ya no. Confirmado con captura en producción. Codex: no
+  verificado (sin cuota).
+- Visto una vez y sin reproducir: "Cajas" del panel se quedó en "Cargando…" 30 segundos con la cuenta del encargado.
 - Las dos páginas del cliente las compartió el CTO con el cliente el 2026-11-11 (Prueba de equipos v2
   <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>, Preguntas <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>).
   El cliente avisa cuando las llene. No consta cuál enlace de Preguntas recibió (el nuevo o el viejo).
@@ -50,15 +53,15 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 2. Siguiente paso concreto, en orden
 
-1. Arreglar el defecto de pantalla del cierre de caja ("Abrir caja" visible junto al resultado del cierre) si el CTO
-   lo aprueba. Cuando exista un producto con precio: reactivar las dos cuentas de prueba y completar el QA de roles
-   con una venta (venta, descuento, anulación y devolución; script `~/.cache/erp-recupera/qa-roles/escrituras.mjs`
-   como base), y volver a desactivarlas.
+1. Nada pendiente del QA de roles que dependa de nosotros. Cuando el cliente cargue catálogo en lavandería y frial,
+   costos y un tope de descuento, se puede repetir en minutos reactivando las cuentas de prueba (scripts en
+   `~/.cache/erp-recupera/qa-roles/`: `escrituras.mjs`, `venta2.mjs`, `qa-roles-d.mjs`). Todo script que escriba en
+   producción se revisa entero antes de cada corrida, también tras un cambio de una línea.
 2. Hardware real: lo prueba el cliente con la página publicada "Prueba de equipos" (decisión del 2026-11-11; no el
    CTO). Primero la computadora de cada caja; después lector, impresora de 80 mm y, si lo usan, celular Android.
    El resultado llega como texto por WhatsApp; lo que falle se anota aquí y se arregla antes del paralelo.
 3. Esperar las cargas y respuestas del cliente; mirar `errores_app` en el panel de Supabase al inicio de cada sesión.
-4. Cuando vuelva la cuota de Codex (2026-12-03): correrlo sobre #95, #97, #99, #103 y #109; si encuentra algo, el
+4. Cuando vuelva la cuota de Codex (2026-12-03): correrlo sobre #95, #97, #99, #103, #109 y #115; si encuentra algo, el
    arreglo va en un PR nuevo.
 5. Antes de entregar los manuales: regenerar los PDF (`scripts/manual/exportar.sh`; `docs/manual/dist/` no se
    versiona).
