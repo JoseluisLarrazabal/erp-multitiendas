@@ -8,23 +8,14 @@ import { supabaseEnv } from "./env";
 export const TOPE_LECTURA_MS = 15_000;
 
 export function fetchConTope(base: typeof fetch = fetch, topeMs = TOPE_LECTURA_MS): typeof fetch {
-  return async (input, init) => {
+  return (input, init) => {
     const metodo = (
       init?.method ?? (input instanceof Request ? input.method : "GET")
     ).toUpperCase();
     if (metodo !== "GET" && metodo !== "HEAD") return base(input, init);
-    const control = new AbortController();
-    const reloj = setTimeout(
-      () => control.abort(new DOMException("La lectura superó el tope de tiempo.", "TimeoutError")),
-      topeMs,
-    );
+    const tope = AbortSignal.timeout(topeMs); // sigue vivo durante la lectura del cuerpo
     const propia = init?.signal ?? (input instanceof Request ? input.signal : null);
-    const signal = propia ? AbortSignal.any([propia, control.signal]) : control.signal;
-    try {
-      return await base(input, { ...init, signal });
-    } finally {
-      clearTimeout(reloj); // shortcut: el tope cubre hasta los encabezados, no la lectura del cuerpo.
-    }
+    return base(input, { ...init, signal: propia ? AbortSignal.any([propia, tope]) : tope });
   };
 }
 
