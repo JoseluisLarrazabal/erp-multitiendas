@@ -69,7 +69,8 @@ están en "Registro del 2026-11-11" y en los planes.
 ### 4. No verificado
 
 - Un celular real, pleno sol, lector e impresora; frial con lotes reales; totales de seis cifras a 320 px; el aviso de
-  cobro sin confirmar en captura; que la web no pueda leer `errores_app` en producción.
+  cobro sin confirmar en captura. (Que la web no pueda leer `errores_app` quedó confirmado en producción para
+  vendedor y encargado el 2026-11-11; falta una fila real registrada.)
 - Producción tras el rediseño: solo se vio el panel (inicio) en solo lectura; no se recorrió el punto de venta ni las
   demás pantallas (el QA de roles en curso lo cubre en parte).
 - Codex: no verificado (sin cuota hasta el 2026-12-03) sobre #103 y #109, y sobre los PR anteriores.
