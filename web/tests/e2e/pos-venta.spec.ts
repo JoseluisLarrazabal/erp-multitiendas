@@ -1269,9 +1269,20 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   await page.getByRole("button", { name: "Cerrar caja" }).first().click();
   const dialogo = page.getByRole("alertdialog");
   await expect(dialogo).toContainText("Bs 120,00");
+  // Anota si el formulario de apertura llega a montarse aunque sea un instante (parpadeo y robo de foco).
+  await page.evaluate(() => {
+    const w = window as unknown as { __aperturaVista: boolean };
+    w.__aperturaVista = false;
+    new MutationObserver(() => {
+      if (document.getElementById("monto-inicial")) w.__aperturaVista = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
   await dialogo.getByRole("button", { name: "Cerrar caja" }).click();
 
   await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 114,50");
+  expect(
+    await page.evaluate(() => (window as unknown as { __aperturaVista: boolean }).__aperturaVista),
+  ).toBe(false);
   await expect(page.getByTestId("cierre-diferencia")).toHaveText("Bs 5,50");
   await expect(page.getByTestId("cierre-qr")).toHaveText("Bs 0,00");
   // Mientras se lee el cierre la pantalla no invita a abrir otra caja; tras "Listo" sí.

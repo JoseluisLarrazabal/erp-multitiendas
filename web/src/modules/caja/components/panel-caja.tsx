@@ -199,7 +199,9 @@ export function PanelCaja({
       // Se cerró con otro contado (p. ej. respuesta perdida y reintento): se comprueba y se lleva a la apertura.
       return setErrorCierre((await alYaCerrada()) ?? "La caja ya estaba cerrada.");
     }
+    // Los tres cambios entran en el mismo render: no hay un cuadro con la caja cerrada y el resultado sin avisar.
     setResultado({ cierre: r.data, contado: centavos / 100 });
+    alVerResultado(true);
     alCerrar();
   }
 
@@ -212,11 +214,7 @@ export function PanelCaja({
     setConfirmando(true);
   }
 
-  useEffect(() => {
-    if (!resultado) return;
-    alVerResultado(true);
-    return () => alVerResultado(false);
-  }, [resultado, alVerResultado]);
+  useEffect(() => () => alVerResultado(false), [alVerResultado]);
 
   if (resultado)
     return <ResultadoCierre r={resultado} nombreEquipo={nombreEquipo} alVolver={alVolver} />;
