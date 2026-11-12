@@ -4,7 +4,14 @@ Lista para marcar con los equipos del cliente en la mano: el celular o la comput
 códigos y la impresora. Es el punto "Equipos reales probados" de `docs/paralelo.md`. Hasta hoy todo esto se probó solo
 con un navegador de escritorio que simula un celular; ningún equipo real pasó por aquí.
 
-La hace el CTO, porque exige tener los equipos. Se hace **antes** de la limpieza de pruebas
+**La hace el cliente, no el CTO (decisión del 2026-11-11).** El cliente no usa este archivo: usa la página publicada
+"Prueba de equipos" (<https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>), que trae además la preparación (cuentas,
+dispositivos, producto de prueba) y el "Cómo se hace" de cada paso, y devuelve el resultado como texto para WhatsApp.
+Este archivo queda como lista interna; si cambia un paso, se cambia también en la página (fuentes en
+`~/.cache/erp-recupera/artifacts/`, ver `docs/handoff.md`). El punto de venta se prueba primero en la computadora de
+cada caja; el celular Android es alternativa.
+
+Se hace **antes** de la limpieza de pruebas
 (`docs/despliegue.md`, "Limpieza de pruebas antes del paralelo"): las ventas de práctica de esta lista se anulan al
 terminar y la limpieza las borra.
 

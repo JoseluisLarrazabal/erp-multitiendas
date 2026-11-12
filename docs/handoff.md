@@ -16,25 +16,34 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
      error. No se recorrió el punto de venta ni las demás pantallas en producción. Si algo está roto:
      `git revert ee132a7` en un PR. Los equipos con el punto de venta instalado toman el diseño nuevo cuando estén
      sin uso.
-  2. **Segunda versión de la página "Prueba de equipos" para el cliente: A MEDIAS, sin publicar** (segunda sesión del
-     2026-11-11, cerrada al 97 % del límite). Un subagente la estaba construyendo en
-     `~/.cache/erp-recupera/artifacts/src/` (edita en sitio; puede haber quedado a medio escribir). Respaldo intacto de
-     la v1 en `~/.cache/erp-recupera/artifacts/v2-a-medias/`. El brief y la **ampliación del CTO** (una cuenta de
-     vendedor por caja de cada negocio; qué equipo se usa para cada cosa; instalación separada por computadora y
-     celular; cada paso dice con qué cuenta y en qué equipo) están en
-     `~/.cache/erp-recupera/artifacts/brief-equipos-v2.md`. Para retomar: (a) ver si existe
-     `contenido-equipos-v2.md` y si cubre la ampliación; (b) `cd ~/.cache/erp-recupera/artifacts && node src/build.mjs
-     && node test.mjs`; (c) revisar el contenido contra los manuales y mirar `capturas-v2/`; (d) leer el HTML completo
-     y publicarlo como Artifact NUEVO con `capabilities: {db: {}}`; (e) anotar la dirección aquí. Si `src/` quedó roto:
-     copiar `v2-a-medias/src/` encima y relanzar el subagente con el brief. Nada de esto se verificó al cerrar.
-     La página nunca lleva contraseñas ni correos.
-     - **Decisión abierta del CTO:** quién crea las cuentas de vendedor. Quedó como camino principal que las crea el
-       dueño desde "Usuarios" (las contraseñas no pasan por nosotros), con la frase "si prefiere, las creamos
+  2. **Segunda versión de la página "Prueba de equipos": HECHA y publicada el 2026-11-11** (dirección abajo). Falta
+     que el CTO la comparta desde el menú Compartir. Qué trae, por pedido del CTO: dirección del sistema con botón de
+     copiar; bloque "Qué equipo se usa para cada cosa" (punto de venta en la computadora de la caja, recomendado;
+     celular Android como alternativa; panel en computadora o celular); "Antes de empezar" con siete puntos y casilla
+     "Listo" (cuenta de dueño, una cuenta de vendedor por negocio y caja: C1, L1, F1; "Dispositivos"; producto con
+     precio y stock; datos del negocio); y "Cómo se hace" en 15 pasos, cada uno con el equipo y la cuenta. La página
+     no lleva contraseñas ni correos ni campos para escribirlos.
+     - Fuentes y pruebas (sobreviven a un reinicio): `~/.cache/erp-recupera/artifacts/` con `src/`, `test.mjs`
+       (151 comprobaciones, todas pasan; `node src/build.mjs && node test.mjs`), `contenido-equipos-v2.md` (cada texto
+       con su fuente en el manual o en `web/src`), `brief-equipos-v2.md` y `capturas-v2/`. `v2-a-medias/` es la v1.
+     - Cambios sobre el texto aprobado de la v1, decididos al revisar: la sección 4 pasa de "en cada celular" a "en
+       cada equipo de caja" (4.1 y 4.2 dicen "cortar el internet del equipo"); el paso 1.6 admite "No aplica".
+     - **No verificado en un equipo real:** el texto del menú "Instalar" de Chrome y Edge; que en computadora la
+       aplicación se llame "ERP Caja" y en Android "Caja" (sale de `web/public/pos.webmanifest`); la secuencia de
+       cambiar de cuenta en la caja para los pasos 2.5 y 3.5 (sale del código: la caja es del equipo, no de la
+       persona); abrir el panel en un segundo navegador sin cerrar la sesión del vendedor; que el sistema no mande
+       correos al crear una cuenta (se crea con `email_confirm: true`).
+     - **Diferencias manual y código halladas** (la página usa el texto del código; los manuales quedan por corregir):
+       "Tipo de cambio" (el campo es "Bs por 1 USD" y el botón "Registrar tipo de cambio"); en anular venta el motivo
+       va antes del botón; el manual del vendedor dice que no se puede cerrar sesión con ventas sin enviar y el botón
+       solo comprueba la conexión.
+     - **Decisión abierta del CTO:** quién crea las cuentas de vendedor. La página pone como camino principal que las
+       crea el dueño desde "Usuarios" (las contraseñas no pasan por nosotros) y ofrece "si prefiere, las creamos
        nosotros". Si las creamos nosotros hacen falta los correos del personal.
      - **Decisión abierta:** con enlace público, cualquier persona con cuenta de Claude y el enlace puede leer las
-       respuestas guardadas en el almacén de la página. Se puede restringir la lectura a editores al publicar.
-  3. Anotar en `docs/prueba-equipos.md` y `docs/preguntas-cliente.md` que la versión que usa el cliente son las páginas
-     publicadas (abajo), y que la prueba de equipos la hace el cliente, no el CTO.
+       respuestas guardadas en el almacén de la página. Se puede restringir la lectura a editores republicando.
+     - La venta a crédito de práctica (paso 3.5) no se puede anular: queda para la limpieza de pruebas.
+  3. Hecho: `docs/prueba-equipos.md` y `docs/preguntas-cliente.md` dicen que el cliente usa las páginas publicadas.
   4. Antes del paralelo: sacar el backup de los artifacts de Actions (ver "Repo público").
 - **Páginas para el cliente, publicadas como Artifacts privados el 2026-11-11** (el CTO las comparte desde el menú
   Compartir; eligió enlace público):
@@ -44,7 +53,9 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
       <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>. Privada hasta que el CTO la comparta. Almacén comprobado en
       lectura (vacío); escritura real desde la página, no verificada. Fuente:
       `~/.cache/erp-recupera/artifacts/v2-a-medias/preguntas-cliente.html`.
-    - Prueba de equipos (v2, nueva): pendiente, ver el punto 2.
+    - Prueba de equipos (v2, publicada el 2026-11-11): <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>. Privada
+      hasta que el CTO la comparta. Almacén comprobado en lectura (vacío). Fuente:
+      `~/.cache/erp-recupera/artifacts/prueba-equipos.html`.
   - Viejas, otra cuenta: Prueba de equipos (v1) <https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1> y Preguntas
     <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>.
   - **Aviso de actualizar en Firefox (2026-11-11):** el CTO vio que el aviso tardó en Firefox. Sin defecto: el panel no

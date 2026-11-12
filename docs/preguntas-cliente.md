@@ -4,6 +4,10 @@ Cuestionario para llevar a la reunión con el cliente antes de la operación en 
 sistema hoy si nadie responde y qué pasa si la respuesta es otra. Las preguntas salen de `docs/srs.md` (P-01 a P-17) y
 la clasificación se verificó contra el código el 2026-11-10.
 
+**Versión que usa el cliente (2026-11-11):** la página publicada "Preguntas antes de empezar"
+(<https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>), con las mismas 21 preguntas en lenguaje del cliente. La llena
+el cliente y devuelve las respuestas como texto para WhatsApp. Este archivo queda como referencia interna.
+
 Hay tres clases de respuesta:
 
 - **La carga el cliente**: es un dato que se escribe en una pantalla del panel. No hay que esperar a nadie.
