@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { AVISO_FILTRO_INVALIDO } from "@/lib/filtros";
 import { createClient } from "@/lib/supabase/server";
@@ -25,6 +26,7 @@ export default async function PaginaCreditos({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { activo, permisos } = await exigirAlgunPermiso(["gestionar_credito", "ver_reportes"]);
+  if (activo.tipo === "lavanderia") redirect("/panel");
   const { filtros, invalido } = leerFiltrosCreditos(await searchParams);
   const gestiona = permisos.includes("gestionar_credito");
   const supabase = await createClient();

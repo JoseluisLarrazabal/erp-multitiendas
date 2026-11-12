@@ -253,3 +253,14 @@ test.describe("encargado de tienda", () => {
     await expect(page).toHaveURL(/\/panel$/);
   });
 });
+
+test.describe("encargado de lavandería sin créditos", () => {
+  test.use({ storageState: rutaAuth("encargadoLavanderia") });
+
+  test("/panel/creditos y su detalle lo devuelven al inicio", async ({ page }) => {
+    await page.goto("/panel/creditos");
+    await expect(page).toHaveURL(/\/panel$/);
+    await page.goto("/panel/creditos/00000000-0000-0000-0000-000000000000");
+    await expect(page).toHaveURL(/\/panel$/);
+  });
+});
