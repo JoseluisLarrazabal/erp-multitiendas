@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EncabezadoPagina, EnlaceVolver } from "@/modules/catalogo/panel";
 import { cargarDetalle, DetalleCreditoVista } from "@/modules/creditos/panel";
@@ -17,6 +17,7 @@ export default async function PaginaDetalleCredito({
 }) {
   const { id } = await params;
   const { permisos, activo } = await exigirAlgunPermiso(["gestionar_credito", "ver_reportes"]);
+  if (activo.tipo === "lavanderia") redirect("/panel");
   if (!GUID.test(id)) notFound();
   const supabase = await createClient();
   const puedeAnular = permisos.includes("anular");
