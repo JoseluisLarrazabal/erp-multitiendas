@@ -108,11 +108,13 @@ proveedores creados en la ventana. Recalcula `stock` y la numeración; conserva 
 horaria (`2026-11-10T08:00:00-04:00`). Si el stock inicial de la importación es posterior a ese corte, también se borra:
 el script aborta (también en seco): elegí un `--desde` posterior a la importación.
 
-**Pruebas de QA del 2026-11-12 en producción** (`docs/qa-roles-produccion.md`): tres cajas en cero y un cliente de
-práctica, creados entre las 08:46 y las 08:48 (hora de Bolivia). Un `--desde` anterior o igual a
-`2026-11-12T08:46:00-04:00` los borra; uno posterior a las 08:48 de ese día los deja (no alteran la numeración); uno
-dentro de esos dos minutos haría abortar el script por la regla de la caja abierta antes del corte y cerrada después
-(`docs/plan-limpieza-pruebas.md`). No se corrió la limpieza, ni en seco, para comprobarlo.
+**Pruebas de QA del 2026-11-12 en producción** (`docs/qa-roles-produccion.md`): en Multitienda Lider quedaron dos
+ventas de práctica (`C1-000001` devuelta, `C1-000002` anulada), tres cajas cerradas y un cliente de práctica, y la
+numeración de C1 en 2; en Lider Clean y Frial Lider, una caja en cero cada uno. Se hicieron entre las 08:46 y las
+13:53 (hora de Bolivia). **El `--desde` tiene que ser anterior o igual a `2026-11-12T08:46:00-04:00`** para borrarlas;
+si es posterior, la primera venta real sale como `C1-000003` y las de práctica quedan en los reportes. Uno dentro de
+ese intervalo puede hacer abortar el script (`docs/plan-limpieza-pruebas.md`). No se corrió la limpieza, ni en seco,
+para comprobarlo.
 
 **Aviso: series.** Si un producto que ya tenía números de serie antes de `--desde` tuvo, dentro del corte, un traslado,
 una baja, un ajuste, un daño, un cambio de garantía, una devolución a proveedor o un consumo, el script aborta (también
