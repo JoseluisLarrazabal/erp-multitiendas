@@ -29,6 +29,11 @@ fijada (la decide el CTO). El contrato se firmó el 2026-11-01 (D-04). El reposi
 2026-11-11 que el backup cifrado siga en los artifacts de Actions, así que eso ya no frena el paralelo (decisión en
 `docs/handoff.md`). Siguen abiertas: rotar credenciales y la cláusula decimotercera (confidencialidad).
 
+**A vigilar durante el paralelo.** El 2026-11-12 una pantalla del panel ("Cajas") se quedó en "Cargando…" 30 segundos,
+una sola vez y sin causa confirmada (`docs/qa-roles-produccion.md`). Desde el PR #120 una lectura colgada corta a los
+15 segundos y muestra un error. Si alguien del cliente lo ve, anotar la hora y la pantalla: con la hora se busca en
+`errores_app` y en los registros de Vercel.
+
 ## Cada día
 
 Cada venta se anota en el cuaderno **y** se registra en el sistema, en el momento. Lo mismo con entradas de mercadería,
