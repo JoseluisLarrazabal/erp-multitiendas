@@ -13,8 +13,28 @@ están en "Registro del 2026-11-11" y en los planes.
 ### 1. Dónde estamos
 
 - **Plan activo: observaciones del QA de roles** (`docs/plan-observaciones-qa-roles.md`, aprobado por el CTO el
-  2026-11-12). Estado: paso 1 (documentación) hecho; paso 2 (arreglo: "Créditos" solo en tienda y frial) y paso 3
-  (diagnóstico del cuelgue de "Cajas") en curso. Se quita de aquí cuando culmine.
+  2026-11-12). La sesión del 2026-11-12 se cortó por el límite semanal de Fable; estado exacto al corte:
+  - Paso 1 (documentación): hecho (#117).
+  - Paso 2 (arreglo "Créditos" solo en tienda y frial): **PR #118 abierto, sin mergear.** Rama
+    `fix/creditos-solo-tienda-frial`, worktree `/home/shadowfreak/Documents/wt-fix-creditos-tipo`. Diff revisado a
+    mano por el chairman (dos líneas de `redirect` y un caso e2e que falla sin el arreglo). `importacion` y `gitleaks`
+    en verde; `ci` estaba corriendo. **`/code-review` no corrió** (falló por el límite); `/ponytail-review` y
+    `/security-review` tampoco. Falta: correr las revisiones, esperar `ci`, mergear, borrar rama y worktree, y
+    verificar en producción (reactivar "QA Encargado (prueba)", rol contador en Lider Clean, abrir `/panel/creditos`,
+    debe volver a `/panel`; devolver el rol y desactivar).
+  - Paso 3 (cuelgue de "Cajas"): la lectura de código descartó bloqueos de la base y encontró que las lecturas de
+    servidor del panel van sin tope de tiempo (`web/src/modules/caja/lecturas-panel.ts`,
+    `web/src/modules/usuarios/contexto.ts`; el punto de venta sí usa `AbortSignal.timeout`). El CTO corrió la consulta
+    sobre `errores_app` para el 2026-11-12 entre 12:40 y 18:10 UTC: **0 filas**. Los registros de Postgres que mandó
+    son de las 14:00 (hora local) y corresponden a los rechazos esperados del propio QA, no al cuelgue de las 09:37.
+    Los registros de Vercel de las 09:36 a 09:40 no se consultaron. Causa del incidente: **no confirmada**.
+    Decisión del chairman: tope de 15 s solo para lecturas (`GET`/`HEAD`) en el cliente de Supabase de servidor
+    (`web/src/lib/supabase/server.ts`); las escrituras quedan sin tope nuevo. **A medias:** un subagente lo estaba
+    implementando en `/home/shadowfreak/Documents/wt-fix-tope-lecturas` (rama `fix/lecturas-servidor-con-tope`, sin
+    commit: `server.ts` modificado y `server.test.ts` nuevo, sin verificar). Falta: revisar ese diff, pruebas,
+    revisiones, PR, CI y merge; o descartarlo si no convence. La reproducción local de diez repeticiones del plan se
+    reemplazó por esto: la lectura de código descartó el único mecanismo por el que el cierre de caja podía influir.
+  - Paso 4 (cierre del plan y resultado en `docs/qa-roles-produccion.md`): pendiente.
 - **Mejora pospuesta, posterior a la entrega:** que vendedor y empleado lean por la API solo sus propias ventas y
   cajas. Decisión del CTO del 2026-11-12: no antes del paralelo. Notas de diseño y trampas, en ese mismo plan.
 
