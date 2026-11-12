@@ -12,29 +12,17 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 1. Dónde estamos
 
-- **Plan activo: observaciones del QA de roles** (`docs/plan-observaciones-qa-roles.md`, aprobado por el CTO el
-  2026-11-12). La sesión del 2026-11-12 se cortó por el límite semanal de Fable; estado exacto al corte:
-  - Paso 1 (documentación): hecho (#117).
-  - Paso 2 (arreglo "Créditos" solo en tienda y frial): **PR #118 abierto, sin mergear.** Rama
-    `fix/creditos-solo-tienda-frial`, worktree `/home/shadowfreak/Documents/wt-fix-creditos-tipo`. Diff revisado a
-    mano por el chairman (dos líneas de `redirect` y un caso e2e que falla sin el arreglo). `importacion` y `gitleaks`
-    en verde; `ci` estaba corriendo. **`/code-review` no corrió** (falló por el límite); `/ponytail-review` y
-    `/security-review` tampoco. Falta: correr las revisiones, esperar `ci`, mergear, borrar rama y worktree, y
-    verificar en producción (reactivar "QA Encargado (prueba)", rol contador en Lider Clean, abrir `/panel/creditos`,
-    debe volver a `/panel`; devolver el rol y desactivar).
-  - Paso 3 (cuelgue de "Cajas"): la lectura de código descartó bloqueos de la base y encontró que las lecturas de
-    servidor del panel van sin tope de tiempo (`web/src/modules/caja/lecturas-panel.ts`,
-    `web/src/modules/usuarios/contexto.ts`; el punto de venta sí usa `AbortSignal.timeout`). El CTO corrió la consulta
-    sobre `errores_app` para el 2026-11-12 entre 12:40 y 18:10 UTC: **0 filas**. Los registros de Postgres que mandó
-    son de las 14:00 (hora local) y corresponden a los rechazos esperados del propio QA, no al cuelgue de las 09:37.
-    Los registros de Vercel de las 09:36 a 09:40 no se consultaron. Causa del incidente: **no confirmada**.
-    Decisión del chairman: tope de 15 s solo para lecturas (`GET`/`HEAD`) en el cliente de Supabase de servidor
-    (`web/src/lib/supabase/server.ts`); las escrituras quedan sin tope nuevo. **A medias:** un subagente lo estaba
-    implementando en `/home/shadowfreak/Documents/wt-fix-tope-lecturas` (rama `fix/lecturas-servidor-con-tope`, sin
-    commit: `server.ts` modificado y `server.test.ts` nuevo, sin verificar). Falta: revisar ese diff, pruebas,
-    revisiones, PR, CI y merge; o descartarlo si no convence. La reproducción local de diez repeticiones del plan se
-    reemplazó por esto: la lectura de código descartó el único mecanismo por el que el cierre de caja podía influir.
-  - Paso 4 (cierre del plan y resultado en `docs/qa-roles-produccion.md`): pendiente.
+- **Plan culminado el 2026-11-12: observaciones del QA de roles** (`docs/plan-observaciones-qa-roles.md`).
+  - "Créditos" solo en tienda y frial: PR #118, en producción y verificado (contador en Lider Clean: `/panel/creditos`
+    y su detalle vuelven a `/panel`; en Multitienda Lider sigue abriendo).
+  - Cuelgue de "Cajas": causa **no confirmada**. `errores_app` sin filas en esa ventana (consulta del CTO); la lectura
+    de código descartó bloqueos de la base. Indicio: ese mismo día el navegador de la máquina del QA registró
+    `net::ERR_NETWORK_CHANGED` en otra operación (la red local cambió con una petición en vuelo). Se cerró el hueco
+    que el código sí mostraba: tope de 15 s en las lecturas de servidor (`GET`/`HEAD`) en
+    `web/src/lib/supabase/server.ts`, PR #120, en producción; el panel carga entre 0,6 y 1,2 s tras el cambio.
+  - Manual del dueño con la nota de la cuenta desactivada (#117).
+  - Revisiones: `/code-review` sin hallazgos en #118 y #120; `/ponytail-review` y `/security-review` no corrieron
+    como skill en esos dos (diff leído por el chairman). Codex: no verificado (sin cuota) en #115, #118 y #120.
 - **Mejora pospuesta, posterior a la entrega:** que vendedor y empleado lean por la API solo sus propias ventas y
   cajas. Decisión del CTO del 2026-11-12: no antes del paralelo. Notas de diseño y trampas, en ese mismo plan.
 
@@ -79,10 +67,8 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 2. Siguiente paso concreto, en orden
 
-1. Terminar `docs/plan-observaciones-qa-roles.md`: PR del arreglo de créditos (rama `fix/creditos-solo-tienda-frial`),
-   su verificación en producción con la cuenta de prueba como contador en Lider Clean, y el resultado del diagnóstico
-   de "Cajas". Para ese diagnóstico el CTO corre una consulta de solo lectura sobre `errores_app` (está en el plan).
-   Del QA de roles no queda nada más que dependa de nosotros. Cuando el cliente cargue catálogo en lavandería y frial,
+1. Esperar al cliente (decisión del CTO del 2026-11-12): cargas, páginas llenas y fecha del paralelo. Del QA de
+   roles y de sus observaciones no queda nada que dependa de nosotros. Cuando el cliente cargue catálogo en lavandería y frial,
    costos y un tope de descuento, se puede repetir en minutos reactivando las cuentas de prueba (scripts en
    `~/.cache/erp-recupera/qa-roles/`: `escrituras.mjs`, `venta2.mjs`, `qa-roles-d.mjs`). Todo script que escriba en
    producción se revisa entero antes de cada corrida, también tras un cambio de una línea.
@@ -90,7 +76,7 @@ están en "Registro del 2026-11-11" y en los planes.
    CTO). Primero la computadora de cada caja; después lector, impresora de 80 mm y, si lo usan, celular Android.
    El resultado llega como texto por WhatsApp; lo que falle se anota aquí y se arregla antes del paralelo.
 3. Esperar las cargas y respuestas del cliente; mirar `errores_app` en el panel de Supabase al inicio de cada sesión.
-4. Cuando vuelva la cuota de Codex (2026-12-03): correrlo sobre #95, #97, #99, #103, #109 y #115; si encuentra algo, el
+4. Cuando vuelva la cuota de Codex (2026-12-03): correrlo sobre #95, #97, #99, #103, #109, #115, #118 y #120; si encuentra algo, el
    arreglo va en un PR nuevo.
 5. Antes de entregar los manuales: regenerar los PDF (`scripts/manual/exportar.sh`; `docs/manual/dist/` no se
    versiona).

@@ -1,6 +1,11 @@
 # Plan: observaciones del QA de roles (2026-11-12)
 
-Aprobado por el CTO el 2026-11-12. Estado y avance: `docs/handoff.md`.
+Aprobado por el CTO el 2026-11-12. **Culminado el 2026-11-12.**
+
+Resultado: paso 1 en #117; paso 2 en #118 (verificado en producción); paso 3 sin causa confirmada, con el tope de
+tiempo de las lecturas de servidor en #120 (la reproducción local de diez repeticiones se reemplazó por ese cambio:
+la lectura de código descartó el único mecanismo por el que el cierre de caja podía influir); la observación 1 queda
+pospuesta con las notas de abajo. Detalle en `docs/handoff.md` y `docs/qa-roles-produccion.md`.
 
 ## Contexto
 

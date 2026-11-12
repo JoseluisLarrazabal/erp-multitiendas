@@ -140,11 +140,14 @@ Otras cosas vistas:
   resultado (`capturas-venta2/paso9-cierre.png`).
 - "Cajas" del panel se quedó en "Cargando…" 30 segundos una vez, con la cuenta del encargado, justo después de cerrar
   una caja. En la corrida siguiente cargó en menos de un segundo, sin errores de consola ni de red. No se reprodujo y
-  no se conoce la causa. Decisión: diagnóstico con evidencia antes de tocar código
-  (`docs/plan-observaciones-qa-roles.md`, paso 3).
+  no se conoce la causa. Diagnóstico (2026-11-12): `errores_app` sin filas en esa ventana; el código no tiene bloqueos
+  que el cierre de caja pueda provocar; ese día la red de la máquina del QA cambió al menos una vez con una petición
+  en vuelo (`net::ERR_NETWORK_CHANGED`), así que pudo ser red local. Causa no confirmada. Se cerró el hueco que el
+  código mostraba: las lecturas de servidor del panel no tenían tope de tiempo; ahora cortan a los 15 s y muestran el
+  error de la pantalla en vez de "Cargando…" sin fin (PR #120).
 - El contador abre `/panel/creditos` en lavandería escribiendo la dirección (el menú no lo muestra). Es de solo
-  lectura y está vacío: lavandería no tiene créditos. Decisión: se arregla (`docs/plan-observaciones-qa-roles.md`,
-  paso 2).
+  lectura y está vacío: lavandería no tiene créditos. **Arreglado** (PR #118) y verificado en producción: en
+  lavandería `/panel/creditos` y su detalle vuelven al inicio del panel.
 - La revisión de caja ("Marcar revisado") está en "Reconciliación" y solo aparece para cajas con movimientos hechos
   sin conexión. Las cajas de práctica no los tuvieron, así que no se probó.
 
