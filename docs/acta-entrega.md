@@ -86,7 +86,8 @@ Firmado en dos ejemplares.
 - [ ] Lista de accesos a entregar con el código: repositorio, Vercel, Supabase, dominio, GitHub Actions (secreto del
       backup) y clave privada `age`. Se entregan en persona, nunca por chat
 - [ ] Decidir la garantía del punto 6 (D-01, `docs/srs.md`): el punto ya enumera los extras
-- [ ] Fecha del contrato: el ejemplar del repo la tiene en blanco (D-04)
+- [ ] Fecha del contrato: se firmó el 2026-11-01 (CTO, 2026-11-11; D-04). Falta escribirla en el acta, que la tiene en
+      blanco en el encabezado
 - [ ] Credenciales rotadas antes de entregar los accesos (base de datos, claves de Supabase, secretos de GitHub
       Actions); diferido por el CTO al cierre (`docs/despliegue.md`)
 - [ ] Copia fuera de línea de la clave privada `age` entregada y probada (`docs/backup.md`)

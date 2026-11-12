@@ -6,10 +6,31 @@ proveedores e insumos, por decisión del CTO del 2026-11-01.
 **Riesgo aceptado:** el alcance total no entra razonablemente en 30 días ni en Bs 10.000. El orden protege lo
 contractual: si el tiempo falta, se recorta B, nunca A.
 
+## Estado al 2026-11-11
+
+Fases 0 a 7 cerradas en código y en producción. Después vinieron la auditoría previa a la entrega y dos planes más.
+Estado y evidencia, detalle en `docs/handoff.md`:
+
+| Fase o plan | Estado | Evidencia |
+|---|---|---|
+| 0 a 6 (Entrega A) | Cerradas en código y en producción | Historial del handoff; auditoría de la Entrega A cerrada con #91 |
+| 7 Extras (Entrega B) | Cerrada el 2026-11-09 | #83 compras, #86 insumos, #87 reservas, #88 crédito |
+| Preentrega (`plan-preentrega.md`) | Culminado el 2026-11-10 | #95 bloqueantes, #97 Entrega B, #99 operación diaria, #101 documentos |
+| Registro de errores (M-15, RNF-16) | En producción desde el 2026-11-10 | #103 (`543824d`) |
+| Rediseño visual y tablero | En producción desde el 2026-11-11, en un solo PR | #109 (`ee132a7`) |
+| Verificación (fase 2 del plan paralelo-rediseño) | Pendiente: hardware real y QA de roles en producción (en curso) | Handoff |
+| Paralelo y acta | Sin fecha | Depende de las cargas del cliente |
+
+- El objetivo de "terminar en 2 semanas" fijado el 2026-11-01 venció sin replanteo.
+- El plazo contractual, contado desde la firma del 2026-11-01, vence el 2026-12-01. La cláusula también lo cuenta desde
+  la recepción de la información, que sigue incompleta.
+- La fecha de inicio del paralelo no está fijada en ningún documento: la decide el CTO.
+
 ## Fases
 
 Las duraciones son estimaciones del plan, en días de trabajo, sin validar con velocidad real. El plazo contractual
-arranca con la firma y la recepción de precios e inventario; ver D-03 y D-04 en `docs/srs.md`.
+arranca con la firma y la recepción de precios e inventario; ver D-03 y D-04 en `docs/srs.md`. El contrato se firmó el
+2026-11-01 (D-04).
 
 | Fase | Entrega | Contenido | Requisitos | Estimación | Depende de |
 |---|---|---|---|---|---|

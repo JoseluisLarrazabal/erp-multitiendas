@@ -198,8 +198,8 @@ Pulsar "Tipo de cambio". La pantalla muestra el valor "Vigente", el "Historial" 
 
 Para registrar un tipo de cambio:
 
-1. Escribir el valor en "Tipo de cambio nuevo" (bolivianos por 1 USD, por ejemplo 6,96).
-2. Pulsar "Registrar".
+1. Escribir el valor en el campo "Bs por 1 USD" (por ejemplo 6,96).
+2. Pulsar "Registrar tipo de cambio".
 3. Si el valor se aleja más de 20 % del vigente, el sistema pide confirmación con el texto "¿Registrar Bs … por 1 USD?".
    Revisar que no sea un error de tipeo y confirmar con "Registrar".
 
@@ -213,7 +213,7 @@ Junto al formulario aparece una tarjeta con el dólar paralelo, en el formato "P
 
 - Si la lectura tiene más de 15 minutos, agrega "(desactualizado)".
 - Si no se pudo leer, dice "Paralelo: sin datos".
-- "Usar este valor" copia el número al campo del tipo de cambio, pero no lo guarda. Hay que pulsar "Registrar".
+- "Usar este valor" copia el número al campo del tipo de cambio, pero no lo guarda. Hay que pulsar "Registrar tipo de cambio".
 - Nunca cambia por sí solo el tipo de cambio vigente ni las ventas.
 
 La fuente (paralelo.bo) es un sitio externo, sin garantía de que esté disponible.
@@ -348,8 +348,8 @@ La anulación borra el efecto de la venta completa: devuelve el stock, quita la 
 venta marcada como "Anulada" (no se elimina).
 
 1. "Ventas", entrar a la venta.
-2. Pulsar "Anular venta".
-3. Escribir el "Motivo de la anulación" (hasta 200 caracteres).
+2. Escribir el "Motivo de la anulación" (hasta 200 caracteres). Es obligatorio.
+3. Pulsar "Anular venta".
 4. Confirmar en "¿Anular la venta …?". No se puede deshacer.
 
 Reglas:

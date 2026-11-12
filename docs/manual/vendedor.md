@@ -36,8 +36,10 @@ punto de venta no existe una clave de autorización que el encargado pueda escri
 
 Si aparece "Este negocio no tiene equipos registrados", avisar al encargado: el equipo se registra en el panel.
 
-Para cambiar de equipo, pulsar "Cambiar equipo". No se puede cambiar de equipo ni cerrar sesión sin internet, ni
-cuando hay operaciones sin enviar.
+Para cambiar de equipo, pulsar "Cambiar equipo". No se puede cambiar de equipo sin internet ni cuando hay operaciones
+sin enviar. "Cerrar sesión" necesita internet; el botón solo comprueba la conexión y no revisa si quedan operaciones
+sin enviar (las ventas guardadas no se borran al salir). Aun así, antes de cerrar sesión espere a que se envíen todas
+las operaciones.
 
 **La contraseña.** La contraseña inicial se la entregan en persona y no se vuelve a mostrar. Guárdela y no la comparta.
 Para cambiarla, pulse "Cambiar contraseña" (junto a "Cerrar sesión"), escriba la "Contraseña actual", la "Contraseña nueva"

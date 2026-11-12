@@ -1,13 +1,95 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-11 (plan activo: `docs/plan-paralelo-rediseno.md`; PR A de registro de errores mergeado,
-desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver el bloque de cierre de sesión).
+Última actualización: 2026-11-11 (cierre de sesión: todo el código de los planes está en producción, incluido el
+rediseño, PR #109; falta la fase 2 de verificación y lo que depende del cliente; plan activo:
+`docs/plan-paralelo-rediseno.md`).
 
 ## Próxima sesión (arrancar acá)
 
-- **CIERRE DE SESIÓN DEL 2026-11-11 (regla 9.b: límite de uso). Lo de este bloque manda sobre lo de abajo si se
-  contradicen.** Siguiente paso concreto, en este orden:
+Este bloque es el estado vigente y manda sobre lo de abajo si se contradicen. El detalle y la evidencia de cada punto
+están en "Registro del 2026-11-11" y en los planes.
+
+### 1. Dónde estamos
+
+- Todo el código de los planes está en producción: Entrega A y B, preentrega (#95, #97, #99, #101), registro de
+  errores (#103) y rediseño visual con tablero (#109, `ee132a7`, mergeado el 2026-11-11).
+- El contrato se firmó el 2026-11-01 (D-04 resuelta, CTO, 2026-11-11). Contado desde la firma, el plazo de 30 días
+  calendario vence el 2026-12-01. La cláusula también lo cuenta desde la recepción de la información, que sigue
+  incompleta (frial sin catálogo ni respuestas). No se interpreta más que eso.
+- El objetivo de "terminar en 2 semanas" (CTO, 2026-11-01) venció sin replanteo.
+- El repositorio ya es público (comprobado el 2026-11-11). El CTO aceptó ese día que el backup cifrado se quede en los
+  artifacts de Actions (decisión y cómo revertirla, en el registro de abajo).
+- **QA de roles en producción: hecho el 2026-11-11, sin desvíos en lo observado** (`docs/qa-roles-produccion.md`).
+  Vendedor y encargado, en los tres negocios, solo lectura: rutas del panel, permisos y lectura directa de costos y de
+  `errores_app`. No se comprobaron los controles dentro del punto de venta ni los rechazos del servidor a escrituras
+  (exigen escribir en producción). Las cuentas "QA Vendedor (prueba)" y "QA Encargado (prueba)" siguen **activas**:
+  desactivarlas cuando ya no hagan falta.
+- Las dos páginas del cliente las compartió el CTO con el cliente el 2026-11-11 (Prueba de equipos v2
+  <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>, Preguntas <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>).
+  El cliente avisa cuando las llene. No consta cuál enlace de Preguntas recibió (el nuevo o el viejo de la otra
+  cuenta); las respuestas guardadas en la página vieja no se pueden leer desde la cuenta de Claude en uso.
+- Las cargas del cliente (precios, NIT y datos para la nota, catálogo del frial, precios de lavandería, tope de
+  descuento, conteo, usuarios del personal) las hace el cliente cuando quiera y se las pasa al CTO. El CTO dijo el
+  2026-11-11 que no bloquean el trabajo actual. **Siguen siendo requisito del día en que arranque el paralelo** (sin
+  precio un producto no se vende: `ERP_PRODUCTO_SIN_PRECIO`); ver `docs/paralelo.md`.
+
+### 2. Siguiente paso concreto, en orden
+
+1. Decidir con el CTO si se completa el QA de roles con escrituras de práctica (abrir caja con la cuenta de prueba
+   para ver los controles del punto de venta) y cuándo se desactivan las dos cuentas de prueba.
+2. Hardware real: lo prueba el cliente con la página publicada "Prueba de equipos" (decisión del 2026-11-11; no el
+   CTO). Primero la computadora de cada caja; después lector, impresora de 80 mm y, si lo usan, celular Android.
+   El resultado llega como texto por WhatsApp; lo que falle se anota aquí y se arregla antes del paralelo.
+3. Esperar las cargas y respuestas del cliente; mirar `errores_app` en el panel de Supabase al inicio de cada sesión.
+4. Cuando vuelva la cuota de Codex (2026-12-03): correrlo sobre #95, #97, #99, #103 y #109; si encuentra algo, el
+   arreglo va en un PR nuevo.
+5. Antes de entregar los manuales: regenerar los PDF (`scripts/manual/exportar.sh`; `docs/manual/dist/` no se
+   versiona).
+6. Limpieza menor pendiente (el harness negó el comando a Claude): borrar las ramas locales `docs/plan-fase-7`,
+   `feat/compras` y `fix/cola-intentos-red`; las remotas `docs/plan-fase-7`, `feat/backup-fotos`, `feat/compras`,
+   `feat/lavanderia-panel`, `fix/aviso-agregado-nueva-venta`, `fix/cola-intentos-red` y
+   `fix/e2e-catalogo-sin-contado`; y el worktree `.claude/worktrees/wt-push`. Todas tienen su PR mergeado con el mismo
+   commit. Hoy (2026-11-11) se borraron las locales `feat/backup-fotos`, `fix/aviso-agregado-nueva-venta`,
+   `fix/e2e-catalogo-sin-contado` y tres `worktree-agent-*`, todas contenidas en `main`.
+
+### 3. Decisiones del CTO abiertas
+
+- **FECHA DE INICIO DEL PARALELO: ningún documento la fija.**
+- D-01: la palabra del punto 6 del acta ("quedan / no quedan" cubiertas por la garantía). Recomendación: "no quedan".
+- D-02: entrega del frial sin catálogo, por escrito.
+- Quién crea las cuentas de vendedor del cliente (la página pone al dueño desde "Usuarios" como camino principal; si
+  las creamos nosotros hacen falta los correos del personal).
+- Lectura pública de las respuestas de las páginas: con enlace público, cualquier persona con cuenta de Claude puede
+  leerlas; se restringe a editores republicando.
+- Rotar credenciales ahora o al cierre, y leer la cláusula decimotercera (confidencialidad).
+- Sondeo de versión del aviso de actualizar: no existe; un punto de venta abierto todo el día sin navegar puede tardar
+  en enterarse de un despliegue.
+
+### 4. No verificado
+
+- Un celular real, pleno sol, lector e impresora; frial con lotes reales; totales de seis cifras a 320 px; el aviso de
+  cobro sin confirmar en captura. (Que la web no pueda leer `errores_app` quedó confirmado en producción para
+  vendedor y encargado el 2026-11-11; falta una fila real registrada.)
+- Producción tras el rediseño: solo se vio el panel (inicio) en solo lectura; no se recorrió el punto de venta ni las
+  demás pantallas (el QA de roles en curso lo cubre en parte).
+- Codex: no verificado (sin cuota hasta el 2026-12-03) sobre #103 y #109, y sobre los PR anteriores.
+- Menú "Instalar", nombre de la app instalada y secuencia de cambio de cuenta en la caja (página de equipos).
+- Cuál enlace de Preguntas recibió el cliente.
+
+### 5. Lo que sobrevive a un reinicio
+
+- `~/.cache/erp-recupera/` (el scratchpad de `/tmp` se borra): `rediseno/verificar.sh` (los 8 pasos del CI en local),
+  `r3/lote.sh`, maquetas, capturas del rediseño (`r3/capturas`, `r4`) y los fuentes de las páginas del cliente
+  (`artifacts/`, con `test.mjs`).
+- Todo lo demás está en `main` (rediseño incluido). Si algo del rediseño está roto: `git revert ee132a7` en un PR.
+- Regla 9.b del `CLAUDE.md` global: al 95 % del límite de uso de 5 horas se cierra para que otra sesión arranque de
+  este handoff. Claude no tiene medidor del cupo: pedir el porcentaje o cerrar en cada punto de corte.
+
+### Registro del 2026-11-11 (detalle movido desde el bloque de arriba)
+
+- **Cierre de sesión del 2026-11-11 (regla 9.b: límite de uso), detalle.** Lo vigente está resumido arriba; esto es el
+  registro de lo hecho, con su evidencia:
   1. **El rediseño ya está en producción y verificado.** El PR #109 (R1 a R5, squash `ee132a7`) se mergeó el
      2026-11-11 con CI en verde, por decisión del CTO de no esperar a diciembre. No lleva migraciones. Verificado con
      Playwright en solo lectura tras el despliegue de Vercel: `/login` responde 200; `/panel` carga el tablero (título
@@ -16,8 +98,8 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
      error. No se recorrió el punto de venta ni las demás pantallas en producción. Si algo está roto:
      `git revert ee132a7` en un PR. Los equipos con el punto de venta instalado toman el diseño nuevo cuando estén
      sin uso.
-  2. **Segunda versión de la página "Prueba de equipos": HECHA y publicada el 2026-11-11** (dirección abajo). Falta
-     que el CTO la comparta desde el menú Compartir. Qué trae, por pedido del CTO: dirección del sistema con botón de
+  2. **Segunda versión de la página "Prueba de equipos": HECHA y publicada el 2026-11-11** (dirección abajo). El CTO
+     la compartió con el cliente el 2026-11-11. Qué trae, por pedido del CTO: dirección del sistema con botón de
      copiar; bloque "Qué equipo se usa para cada cosa" (punto de venta en la computadora de la caja, recomendado;
      celular Android como alternativa; panel en computadora o celular); "Antes de empezar" con siete puntos y casilla
      "Listo" (cuenta de dueño, una cuenta de vendedor por negocio y caja: C1, L1, F1; "Dispositivos"; producto con
@@ -33,7 +115,7 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
        cambiar de cuenta en la caja para los pasos 2.5 y 3.5 (sale del código: la caja es del equipo, no de la
        persona); abrir el panel en un segundo navegador sin cerrar la sesión del vendedor; que el sistema no mande
        correos al crear una cuenta (se crea con `email_confirm: true`).
-     - **Diferencias manual y código halladas** (la página usa el texto del código; los manuales quedan por corregir):
+     - **Diferencias manual y código halladas** (la página usa el texto del código; los manuales se corrigieron el 2026-11-11, ver abajo):
        "Tipo de cambio" (el campo es "Bs por 1 USD" y el botón "Registrar tipo de cambio"); en anular venta el motivo
        va antes del botón; el manual del vendedor dice que no se puede cerrar sesión con ventas sin enviar y el botón
        solo comprueba la conexión.
@@ -44,17 +126,19 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
        respuestas guardadas en el almacén de la página. Se puede restringir la lectura a editores republicando.
      - La venta a crédito de práctica (paso 3.5) no se puede anular: queda para la limpieza de pruebas.
   3. Hecho: `docs/prueba-equipos.md` y `docs/preguntas-cliente.md` dicen que el cliente usa las páginas publicadas.
-  4. Antes del paralelo: sacar el backup de los artifacts de Actions (ver "Repo público").
-- **Páginas para el cliente, publicadas como Artifacts privados el 2026-11-11** (el CTO las comparte desde el menú
-  Compartir; eligió enlace público):
+  4. Backup en los artifacts de Actions: **decidido el 2026-11-11, se queda como está** (ver "Repo público").
+- **Páginas para el cliente, publicadas el 2026-11-11 y compartidas con el cliente por el CTO ese mismo día** (enlace
+  público). El cliente avisa cuando las llene. **No consta cuál enlace de Preguntas recibió el cliente** (el nuevo o el
+  viejo de la otra cuenta). Las respuestas guardadas en la página vieja no se pueden leer desde la cuenta de Claude en
+  uso:
   - **Esas dos direcciones (abajo) quedaron en la otra cuenta de Claude del CTO y no abren desde la cuenta en uso.**
     Se reemplazan por páginas nuevas en la cuenta en uso:
     - Preguntas antes de empezar (nueva, mismo contenido, publicada el 2026-11-11):
-      <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>. Privada hasta que el CTO la comparta. Almacén comprobado en
-      lectura (vacío); escritura real desde la página, no verificada. Fuente:
+      <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>. Compartida por el CTO. Almacén comprobado en
+      lectura (vacío, antes de compartirla); escritura real desde la página, no verificada. Fuente:
       `~/.cache/erp-recupera/artifacts/v2-a-medias/preguntas-cliente.html`.
-    - Prueba de equipos (v2, publicada el 2026-11-11): <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>. Privada
-      hasta que el CTO la comparta. Almacén comprobado en lectura (vacío). Fuente:
+    - Prueba de equipos (v2, publicada el 2026-11-11): <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>. Compartida
+      por el CTO. Almacén comprobado en lectura (vacío, antes de compartirla). Fuente:
       `~/.cache/erp-recupera/artifacts/prueba-equipos.html`.
   - Viejas, otra cuenta: Prueba de equipos (v1) <https://claude.ai/artifact/3UL2L4znpLHHKiLsLofXy1> y Preguntas
     <https://claude.ai/artifact/RTHMeJHMrDWSxqwH95qbZd>.
@@ -69,14 +153,18 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
     comprobaciones); no probadas en un celular real ni la escritura real desde la página publicada.
   - El CTO alterna entre dos cuentas de Claude: para actualizar una página sin cambiarle la dirección hay que estar en
     la cuenta con la que se publicó.
-- **Repo público (decisión del CTO, 2026-11-11):** va a hacer público el repositorio para tener minutos de Actions
-  sin tope. Comprobado antes: `gitleaks` sobre todo el historial (161 commits, todas las ramas) sin hallazgos; ninguna
-  clave, token ni `.env` versionado; los secretos están en Secrets de Actions. Queda a la vista: el código y los
-  documentos (nombran los negocios del cliente), el identificador del proyecto de Supabase, un correo del CTO en este
-  handoff y 9 backups cifrados con `age` en los artifacts de Actions. Hoy esos backups solo traen el catálogo, las fotos
-  y una cuenta (producción tiene 0 ventas y 0 clientes). **Condición antes de que el cliente opere:** el backup debe
-  dejar de subirse a los artifacts de un repo público, o aceptar que el archivo cifrado sea descargable. Sin decidir:
-  rotar credenciales ahora o al cierre, y leer la cláusula decimotercera del contrato (confidencialidad).
+- **Repo público: ya lo es (comprobado el 2026-11-11 con `gh repo view`: PUBLIC).** El CTO lo hizo público el
+  2026-11-11 para tener minutos de Actions sin tope. Comprobado antes: `gitleaks` sobre todo el historial (161
+  commits, todas las ramas) sin hallazgos; ninguna clave, token ni `.env` versionado; los secretos están en Secrets de
+  Actions. Queda a la vista: el código y los documentos (nombran los negocios del cliente), el identificador del
+  proyecto de Supabase, un correo del CTO en este handoff y 9 backups cifrados con `age` en los artifacts de Actions.
+  Hoy esos backups solo traen el catálogo, las fotos y una cuenta (producción tiene 0 ventas y 0 clientes).
+  - **Decisión del CTO, 2026-11-11: el backup se queda como está.** Qué: los backups cifrados con `age` siguen
+    subiéndose a los artifacts de Actions y son descargables por cualquiera. Por qué: minutos de Actions sin tope.
+    Riesgo aceptado: el archivo cifrado es público y su seguridad depende de la clave `age`. Cómo revertir: volver
+    privado el repo o cambiar el destino del backup (`docs/backup.md`). Ya no es condición para el paralelo.
+  - Siguen abiertas: rotar credenciales ahora o al cierre, y leer la cláusula decimotercera del contrato
+    (confidencialidad).
 - **Regla nueva del CTO (9.b del `CLAUDE.md` global):** al 95 % del límite de uso de 5 horas se deja de abrir trabajo
   y se cierra para que otra sesión arranque desde este handoff. En esta sesión el cierre llegó tarde: el CTO tuvo que
   pedirlo. Claude no tiene medidor del cupo; pedir el porcentaje o cerrar en cada punto de corte.
@@ -117,14 +205,15 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
       saneo no cubre nombres en texto libre; sin prueba propia de `useAccion`, los `error.tsx` y los listeners
       globales; el mensaje de un error inesperado de una acción del panel viaja al navegador de quien la ejecutó.
   - **Fase 2, verificación sin código: pendiente.** Hardware real (lo hace el CTO con `docs/prueba-equipos.md`),
-    QA con roles en producción en solo lectura (el CTO crea las cuentas y escribe las contraseñas) y el paralelo.
-  - **Fase 3, rediseño visual y tablero: mergeado en `main` el 2026-11-11 (PR #109).** El CTO eligió el 2026-11-10 el híbrido recomendado:
+    QA con roles en producción en solo lectura (en curso el 2026-11-11, con cuentas de prueba de vendedor y encargado;
+    resultado sin anotar) y el paralelo (sin fecha).
+  - **Fase 3, rediseño visual y tablero: cerrada el 2026-11-11 (PR #109, squash `ee132a7`, un solo PR por decisión del CTO).** El CTO eligió el 2026-11-10 el híbrido recomendado:
     base A en todo el producto más tres piezas del tablero de B. Enlaces de las maquetas, diferencias, defectos y
     deliberación en `docs/rediseno-propuestas.md`; copia local de las maquetas y de las capturas en
-    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`. Los
-    PR B, C y D se abren desde el 2026-12-01 (minutos de Actions).
-    - **Rama `feat/rediseno-base` (empujada, sin PR), con `main` ya integrado.** Worktree local
-      `/home/shadowfreak/Documents/wt-rediseno`.
+    `~/.cache/erp-recupera/rediseno/` (fuera del repo). Plan por tramos: `docs/plan-rediseno-implementacion.md`.
+      **Reemplazado el 2026-11-11:** el plan decía PR B, C y D desde el 2026-12-01; el CTO decidió mergear todo en un
+      solo PR (#109) el 2026-11-11.
+    - **Historia de la rama `feat/rediseno-base` (ya mergeada en #109; el worktree `wt-rediseno` ya no hace falta).**
     - **R1, base: hecho** (`8758136`). Tokens de la propuesta A sobre los nombres que ya usaba el proyecto, Figtree e
       IBM Plex Mono por `next/font`, botones y campos de 40 px, menú en 5 grupos (`gruposVisibles` sobre
       `itemsVisibles`: agrupar no cambia qué ve cada rol), sombras a `shadow-card` en 22 archivos.
@@ -200,12 +289,11 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
       errores (vendedor 19 páginas, lavandería 11, encargado y dueño 36, contador 6); `docs/manual/dist/` no se
       versiona: hay que volver a generarlos antes de entregarlos. `docs/decisiones-manual.md` recoge que el aviso de
       ventas por revisar ya no trae vendedor y motivo en el Inicio.
-    - **El rediseño está completo en `feat/rediseno-base` (R1 a R5), sin PR.** Es una sola rama con todo: al abrir los
-      PR desde el 2026-12-01 hay que decidir si va en uno (un CI de ~17 minutos) o partido en B, C y D como decía el
-      plan (tres CI). Recomendación del chairman: uno solo, porque los tramos dependen entre sí (R3 y R4 usan los
-      primitivos de R1) y partirlos exige rehacer la historia. Antes de abrirlo: integrar `main`, correr
-      `verificar.sh` y, cuando vuelva la cuota (2026-12-03), Codex sobre el diff.
-    - **Después del merge del rediseño:** verificación en producción con Playwright (solo lectura), y los equipos que
+    - **El rediseño quedó completo en `feat/rediseno-base` (R1 a R5) y se mergeó en un solo PR, #109, el 2026-11-11**
+      (CI en verde, decisión del CTO de no esperar a diciembre ni partirlo en B, C y D). El chairman había recomendado
+      un solo PR: los tramos dependen entre sí (R3 y R4 usan los primitivos de R1) y partirlos exige rehacer la
+      historia. Codex sigue pendiente (sin cuota hasta el 2026-12-03).
+    - **Después del merge del rediseño (hecho el 2026-11-11):** verificación en producción con Playwright (solo lectura), y los equipos que
       ya tengan el punto de venta instalado toman el diseño nuevo solos cuando estén sin uso.
     - No verificado: frial en el navegador con lotes reales (no hay sesión de un negocio frial entre los archivos de
       prueba); aviso de órdenes de lavandería con datos; el camino de error de "Por atender"; formularios de pago y
@@ -215,8 +303,9 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
     minutos. Se verifica todo en local y cada PR se abre una sola vez, ya terminado.
 - **Decisiones del CTO del 2026-11-10** (dichas en el chat, anotadas acá por la regla 14):
   - El NIT y los "Datos para la nota" de los tres negocios los carga el cliente desde "Datos del negocio".
-  - El contrato se firmó "hace 3 semanas" (hacia el 2026-10-20). Sigue faltando la fecha exacta (D-04): el plazo no
-    está medido.
+  - El contrato se firmó "hace 3 semanas" (hacia el 2026-10-20). **Corregido el 2026-11-11 por el CTO: se firmó el
+    2026-11-01 (D-04 resuelta).** Contado desde la firma, el plazo vence el 2026-12-01; la cláusula también cuenta
+    desde la recepción de la información, que sigue incompleta.
   - Las funcionalidades fuera de contrato se hicieron sin costo. El CTO dijo que ya no importa si la garantía de
     los extras está estipulada. Objeción dicha una vez: el punto 6 del acta sigue con el blanco
     `[quedan / no quedan]` y conviene escribir la palabra antes de firmar; la recomendación es "no quedan". Sin
@@ -230,8 +319,9 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
 - **Pendiente del CTO y del cliente:**
   - llevar al cliente `docs/preguntas-cliente.md`; las 8 primeras cambian el sistema si la respuesta difiere del
     supuesto y deben resolverse antes del paralelo;
-  - resolver D-01 (la palabra del punto 6 del acta), D-02 y la fecha exacta del contrato (D-04);
-  - rotar las credenciales y comprar el dominio (diferidos por el CTO hasta el cierre);
+  - resolver D-01 (la palabra del punto 6 del acta) y D-02 (D-04 quedó resuelta el 2026-11-11: firma del 2026-11-01);
+  - rotar las credenciales y comprar el dominio (diferidos por el CTO hasta el cierre; la rotación sigue sin decidir
+    si es ahora o al cierre);
   - los equipos que abrieron el POS antes del PR 3 necesitan pulsar "Actualizar ahora" una vez; los que lo instalen
     desde ahora se actualizan solos;
   - guardar fuera de línea la clave privada `age` y hacer la copia periódica de los backups (`docs/backup.md`).
@@ -567,8 +657,8 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
   aplicada en producción y filtro verificado con Playwright) y scroll del menú lateral en celular. Decisión: Firefox no
   se prueba, RNF-15 no lo pide. Pendiente: dispositivos reales (RF-TR-07), impresora térmica, lector de pantalla.
   Codex: no verificado.
-- **Siguiente:** los 6 bloqueantes de `docs/auditoria-preentrega.md` (reemplaza "nada de código bloqueante", del
-  2026-11-09 por la mañana). Además, lo que depende del cliente (lista de abajo) y de Codex (2026-12-03).
+- **Siguiente (vencido: los 6 bloqueantes de `docs/auditoria-preentrega.md` se cerraron el 2026-11-10 en el PR #95; lo
+  vigente está en "Próxima sesión"):** lo que depende del cliente (lista de abajo) y de Codex (2026-12-03).
 - **Migraciones a producción (CTO, 2026-11-08):** `.claude/settings.json` permite a Claude correr
   `pnpm exec supabase --workdir <dir> db push --linked` y su `--dry-run`. Siempre se corre desde un worktree limpio en
   `origin/main`, con el dry-run primero y verificando `supabase/.temp/project-ref`. Para revertir, se borra la regla.
@@ -594,7 +684,8 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
 - **Fase 7, insumos (PR 2):** consumo desde Salida o ajuste (solo lavandería), reversión desde el kardex y reporte Insumos (requiere `ver_reportes` y `ver_costos`). Residuo aceptado: un `operacion_id` elegido igual al id de un movimiento bloquea su reversión (solo dentro del negocio).
 - **Producción lista para cargar datos.** El backup diario con fotos está en verde, el script de limpieza está
   ensayado (PRs #71 a #79) y el CI está en verde en `main`.
-- **Bloqueado por el cliente o el CTO, en orden:**
+- **Bloqueado por el cliente o el CTO, en orden** (aclaración del 2026-11-11: las cargas del cliente las hace él cuando
+  quiera y no bloquean el trabajo actual del CTO, pero siguen siendo requisito del día en que arranque el paralelo):
   1. Precios del cliente. Sin ellos no se puede vender (`ERP_PRODUCTO_SIN_PRECIO`) ni capacitar.
   2. Servicios de lavandería, catálogo del frial y tope de descuento (D-03).
   3. Conteo físico (P-17, P-02 a P-05).
@@ -603,18 +694,21 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
   6. Capacitación. Antes del paralelo va la limpieza: seco y real con `--linked`, `SUPABASE_DB_PASSWORD` lo escribe el
      CTO, y se resetea el contador local en cada equipo (`docs/despliegue.md`).
   7. Paralelo de 3 días y acta.
-  8. Fecha de firma (D-04), dominio (RF-TR-10), rotación de credenciales a la entrega y adenda D-01.
+  8. Dominio (RF-TR-10), rotación de credenciales a la entrega y adenda D-01. La fecha de firma (D-04) quedó resuelta:
+     2026-11-01.
 - **Codex:** cuando vuelva la cuota (2026-12-03, según el error de Codex del 2026-11-08), correr las revisiones pendientes de las fases 3 a 6 y `verify-fix`
   sobre los `fix:`.
 
 ## Estado actual
 
-- **Contrato firmado** (decisión del CTO del 2026-11-01): `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx`
-  (basado en el contrato de Elegance Dominio Barbería). Falta anotar la fecha exacta de firma (D-04).
+- **Contrato firmado el 2026-11-01** (D-04, dicho por el CTO el 2026-11-11):
+  `/home/shadowfreak/Downloads/Contrato_ERP_Hinojosa_Claros.docx` (basado en el contrato de Elegance Dominio Barbería).
+  Contado desde la firma, el plazo de 30 días calendario vence el 2026-12-01; la cláusula también lo cuenta desde la
+  recepción de la información, que sigue incompleta.
 - **Anticipo cobrado** (50%). Saldo (50%) se cobra a la entrega, contra firma del acta de entrega.
 - **Desarrollo:** fases 0 a 7 cerradas (frial, reportes y PWA: `docs/plan-fase-5.md`; salida: `docs/plan-fase-6.md`;
   backup en `docs/backup.md`). Después vino la auditoría previa a la entrega y su plan de 4 PRs
-  (`docs/plan-preentrega.md`). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (privado).
+  (`docs/plan-preentrega.md`). Repo: `github.com/JoseluisLarrazabal/erp-multitiendas` (público desde el 2026-11-11).
 - **Formulario de relevamiento Lider: LISTO (2026-10-26, PR #1).** Apps Script `formularios/apps-script/relevamiento.gs`
   creó (cuenta Google del CTO):
   - Form (link cliente): https://docs.google.com/forms/d/e/1FAIpQLScKis-v3T917G29sN-J5wxRG5Y2in2HU8FjfbkmGBFEkNEUew/viewform
@@ -702,7 +796,8 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
   - Desarrollo: `docs/estandares-codigo.md`, `docs/plan-pruebas.md`, `docs/roadmap.md`, `docs/migracion-datos.md`.
   - **Alcance v1 (CTO, 2026-11-01):** incluye todo: contrato más crédito, reservas, proveedores e insumos. Se avisó que
     no entra razonablemente en 30 días ni en Bs 10.000. Mitigación: Entrega A contractual y Entrega B extras.
-  - **Pendiente CTO:** D-01 a D-04 del SRS (adenda de extras, frial sin catálogo, aviso del plazo, fecha exacta de firma del contrato).
+  - **Pendiente CTO:** D-01 a D-03 del SRS (adenda de extras, frial sin catálogo, aviso del plazo). D-04 resuelta el
+    2026-11-11 (firma del 2026-11-01).
   - **Pendiente cliente:** cargar precios en el panel, y preguntas P-01 a P-17 del SRS.
 - **Fase 0 cerrada (2026-11-01):** plan en `docs/plan-fase-0.md`, 5 PRs. Hito cumplido: login real, RLS probado y CI
   verde. Hecha en una sesión; la estimación era 3 días. Todo local, sin proyectos en Supabase ni Vercel. El prototipo
@@ -752,7 +847,7 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
     con anulación y devolución parcial, cajas con detalle, y tope de descuento. RPC nueva `resumen_caja`. pgTAP 1057,
     Vitest 188, E2E 98 en verde. Revisión de seguridad sin hallazgos. No verificado: cerrar caja con venta en duda y
     filtro inválido solo en Vitest, sin E2E. Codex: no verificado (sin cuota).
-- **Decisiones del CTO (2026-11-01):** contrato firmado (falta la fecha exacta). El cliente carga desde el panel servicios,
+- **Decisiones del CTO (2026-11-01):** contrato firmado (la fecha, 2026-11-01, se confirmó el 2026-11-11). El cliente carga desde el panel servicios,
   precios, productos con serie y datos propios. Objetivo: terminar en 2 semanas como máximo. El sistema se entrega preparado
   para frial de carnes al vacío: RF-FRI-04 a 07 (paquetes, lotes con vencimiento, por vencer, mermas). Despiece y balanza
   siguen fuera.
@@ -1104,7 +1199,7 @@ desplegado en producción; rediseño completo mergeado en `main` (PR #109); ver 
 
 ## Pendientes / a decidir en la planificación
 
-- Decisiones del CTO: D-01 a D-04 en `docs/srs.md`, sección 7.
+- Decisiones del CTO: D-01 a D-04 en `docs/srs.md`, sección 7 (D-04 resuelta el 2026-11-11).
 - Preguntas para el cliente: P-01 a P-17 en esa misma sección.
 - Resuelto y documentado: impresión sin ESC/POS (`docs/arquitectura.md`), backups y hosting (`docs/stack.md`), estados
   y cobro de lavandería y roles (`docs/srs.md`), carga inicial (`docs/migracion-datos.md`).
