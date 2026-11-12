@@ -20,11 +20,19 @@ están en "Registro del 2026-11-11" y en los planes.
 - El objetivo de "terminar en 2 semanas" (CTO, 2026-11-01) venció sin replanteo.
 - El repositorio ya es público (comprobado el 2026-11-11). El CTO aceptó ese día que el backup cifrado se quede en los
   artifacts de Actions (decisión y cómo revertirla, en el registro de abajo).
-- **QA de roles en producción: hecho el 2026-11-11, sin desvíos en lo observado** (`docs/qa-roles-produccion.md`).
-  Vendedor y encargado, en los tres negocios, solo lectura: rutas del panel, permisos y lectura directa de costos y de
-  `errores_app`. No se comprobaron los controles dentro del punto de venta ni los rechazos del servidor a escrituras
-  (exigen escribir en producción). Las cuentas "QA Vendedor (prueba)" y "QA Encargado (prueba)" siguen **activas**:
-  desactivarlas cuando ya no hagan falta.
+- **QA de roles en producción: dos pasadas, sin desvíos en lo observado** (`docs/qa-roles-produccion.md`).
+  2026-11-11, solo lectura: rutas del panel, permisos y lectura directa de costos y de `errores_app`. 2026-11-12, con
+  escrituras de práctica aprobadas por el CTO ese día: el vendedor abre y cierra caja en los tres negocios y no tiene
+  crédito ni descuento en pantalla; el servidor le rechaza una venta a crédito (`ERP_SIN_PERMISO`) y le rechaza al
+  encargado cambiar roles protegidos y desactivar cuentas (`ERP_SIN_PERMISO`, `ERP_DUENO_PROTEGIDO`).
+  **Quedó sin probar todo lo que exige una venta** (venta, anulación, devolución, descuento): en producción ningún
+  producto tiene precio y no se cargó uno de prueba porque la limpieza no lo borraría. Se completa en minutos cuando
+  el cliente cargue un precio, reactivando las cuentas.
+- Las cuentas "QA Vendedor (prueba)" y "QA Encargado (prueba)" están **desactivadas** desde el 2026-11-12 (comprobado:
+  no inician sesión). En producción quedaron tres cajas cerradas en cero y el cliente "QA Cliente (prueba)" en
+  Multitienda Lider; cómo afectan al `--desde` de la limpieza está en `docs/despliegue.md`.
+- **Defecto menor encontrado en ese QA, sin arreglar:** tras cerrar la caja, el punto de venta muestra la tarjeta
+  "Abrir caja" arriba y el resultado "Caja cerrada" abajo al mismo tiempo, en los tres negocios.
 - Las dos páginas del cliente las compartió el CTO con el cliente el 2026-11-11 (Prueba de equipos v2
   <https://claude.ai/artifact/B25M1hC1KJieS8XbeC67gA>, Preguntas <https://claude.ai/artifact/5VpW65FVmxtgsVoaDnr967>).
   El cliente avisa cuando las llene. No consta cuál enlace de Preguntas recibió (el nuevo o el viejo).
@@ -42,8 +50,10 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 2. Siguiente paso concreto, en orden
 
-1. Decidir con el CTO si se completa el QA de roles con escrituras de práctica (abrir caja con la cuenta de prueba
-   para ver los controles del punto de venta) y cuándo se desactivan las dos cuentas de prueba.
+1. Arreglar el defecto de pantalla del cierre de caja ("Abrir caja" visible junto al resultado del cierre) si el CTO
+   lo aprueba. Cuando exista un producto con precio: reactivar las dos cuentas de prueba y completar el QA de roles
+   con una venta (venta, descuento, anulación y devolución; script `~/.cache/erp-recupera/qa-roles/escrituras.mjs`
+   como base), y volver a desactivarlas.
 2. Hardware real: lo prueba el cliente con la página publicada "Prueba de equipos" (decisión del 2026-11-11; no el
    CTO). Primero la computadora de cada caja; después lector, impresora de 80 mm y, si lo usan, celular Android.
    El resultado llega como texto por WhatsApp; lo que falle se anota aquí y se arregla antes del paralelo.
