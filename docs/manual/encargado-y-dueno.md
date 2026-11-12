@@ -753,6 +753,9 @@ restablecer la contraseña y "Reactivar". La contraseña propia se cambia con "C
 - "Quitar" la saca de este negocio y conserva su cuenta y sus otros negocios. Si es su último negocio, no se puede quitar: hay
   que desactivar la cuenta.
 - Un equipo sin conexión puede seguir vendiendo hasta 72 horas con una cuenta desactivada; después se bloquea.
+- Una persona desactivada que intenta entrar ve "Correo o contraseña incorrectos", igual que con una clave equivocada: la
+  pantalla no dice que la cuenta está desactivada. Si alguien avisa que su clave dejó de funcionar, revisar primero aquí
+  si figura como desactivada.
 
 Reglas de protección:
 

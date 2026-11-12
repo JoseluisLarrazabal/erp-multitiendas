@@ -12,6 +12,12 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 1. Dónde estamos
 
+- **Plan activo: observaciones del QA de roles** (`docs/plan-observaciones-qa-roles.md`, aprobado por el CTO el
+  2026-11-12). Estado: paso 1 (documentación) hecho; paso 2 (arreglo: "Créditos" solo en tienda y frial) y paso 3
+  (diagnóstico del cuelgue de "Cajas") en curso. Se quita de aquí cuando culmine.
+- **Mejora pospuesta, posterior a la entrega:** que vendedor y empleado lean por la API solo sus propias ventas y
+  cajas. Decisión del CTO del 2026-11-12: no antes del paralelo. Notas de diseño y trampas, en ese mismo plan.
+
 - Todo el código de los planes está en producción: Entrega A y B, preentrega (#95, #97, #99, #101), registro de
   errores (#103) y rediseño visual con tablero (#109, `ee132a7`, mergeado el 2026-11-11).
 - El contrato se firmó el 2026-11-01 (D-04 resuelta, CTO, 2026-11-11). Contado desde la firma, el plazo de 30 días
@@ -53,7 +59,10 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 2. Siguiente paso concreto, en orden
 
-1. Nada pendiente del QA de roles que dependa de nosotros. Cuando el cliente cargue catálogo en lavandería y frial,
+1. Terminar `docs/plan-observaciones-qa-roles.md`: PR del arreglo de créditos (rama `fix/creditos-solo-tienda-frial`),
+   su verificación en producción con la cuenta de prueba como contador en Lider Clean, y el resultado del diagnóstico
+   de "Cajas". Para ese diagnóstico el CTO corre una consulta de solo lectura sobre `errores_app` (está en el plan).
+   Del QA de roles no queda nada más que dependa de nosotros. Cuando el cliente cargue catálogo en lavandería y frial,
    costos y un tope de descuento, se puede repetir en minutos reactivando las cuentas de prueba (scripts en
    `~/.cache/erp-recupera/qa-roles/`: `escrituras.mjs`, `venta2.mjs`, `qa-roles-d.mjs`). Todo script que escriba en
    producción se revisa entero antes de cada corrida, también tras un cambio de una línea.
@@ -72,7 +81,9 @@ están en "Registro del 2026-11-11" y en los planes.
 
 ### 3. Decisiones del CTO abiertas
 
-- **FECHA DE INICIO DEL PARALELO: ningún documento la fija.**
+- **FECHA DE INICIO DEL PARALELO: ningún documento la fija.** El CTO decidió el 2026-11-12 esperar a que el cliente
+  avise (cargas, páginas llenas y fecha); no se fija antes. El plazo del contrato contado desde la firma vence el
+  2026-12-01.
 - D-01: la palabra del punto 6 del acta ("quedan / no quedan" cubiertas por la garantía). Recomendación: "no quedan".
 - D-02: entrega del frial sin catálogo, por escrito.
 - Quién crea las cuentas de vendedor del cliente (la página pone al dueño desde "Usuarios" como camino principal; si

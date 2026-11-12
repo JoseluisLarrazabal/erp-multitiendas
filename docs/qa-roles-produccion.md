@@ -92,7 +92,8 @@ Otras cosas vistas:
   aparece arriba de la barra del equipo al mismo tiempo que el resultado "Caja cerrada" abajo
   (`capturas-escrituras/tienda-5-cierre.png`). Confunde: invita a abrir otra vez antes de leer el cierre.
 - Una cuenta desactivada que intenta entrar recibe "Correo o contraseña incorrectos.", el mismo mensaje que una clave
-  equivocada.
+  equivocada. Decisión: se deja así (un mensaje distinto confirmaría a un extraño que la cuenta existe) y se explica
+  en el manual del dueño.
 
 ## Tercera pasada: venta de práctica, contador y empleado (2026-11-12)
 
@@ -139,9 +140,11 @@ Otras cosas vistas:
   resultado (`capturas-venta2/paso9-cierre.png`).
 - "Cajas" del panel se quedó en "Cargando…" 30 segundos una vez, con la cuenta del encargado, justo después de cerrar
   una caja. En la corrida siguiente cargó en menos de un segundo, sin errores de consola ni de red. No se reprodujo y
-  no se conoce la causa.
+  no se conoce la causa. Decisión: diagnóstico con evidencia antes de tocar código
+  (`docs/plan-observaciones-qa-roles.md`, paso 3).
 - El contador abre `/panel/creditos` en lavandería escribiendo la dirección (el menú no lo muestra). Es de solo
-  lectura y está vacío: lavandería no tiene créditos.
+  lectura y está vacío: lavandería no tiene créditos. Decisión: se arregla (`docs/plan-observaciones-qa-roles.md`,
+  paso 2).
 - La revisión de caja ("Marcar revisado") está en "Reconciliación" y solo aparece para cajas con movimientos hechos
   sin conexión. Las cajas de práctica no los tuvieron, así que no se probó.
 
@@ -173,7 +176,8 @@ Queda cubierto solo por las pruebas locales (pgTAP y Playwright):
 - Vendedor y empleado leen por la API, con su propia sesión, las ventas, devoluciones y cajas cerradas de todo el
   negocio (con esperado, contado y diferencia), no solo las suyas: el filtro es por negocio, no por persona. La
   pantalla no se lo muestra. Es lo habitual en un local chico; se anota por si el dueño quiere que cada cajero vea solo
-  lo suyo.
+  lo suyo. Decisión del 2026-11-12: no se cambia antes del paralelo; queda como mejora posterior a la entrega, con
+  notas de diseño en `docs/plan-observaciones-qa-roles.md`.
 
 ## Qué quedó en producción
 
