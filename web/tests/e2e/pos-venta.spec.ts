@@ -1274,6 +1274,8 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   await expect(page.getByTestId("cierre-esperado")).toHaveText("Bs 114,50");
   await expect(page.getByTestId("cierre-diferencia")).toHaveText("Bs 5,50");
   await expect(page.getByTestId("cierre-qr")).toHaveText("Bs 0,00");
+  // Mientras se lee el cierre la pantalla no invita a abrir otra caja; tras "Listo" sí.
+  await expect(page.getByRole("button", { name: "Abrir caja" })).toHaveCount(0);
   const fila = await apiComo(
     "vendedor",
     `caja_sesiones?select=monto_esperado,monto_contado,diferencia,cerrada_en&id=eq.${sesionId}`,
@@ -1291,7 +1293,8 @@ test("caja en /pos: movimientos, error por falta de efectivo y cierre con la dif
   ]);
   expect(s.cerrada_en).not.toBeNull();
 
-  // Queda en apertura.
+  // Tras "Listo" queda en apertura.
+  await page.getByRole("button", { name: "Listo" }).click();
   await expect(page.getByLabel("Efectivo inicial (Bs)")).toBeVisible();
   expect(await sesionAbierta(equipoId)).toBeNull();
 });

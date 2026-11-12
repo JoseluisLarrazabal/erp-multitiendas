@@ -159,6 +159,7 @@ export function VentaEnCurso({
           alCerrar={() => opciones.cajaCerrada(equipo.id)}
           alYaCerrada={() => opciones.verificarCaja(equipo.id)}
           alVolver={() => setVerCaja(false)}
+          alVerResultado={opciones.alVerCierre}
         />
       )}
       {verReservas && (

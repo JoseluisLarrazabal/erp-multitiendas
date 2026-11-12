@@ -57,6 +57,7 @@ export function PanelCaja({
   alCerrar,
   alYaCerrada,
   alVolver,
+  alVerResultado,
 }: {
   negocioId: string;
   dispositivoId: string;
@@ -77,6 +78,8 @@ export function PanelCaja({
   // ERP_CAJA_CERRADA al cerrar: la caja ya estaba cerrada. El POS la vuelve a consultar; devuelve un error o null.
   alYaCerrada: () => Promise<string | null>;
   alVolver: () => void;
+  // El resultado del cierre está en pantalla: el POS no ofrece abrir otra caja hasta que se lea.
+  alVerResultado: (visible: boolean) => void;
 }) {
   const sinRed = useSinRed();
   // Movimientos hechos sin conexión que aún no llegaron: se ven aunque la lista del servidor no esté.
@@ -208,6 +211,12 @@ export function PanelCaja({
     setErrorCierre(null);
     setConfirmando(true);
   }
+
+  useEffect(() => {
+    if (!resultado) return;
+    alVerResultado(true);
+    return () => alVerResultado(false);
+  }, [resultado, alVerResultado]);
 
   if (resultado)
     return <ResultadoCierre r={resultado} nombreEquipo={nombreEquipo} alVolver={alVolver} />;

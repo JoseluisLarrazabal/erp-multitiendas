@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AperturaCaja } from "@/modules/caja";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { leerCatalogoDesde } from "../contexto-ventas";
 import { usePosCaja } from "../use-pos-caja";
 import { useColaPos } from "../use-cola";
@@ -49,6 +49,8 @@ export function PosVenta({
     cajaCerrada,
     recargarNegocio,
   } = usePosCaja(negocioId, permisos, usuarioId);
+  // Mientras se lee el resultado del cierre la pantalla no invita a abrir otra caja.
+  const [verCierre, setVerCierre] = useState(false);
   // Motor y aviso por encima de las fases: con el equipo sin elegir o la carga fallida la cola se envía y se ve igual.
   const cola = useColaPos(
     negociosIds,
@@ -141,7 +143,7 @@ export function PosVenta({
         if (!negocio) return null;
         const venta = (
           <>
-            {fase.cajaId === null && (
+            {fase.cajaId === null && !verCierre && (
               <AperturaCaja
                 negocioId={negocioId}
                 dispositivoId={fase.equipo.id}
@@ -168,6 +170,7 @@ export function PosVenta({
               recargarPermisos={recargarPermisos}
               verificarCaja={verificarCaja}
               cajaCerrada={cajaCerrada}
+              alVerCierre={setVerCierre}
               registrarGuarda={registrarGuarda}
               atajosBloqueados={atajosBloqueados}
               alCambiarCatalogo={alCambiarCatalogo}
