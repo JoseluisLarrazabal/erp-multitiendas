@@ -181,6 +181,50 @@ test.describe("dueño: catálogo", () => {
     verCsp();
   });
 
+  test("la foto se amplía al hacer clic, en la lista y en la ficha; Escape cierra y devuelve el foco", async ({
+    page,
+  }) => {
+    const p = unico();
+    await ir(page, "/panel/productos/nuevo");
+    await page.getByLabel("Código", { exact: true }).fill(p.codigo);
+    await page.getByLabel("Nombre").fill(p.nombre);
+    await page
+      .locator("#producto-foto")
+      .setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG });
+    await page.getByRole("button", { name: "Crear producto" }).click();
+    await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
+
+    const ampliar = (raiz: Page) =>
+      raiz.getByRole("button", { name: `Ampliar foto de ${p.nombre}` });
+    const ventana = page.getByRole("dialog", { name: p.nombre });
+
+    await ir(page, `/panel/productos?q=${p.codigo}`);
+    const miniatura = ampliar(page);
+    const chica = (await miniatura.boundingBox())!;
+    await miniatura.click();
+    await expect(ventana).toBeVisible();
+    const grande = (await ventana.getByRole("img", { name: `Foto de ${p.nombre}` }).boundingBox())!;
+    expect(grande.width).toBeGreaterThan(chica.width * 4);
+    await expect(ventana.getByRole("button", { name: "Cerrar" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ventana).toBeHidden();
+    await expect(miniatura).toBeFocused();
+
+    await miniatura.click();
+    await expect(ventana).toBeVisible();
+    await page.mouse.click(2, 2);
+    await expect(ventana).toBeHidden();
+
+    await page.getByRole("link", { name: p.nombre }).click();
+    await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
+    const vista = ampliar(page);
+    await vista.click();
+    await expect(ventana.getByRole("img", { name: `Foto de ${p.nombre}` })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ventana).toBeHidden();
+    await expect(vista).toBeFocused();
+  });
+
   test("la foto grande se achica a 1.200 px y se sube como WebP", async ({ page }) => {
     const p = unico();
     await ir(page, "/panel/productos/nuevo");

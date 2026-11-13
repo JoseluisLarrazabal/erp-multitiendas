@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Package } from "lucide-react";
 import { formatearBs } from "@/lib/format/moneda";
 import { Etiqueta } from "@/components/ui/etiqueta";
+import { FotoAmpliable } from "@/components/ui/foto-ampliable";
 import { Fila, ListaFilas } from "@/components/ui/lista-filas";
 import { ETIQUETA_LISTA, pesoATexto, type Lista, type ProductoLista } from "../domain";
 
@@ -14,17 +15,23 @@ type Props = {
   listaPrincipal: Lista;
 };
 
-function Miniatura({ url }: { url?: string }) {
-  return (
-    <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center overflow-hidden rounded-md border">
-      {url ? (
-        // Decorativa: el nombre ya está en la fila. URL firmada con vencimiento: next/image no la cachea bien.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="size-full object-cover" loading="lazy" />
-      ) : (
+const MINIATURA =
+  "bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center overflow-hidden rounded-md border";
+
+function Miniatura({ url, nombre }: { url?: string; nombre: string }) {
+  if (!url) {
+    return (
+      <span className={MINIATURA}>
         <Package className="size-4" aria-hidden />
-      )}
-    </span>
+      </span>
+    );
+  }
+  return (
+    <FotoAmpliable url={url} nombre={nombre} className={MINIATURA}>
+      {/* Decorativa: el botón ya lleva el nombre. URL firmada con vencimiento: next/image no la cachea bien. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="" className="size-full object-cover" loading="lazy" />
+    </FotoAmpliable>
   );
 }
 
@@ -63,7 +70,7 @@ export function ListaProductos({ productos, fotos, puedeEditar, listaPrincipal }
     >
       {productos.map((p) => (
         <Fila key={p.id} columnas={`grid-cols-[auto_1fr_auto] ${COLUMNAS}`}>
-          <Miniatura url={p.fotoPath ? fotos[p.fotoPath] : undefined} />
+          <Miniatura url={p.fotoPath ? fotos[p.fotoPath] : undefined} nombre={p.nombre} />
           <span className="text-muted-foreground font-mono text-xs">
             <span className="sr-only">Código: </span>
             {p.codigo}
