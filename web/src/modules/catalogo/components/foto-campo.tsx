@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ImagePlus, Package } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { FotoAmpliable } from "@/components/ui/foto-ampliable";
 import { errorDeFoto, FOTO_ORIGINAL_MAX_BYTES, FOTO_TIPOS } from "../domain";
 import { comprimirFoto } from "../foto";
 
@@ -60,19 +61,25 @@ export function FotoCampo({ urlActual, nombre, alElegir, alProcesar }: Props) {
     <div className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold">Foto</span>
       <div className="bg-surface flex flex-col items-center gap-3 rounded-xl border-2 border-dashed p-4 text-center">
-        <span className="bg-muted text-muted-foreground grid size-32 shrink-0 place-items-center overflow-hidden rounded-lg border">
-          {imagen ? (
-            // Vista previa local o URL firmada: no pasa por el optimizador de next/image.
-            // eslint-disable-next-line @next/next/no-img-element
+        {imagen ? (
+          <FotoAmpliable
+            url={imagen}
+            nombre={nombre.trim() || "Producto sin nombre"}
+            className="bg-muted grid size-32 shrink-0 place-items-center overflow-hidden rounded-lg border"
+          >
+            {/* Vista previa local o URL firmada: no pasa por el optimizador de next/image. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imagen}
               alt={`Foto de ${nombre || "el producto"}`}
               className="size-full object-cover"
             />
-          ) : (
+          </FotoAmpliable>
+        ) : (
+          <span className="bg-muted text-muted-foreground grid size-32 shrink-0 place-items-center overflow-hidden rounded-lg border">
             <Package className="size-10" aria-label="Sin foto" role="img" />
-          )}
-        </span>
+          </span>
+        )}
         <div className="flex min-w-0 flex-col items-center gap-1.5">
           <label
             htmlFor="producto-foto"
