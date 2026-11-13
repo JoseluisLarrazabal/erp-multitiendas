@@ -1,7 +1,7 @@
 # Handoff — ERP Multitiendas
 
 Documento vivo. Fuente de verdad para planificar y ejecutar el proyecto.
-Última actualización: 2026-11-11 (cierre de sesión: todo el código de los planes está en producción, incluido el
+Última actualización: 2026-11-13 (demo local y presentación para el cliente). Antes, 2026-11-11 (cierre de sesión: todo el código de los planes está en producción, incluido el
 rediseño, PR #109; falta la fase 2 de verificación y lo que depende del cliente; plan activo:
 `docs/plan-paralelo-rediseno.md`).
 
@@ -11,6 +11,28 @@ Este bloque es el estado vigente y manda sobre lo de abajo si se contradicen. El
 están en "Registro del 2026-11-11" y en los planes.
 
 ### 1. Dónde estamos
+
+- **Demo para el cliente (2026-11-13, pedido del CTO): entorno local y presentación, listos.** Nada de esto toca
+  producción ni el repo.
+  - Entorno: `~/.cache/erp-recupera/demo/` (`LEEME.md` con cuentas, guion de 12 a 15 minutos y advertencias).
+    `preparar.sh` resetea la base local y carga la demo; `levantar.sh` la sirve en `http://localhost:3000`;
+    `parar.sh` la baja. Negocios con su nombre real, personas y productos ficticios, una semana de actividad
+    (34 ventas en la tienda, 9 órdenes en la lavandería, 7 ventas en el frial), caja C1 cerrada.
+  - Por qué local y no producción: producción no tiene precios (no se puede vender) y los precios de ejemplo
+    sobrevivirían a la limpieza previa al paralelo.
+  - Verificado el 2026-11-13: por SQL, 0 nombres "Demo" visibles y stock = suma del kardex; con Playwright (subagente),
+    29 capturas sin fallas ni errores de consola, venta y cierre de caja sin diferencia.
+  - **No verificado:** `preparar.sh --planilla` (catálogo real del cliente: la planilla `lider.xlsx` ya no está en
+    disco; si el CTO la descarga, se importa con el importador del repo), venta sin conexión dentro de la demo, crear
+    cuentas en "Usuarios", y el encabezado del dólar sin internet.
+  - **Cualquier `db reset`, corrida de e2e o `pnpm manual:capturas` borra la demo:** correr `preparar.sh` justo antes
+    de mostrarla.
+  - Presentación (17 láminas, lenguaje no técnico, cada afirmación con respaldo en `docs/manual/`):
+    https://claude.ai/artifact/VYUYzP8LvKh47xdM4K6bwG (privada, cuenta actual del CTO). Fuente en
+    `~/.cache/erp-recupera/demo/presentacion/project/`. No se revisó visualmente lámina por lámina.
+  - Para tener presente si el cliente pregunta (salió al cruzar las láminas con los manuales): no hay un resumen de los
+    tres negocios juntos; no hay pantalla para mirar el registro de cambios; se cobra siempre en bolivianos; la
+    balanza no se conecta; el tope de descuento arranca en 0 %.
 
 - **Plan culminado el 2026-11-12: observaciones del QA de roles** (`docs/plan-observaciones-qa-roles.md`).
   - "Créditos" solo en tienda y frial: PR #118, en producción y verificado (contador en Lider Clean: `/panel/creditos`
@@ -115,7 +137,7 @@ están en "Registro del 2026-11-11" y en los planes.
 
 - `~/.cache/erp-recupera/` (el scratchpad de `/tmp` se borra): `rediseno/verificar.sh` (los 8 pasos del CI en local),
   `r3/lote.sh`, maquetas, capturas del rediseño (`r3/capturas`, `r4`) y los fuentes de las páginas del cliente
-  (`artifacts/`, con `test.mjs`).
+  (`artifacts/`, con `test.mjs`). También `demo/`: entorno de demostración local y fuente de la presentación.
 - Todo lo demás está en `main` (rediseño incluido). Si algo del rediseño está roto: `git revert ee132a7` en un PR.
 - Regla 9.b del `CLAUDE.md` global: al 95 % del límite de uso de 5 horas se cierra para que otra sesión arranque de
   este handoff. Claude no tiene medidor del cupo: pedir el porcentaje o cerrar en cada punto de corte.
