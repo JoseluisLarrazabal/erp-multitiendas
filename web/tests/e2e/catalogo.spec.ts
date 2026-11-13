@@ -181,9 +181,7 @@ test.describe("dueño: catálogo", () => {
     verCsp();
   });
 
-  test("la foto se amplía al hacer clic, en la lista y en la ficha; Escape cierra y devuelve el foco", async ({
-    page,
-  }) => {
+  async function productoConFoto(page: Page) {
     const p = unico();
     await ir(page, "/panel/productos/nuevo");
     await page.getByLabel("Código", { exact: true }).fill(p.codigo);
@@ -193,17 +191,26 @@ test.describe("dueño: catálogo", () => {
       .setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG });
     await page.getByRole("button", { name: "Crear producto" }).click();
     await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
+    return p;
+  }
 
-    const ampliar = (raiz: Page) =>
-      raiz.getByRole("button", { name: `Ampliar foto de ${p.nombre}` });
+  test("la foto se amplía al hacer clic, en la lista y en la ficha; Escape cierra y devuelve el foco", async ({
+    page,
+  }) => {
+    const p = await productoConFoto(page);
+    const ampliar = () => page.getByRole("button", { name: `Ampliar foto de ${p.nombre}` });
     const ventana = page.getByRole("dialog", { name: p.nombre });
+    const foto = ventana.getByRole("img", { name: `Foto de ${p.nombre}` });
+    // El PNG de prueba es de 1x1: el tamaño sale del CSS, así que además se exige que la imagen haya cargado.
+    const cargada = () => expect.poll(() => foto.evaluate((i: HTMLImageElement) => i.naturalWidth));
 
     await ir(page, `/panel/productos?q=${p.codigo}`);
-    const miniatura = ampliar(page);
+    const miniatura = ampliar();
     const chica = (await miniatura.boundingBox())!;
     await miniatura.click();
     await expect(ventana).toBeVisible();
-    const grande = (await ventana.getByRole("img", { name: `Foto de ${p.nombre}` }).boundingBox())!;
+    await cargada().toBeGreaterThan(0);
+    const grande = (await foto.boundingBox())!;
     expect(grande.width).toBeGreaterThan(chica.width * 4);
     await expect(ventana.getByRole("button", { name: "Cerrar" })).toBeVisible();
     await page.keyboard.press("Escape");
@@ -217,12 +224,26 @@ test.describe("dueño: catálogo", () => {
 
     await page.getByRole("link", { name: p.nombre }).click();
     await page.waitForURL(/\/panel\/productos\/[0-9a-f-]{36}$/);
-    const vista = ampliar(page);
+    const vista = ampliar();
     await vista.click();
-    await expect(ventana.getByRole("img", { name: `Foto de ${p.nombre}` })).toBeVisible();
+    await expect(foto).toBeVisible();
+    await cargada().toBeGreaterThan(0);
     await page.keyboard.press("Escape");
     await expect(ventana).toBeHidden();
     await expect(vista).toBeFocused();
+  });
+
+  test("si la foto ya no carga, la ventana avisa en vez de mostrar una imagen rota", async ({
+    page,
+  }) => {
+    const p = await productoConFoto(page);
+    // Se corta antes de entrar a la lista: la caché de imágenes del navegador no deja forzar el fallo de otro modo.
+    await page.route("**/storage/v1/object/sign/**", (ruta) => ruta.fulfill({ status: 400 }));
+    await ir(page, `/panel/productos?q=${p.codigo}`);
+    await page.getByRole("button", { name: `Ampliar foto de ${p.nombre}` }).click();
+    const ventana = page.getByRole("dialog", { name: p.nombre });
+    await expect(ventana.getByRole("status")).toHaveText(/No se pudo cargar la foto/);
+    await expect(ventana.getByRole("img")).toHaveCount(0);
   });
 
   test("la foto grande se achica a 1.200 px y se sube como WebP", async ({ page }) => {

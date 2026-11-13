@@ -64,7 +64,7 @@ export function FotoCampo({ urlActual, nombre, alElegir, alProcesar }: Props) {
         {imagen ? (
           <FotoAmpliable
             url={imagen}
-            nombre={nombre || "el producto"}
+            nombre={nombre.trim() || "Producto sin nombre"}
             className="bg-muted grid size-32 shrink-0 place-items-center overflow-hidden rounded-lg border"
           >
             {/* Vista previa local o URL firmada: no pasa por el optimizador de next/image. */}
